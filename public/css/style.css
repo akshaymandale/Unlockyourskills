@@ -1,0 +1,446 @@
+/* Unlock Your Skills - Complete Navbar, Sidebar, and Manage Portal CSS */
+
+/* ✅ Fix Body Layout */
+body {
+    background-color: #f4f4f4;
+    font-family: Arial, sans-serif;
+    margin-top: 60px;
+    overflow-x: hidden;
+}
+
+/* ✅ Fix Navbar (Horizontal Layout) */
+.navbar {
+    height: 60px;
+    width: 100%;
+    position: fixed;
+    top: 0;
+    left: 0;
+    background: #d9b3ff; /* Light purple shade */
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 20px;
+    z-index: 1000;
+    box-shadow: 0px 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+/* ✅ Horizontal Alignment for Navbar Elements */
+.navbar-left {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    flex: 1;
+}
+
+.navbar-center {
+    display: flex;
+    flex: 2;
+    justify-content: center;
+}
+
+.navbar-right {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    flex: 1;
+    justify-content: flex-end;
+    position: relative;
+    width: 200px;
+    padding-right: 30px;
+}
+
+/* ✅ Sidebar Toggle Button (☰) */
+.sidebar-toggle {
+    font-size: 24px;
+    background: none;
+    border: none;
+    color: #4b0082;
+    cursor: pointer;
+}
+
+/* ✅ Fix Logo */
+.navbar-brand img {
+    height: 40px;
+}
+
+/* ✅ Fix Search Bar */
+.search-input {
+    width: 300px;
+    border-radius: 20px;
+    padding: 5px 10px;
+}
+.search-btn {
+    margin-left: 5px;
+    border-radius: 20px;
+}
+
+/* ✅ Fix Profile Menu */
+.profile-menu {
+    position: relative;
+}
+.profile-btn {
+    border-radius: 50%;
+    padding: 5px 10px;
+}
+.dropdown-menu {
+    display: none;
+    position: absolute;
+    right: 0;
+    background: white;
+    border: 1px solid #ddd;
+    padding: 10px;
+    width: 150px;
+    flex-direction: column;
+    text-align: left;
+}
+.dropdown-menu a {
+    display: block;
+    padding: 10px;
+    border-bottom: 1px solid #ddd;
+}
+.profile-menu.active .dropdown-menu {
+    display: block;
+}
+
+/* ✅ Fix Sidebar */
+.sidebar {
+    width: 250px;
+    height: 100vh;
+    position: fixed;
+    top: 60px;
+    left: 0;
+    background: #6a0dad;
+    color: white;
+    padding-top: 20px;
+    transition: all 0.3s;
+    z-index: 999;
+}
+.sidebar.collapsed {
+    width: 80px;
+}
+.sidebar ul {
+    padding-left: 0;
+    list-style: none;
+}
+.sidebar ul li {
+    padding: 15px;
+    display: flex;
+    align-items: center;
+}
+.sidebar ul li a {
+    color: white;
+    text-decoration: none;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+.sidebar.collapsed ul li a span {
+    display: none;
+}
+.sidebar ul li:hover {
+    background: #5a0bab;
+}
+
+/* ✅ Fix Dashboard Content (Avoid Overlapping with Sidebar) */
+.container {
+    margin-left: 260px;
+    padding: 20px;
+    transition: margin-left 0.3s;
+}
+.sidebar.collapsed + .container {
+    margin-left: 100px;
+}
+
+/* ✅ Manage Portal Tabs Styling */
+.nav-tabs {
+    border-bottom: 2px solid #6a0dad;
+    display: flex;
+    justify-content: center;
+    background: white;
+    padding: 10px;
+    border-radius: 5px;
+    box-shadow: 0px 2px 4px rgba(0, 0, 0, 0.1);
+}
+.nav-tabs .nav-item {
+    margin-right: 10px;
+    list-style: none;
+}
+.nav-tabs .nav-item .nav-link {
+    color: #6a0dad;
+    font-weight: bold;
+    border: none;
+    padding: 10px 15px;
+    border-radius: 5px;
+}
+.nav-tabs .nav-item .nav-link.active {
+    background-color: #6a0dad;
+    color: white;
+    border-radius: 5px;
+}
+
+/* ✅ Tab Content */
+.tab-content {
+    background: white;
+    padding: 20px;
+    border-radius: 5px;
+    box-shadow: 0px 4px 6px rgba(0, 0, 0, 0.1);
+    margin-top: 10px;
+}
+
+/* ✅ User Management & User Settings Side by Side */
+.user-section {
+    display: flex;
+    justify-content: space-between;
+    gap: 20px;
+    margin-top: 20px;
+}
+.user-box {
+    background: #ffffff;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    padding: 20px;
+    flex: 1;
+    cursor: pointer;
+    transition: all 0.3s ease-in-out;
+}
+.user-box:hover {
+    background: #d9b3ff;
+    transform: scale(1.05);
+}
+.user-box h5 {
+    color: #6a0dad;
+    font-size: 18px;
+    font-weight: bold;
+}
+.user-box p {
+    font-size: 14px;
+    color: #555;
+}
+
+.footer {
+    text-align: center;
+    padding: 10px;
+    background: #6a0dad;
+    color: white;
+    position: fixed;
+    bottom: 0;
+    width: 100%;
+}
+
+/* ✅ Login Page Styling */
+.login-container {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+    background: linear-gradient(to right, #6a0dad, #b39ddb);
+    margin: 0;
+    padding: 0;
+}
+
+.login-box {
+    display: flex;
+    width: 600px;
+    background: white;
+    border-radius: 10px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    overflow: hidden;
+    position: relative;
+}
+
+.login-left {
+    width: 40%;
+    background: #6a0dad;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 20px;
+}
+
+.login-left img {
+    width: 100px;
+    height: auto;
+}
+
+.login-right {
+    width: 60%;
+    padding: 30px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+}
+
+.login-title {
+    font-size: 24px;
+    font-weight: bold;
+    color: #6a0dad;
+    margin-bottom: 20px;
+    text-align: center;
+}
+
+.login-input {
+    width: 100%;
+    padding: 10px;
+    margin-bottom: 15px;
+    border: 1px solid #ccc;
+    border-radius: 5px;
+}
+
+.login-button {
+    background: #6a0dad;
+    color: white;
+    border: none;
+    padding: 10px;
+    border-radius: 5px;
+    cursor: pointer;
+    width: 100%;
+    font-size: 16px;
+    font-weight: bold;
+}
+
+.login-button:hover {
+    background: #5a0bab;
+}
+
+.forgot-password {
+    text-align: center;
+    margin-top: 10px;
+}
+
+.forgot-password a {
+    color: #6a0dad;
+    text-decoration: none;
+    font-size: 14px;
+}
+
+.forgot-password a:hover {
+    text-decoration: underline;
+}
+
+/* ✅ User Management Page Styling */
+.user-management-toolbar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+    gap: 10px;
+}
+
+.filter-multiselect {
+    width: 220px;
+    padding: 8px;
+    border-radius: 5px;
+    border: 1px solid #ccc;
+    background: white;
+}
+
+.search-bar {
+    padding: 8px;
+    border-radius: 5px;
+    border: 1px solid #ccc;
+    width: 250px;
+}
+
+.add-user-btn, .import-user-btn {
+    background: #6a0dad;
+    color: white;
+    padding: 8px 12px;
+    border-radius: 5px;
+    border: none;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+}
+
+.add-user-btn i, .import-user-btn i {
+    font-size: 16px;
+}
+
+.user-grid {
+    width: 100%;
+    border-collapse: collapse;
+    text-align: center;
+}
+
+.user-grid th, .user-grid td {
+    padding: 10px;
+    border: 1px solid #ddd;
+}
+
+.user-grid th {
+    background: #6a0dad;
+    color: white;
+}
+
+.edit-btn, .lock-btn, .delete-btn {
+    border: none;
+    background: none;
+    font-size: 18px;
+    cursor: pointer;
+    padding: 5px;
+}
+
+.edit-btn:hover, .lock-btn:hover, .delete-btn:hover {
+    transform: scale(1.1);
+}
+
+/* ✅ Add User Page Styling */
+.add-user-container {
+    background: white;
+    padding: 20px;
+    border-radius: 10px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    margin-top: 20px;
+}
+
+.add-user-tabs {
+    display: flex;
+    border-bottom: 2px solid #6a0dad;
+    margin-bottom: 20px;
+}
+
+.add-user-tabs .tab {
+    padding: 10px 20px;
+    cursor: pointer;
+    font-weight: bold;
+    color: #6a0dad;
+    border-bottom: 2px solid transparent;
+}
+
+.add-user-tabs .tab.active {
+    border-bottom: 2px solid #6a0dad;
+}
+
+.tab-content {
+    display: block;
+    padding: 20px;
+    border: 1px solid #ddd;
+    border-radius: 5px;
+}
+
+.tab-content.active {
+    display: block;
+}
+
+.input-field {
+    width: 100%;
+    padding: 10px;
+    border: 1px solid #ccc;
+    border-radius: 5px;
+    margin-bottom: 15px;
+}
+
+.submit-btn {
+    background: #6a0dad;
+    color: white;
+    padding: 10px 15px;
+    border-radius: 5px;
+    border: none;
+    cursor: pointer;
+    font-weight: bold;
+}
+
+.submit-btn:hover {
+    background: #5a0bab;
+}
