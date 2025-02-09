@@ -476,3 +476,17 @@ body {
 .search-icon:hover {
     color: #4b0082; /* Darker shade for hover effect */
 }
+
+
+/* ✅ Tabs Content */
+.tab-pane {
+    display: none; /* Hide all tabs initially */
+    padding: 20px;
+    background: white;
+    border: 1px solid #ddd;
+}
+
+/* ✅ Only the active tab should be visible */
+.tab-pane.show.active {
+    display: block;
+}
