@@ -19,7 +19,12 @@
             <option value="user_status">User Status</option>
             <option value="locked_status">Locked Status</option>
         </select>
-        <input type="text" id="searchInput" class="search-bar" placeholder="Search by Profile ID, Name, Email, Contact...">
+        <div class="search-container">
+    <input type="text" id="searchInput" class="search-bar" placeholder="Search by Profile ID, Name, Email, Contact...">
+    <button type="submit" id="searchButton" class="search-icon">
+        <i class="fas fa-search"></i>
+    </button>
+</div>
         <button class="add-user-btn">+ Add User</button>
         <button class="import-user-btn">📥 Import</button>
     </div>
