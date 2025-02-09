@@ -42,20 +42,40 @@ document.addEventListener("DOMContentLoaded", function() {
         activeTabPane.style.display = "block";
     }
 
+    // Manage Portal tab change hide and show
+
+
     let managePortalTabs = document.querySelectorAll("#managePortalTabs a");
-    if (managePortalTabs) {
-        managePortalTabs.forEach(tab => {
-            tab.addEventListener("click", function (e) {
-                e.preventDefault();
-                document.querySelectorAll(".tab-pane").forEach(pane => pane.style.display = "none");
-                let targetPane = document.querySelector(this.getAttribute("href"));
-                if (targetPane) {
-                    targetPane.style.display = "block";
-                    targetPane.classList.add("show", "active");
-                }
+
+    managePortalTabs.forEach(tab => {
+        tab.addEventListener("click", function(event) {
+            event.preventDefault();
+            const targetId = this.getAttribute("href").substring(1);
+
+            // Hide all tab panes
+            document.querySelectorAll(".tab-pane").forEach(pane => {
+                pane.classList.remove("show", "active");
+                pane.style.display = "none"; // Explicitly hide all
             });
+
+            // Remove active class from all tabs
+            document.querySelectorAll("#managePortalTabs a").forEach(tab => {
+                tab.classList.remove("active");
+            });
+
+            // Show the selected tab pane
+            let targetPane = document.getElementById(targetId);
+            if (targetPane) {
+                targetPane.classList.add("show", "active");
+                targetPane.style.display = "block"; // Ensure it is visible
+            }
+
+            // Add active class to the clicked tab
+            this.classList.add("active");
         });
-    }
+    });
+
+
 
     let userManagementBtn = document.querySelector(".user-box[onclick]");
     if (userManagementBtn) {

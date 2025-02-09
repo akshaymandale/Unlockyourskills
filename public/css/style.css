@@ -178,6 +178,19 @@ body {
     border-radius: 5px;
 }
 
+
+.nav-tabs .nav-link.active {
+    background-color: #6a0dad !important;  /* Dark purple */
+    color: white !important;  /* White text */
+    border-color: #ddd;
+}
+
+/* ✅ Also ensure hover effect */
+.nav-tabs .nav-link:hover {
+    background-color: #8c52ff !important;
+    color: white !important;
+}
+
 /* ✅ Tab Content */
 .tab-content {
     background: white;
