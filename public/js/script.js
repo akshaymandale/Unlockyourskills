@@ -2,15 +2,45 @@
 
 document.addEventListener("DOMContentLoaded", function() {
 
-    let sidebarToggle = document.getElementById("sidebarToggle");
-    let sidebar = document.getElementById("sidebar");
     let profileToggle = document.getElementById("profileToggle");
     let profileDropdown = document.getElementById("profileDropdown");
+    
+    let sidebar = document.getElementById("sidebar");
+    let container = document.querySelector(".container");
 
+    // ✅ Adjust on page load
+    adjustContainerWidth();
+
+    function adjustContainerWidth() {
+        if (sidebar.classList.contains("collapsed")) {
+            container.style.marginLeft = "80px";
+            container.style.maxWidth = "calc(100% - 80px)";
+        } else {
+            container.style.marginLeft = "250px";
+            container.style.maxWidth = "calc(100% - 250px)";
+        }
+    }
+
+    // ✅ Adjust container margin based on sidebar state on page load
+    if (sidebar.classList.contains("collapsed")) {
+        container.style.marginLeft = "80px"; // Sidebar is collapsed
+    } else {
+        container.style.marginLeft = "250px"; // Sidebar is expanded
+    }
+
+    // ✅ Toggle Sidebar on Button Click
+    let sidebarToggle = document.getElementById("sidebarToggle");
     if (sidebarToggle) {
-        sidebarToggle.addEventListener("click", function() {
+        sidebarToggle.addEventListener("click", function () {
             sidebar.classList.toggle("collapsed");
-            document.body.classList.toggle("sidebar-collapsed");
+
+            if (sidebar.classList.contains("collapsed")) {
+                container.style.marginLeft = "80px"; // Adjusted for collapsed sidebar
+            } else {
+                container.style.marginLeft = "250px"; // Adjusted for expanded sidebar
+            }
+
+            adjustContainerWidth();
         });
     }
 

@@ -8,6 +8,11 @@ body {
     overflow-x: hidden;
 }
 
+/* ✅ Prevent Content Overflow */
+html, body {
+    overflow-x: hidden;
+}
+
 /* ✅ Fix Navbar (Horizontal Layout) */
 .navbar {
     height: 60px;
@@ -142,14 +147,28 @@ body {
 }
 
 /* ✅ Fix Dashboard Content (Avoid Overlapping with Sidebar) */
+/* ✅ Override Bootstrap's Max-Width */
+/* ✅ Ensure Full-Width Without Overflow */
 .container {
-    margin-left: 260px;
-    padding: 20px;
-    transition: margin-left 0.3s;
+    max-width: calc(100% - 250px) !important; /* Adjust width based on sidebar */
+    width: 100%;
+    transition: margin-left 0.1s ease-in-out;
+    overflow-x: hidden; /* Prevents horizontal scroll */
 }
+
+/* ✅ When Sidebar is Collapsed */
 .sidebar.collapsed + .container {
-    margin-left: 100px;
+    max-width: calc(100% - 80px) !important; /* Adjust width based on collapsed sidebar */
+    margin-left: 80px !important;
 }
+
+/* ✅ When Sidebar is Expanded */
+.sidebar + .container {
+    margin-left: 250px !important;
+    max-width: calc(100% - 250px) !important;
+}
+
+
 
 /* ✅ Manage Portal Tabs Styling */
 .nav-tabs {
@@ -230,7 +249,7 @@ body {
     color: #555;
 }
 
-.footer {
+.site-footer .site-info {
     text-align: center;
     padding: 10px;
     background: #6a0dad;
@@ -404,7 +423,7 @@ body {
     padding: 20px;
     border-radius: 10px;
     box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-    margin-top: 20px;
+   /* margin-top: 20px; */
 }
 
 .add-user-tabs {
@@ -527,7 +546,7 @@ body {
     display: flex;
     justify-content: center; /* Center align buttons */
     gap: 15px; /* Space between buttons */
-    margin-top: 25px; /* Ensure spacing from form fields */
+    /*margin-top: 25px; Ensure spacing from form fields */
 }
 
 /* ✅ Theme Consistency for Buttons */
@@ -555,4 +574,39 @@ body {
 
 .btn-danger:hover {
     background-color: #a71d2a !important; /* Darker red on hover */
+}
+
+/* ✅ Sidebar Styling */
+#sidebar {
+    background-color: #6a0dad !important; /* Theme primary color */
+    min-height: 100vh;
+    padding-top: 20px;
+}
+
+/* ✅ List Group Theme Fix */
+.list-group {
+    background-color: #6a0dad !important; /* Sidebar background */
+    border-radius: 8px;
+}
+
+/* ✅ List Group Items */
+.list-group-item {
+    background-color: transparent !important;
+    color: white !important;
+    border: none !important;
+    padding: 12px 15px;
+    font-size: 16px;
+    transition: background 0.3s ease-in-out, color 0.3s ease-in-out;
+}
+
+/* ✅ Hover & Active State */
+.list-group-item:hover, .list-group-item.active {
+    background-color: #4b0082 !important; /* Darker shade for hover */
+    color: #fff !important;
+}
+
+/* ✅ List Group Icons */
+.list-group-item i {
+    margin-right: 10px;
+    font-size: 18px;
 }
