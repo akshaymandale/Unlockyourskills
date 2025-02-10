@@ -14,10 +14,11 @@ include 'views/includes/navbar.php';
 include 'views/includes/sidebar.php';
 ?>
 
-<div class="container mt-4">
+<div class="container add-user-container">
     <h2>Welcome to the Dashboard</h2>
     <p>This is your e-learning admin panel.</p>
 </div>
 
 </body>
 </html>
+<?php include 'includes/footer.php'; ?>

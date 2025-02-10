@@ -6,7 +6,7 @@
 <?php include 'includes/navbar.php'; ?>
 <?php include 'includes/sidebar.php'; ?>
 
-<div class="container">
+<div class="container add-user-container">
     <h1>Manage Portal</h1>
     
     <!-- ✅ Tabs Section -->
