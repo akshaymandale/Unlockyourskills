@@ -503,3 +503,56 @@ body {
 .tab-pane.show.active {
     display: block;
 }
+
+/* ✅ Align Submit and Cancel Buttons to the Right */
+
+.form-group {
+    margin-bottom: 15px; /* Add consistent spacing between form fields */
+}
+
+/* ✅ Ensure Two Fields Appear Side by Side */
+.form-group-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 20px; /* Ensure spacing between fields */
+}
+
+.form-group-row .form-group {
+    flex: 1;
+    min-width: 45%;
+}
+
+/* ✅ Center Submit & Cancel Buttons */
+.form-actions {
+    display: flex;
+    justify-content: center; /* Center align buttons */
+    gap: 15px; /* Space between buttons */
+    margin-top: 25px; /* Ensure spacing from form fields */
+}
+
+/* ✅ Theme Consistency for Buttons */
+.btn-primary {
+    background-color: #6a0dad !important; /* Theme primary button */
+    border: none;
+    padding: 10px 15px;
+    border-radius: 5px;
+    color: white;
+    transition: 0.3s;
+}
+
+.btn-primary:hover {
+    background-color: #4b0082 !important; /* Darker shade on hover */
+}
+
+.btn-danger {
+    background-color: #dc3545 !important; /* Red cancel button */
+    border: none;
+    padding: 10px 15px;
+    border-radius: 5px;
+    color: white;
+    transition: 0.3s;
+}
+
+.btn-danger:hover {
+    background-color: #a71d2a !important; /* Darker red on hover */
+}
