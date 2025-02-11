@@ -152,4 +152,67 @@ document.addEventListener("DOMContentLoaded", function() {
             this.classList.add("active");
         });
     });
+
+// Country - State - City script
+
+const countrySelect = document.getElementById("country");
+const stateSelect = document.getElementById("state");
+const citySelect = document.getElementById("city");
+
+countrySelect.addEventListener("change", function () {
+    const countryId = this.value;
+    stateSelect.disabled = true;
+    citySelect.disabled = true;
+    citySelect.innerHTML = '<option value="">Select City</option>';
+
+    if (countryId) {
+        fetch("index.php?controller=LocationController&action=getStatesByCountry", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/x-www-form-urlencoded",
+            },
+            body: `country_id=${countryId}`,
+        })
+            .then((response) => response.json())
+            .then((states) => {
+                let options = '<option value="">Select State</option>';
+                states.forEach((state) => {
+                    options += `<option value="${state.id}">${state.name}</option>`;
+                });
+                stateSelect.innerHTML = options;
+                stateSelect.disabled = false;
+            });
+    } else {
+        stateSelect.innerHTML = '<option value="">Select State</option>';
+        stateSelect.disabled = true;
+    }
+});
+
+stateSelect.addEventListener("change", function () {
+    const stateId = this.value;
+    citySelect.disabled = true;
+
+    if (stateId) {
+        fetch("index.php?controller=LocationController&action=getCitiesByState", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/x-www-form-urlencoded",
+            },
+            body: `state_id=${stateId}`,
+        })
+            .then((response) => response.json())
+            .then((cities) => {
+                let options = '<option value="">Select City</option>';
+                cities.forEach((city) => {
+                    options += `<option value="${city.id}">${city.name}</option>`;
+                });
+                citySelect.innerHTML = options;
+                citySelect.disabled = false;
+            });
+    } else {
+        citySelect.innerHTML = '<option value="">Select City</option>';
+        citySelect.disabled = true;
+    }
+});
+
 });

@@ -1,5 +1,8 @@
 <?php
-// views/add_user.php
+// Fetch all countries for the initial dropdown
+include 'config/database.php'; 
+$stmt = $db->query("SELECT id, name FROM countries");
+$countries = $stmt->fetchAll(PDO::FETCH_ASSOC);
 ?>
 
 <?php include 'includes/header.php'; ?>
@@ -100,18 +103,27 @@
             <div class="tab-pane" id="additional-details">
                 <div class="row">
                     <div class="col-lg-6 col-md-6 col-sm-12 form-group">
-                        <label>Country</label>
-                        <input type="text" name="country" class="input-field" id="country-autocomplete">
+                        <label for="country">Country</label>
+                        <select id="country" name="country" class="form-control">
+                            <option value="">Select Country</option>
+                            <?php foreach ($countries as $country): ?>
+                                <option value="<?= $country['id']; ?>"><?= $country['name']; ?></option>
+                            <?php endforeach; ?>
+                        </select>
                     </div>
                     <div class="col-lg-6 col-md-6 col-sm-12 form-group">
-                        <label>State</label>
-                        <input type="text" name="state" class="input-field" id="state-autocomplete">
+                        <label for="state">State</label>
+                            <select id="state" name="state" class="form-control" disabled>
+                                <option value="">Select State</option>
+                            </select>
                     </div>
                 </div>
                 <div class="row">
                     <div class="col-lg-6 col-md-6 col-sm-12 form-group">
-                        <label>City</label>
-                        <input type="text" name="city" class="input-field" id="city-autocomplete">
+                        <label for="city">City</label>
+                            <select id="city" name="city" class="form-control" disabled>
+                                <option value="">Select City</option>
+                            </select>
                     </div>
                     <div class="col-lg-6 col-md-6 col-sm-12 form-group">
                         <label>Timezone</label>
