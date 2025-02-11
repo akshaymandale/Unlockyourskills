@@ -1,6 +1,4 @@
 <?php
-// controllers/LocationController.php
-
 require_once 'models/LocationModel.php';
 
 class LocationController {
@@ -15,6 +13,8 @@ class LocationController {
             $country_id = $_POST['country_id'];
             $states = $this->locationModel->fetchStatesByCountry($country_id);
             echo json_encode($states);
+        } else {
+            echo json_encode([]);
         }
     }
 
@@ -23,6 +23,8 @@ class LocationController {
             $state_id = $_POST['state_id'];
             $cities = $this->locationModel->fetchCitiesByState($state_id);
             echo json_encode($cities);
+        } else {
+            echo json_encode([]);
         }
     }
 }

@@ -7,7 +7,8 @@ class LocationModel {
     private $db;
 
     public function __construct() {
-        $this->db = Database::getConnection();
+        $database = new Database(); // Create a Database object
+        $this->db = $database->connect(); // Use `connect()` instead of `getConnection()`
     }
 
     public function fetchStatesByCountry($country_id) {
@@ -22,4 +23,5 @@ class LocationModel {
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
 }
+
 ?>

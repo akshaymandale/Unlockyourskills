@@ -1,8 +1,21 @@
 <?php
 // Fetch all countries for the initial dropdown
-include 'config/database.php'; 
+require_once 'config/database.php';
+
+// Instantiate the Database class
+$database = new Database();
+
+// Establish the connection
+$db = $database->connect();
+
+// Check if the connection was successful
+if (!$db) {
+    die("Database connection failed.");
+}
+
 $stmt = $db->query("SELECT id, name FROM countries");
 $countries = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
 ?>
 
 <?php include 'includes/header.php'; ?>
@@ -104,7 +117,7 @@ $countries = $stmt->fetchAll(PDO::FETCH_ASSOC);
                 <div class="row">
                     <div class="col-lg-6 col-md-6 col-sm-12 form-group">
                         <label for="country">Country</label>
-                        <select id="country" name="country" class="form-control">
+                        <select id="countrySelect" name="country" class="form-control">
                             <option value="">Select Country</option>
                             <?php foreach ($countries as $country): ?>
                                 <option value="<?= $country['id']; ?>"><?= $country['name']; ?></option>
@@ -113,7 +126,7 @@ $countries = $stmt->fetchAll(PDO::FETCH_ASSOC);
                     </div>
                     <div class="col-lg-6 col-md-6 col-sm-12 form-group">
                         <label for="state">State</label>
-                            <select id="state" name="state" class="form-control" disabled>
+                            <select id="stateSelect" name="state" class="form-control" disabled>
                                 <option value="">Select State</option>
                             </select>
                     </div>
@@ -121,7 +134,7 @@ $countries = $stmt->fetchAll(PDO::FETCH_ASSOC);
                 <div class="row">
                     <div class="col-lg-6 col-md-6 col-sm-12 form-group">
                         <label for="city">City</label>
-                            <select id="city" name="city" class="form-control" disabled>
+                            <select id="citySelect" name="city" class="form-control" disabled>
                                 <option value="">Select City</option>
                             </select>
                     </div>
