@@ -155,64 +155,79 @@ document.addEventListener("DOMContentLoaded", function() {
 
 // Country - State - City script
 
-const countrySelect = document.getElementById("country");
-const stateSelect = document.getElementById("state");
-const citySelect = document.getElementById("city");
+    const countrySelect = document.getElementById("countrySelect");
+    const stateSelect = document.getElementById("stateSelect");
+    const citySelect = document.getElementById("citySelect");
 
-countrySelect.addEventListener("change", function () {
-    const countryId = this.value;
-    stateSelect.disabled = true;
-    citySelect.disabled = true;
-    citySelect.innerHTML = '<option value="">Select City</option>';
-
-    if (countryId) {
-        fetch("index.php?controller=LocationController&action=getStatesByCountry", {
-            method: "POST",
-            headers: {
-                "Content-Type": "application/x-www-form-urlencoded",
-            },
-            body: `country_id=${countryId}`,
-        })
-            .then((response) => response.json())
-            .then((states) => {
-                let options = '<option value="">Select State</option>';
-                states.forEach((state) => {
-                    options += `<option value="${state.id}">${state.name}</option>`;
-                });
-                stateSelect.innerHTML = options;
-                stateSelect.disabled = false;
-            });
-    } else {
+    countrySelect.addEventListener("change", function() {
+        const countryId = this.value;
         stateSelect.innerHTML = '<option value="">Select State</option>';
-        stateSelect.disabled = true;
-    }
-});
-
-stateSelect.addEventListener("change", function () {
-    const stateId = this.value;
-    citySelect.disabled = true;
-
-    if (stateId) {
-        fetch("index.php?controller=LocationController&action=getCitiesByState", {
-            method: "POST",
-            headers: {
-                "Content-Type": "application/x-www-form-urlencoded",
-            },
-            body: `state_id=${stateId}`,
-        })
-            .then((response) => response.json())
-            .then((cities) => {
-                let options = '<option value="">Select City</option>';
-                cities.forEach((city) => {
-                    options += `<option value="${city.id}">${city.name}</option>`;
-                });
-                citySelect.innerHTML = options;
-                citySelect.disabled = false;
-            });
-    } else {
         citySelect.innerHTML = '<option value="">Select City</option>';
         citySelect.disabled = true;
-    }
-});
+
+        if (countryId) {
+            fetch(`index.php?controller=LocationController&action=getStatesByCountry`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                },
+                body: `country_id=${countryId}`,
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.length > 0) {
+                    data.forEach(state => {
+                        const option = document.createElement('option');
+                        option.value = state.id;
+                        option.textContent = state.name;
+                        stateSelect.appendChild(option);
+                    });
+                    stateSelect.disabled = false;
+                } else {
+                    stateSelect.disabled = true;
+                }
+            })
+            .catch(error => {
+                console.error('Error fetching states:', error);
+            });
+        } else {
+            stateSelect.disabled = true;
+            citySelect.disabled = true;
+        }
+    });
+
+    stateSelect.addEventListener("change", function() {
+        const stateId = this.value;
+        citySelect.innerHTML = '<option value="">Select City</option>';
+
+        if (stateId) {
+            fetch(`index.php?controller=LocationController&action=getCitiesByState`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                },
+                body: `state_id=${stateId}`,
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.length > 0) {
+                    data.forEach(city => {
+                        const option = document.createElement('option');
+                        option.value = city.id;
+                        option.textContent = city.name;
+                        citySelect.appendChild(option);
+                    });
+                    citySelect.disabled = false;
+                } else {
+                    citySelect.disabled = true;
+                }
+            })
+            .catch(error => {
+                console.error('Error fetching cities:', error);
+            });
+        } else {
+            citySelect.disabled = true;
+        }
+    });
 
 });
