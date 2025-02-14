@@ -30,23 +30,23 @@ $countries = $stmt->fetchAll(PDO::FETCH_ASSOC);
 <input type="hidden" id="clientName" value="<?php echo htmlspecialchars($clientName); ?>">
 <div class="container add-user-container">
     <h1>Add User</h1>
-    
-    <!-- ✅ Tabs Section -->
-    <!-- Tabs Navigation -->
-    <ul class="nav nav-tabs" id="addUserTabs">
-        <li class="nav-item">
-            <a class="nav-link active" data-toggle="tab" href="#basic-details">Basic Details</a>
-        </li>
-        <li class="nav-item">
-            <a class="nav-link" data-toggle="tab" href="#additional-details">Additional Details</a>
-        </li>
-        <li class="nav-item">
-            <a class="nav-link" data-toggle="tab" href="#extra-details">Extra Details</a>
-        </li>
-    </ul>
+    <form action="index.php?controller=UserManagementController&action=storeUser" id="addUserForm" method="POST" enctype="multipart/form-data">  
+        <!-- ✅ Tabs Section -->
+        <!-- Tabs Navigation -->
+        <ul class="nav nav-tabs" id="addUserTabs">
+            <li class="nav-item">
+                <a class="nav-link active" data-toggle="tab" href="#basic-details">Basic Details</a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link" data-toggle="tab" href="#additional-details">Additional Details</a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link" data-toggle="tab" href="#extra-details">Extra Details</a>
+            </li>
+        </ul>
 
         <!-- Tabs Content -->
-    <form action="process_add_user.php" id="addUserForm" method="POST" enctype="multipart/form-data">
+
         <div class="tab-content">
             <div class="tab-pane show active" id="basic-details">
                 <div class="row">
@@ -233,11 +233,11 @@ $countries = $stmt->fetchAll(PDO::FETCH_ASSOC);
                 </div>
             </div>
             <div class="row mt-4">
-    <div class="col-md-12 form-actions">
-        <button type="submit" class="btn btn-primary">Submit</button>
-        <button type="reset" class="btn btn-danger">Cancel</button>
-    </div>
-</div>
+            <div class="col-md-12 form-actions">
+                <button type="submit" class="btn btn-primary">Submit</button>
+                <button type="reset" class="btn btn-danger">Cancel</button>
+            </div>
+            </div>
         </div>
     </form>
 </div>

@@ -1,5 +1,6 @@
 <?php
 // controllers/UserManagementController.php
+require_once 'models/UserModel.php';
 
 class UserManagementController {
     
@@ -10,17 +11,21 @@ class UserManagementController {
     public function addUser() {
         include 'views/add_user.php';
     }
-    
-    public function store() {
-        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-            include 'models/UserModel.php';
-    
+
+    public function storeUser() {
+        if ($_SERVER["REQUEST_METHOD"] === "POST") {
             $userModel = new UserModel();
-            $userModel->addUser($_POST, $_FILES, 'user_profiles'); // Specify table name
-    
-            header('Location: index.php?controller=UserManagementController&action=index');
-            exit();
+            $result = $userModel->insertUser($_POST, $_FILES);
+
+            if ($result) {
+                echo "<script>alert('User added successfully!'); 
+                window.location.href='index.php?controller=UserManagementController';</script>";
+            } else {
+                echo "<script>alert('Error adding user.'); 
+                window.history.back();</script>";
+            }
         }
     }
+    
 }
 ?>
