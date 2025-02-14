@@ -2,29 +2,39 @@
 require_once 'models/LocationModel.php';
 
 class LocationController {
-    private $locationModel;
-
-    public function __construct() {
-        $this->locationModel = new LocationModel();
-    }
-
+    
     public function getStatesByCountry() {
-        if (isset($_POST['country_id'])) {
+        if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST['country_id'])) {
             $country_id = $_POST['country_id'];
-            $states = $this->locationModel->fetchStatesByCountry($country_id);
+            $locationModel = new LocationModel();
+            $states = $locationModel->getStatesByCountry($country_id);
+
+            header('Content-Type: application/json');
             echo json_encode($states);
-        } else {
-            echo json_encode([]);
         }
     }
 
     public function getCitiesByState() {
-        if (isset($_POST['state_id'])) {
+        if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST['state_id'])) {
             $state_id = $_POST['state_id'];
-            $cities = $this->locationModel->fetchCitiesByState($state_id);
+            $locationModel = new LocationModel();
+            $cities = $locationModel->getCitiesByState($state_id);
+
+            header('Content-Type: application/json');
             echo json_encode($cities);
-        } else {
-            echo json_encode([]);
+        }
+    }
+
+    // ✅ Fetch Timezones based on Country
+    public function getTimezonesByCountry() {
+        if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST['country_id'])) {
+            $country_id = $_POST['country_id'];
+    
+            $locationModel = new LocationModel();
+            $timezones = $locationModel->getTimezonesByCountry($country_id);
+    
+            header('Content-Type: application/json');
+            echo json_encode(["success" => true, "timezones" => $timezones]);
         }
     }
 }

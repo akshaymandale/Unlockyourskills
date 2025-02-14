@@ -19,12 +19,14 @@ class LoginController {
 
             $userModel = new UserModel();
             $user = $userModel->getUser($client_code, $username);
+            //echo '<pre>'; print_r($user); die;
 
             if ($user) {
                 // ✅ Compare plain text password directly
-                if ($password === $user['password']) {
+                if ($password === $user['current_password']) {
                     $_SESSION['loggedin'] = true;
                     $_SESSION['username'] = $username;
+                    $_SESSION['client_code'] = $client_code;
 
                     header('Location: index.php?controller=DashboardController&action=index');
                     exit();
