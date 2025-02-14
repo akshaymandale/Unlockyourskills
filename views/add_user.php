@@ -40,7 +40,7 @@ $countries = $stmt->fetchAll(PDO::FETCH_ASSOC);
     </ul>
 
         <!-- Tabs Content -->
-    <form action="process_add_user.php"" method="POST" enctype="multipart/form-data">
+    <form action="process_add_user.php" id="addUserForm" method="POST" enctype="multipart/form-data">
         <div class="tab-content">
             <div class="tab-pane show active" id="basic-details">
                 <div class="row">
@@ -50,17 +50,17 @@ $countries = $stmt->fetchAll(PDO::FETCH_ASSOC);
                     </div>
                     <div class="col-lg-6 col-md-6 col-sm-12 form-group">
                         <label>Full Name *</label>
-                        <input type="text" name="full_name" required class="input-field">
+                        <input type="text" id="full_name" name="full_name" required class="input-field">
                     </div>
                 </div>
                 <div class="row">
                     <div class="col-lg-6 col-md-6 col-sm-12 form-group">
                         <label>Email *</label>
-                        <input type="email" name="email" required class="input-field">
+                        <input type="text" id="email" name="email" required class="input-field">
                     </div>
                     <div class="col-lg-6 col-md-6 col-sm-12 form-group">
                         <label>Contact Number *</label>
-                        <input type="text" name="contact_number" required class="input-field">
+                        <input type="text" id="contact_number" name="contact_number" required class="input-field">
                     </div>
                 </div>
                 <div class="row">
@@ -75,42 +75,45 @@ $countries = $stmt->fetchAll(PDO::FETCH_ASSOC);
                     </div>
                     <div class="col-lg-6 col-md-6 col-sm-12 form-group">
                         <label>Date of Birth</label>
-                        <input type="date" name="dob" class="input-field">
+                        <input type="date" id="dob" name="dob" class="input-field">
                     </div>
                 </div>
                 <div class="row">
                     <div class="col-lg-6 col-md-6 col-sm-12 form-group">
                         <label>User Role *</label>
-                        <select name="user_role" required class="input-field">
+                        <select id="user_role" name="user_role" required class="input-field">
                             <option value="Admin">Admin</option>
                             <option value="End User">End User</option>
                         </select>
                     </div>
                     <div class="col-lg-6 col-md-6 col-sm-12 form-group">
                         <label>Profile Expiry Date</label>
-                        <input type="date" name="profile_expiry" class="input-field">
+                        <input type="date" id="profile_expiry" name="profile_expiry" class="input-field">
                     </div>
                 </div>
                 <div class="row">
                     <div class="col-lg-6 col-md-6 col-sm-12 form-group">
                         <label>User Status</label>
-                        <input type="checkbox" name="user_status" checked> Active
+                        <input type="checkbox" name="user_status_active" checked> Active
+                        <input type="checkbox" name="user_status_inactive" > InActive
                     </div>
                     <div class="col-lg-6 col-md-6 col-sm-12 form-group">
                         <label>Locked Status</label>
-                        <input type="checkbox" name="locked_status"> Unlocked
+                        <input type="checkbox" name="locked_status"> Locked
+                        <input type="checkbox" name="unlocked_status" checked> Unlocked
                     </div>
                 </div>
                 <div class="row">
                     <div class="col-lg-6 col-md-6 col-sm-12 form-group">
                         <label>Appear On Leaderboard</label>
-                        <input type="checkbox" name="leaderboard" checked> Yes
+                        <input type="checkbox" name="leaderboard_yes" checked> Yes
+                        <input type="checkbox" name="leaderboard_no"> No
                     </div>
                     <div class="col-lg-6 col-md-6 col-sm-12 form-group">
                         <label>Profile Picture</label>
-                        <input type="file" name="profile_picture" accept="image/jpeg, image/png" class="input-field">
+                        <input type="file" id="profile_picture" name="profile_picture" accept="image/jpeg, image/png" class="input-field">
                     </div>
-                </div>
+         </div>
             </div>
 
             <div class="tab-pane" id="additional-details">
@@ -140,7 +143,7 @@ $countries = $stmt->fetchAll(PDO::FETCH_ASSOC);
                     </div>
                     <div class="col-lg-6 col-md-6 col-sm-12 form-group">
                         <label>Timezone</label>
-                        <input type="text" name="timezone" class="input-field">
+                        <input type="text" name="timezone" id="timezone" class="input-field" readonly>
                     </div>
                 </div>
                 <div class="row">
@@ -226,5 +229,6 @@ $countries = $stmt->fetchAll(PDO::FETCH_ASSOC);
         </div>
     </form>
 </div>
-
+<!-- ✅ Form Validation Script -->
+<script src="public/js/add_user_validation.js"></script>
 <?php include 'includes/footer.php'; ?>
