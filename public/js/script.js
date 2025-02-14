@@ -259,4 +259,23 @@ stateSelect.addEventListener("change", function() {
                 profileExpiryInput.setAttribute("min", today);
             }
 
+            let profileIdInput = document.getElementById("profile_id");
+
+            // ✅ Fetch Client Name from Session (Injected via PHP)
+            let clientName = document.getElementById("clientName").value; // Hidden input in add_user.php
+        
+            if (clientName) {
+                // ✅ Extract First 3 Letters of Client Name
+                let clientPrefix = clientName.substring(0, 3).toUpperCase();
+        
+                // ✅ Generate a Unique 7-Digit Number
+                let randomNumber = Math.floor(1000000 + Math.random() * 9000000);
+        
+                // ✅ Final Profile ID (Example: "DEE1234567")
+                let generatedProfileId = clientPrefix + randomNumber;
+        
+                // ✅ Auto-Fill Profile ID Field (Read-Only)
+                profileIdInput.value = generatedProfileId;
+            }
+
 });
