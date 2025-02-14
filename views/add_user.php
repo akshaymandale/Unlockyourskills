@@ -82,6 +82,7 @@ $countries = $stmt->fetchAll(PDO::FETCH_ASSOC);
                     <div class="col-lg-6 col-md-6 col-sm-12 form-group">
                         <label>User Role *</label>
                         <select id="user_role" name="user_role" required class="input-field">
+                        <option value="">Select User Role</option>
                             <option value="Admin">Admin</option>
                             <option value="End User">End User</option>
                         </select>
@@ -143,8 +144,11 @@ $countries = $stmt->fetchAll(PDO::FETCH_ASSOC);
                     </div>
                     <div class="col-lg-6 col-md-6 col-sm-12 form-group">
                         <label>Timezone</label>
-                        <input type="text" name="timezone" id="timezone" class="input-field" readonly>
+                            <select id="timezoneSelect" name="timezone" class="input-field">
+                                <option value="">Select Timezone</option>
+                            </select>
                     </div>
+                    
                 </div>
                 <div class="row">
                     <div class="col-lg-6 col-md-6 col-sm-12 form-group">

@@ -155,79 +155,108 @@ document.addEventListener("DOMContentLoaded", function() {
 
 // Country - State - City script
 
-    const countrySelect = document.getElementById("countrySelect");
-    const stateSelect = document.getElementById("stateSelect");
-    const citySelect = document.getElementById("citySelect");
+const countrySelect = document.getElementById("countrySelect");
+const stateSelect = document.getElementById("stateSelect");
+const citySelect = document.getElementById("citySelect");
+const timezoneSelect = document.getElementById("timezoneSelect");
 
-    countrySelect.addEventListener("change", function() {
-        const countryId = this.value;
-        stateSelect.innerHTML = '<option value="">Select State</option>';
-        citySelect.innerHTML = '<option value="">Select City</option>';
-        citySelect.disabled = true;
+// ✅ Fetch States on Country Select
+countrySelect.addEventListener("change", function() {
+    const countryId = this.value;
+    stateSelect.innerHTML = '<option value="">Select State</option>';
+    citySelect.innerHTML = '<option value="">Select City</option>';
+    timezoneSelect.innerHTML = '<option value="">Select Timezone</option>';
+    citySelect.disabled = true;
+    timezoneSelect.disabled = true;
 
-        if (countryId) {
-            fetch(`index.php?controller=LocationController&action=getStatesByCountry`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/x-www-form-urlencoded',
-                },
-                body: `country_id=${countryId}`,
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data.length > 0) {
-                    data.forEach(state => {
-                        const option = document.createElement('option');
-                        option.value = state.id;
-                        option.textContent = state.name;
-                        stateSelect.appendChild(option);
-                    });
-                    stateSelect.disabled = false;
-                } else {
-                    stateSelect.disabled = true;
-                }
-            })
-            .catch(error => {
-                console.error('Error fetching states:', error);
-            });
-        } else {
-            stateSelect.disabled = true;
-            citySelect.disabled = true;
-        }
-    });
+    if (countryId) {
+        // ✅ Fetch States
+        fetch(`index.php?controller=LocationController&action=getStatesByCountry`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            body: `country_id=${countryId}`,
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.length > 0) {
+                data.forEach(state => {
+                    const option = document.createElement('option');
+                    option.value = state.id;
+                    option.textContent = state.name;
+                    stateSelect.appendChild(option);
+                });
+                stateSelect.disabled = false;
+            } else {
+                stateSelect.disabled = true;
+            }
+        })
+        .catch(error => console.error('Error fetching states:', error));
 
-    stateSelect.addEventListener("change", function() {
-        const stateId = this.value;
-        citySelect.innerHTML = '<option value="">Select City</option>';
+        // ✅ Fetch Timezones
+        fetch(`index.php?controller=LocationController&action=getTimezonesByCountry`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            body: `country_id=${countryId}`,
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success && data.timezones.length > 0) {
+                data.timezones.forEach(tz => {
+                    const option = document.createElement('option');
+                    option.value = tz.zoneName;
+                    option.textContent = `${tz.zoneName} (${tz.gmtOffsetName}) - ${tz.abbreviation} - ${tz.tzName}`;
+                    timezoneSelect.appendChild(option);
+                });
+                timezoneSelect.disabled = false;
+            } else {
+                timezoneSelect.disabled = true;
+            }
+        })
+        .catch(error => console.error('Error fetching timezones:', error));
+    }
+});
 
-        if (stateId) {
-            fetch(`index.php?controller=LocationController&action=getCitiesByState`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/x-www-form-urlencoded',
-                },
-                body: `state_id=${stateId}`,
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data.length > 0) {
-                    data.forEach(city => {
-                        const option = document.createElement('option');
-                        option.value = city.id;
-                        option.textContent = city.name;
-                        citySelect.appendChild(option);
-                    });
-                    citySelect.disabled = false;
-                } else {
-                    citySelect.disabled = true;
-                }
-            })
-            .catch(error => {
-                console.error('Error fetching cities:', error);
-            });
-        } else {
-            citySelect.disabled = true;
-        }
-    });
+// ✅ Fetch Cities on State Select
+stateSelect.addEventListener("change", function() {
+    const stateId = this.value;
+    citySelect.innerHTML = '<option value="">Select City</option>';
+    if (stateId) {
+        fetch(`index.php?controller=LocationController&action=getCitiesByState`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            body: `state_id=${stateId}`,
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.length > 0) {
+                data.forEach(city => {
+                    const option = document.createElement('option');
+                    option.value = city.id;
+                    option.textContent = city.name;
+                    citySelect.appendChild(option);
+                });
+                citySelect.disabled = false;
+            } else {
+                citySelect.disabled = true;
+            }
+        })
+        .catch(error => console.error('Error fetching cities:', error));
+    }
+});
+        // Disable date on datepicker
+        const dobInput = document.getElementById("dob");
+            const profileExpiryInput = document.getElementById("profile_expiry");
+
+            // ✅ Disable future dates for DOB
+            if (dobInput) {
+                const today = new Date().toISOString().split("T")[0];
+                dobInput.setAttribute("max", today);
+            }
+
+            // ✅ Restrict Profile Expiry Date to be today or later
+            if (profileExpiryInput) {
+                const today = new Date().toISOString().split("T")[0];
+                profileExpiryInput.setAttribute("min", today);
+            }
 
 });
