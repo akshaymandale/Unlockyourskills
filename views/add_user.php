@@ -27,7 +27,7 @@ $countries = $stmt->fetchAll(PDO::FETCH_ASSOC);
 <?php include 'includes/header.php'; ?>
 <?php include 'includes/navbar.php'; ?>
 <?php include 'includes/sidebar.php'; ?>
-<input type="hidden" id="clientName" value="<?php echo htmlspecialchars($clientName); ?>">
+
 <div class="container add-user-container">
     <h1>Add User</h1>
     <form action="index.php?controller=UserManagementController&action=storeUser" id="addUserForm" method="POST" enctype="multipart/form-data">  
@@ -46,7 +46,7 @@ $countries = $stmt->fetchAll(PDO::FETCH_ASSOC);
         </ul>
 
         <!-- Tabs Content -->
-
+        <input type="hidden" name="client_id" id="clientName" value="<?php echo htmlspecialchars($clientName); ?>">
         <div class="tab-content">
             <div class="tab-pane show active" id="basic-details">
                 <div class="row">
