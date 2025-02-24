@@ -30,9 +30,9 @@ class UserModel {
         $dob = !empty($postData['dob']) ? $postData['dob'] : null;
         $user_role = $postData['user_role'] ?? null;
         $profile_expiry = !empty($postData['profile_expiry']) ? $postData['profile_expiry'] : null;
-        $user_status = $postData['user_status_active'];
-        $locked_status = $postData['unlocked_status'];
-        $leaderboard = $postData['leaderboard_yes'];
+        $user_status = $postData['user_status'] ?? null;
+        $locked_status = $postData['locked_status'] ?? null;
+        $leaderboard = $postData['leaderboard'] ?? null;
         $country = $postData['country'] ?? null;
         $state = $postData['state'] ?? null;
         $city = $postData['city'] ?? null;
