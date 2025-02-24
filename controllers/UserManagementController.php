@@ -107,7 +107,7 @@ class UserManagementController {
         } else {
             die("Error inserting user.");
         }
-      //  echo "<pre>"; print_r($_POST); echo "</pre>"; exit;
+      echo "<pre>"; print_r($_POST); echo "</pre>"; exit;
     }
     
     

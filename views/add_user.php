@@ -105,10 +105,10 @@ $countries = $stmt->fetchAll(PDO::FETCH_ASSOC);
                         <label>User Status :</label>
                             <div>
                                 <label>
-                                    <input type="radio" name="user_status" value="1" checked> Active
+                                    <input type="radio" name="user_status" value="Active" checked> Active
                                 </label>
                                 <label>
-                                    <input type="radio" name="user_status" value="0"> Inactive
+                                    <input type="radio" name="user_status" value="Inactive"> Inactive
                                 </label>
                             </div>
                     </div>
@@ -117,10 +117,10 @@ $countries = $stmt->fetchAll(PDO::FETCH_ASSOC);
                         <label>Locked Status :</label>
                         <div>
                             <label>
-                                <input type="radio" name="locked_status" value="1"> Locked
+                                <input type="radio" name="locked_status" value="Locked"> Locked
                             </label>
                             <label>
-                                <input type="radio" name="locked_status" value="0" checked> Unlocked
+                                <input type="radio" name="locked_status" value="Unlocked" checked> Unlocked
                             </label>
                         </div>
                     </div>
@@ -131,10 +131,10 @@ $countries = $stmt->fetchAll(PDO::FETCH_ASSOC);
                         <label>Appear on Leaderboard :</label>
                         <div>
                             <label>
-                                <input type="radio" name="leaderboard" value="1"> Yes
+                                <input type="radio" name="leaderboard" value="Yes"> Yes
                             </label>
                             <label>
-                                <input type="radio" name="leaderboard" value="0" checked> No
+                                <input type="radio" name="leaderboard" value="No" checked> No
                             </label>
                         </div>
                     </div>
