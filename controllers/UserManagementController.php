@@ -16,7 +16,6 @@ class UserManagementController {
        // session_start();
 
         // Ensure client_id is set
-        
       //  $client_id = $_SESSION['client_id'];
         $client_id = trim($_POST['client_id']);
         // Extract form data
@@ -28,9 +27,9 @@ class UserManagementController {
         $dob = trim($_POST['dob']);
         $user_role = trim($_POST['user_role']);
         $profile_expiry = trim($_POST['profile_expiry']);
-        $user_status = isset($_POST['user_status']) ? 1 : 0;
-        $locked_status = isset($_POST['locked_status']) ? 1 : 0;
-        $leaderboard = isset($_POST['leaderboard']) ? 1 : 0;
+        $user_status = trim($_POST['user_status']);
+        $locked_status = trim($_POST['locked_status']);
+        $leaderboard = trim($_POST['leaderboard']);
 
         // Additional Details
         $country = trim($_POST['country']);
@@ -101,14 +100,14 @@ class UserManagementController {
 
         // ✅ **Pass Validated Data to Model**
         $userModel = new UserModel();
-        $result = $userModel->insertUser($client_id, $profile_id, $full_name, $email, $contact_number, $gender, $dob, $user_role, $profile_expiry, $user_status, $locked_status, $leaderboard, $profile_picture, $country, $state, $city, $timezone, $language, $reports_to, $joining_date, $retirement_date, $custom_1, $custom_2, $custom_3, $custom_4, $custom_5, $custom_6, $custom_7, $custom_8, $custom_9, $custom_10);
+        $result = $userModel->insertUser($_POST, $_FILES);
 
         if ($result) {
             echo "<script>alert('User added successfully!'); window.location.href = 'index.php?controller=UserManagementController';</script>";
         } else {
             die("Error inserting user.");
         }
-
+      //  echo "<pre>"; print_r($_POST); echo "</pre>"; exit;
     }
     
     
