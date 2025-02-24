@@ -102,22 +102,43 @@ $countries = $stmt->fetchAll(PDO::FETCH_ASSOC);
                 </div>
                 <div class="row">
                     <div class="col-lg-6 col-md-6 col-sm-12 form-group">
-                        <label>User Status : </label>
-                        <input type="checkbox" name="user_status_active" checked> Active
-                        <input type="checkbox" name="user_status_inactive" > InActive
+                        <label>User Status :</label>
+                            <div>
+                                <label>
+                                    <input type="radio" name="user_status" value="1" checked> Active
+                                </label>
+                                <label>
+                                    <input type="radio" name="user_status" value="0"> Inactive
+                                </label>
+                            </div>
                     </div>
+
                     <div class="col-lg-6 col-md-6 col-sm-12 form-group">
-                        <label>Locked Status : </label>
-                        <input type="checkbox" name="locked_status"> Locked
-                        <input type="checkbox" name="unlocked_status" checked> Unlocked
+                        <label>Locked Status :</label>
+                        <div>
+                            <label>
+                                <input type="radio" name="locked_status" value="1"> Locked
+                            </label>
+                            <label>
+                                <input type="radio" name="locked_status" value="0" checked> Unlocked
+                            </label>
+                        </div>
                     </div>
+
                 </div>
                 <div class="row">
                     <div class="col-lg-6 col-md-6 col-sm-12 form-group">
-                        <label>Appear On Leaderboard : </label>
-                        <input type="checkbox" name="leaderboard_yes" checked> Yes
-                        <input type="checkbox" name="leaderboard_no"> No
+                        <label>Appear on Leaderboard :</label>
+                        <div>
+                            <label>
+                                <input type="radio" name="leaderboard" value="1"> Yes
+                            </label>
+                            <label>
+                                <input type="radio" name="leaderboard" value="0" checked> No
+                            </label>
+                        </div>
                     </div>
+
                     <div class="col-lg-6 col-md-6 col-sm-12 form-group">
                         <label>Profile Picture</label>
                         <input type="file" id="profile_picture" name="profile_picture" accept="image/jpeg, image/png" class="input-field">
