@@ -244,3 +244,4 @@ $countries = $stmt->fetchAll(PDO::FETCH_ASSOC);
 <!-- ✅ Form Validation Script -->
 <script src="public/js/add_user_validation.js"></script>
 <?php include 'includes/footer.php'; ?>
+
