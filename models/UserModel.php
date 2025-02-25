@@ -112,7 +112,37 @@ class UserModel {
         return true;
     }
     
-    
+       // ✅ Fetch All Users (Exclude Deleted)
+       public function getAllUsers() {
+        try {
+            $query = "SELECT * FROM user_profiles WHERE is_deleted = 0 ORDER BY id DESC";
+            $stmt = $this->conn->prepare($query);
+            $stmt->execute();
+            return $stmt->fetchAll(PDO::FETCH_ASSOC);
+        } catch (PDOException $e) {
+            return [];
+        }
+    }
 
+     // ✅ Soft Delete Function
+     public function softDeleteUser($profile_id) {
+        try {
+            $query = "UPDATE user_profiles SET is_deleted = 1 WHERE profile_id = :profile_id";
+            $stmt = $this->conn->prepare($query);
+            $stmt->bindParam(":profile_id", $profile_id);
+            return $stmt->execute();
+        } catch (PDOException $e) {
+            return false;
+        }
+    }
+
+    // Lock and unlock user from actions
+    public function updateLockStatus($profile_id, $locked_status) {
+        $query = "UPDATE user_profiles SET locked_status = :locked_status WHERE profile_id = :profile_id";
+        $stmt = $this->conn->prepare($query);
+        $stmt->bindParam(":locked_status", $locked_status, PDO::PARAM_INT);
+        $stmt->bindParam(":profile_id", $profile_id, PDO::PARAM_STR);
+        return $stmt->execute();
+    }
 }
 ?>
