@@ -11,8 +11,19 @@ class UserManagementController {
     }
 
     public function index() {
-        $users = $this->userModel->getAllUsers(); // Fetch user records from DB
-        require 'views/user_management.php'; // Pass data to the view
+
+        $limit = 10; // Number of records per page
+        $page = isset($_GET['page']) ? (int)$_GET['page'] : 1;
+        $offset = ($page - 1) * $limit;
+
+        $totalUsers = $this->userModel->getTotalUserCount();
+        $users = $this->userModel->getAllUsersPaginated($limit, $offset);
+        $totalPages = ceil($totalUsers / $limit);
+
+          // ✅ Fetch paginated user records
+   // $users = $this->userModel->getPaginatedUsers($limit, $offset);
+
+        require 'views/user_management.php';
     }
     
     public function addUser() {

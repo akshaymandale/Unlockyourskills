@@ -113,7 +113,7 @@ class UserModel {
     }
     
        // ✅ Fetch All Users (Exclude Deleted)
-       public function getAllUsers() {
+      /* public function getAllUsers() {
         try {
             $query = "SELECT * FROM user_profiles WHERE is_deleted = 0 ORDER BY id DESC";
             $stmt = $this->conn->prepare($query);
@@ -122,7 +122,7 @@ class UserModel {
         } catch (PDOException $e) {
             return [];
         }
-    }
+    } */
 
      // ✅ Soft Delete Function
      public function softDeleteUser($profile_id) {
@@ -143,6 +143,22 @@ class UserModel {
         $stmt->bindParam(":locked_status", $locked_status, PDO::PARAM_INT);
         $stmt->bindParam(":profile_id", $profile_id, PDO::PARAM_STR);
         return $stmt->execute();
+    }
+
+     // Fetch paginated users
+     public function getAllUsersPaginated($limit, $offset) {
+        $stmt = $this->conn->prepare("SELECT * FROM user_profiles WHERE is_deleted = 0 ORDER BY full_name ASC LIMIT :limit OFFSET :offset");
+        $stmt->bindParam(':limit', $limit, PDO::PARAM_INT);
+        $stmt->bindParam(':offset', $offset, PDO::PARAM_INT);
+        $stmt->execute();
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
+
+    // Get total user count
+    public function getTotalUserCount() {
+        $stmt = $this->conn->query("SELECT COUNT(*) as total FROM user_profiles WHERE is_deleted = 0");
+        $result = $stmt->fetch(PDO::FETCH_ASSOC);
+        return $result['total'];
     }
 }
 ?>
