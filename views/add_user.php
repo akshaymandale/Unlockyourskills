@@ -117,10 +117,10 @@ $countries = $stmt->fetchAll(PDO::FETCH_ASSOC);
                         <label>Locked Status :</label>
                         <div>
                             <label>
-                                <input type="radio" name="locked_status" value="Locked"> Locked
+                                <input type="radio" name="locked_status" value="1"> Locked
                             </label>
                             <label>
-                                <input type="radio" name="locked_status" value="Unlocked" checked> Unlocked
+                                <input type="radio" name="locked_status" value="0" checked> Unlocked
                             </label>
                         </div>
                     </div>

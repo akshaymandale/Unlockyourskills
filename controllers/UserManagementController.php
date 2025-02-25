@@ -4,8 +4,15 @@ require_once 'models/UserModel.php';
 
 class UserManagementController {
     
+    private $userModel;
+
+    public function __construct() {
+        $this->userModel = new UserModel();
+    }
+
     public function index() {
-        include 'views/user_management.php';
+        $users = $this->userModel->getAllUsers(); // Fetch user records from DB
+        require 'views/user_management.php'; // Pass data to the view
     }
     
     public function addUser() {
@@ -13,12 +20,7 @@ class UserManagementController {
     }
 
     public function storeUser() {
-       // session_start();
-
-        // Ensure client_id is set
-      //  $client_id = $_SESSION['client_id'];
         $client_id = trim($_POST['client_id']);
-        // Extract form data
         $profile_id = trim($_POST['profile_id']);
         $full_name = trim($_POST['full_name']);
         $email = trim($_POST['email']);
@@ -30,7 +32,7 @@ class UserManagementController {
         $user_status = trim($_POST['user_status']);
         $locked_status = trim($_POST['locked_status']);
         $leaderboard = trim($_POST['leaderboard']);
-
+        
         // Additional Details
         $country = trim($_POST['country']);
         $state = trim($_POST['state']);
@@ -53,7 +55,7 @@ class UserManagementController {
         $custom_9 = trim($_POST['customised_9']);
         $custom_10 = trim($_POST['customised_10']);
 
-        // ✅ **Backend Validation Before Inserting**
+        // ✅ Backend Validations
         if (empty($full_name) || empty($email) || empty($contact_number) || empty($user_role)) {
             die("Error: Required fields are missing.");
         }
@@ -74,7 +76,7 @@ class UserManagementController {
             die("Error: Profile Expiry Date cannot be in the past.");
         }
 
-        // ✅ **Handle Profile Picture Upload**
+        // ✅ Handle Profile Picture Upload
         $profile_picture = "";
         if (!empty($_FILES["profile_picture"]["name"])) {
             $target_dir = "uploads/";
@@ -85,7 +87,6 @@ class UserManagementController {
             $profile_picture = $target_dir . basename($_FILES["profile_picture"]["name"]);
             $imageFileType = strtolower(pathinfo($profile_picture, PATHINFO_EXTENSION));
 
-            // Validate file type and size
             if ($_FILES["profile_picture"]["size"] > 5242880) {
                 die("Error: File size exceeds 5MB limit.");
             }
@@ -98,18 +99,46 @@ class UserManagementController {
             }
         }
 
-        // ✅ **Pass Validated Data to Model**
-        $userModel = new UserModel();
-        $result = $userModel->insertUser($_POST, $_FILES);
+        // ✅ Pass Validated Data to Model
+        $result = $this->userModel->insertUser($_POST, $_FILES);
 
         if ($result) {
             echo "<script>alert('User added successfully!'); window.location.href = 'index.php?controller=UserManagementController';</script>";
         } else {
             die("Error inserting user.");
         }
-      echo "<pre>"; print_r($_POST); echo "</pre>"; exit;
     }
     
+    // ✅ Soft Delete Function in Controller
+    public function deleteUser() {
+        if (isset($_GET['id'])) {
+            $profile_id = $_GET['id'];
+            $result = $this->userModel->softDeleteUser($profile_id);
+
+            if ($result) {
+                echo "<script>alert('User deleted successfully.'); window.location.href='index.php?controller=UserManagementController';</script>";
+            } else {
+                echo "<script>alert('Failed to delete user.'); window.location.href='index.php?controller=UserManagementController';</script>";
+            }
+        }
+    }
+    // Lock and unlock user from actions 
+    public function toggleLock() {
+        if (isset($_GET['id']) && isset($_GET['status'])) {
+            $profile_id = $_GET['id'];
+            $new_status = $_GET['status']; // 1 for Lock, 0 for Unlock
     
+            $userModel = new UserModel();
+            $result = $userModel->updateLockStatus($profile_id, $new_status);
+    
+            if ($result) {
+                echo "<script>alert('User lock status updated successfully.'); window.location.href='index.php?controller=UserManagementController';</script>";
+            } else {
+                echo "<script>alert('Failed to update user lock status.'); window.location.href='index.php?controller=UserManagementController';</script>";
+            }
+        } else {
+            echo "<script>alert('Invalid request parameters.'); window.location.href='index.php?controller=UserManagementController';</script>";
+        }
+    }
 }
 ?>
