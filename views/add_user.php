@@ -28,6 +28,7 @@ $countries = $stmt->fetchAll(PDO::FETCH_ASSOC);
 <?php include 'includes/navbar.php'; ?>
 <?php include 'includes/sidebar.php'; ?>
 
+<div class="main-content">
 <div class="container add-user-container">
     <h1>Add User</h1>
     <form action="index.php?controller=UserManagementController&action=storeUser" id="addUserForm" method="POST" enctype="multipart/form-data">  
@@ -261,6 +262,7 @@ $countries = $stmt->fetchAll(PDO::FETCH_ASSOC);
             </div>
         </div>
     </form>
+</div>
 </div>
 <!-- ✅ Form Validation Script -->
 <script src="public/js/add_user_validation.js"></script>

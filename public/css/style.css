@@ -11,6 +11,14 @@ body {
 /* ✅ Prevent Content Overflow */
 html, body {
     overflow-x: hidden;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+}
+/* Push footer to the bottom */
+.main-content {
+    flex: 1; /* Takes up all available space */
+    padding-bottom: 20px; /* Space before footer */
 }
 
 /* ✅ Fix Navbar (Horizontal Layout) */

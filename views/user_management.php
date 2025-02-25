@@ -6,6 +6,7 @@
 <?php include 'includes/navbar.php'; ?>
 <?php include 'includes/sidebar.php'; ?>
 
+<div class="main-content">
 <div class="container add-user-container">
     <h1>User Management</h1>
     
@@ -103,6 +104,39 @@
             <?php endif; ?>
         </tbody>
     </table>
+    <!-- ✅ Pagination -->
+    <?php if ($totalPages > 1): ?>
+        <nav>
+            <ul class="pagination justify-content-center">
+                
+                <!-- ✅ Previous Button -->
+                <?php if ($page > 5): ?>
+                    <li class="page-item">
+                        <a class="page-link" href="index.php?controller=UserManagementController&page=<?php echo $page - 5; ?>">« Prev</a>
+                    </li>
+                <?php endif; ?>
+
+                <!-- ✅ Page Numbers (1 to 5, then Next) -->
+                <?php 
+                $startPage = max(1, $page - 2); 
+                $endPage = min($totalPages, $startPage + 4); 
+                for ($i = $startPage; $i <= $endPage; $i++): ?>
+                    <li class="page-item <?php echo ($i == $page) ? 'active' : ''; ?>">
+                        <a class="page-link" href="index.php?controller=UserManagementController&page=<?php echo $i; ?>"><?php echo $i; ?></a>
+                    </li>
+                <?php endfor; ?>
+
+                <!-- ✅ Next Button -->
+                <?php if ($page + 5 <= $totalPages): ?>
+                    <li class="page-item">
+                        <a class="page-link" href="index.php?controller=UserManagementController&page=<?php echo $page + 5; ?>">Next »</a>
+                    </li>
+                <?php endif; ?>
+            </ul>
+        </nav>
+    <?php endif; ?>
 </div>
+</div>
+
 
 <?php include 'includes/footer.php'; ?>
