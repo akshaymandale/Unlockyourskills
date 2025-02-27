@@ -8,7 +8,7 @@
 
 <div class="main-content">
 <div class="container add-user-container">
-    <h1>User Management</h1>
+    <h1 class="page-title text-purple">User Management</h1>
     
     <!-- ✅ Filters & Search Section -->
     <div class="user-management-toolbar">

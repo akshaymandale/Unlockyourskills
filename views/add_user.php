@@ -30,7 +30,7 @@ $countries = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
 <div class="main-content">
 <div class="container add-user-container">
-    <h1>Add User</h1>
+    <h1 class="page-title text-purple">Add User</h1>
     <form action="index.php?controller=UserManagementController&action=storeUser" id="addUserForm" method="POST" enctype="multipart/form-data">  
         <!-- ✅ Tabs Section -->
         <!-- Tabs Navigation -->
