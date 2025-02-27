@@ -111,18 +111,6 @@ class UserModel {
     
         return true;
     }
-    
-       // ✅ Fetch All Users (Exclude Deleted)
-      /* public function getAllUsers() {
-        try {
-            $query = "SELECT * FROM user_profiles WHERE is_deleted = 0 ORDER BY id DESC";
-            $stmt = $this->conn->prepare($query);
-            $stmt->execute();
-            return $stmt->fetchAll(PDO::FETCH_ASSOC);
-        } catch (PDOException $e) {
-            return [];
-        }
-    } */
 
      // ✅ Soft Delete Function
      public function softDeleteUser($profile_id) {

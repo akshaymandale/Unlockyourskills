@@ -6,11 +6,12 @@
 <?php include 'includes/navbar.php'; ?>
 <?php include 'includes/sidebar.php'; ?>
 
-<div class="container add-user-container">
-    <h1>Manage Portal</h1>
-    
+<div class="main-content">
+<div class="container mt-4">
+    <h1 class="page-title text-purple">Manage Portal</h1>
+
     <!-- ✅ Tabs Section -->
-    <ul class="nav nav-tabs" id="managePortalTabs">
+    <ul class="nav nav-tabs custom-tabs" id="managePortalTabs">
         <li class="nav-item">
             <a class="nav-link active" id="user-details-tab" data-toggle="tab" href="#user-details">
                 <i class="fas fa-users"></i> User Details
@@ -35,48 +36,90 @@
 
     <!-- ✅ Tab Content Section -->
     <div class="tab-content mt-3">
-        <div class="tab-pane fade show active" id="user-details">
-            <h3>User Details</h3>
+        <!-- ✅ User Details Tab -->
+        <div class="tab-pane fade show active card shadow-lg p-4" id="user-details">
+            <h3 class="text-purple">User Details</h3>
             
-            <div class="user-section">
-                <div class="user-box" onclick="location.href='index.php?controller=UserManagementController'">
-                    <h5>User Management</h5>
-                    <p><small class="text-muted">Create, Edit, Remove User</small></p>
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="card user-box shadow-sm" onclick="location.href='index.php?controller=UserManagementController'">
+                        <h5><i class="fas fa-user-cog"></i> User Management</h5>
+                        <p><small class="text-muted">Create, Edit, Remove User</small></p>
+                    </div>
                 </div>
                 
-                <div class="user-box" onclick="location.href='index.php?controller=UserSettingsController'">
-                    <h5>User Settings</h5>
-                    <p><small class="text-muted">Manage</small></p>
-                </div>
-            </div>
-        </div>
-        
-        <div class="tab-pane fade" id="course-details">
-            <h3>Course Details</h3>
-            
-            <div class="user-section">
-                <div class="user-box" onclick="location.href='index.php?controller=CourseCreationController'">
-                    <h5>Course Creation</h5>
-                    <p><small class="text-muted">Create eLearning, Classroom, Assessment type courses</small></p>
-                </div>
-                
-                <div class="user-box" onclick="location.href='index.php?controller=CourseModuleController'">
-                    <h5>Course Module Creation</h5>
-                    <p><small class="text-muted">Create Course sections</small></p>
+                <div class="col-md-6">
+                    <div class="card user-box shadow-sm" onclick="location.href='index.php?controller=UserSettingsController'">
+                        <h5><i class="fas fa-user-shield"></i> User Settings</h5>
+                        <p><small class="text-muted">Manage User Roles & Permissions</small></p>
+                    </div>
                 </div>
             </div>
         </div>
 
-        <div class="tab-pane fade" id="social">
-            <h3>Social</h3>
+        <!-- ✅ Course Details Tab -->
+        <div class="tab-pane fade card shadow-lg p-4" id="course-details">
+            <h3 class="text-purple">Course Details</h3>
+            
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="card user-box shadow-sm" onclick="location.href='index.php?controller=CourseCreationController'">
+                        <h5><i class="fas fa-chalkboard-teacher"></i> Course Creation</h5>
+                        <p><small class="text-muted">Create eLearning, Classroom, and Assessment Courses</small></p>
+                    </div>
+                </div>
+                
+                <div class="col-md-6">
+                    <div class="card user-box shadow-sm" onclick="location.href='index.php?controller=CourseModuleController'">
+                        <h5><i class="fas fa-book-open"></i> Course Module Creation</h5>
+                        <p><small class="text-muted">Organize Courses into Sections</small></p>
+                    </div>
+                </div>
+            </div>
+
+            <h3 class="text-purple mt-4">Course Categories</h3>
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="card user-box shadow-sm" onclick="location.href='index.php?controller=CourseCategoryController'">
+                        <h5><i class="fas fa-tags"></i> Category</h5>
+                        <p><small class="text-muted">Add and Manage Course Categories</small></p>
+                    </div>
+                </div>
+                
+                <div class="col-md-6">
+                    <div class="card user-box shadow-sm" onclick="location.href='index.php?controller=SubCategoryController'">
+                        <h5><i class="fas fa-layer-group"></i> Sub-Category</h5>
+                        <p><small class="text-muted">Define Course Sub-Categories</small></p>
+                    </div>
+                </div>
+            </div>
+
+            <h3 class="text-purple mt-4">Course Content</h3>
+            <div class="row">
+
+                <div class="col-md-6">
+                    <div class="card user-box shadow-sm" onclick="location.href='index.php?controller=LCMSController'">
+                        <h5><i class="fas fa-file-alt"></i> LCMS</h5>
+                        <p><small class="text-muted">Add and Manage Course Content</small></p>
+                    </div>
+                </div>
+            </div>
+            
+        </div>
+
+        <!-- ✅ Social Tab -->
+        <div class="tab-pane fade card shadow-lg p-4" id="social">
+            <h3 class="text-purple">Social</h3>
             <p>Social settings section coming soon...</p>
         </div>
 
-        <div class="tab-pane fade" id="settings">
-            <h3>Settings</h3>
+        <!-- ✅ Settings Tab -->
+        <div class="tab-pane fade card shadow-lg p-4" id="settings">
+            <h3 class="text-purple">Settings</h3>
             <p>Settings section coming soon...</p>
         </div>
     </div>
+</div>
 </div>
 
 <?php include 'includes/footer.php'; ?>
