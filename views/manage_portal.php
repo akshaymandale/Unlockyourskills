@@ -98,9 +98,9 @@
             <div class="row">
 
                 <div class="col-md-6">
-                    <div class="card user-box shadow-sm" onclick="location.href='index.php?controller=LCMSController'">
-                        <h5><i class="fas fa-file-alt"></i> LCMS</h5>
-                        <p><small class="text-muted">Add and Manage Course Content</small></p>
+                    <div class="card user-box shadow-sm" onclick="location.href='index.php?controller=VLRController'">
+                        <h5><i class="fas fa-file-alt"></i> VLR - Virtual Learning Repository</h5>
+                        <p><small class="text-muted">Manage SCORM, Assessments, Videos & More</small></p>
                     </div>
                 </div>
             </div>

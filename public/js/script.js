@@ -278,4 +278,43 @@ stateSelect.addEventListener("change", function() {
                 profileIdInput.value = generatedProfileId;
             }
 
+            //VLR 
+            let vlrTabs = document.querySelectorAll("#vlrTabs a");
+
+             vlrTabs.forEach(tab => {
+        tab.addEventListener("click", function (event) {
+            event.preventDefault();
+
+            // Get target ID
+            let targetId = this.getAttribute("href").substring(1);
+
+            // Hide all tab panes
+            document.querySelectorAll(".tab-pane").forEach(pane => {
+                pane.classList.remove("show", "active");
+            });
+
+            // Remove active class from all tabs
+            vlrTabs.forEach(tab => {
+                tab.classList.remove("active");
+            });
+
+            // Show the selected tab pane
+            let targetPane = document.getElementById(targetId);
+            if (targetPane) {
+                targetPane.classList.add("show", "active");
+            } else {
+                console.error(`Tab Content Not Found: #${targetId}`);
+            }
+
+            // Add active class to the clicked tab
+            this.classList.add("active");
+        });
+    });
+
+    // ✅ Ensure Bootstrap initializes tabs
+    $('#vlrTabs a').on('click', function (e) {
+        e.preventDefault();
+        $(this).tab('show');
+    });
+
 });
