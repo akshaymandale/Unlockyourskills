@@ -703,3 +703,34 @@ html, body {
     box-shadow: 0px 4px 8px rgba(106, 13, 173, 0.2);
 }
 
+.tag-input-container {
+    display: flex;
+    flex-wrap: wrap;
+    min-height: 40px;
+    align-items: center;
+    padding: 5px;
+}
+
+.tag {
+    background-color: #6c5ce7;
+    color: #fff;
+    border-radius: 20px;
+    padding: 5px 10px;
+    margin: 2px;
+    display: inline-flex;
+    align-items: center;
+}
+
+.tag .remove-tag {
+    background: none;
+    border: none;
+    color: #fff;
+    margin-left: 5px;
+    cursor: pointer;
+}
+
+.tag-input-container input {
+    border: none;
+    outline: none;
+    flex-grow: 1;
+}

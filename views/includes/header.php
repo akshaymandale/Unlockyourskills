@@ -15,10 +15,6 @@ if (session_status() === PHP_SESSION_NONE) {
     <!-- ✅ FontAwesome for Icons -->
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
 
-    
-    <script src="public/js/jquery.min.js"></script>
-    <script src="public/bootstrap/js/bootstrap.bundle.min.js"></script>
-    <script src="public/js/script.js"></script>
 
         <!-- ✅ Bootstrap CSS -->
         <link rel="stylesheet" href="public/bootstrap/css/bootstrap.min.css">
