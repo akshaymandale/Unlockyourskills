@@ -20,16 +20,14 @@
 
 </div><!-- #page -->
 
-<!-- ✅ jQuery -->
-<script src="<?php echo get_template_directory_uri(); ?>/public/js/jquery.min.js"></script>
+    
+<script src="public/bootstrap/js/jquery.min.js"></script>
+    <script src="public/bootstrap/js/bootstrap.bundle.min.js"></script>
 
-<!-- ✅ Bootstrap JS -->
-<script src="<?php echo get_template_directory_uri(); ?>/public/bootstrap/js/bootstrap.bundle.min.js"></script>
 
-<!-- ✅ Custom Scripts -->
-<script src="<?php echo get_template_directory_uri(); ?>/public/js/script.js"></script>
 
-<?php wp_footer(); ?>
+    <script src="public/js/script.js"></script>
+
 
 </body>
 </html>
