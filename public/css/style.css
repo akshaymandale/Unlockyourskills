@@ -449,7 +449,7 @@ html, body {
     border-bottom: 2px solid #6a0dad;
 }
 
-.tab-content {
+.tabcontent- {
     display: block;
     padding: 20px;
     border: 1px solid #ddd;
@@ -702,3 +702,4 @@ html, body {
     transform: scale(1.03);
     box-shadow: 0px 4px 8px rgba(106, 13, 173, 0.2);
 }
+
