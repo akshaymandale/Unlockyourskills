@@ -153,6 +153,225 @@ document.addEventListener("DOMContentLoaded", function() {
         });
     });
 
+
+    //VLR 
+    
+    let mainTabs = document.querySelectorAll("#vlrTabs a"); // Main tabs
+    let scormTabs = document.querySelectorAll("#scormSubTabs a"); // SCORM sub-tabs
+    let documentTabs = document.querySelectorAll("#documentSubTabs a"); // Document sub-tabs
+    let externalTabs = document.querySelectorAll("#externalSubTabs a"); // External Content sub-tabs
+    let interactiveTabs = document.querySelectorAll("#interactiveSubTabs a"); // Interactive & AI sub-tabs
+
+    // ✅ MAIN TABS FUNCTIONALITY ✅
+    mainTabs.forEach(tab => {
+        tab.addEventListener("click", function (event) {
+            event.preventDefault();
+            const targetId = this.getAttribute("href").substring(1);
+
+            // Hide all main tab panes
+            document.querySelectorAll(".tab-content > .tab-pane").forEach(pane => {
+                pane.classList.remove("show", "active");
+                pane.style.display = "none"; 
+            });
+
+            // Remove active class from all main tabs
+            mainTabs.forEach(tab => {
+                tab.classList.remove("active");
+            });
+
+            // Show the selected main tab pane
+            let targetPane = document.getElementById(targetId);
+            if (targetPane) {
+                targetPane.classList.add("show", "active");
+                targetPane.style.display = "block";
+            }
+
+            // Add active class to clicked main tab
+            this.classList.add("active");
+
+            // ✅ IF RETURNING TO SCORM, ENSURE SUB-TAB CONTENT IS SHOWN ✅
+            if (targetId === "scorm") {
+                let activeSubTab = document.querySelector("#scormSubTabs a.active");
+                if (activeSubTab) {
+                    let activeSubTabId = activeSubTab.getAttribute("href").substring(1);
+                    let activeSubPane = document.getElementById(activeSubTabId);
+                    if (activeSubPane) {
+                        activeSubPane.classList.add("show", "active");
+                        activeSubPane.style.display = "block";
+                    }
+                }
+            }
+
+            // ✅ IF RETURNING TO DOCUMENTS, ENSURE SUB-TAB CONTENT IS SHOWN ✅
+            if (targetId === "document") {
+                let activeDocSubTab = document.querySelector("#documentSubTabs a.active");
+                if (activeDocSubTab) {
+                    let activeDocSubTabId = activeDocSubTab.getAttribute("href").substring(1);
+                    let activeDocSubPane = document.getElementById(activeDocSubTabId);
+                    if (activeDocSubPane) {
+                        activeDocSubPane.classList.add("show", "active");
+                        activeDocSubPane.style.display = "block";
+                    }
+                }
+            }
+
+              // ✅ IF RETURNING TO EXTERNAL CONTENT, ENSURE SUB-TAB CONTENT IS SHOWN ✅
+              if (targetId === "external") {
+                let activeExtSubTab = document.querySelector("#externalSubTabs a.active");
+                if (activeExtSubTab) {
+                    let activeExtSubTabId = activeExtSubTab.getAttribute("href").substring(1);
+                    let activeExtSubPane = document.getElementById(activeExtSubTabId);
+                    if (activeExtSubPane) {
+                        activeExtSubPane.classList.add("show", "active");
+                        activeExtSubPane.style.display = "block";
+                    }
+                }
+            }
+
+            // ✅ IF RETURNING TO INTERACTIVE & AI, ENSURE SUB-TAB CONTENT IS SHOWN ✅
+            if (targetId === "interactive") {
+                let activeIntSubTab = document.querySelector("#interactiveSubTabs a.active");
+                if (activeIntSubTab) {
+                    let activeIntSubTabId = activeIntSubTab.getAttribute("href").substring(1);
+                    let activeIntSubPane = document.getElementById(activeIntSubTabId);
+                    if (activeIntSubPane) {
+                        activeIntSubPane.classList.add("show", "active");
+                        activeIntSubPane.style.display = "block";
+                    }
+                }
+            }
+
+        });
+    });
+
+    // ✅ SCORM SUB-TABS FUNCTIONALITY ✅
+    scormTabs.forEach(tab => {
+        tab.addEventListener("click", function (event) {
+            event.preventDefault();
+            const targetId = this.getAttribute("href").substring(1);
+
+            // Hide all SCORM sub-tab panes
+            document.querySelectorAll("#scorm .tab-pane").forEach(pane => {
+                pane.classList.remove("show", "active");
+                pane.style.display = "none";
+            });
+
+            // Remove active class from all SCORM sub-tabs
+            scormTabs.forEach(tab => {
+                tab.classList.remove("active");
+            });
+
+            // Show the selected SCORM sub-tab pane
+            let targetPane = document.getElementById(targetId);
+            if (targetPane) {
+                targetPane.classList.add("show", "active");
+                targetPane.style.display = "block";
+            }
+
+            // Add active class to clicked SCORM sub-tab
+            this.classList.add("active");
+        });
+    });
+
+    // ✅ DOCUMENTS SUB-TABS FUNCTIONALITY ✅
+    documentTabs.forEach(tab => {
+        tab.addEventListener("click", function (event) {
+            event.preventDefault();
+            const targetId = this.getAttribute("href").substring(1);
+
+            // Hide all DOCUMENT sub-tab panes
+            document.querySelectorAll("#document .tab-pane").forEach(pane => {
+                pane.classList.remove("show", "active");
+                pane.style.display = "none";
+            });
+
+            // Remove active class from all DOCUMENT sub-tabs
+            documentTabs.forEach(tab => {
+                tab.classList.remove("active");
+            });
+
+            // Show the selected DOCUMENT sub-tab pane
+            let targetPane = document.getElementById(targetId);
+            if (targetPane) {
+                targetPane.classList.add("show", "active");
+                targetPane.style.display = "block";
+            }
+
+            // Add active class to clicked DOCUMENT sub-tab
+            this.classList.add("active");
+        });
+    });
+
+        // ✅ EXTERNAL CONTENT SUB-TABS FUNCTIONALITY ✅
+        externalTabs.forEach(tab => {
+            tab.addEventListener("click", function (event) {
+                event.preventDefault();
+                const targetId = this.getAttribute("href").substring(1);
+    
+                // Hide all External sub-tab panes
+                document.querySelectorAll("#external .tab-pane").forEach(pane => {
+                    pane.classList.remove("show", "active");
+                    pane.style.display = "none";
+                });
+    
+                // Remove active class from all External sub-tabs
+                externalTabs.forEach(tab => {
+                    tab.classList.remove("active");
+                });
+    
+                // Show the selected External sub-tab pane
+                let targetPane = document.getElementById(targetId);
+                if (targetPane) {
+                    targetPane.classList.add("show", "active");
+                    targetPane.style.display = "block";
+                }
+    
+                // Add active class to clicked External sub-tab
+                this.classList.add("active");
+            });
+        });
+
+           // ✅ INTERACTIVE & AI POWERED CONTENT SUB-TABS FUNCTIONALITY ✅
+    interactiveTabs.forEach(tab => {
+        tab.addEventListener("click", function (event) {
+            event.preventDefault();
+            const targetId = this.getAttribute("href").substring(1);
+
+            // Hide all Interactive sub-tab panes
+            document.querySelectorAll("#interactive .tab-pane").forEach(pane => {
+                pane.classList.remove("show", "active");
+                pane.style.display = "none";
+            });
+
+            // Remove active class from all Interactive sub-tabs
+            interactiveTabs.forEach(tab => {
+                tab.classList.remove("active");
+            });
+
+            // Show the selected Interactive sub-tab pane
+            let targetPane = document.getElementById(targetId);
+            if (targetPane) {
+                targetPane.classList.add("show", "active");
+                targetPane.style.display = "block";
+            }
+
+            // Add active class to clicked Interactive sub-tab
+            this.classList.add("active");
+        });
+    });
+
+    // ✅ ENSURE FIRST SUB-TAB IS VISIBLE ON PAGE LOAD ✅
+    if (scormTabs.length > 0) {
+        scormTabs[0].classList.add("active");
+        let firstTarget = scormTabs[0].getAttribute("href").substring(1);
+        let firstPane = document.getElementById(firstTarget);
+        if (firstPane) {
+            firstPane.classList.add("show", "active");
+            firstPane.style.display = "block";
+        }
+    }
+
+    
 // Country - State - City script
 
 const countrySelect = document.getElementById("countrySelect");
@@ -278,43 +497,7 @@ stateSelect.addEventListener("change", function() {
                 profileIdInput.value = generatedProfileId;
             }
 
-            //VLR 
-            let vlrTabs = document.querySelectorAll("#vlrTabs a");
+            
 
-             vlrTabs.forEach(tab => {
-        tab.addEventListener("click", function (event) {
-            event.preventDefault();
-
-            // Get target ID
-            let targetId = this.getAttribute("href").substring(1);
-
-            // Hide all tab panes
-            document.querySelectorAll(".tab-pane").forEach(pane => {
-                pane.classList.remove("show", "active");
-            });
-
-            // Remove active class from all tabs
-            vlrTabs.forEach(tab => {
-                tab.classList.remove("active");
-            });
-
-            // Show the selected tab pane
-            let targetPane = document.getElementById(targetId);
-            if (targetPane) {
-                targetPane.classList.add("show", "active");
-            } else {
-                console.error(`Tab Content Not Found: #${targetId}`);
-            }
-
-            // Add active class to the clicked tab
-            this.classList.add("active");
-        });
-    });
-
-    // ✅ Ensure Bootstrap initializes tabs
-    $('#vlrTabs a').on('click', function (e) {
-        e.preventDefault();
-        $(this).tab('show');
-    });
 
 });
