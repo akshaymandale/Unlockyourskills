@@ -798,3 +798,10 @@ html, body {
 .scorm-actions i:hover {
     opacity: 0.7;
 }
+.scorm-actions a {
+    text-decoration: none; /* Removes the underline */
+}
+
+.scorm-actions a:hover {
+    text-decoration: none; /* Ensures no underline on hover */
+}

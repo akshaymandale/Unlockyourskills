@@ -8,9 +8,6 @@ document.addEventListener("DOMContentLoaded", function() {
     let sidebar = document.getElementById("sidebar");
     let container = document.querySelector(".container");
 
-    const tagInput = document.getElementById("tagInput");
-    const tagContainer = document.getElementById("tagDisplay");
-    const hiddenTagList = document.getElementById("tagList");
 
 
 
@@ -379,68 +376,7 @@ document.addEventListener("DOMContentLoaded", function() {
         }
     }
 
-    // Tags on SCROM page 
-
     
-    let tags = [];
-
-    // Function to create and display a tag
-    function addTag(tagText) {
-        if (tagText.trim() === "" || tags.includes(tagText)) return; // Prevent empty/duplicate tags
-
-        tags.push(tagText); // Add tag to the array
-
-        const tagElement = document.createElement("span");
-        tagElement.classList.add("tag");
-        tagElement.innerHTML = `${tagText} <button type="button" class="remove-tag" data-tag="${tagText}">&times;</button>`;
-
-        tagContainer.appendChild(tagElement);
-        updateHiddenInput();
-    }
-
-    // Function to remove a specific tag
-    function removeTag(tagText) {
-        tags = tags.filter(tag => tag !== tagText); // Remove only the clicked tag
-        updateHiddenInput();
-        
-        // Find and remove only the specific tag element
-        const tagElements = document.querySelectorAll(".tag");
-        tagElements.forEach(tagEl => {
-            if (tagEl.textContent.includes(tagText)) {
-                tagEl.remove();
-            }
-        });
-    }
-
-    // Function to update hidden input with tag values
-    function updateHiddenInput() {
-        hiddenTagList.value = tags.join(",");
-    }
-
-    // Listen for Enter key in the input field
-    tagInput.addEventListener("keypress", function (event) {
-        if (event.key === "Enter") {
-            event.preventDefault();
-            addTag(tagInput.value.trim());
-            tagInput.value = ""; // Clear input after adding
-        }
-    });
-
-    // Listen for clicks on remove buttons
-    tagContainer.addEventListener("click", function (event) {
-        if (event.target.classList.contains("remove-tag")) {
-            const tagText = event.target.getAttribute("data-tag");
-            removeTag(tagText);
-        }
-    });
-
-    // Remove last tag when pressing backspace in an empty input
-    tagInput.addEventListener("keydown", function (event) {
-        if (event.key === "Backspace" && tagInput.value === "" && tags.length > 0) {
-            removeTag(tags[tags.length - 1]); // Remove last tag
-        }
-    });
-
   
     
 // Country - State - City script
