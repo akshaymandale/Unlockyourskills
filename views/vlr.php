@@ -1,5 +1,8 @@
 <?php
 // views/vlr.php
+//echo '<pre>'; print_r($_SESSION);
+
+$clientName = $_SESSION['username'] ?? 'DEFAULT';
 ?>
 
 <?php include 'includes/header.php'; ?>
@@ -56,78 +59,81 @@
             <div class="d-flex justify-content-between align-items-center mb-3">
                 <h3>SCORM</h3>
                 <!-- ✅ SCORM "Add" Button - Opens Modal -->
-                <button class="btn btn-primary mb-3" data-toggle="modal" data-target="#scormModal">+ Add SCORM</button>
+                <button class="btn btn-primary mb-3" data-toggle="modal" id="addScormBtn" data-target="#scormModal">+ Add SCORM</button>
 
                 <!-- ✅ SCORM ADD MODAL -->
-                <div class="modal fade" id="scormModal" tabindex="-1" role="dialog" aria-labelledby="scormModalLabel" aria-hidden="true">
-                    <div class="modal-dialog modal-lg" role="document">
-                        <div class="modal-content">
-                            <div class="modal-header">
-                                <h5 class="modal-title" id="scormModalLabel">Add SCORM Package</h5>
-                                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
-                                    <span aria-hidden="true">&times;</span>
-                                </button>
-                            </div>
-                            <div class="modal-body">
-                                <form id="scormForm" enctype="multipart/form-data">
-                                    
-                                    <!-- ✅ Title & Upload Zip (Side by Side) -->
-                                    <div class="row">
-                                        <div class="col-md-6">
-                                            <div class="form-group">
-                                                <label for="scorm_title">Title <span class="text-danger">*</span></label>
-                                                <input type="text" id="scorm_title" name="scorm_title" class="form-control" required>
-                                            </div>
-                                        </div>
-                                        <div class="col-md-6">
-                                            <div class="form-group">
-                                                <label for="zipFile">Upload SCORM Zip File <span class="text-danger">*</span></label>
-                                                <input type="file" id="zipFile" name="zipFile" class="form-control-file" accept=".zip" required>
-                                            </div>
+                <!-- SCORM Modal -->
+            <div class="modal fade" id="scormModal" tabindex="-1" role="dialog" aria-labelledby="scormModalLabel" aria-hidden="true">
+                <div class="modal-dialog modal-lg" role="document">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h5 class="modal-title" id="scormModalLabel">Add SCORM Package</h5>
+                            <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                                <span aria-hidden="true">&times;</span>
+                            </button>
+                        </div>
+                        <div class="modal-body">
+                        <form id="scormForm" action="index.php?controller=VLRController&action=addOrEditScormPackage" method="POST" enctype="multipart/form-data">
+                            <input type="hidden" id="scorm_id" name="scorm_id">
+                            <input type="hidden" id="existing_zip" name="existing_zip"> <!-- Store existing file name -->
+                                <!-- ✅ Title & Upload Zip (Side by Side) -->
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <div class="form-group">
+                                            <label for="scorm_title">Title <span class="text-danger">*</span></label>
+                                            <input type="text" id="scorm_title" name="scorm_title" class="form-control" required>
                                         </div>
                                     </div>
-
-                                    <!-- ✅ Version, Language, SCORM Category (Side by Side) -->
-                                    <div class="row">
-                                        <div class="col-md-4">
-                                            <div class="form-group">
-                                                <label for="version">Version <span class="text-danger">*</span></label>
-                                                <input type="text" id="version" name="version" class="form-control" required>
-                                            </div>
-                                        </div>
-                                        <div class="col-md-4">
-                                            <div class="form-group">
-                                                <label for="language">Language Support</label>
-                                                <input type="text" id="language" name="language" class="form-control">
-                                            </div>
-                                        </div>
-                                        <div class="col-md-4">
-                                            <div class="form-group">
-                                                <label for="scormCategory">SCORM Category <span class="text-danger">*</span></label>
-                                                <select id="scormCategory" name="scormCategory" class="form-control" required>
-                                                    <option value="">Select SCORM Type</option>
-                                                    <option value="scorm1.2">SCORM 1.2</option>
-                                                    <option value="scorm2004">SCORM 2004</option>
-                                                    <option value="xapi">Tin Can API (xAPI)</option>
-                                                    <option value="cmi5">CMI5</option>
-                                                </select>
-                                            </div>
+                                    <div class="col-md-6">
+                                        <div class="form-group">
+                                            <label for="zipFile">Upload SCORM Zip File <span class="text-danger">*</span></label>
+                                            <input type="file" id="zipFile" name="zipFile" class="form-control-file" accept=".zip" required>
+                                            <p id="existingZipDisplay"></p>
                                         </div>
                                     </div>
+                                </div>
 
-                                    <!-- ✅ Description (Full Width) -->
-                                    <div class="row">
-                                        <div class="col-md-12">
-                                            <div class="form-group">
-                                                <label for="description">Description</label>
-                                                <textarea id="description" name="description" class="form-control"></textarea>
-                                            </div>
+                                <!-- ✅ Version, Language, SCORM Category (Side by Side) -->
+                                <div class="row">
+                                    <div class="col-md-4">
+                                        <div class="form-group">
+                                            <label for="version">Version <span class="text-danger">*</span></label>
+                                            <input type="text" id="version" name="version" class="form-control" required>
                                         </div>
                                     </div>
+                                    <div class="col-md-4">
+                                        <div class="form-group">
+                                            <label for="language">Language Support</label>
+                                            <input type="text" id="language" name="language" class="form-control">
+                                        </div>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <div class="form-group">
+                                            <label for="scormCategory">SCORM Category <span class="text-danger">*</span></label>
+                                            <select id="scormCategory" name="scormCategory" class="form-control" required>
+                                                <option value="">Select SCORM Type</option>
+                                                <option value="scorm1.2">SCORM 1.2</option>
+                                                <option value="scorm2004">SCORM 2004</option>
+                                                <option value="xapi">Tin Can API (xAPI)</option>
+                                                <option value="cmi5">CMI5</option>
+                                            </select>
+                                        </div>
+                                    </div>
+                                </div>
 
-                                    <!-- ✅ Tags (Full Width) -->
-                                    <div class="row">
-                                        <div class="col-md-12">
+                                <!-- ✅ Description (Full Width) -->
+                                <div class="row">
+                                    <div class="col-md-12">
+                                        <div class="form-group">
+                                            <label for="description">Description</label>
+                                            <textarea id="description" name="description" class="form-control"></textarea>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- ✅ Tags (Full Width) -->
+                                <div class="row">
+                                    <div class="col-md-12">
                                         <div class="form-group">
                                             <label for="tags">Tags/Keywords <span class="text-danger">*</span></label>
                                             <div class="tag-input-container form-control">
@@ -136,48 +142,48 @@
                                             </div>
                                             <input type="hidden" name="tagList" id="tagList">
                                         </div>
+                                    </div>
+                                </div>
+
+                                <!-- ✅ Time Limit & Mobile Support (Side by Side) -->
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <div class="form-group">
+                                            <label for="timeLimit">Time Limit (in minutes)</label>
+                                            <input type="number" id="timeLimit" name="timeLimit" class="form-control">
                                         </div>
                                     </div>
-
-                                    <!-- ✅ Time Limit & Mobile Support (Side by Side) -->
-                                    <div class="row">
-                                        <div class="col-md-6">
-                                            <div class="form-group">
-                                                <label for="timeLimit">Time Limit (in minutes)</label>
-                                                <input type="number" id="timeLimit" name="timeLimit" class="form-control">
-                                            </div>
-                                        </div>
-                                        <div class="col-md-6">
-                                            <div class="form-group">
-                                                <label>Mobile & Tablet Support</label><br>
-                                                <label><input type="radio" name="mobileSupport" value="Yes"> Yes</label>
-                                                <label class="ml-3"><input type="radio" name="mobileSupport" value="No" checked> No</label>
-                                            </div>
+                                    <div class="col-md-6">
+                                        <div class="form-group">
+                                            <label>Mobile & Tablet Support</label><br>
+                                            <label><input type="radio" name="mobileSupport" value="Yes"> Yes</label>
+                                            <label class="ml-3"><input type="radio" name="mobileSupport" value="No" checked> No</label>
                                         </div>
                                     </div>
+                                </div>
 
-                                    <!-- ✅ Assessment Included (Full Width) -->
-                                    <div class="row">
-                                        <div class="col-md-12">
-                                            <div class="form-group">
-                                                <label>Assessment Included</label><br>
-                                                <label><input type="radio" name="assessment" value="Yes"> Yes</label>
-                                                <label class="ml-3"><input type="radio" name="assessment" value="No" checked> No</label>
-                                            </div>
+                                <!-- ✅ Assessment Included (Full Width) -->
+                                <div class="row">
+                                    <div class="col-md-12">
+                                        <div class="form-group">
+                                            <label>Assessment Included</label><br>
+                                            <label><input type="radio" name="assessment" value="Yes"> Yes</label>
+                                            <label class="ml-3"><input type="radio" name="assessment" value="No" checked> No</label>
                                         </div>
                                     </div>
+                                </div>
 
-                                    <!-- ✅ Submit & Cancel Buttons -->
-                                    <div class="modal-footer">
-                                        <button type="submit" class="btn btn-primary">Submit</button>
-                                        <button type="button" class="btn btn-danger" id="clearForm">Cancel</button>  
-                                    </div>
+                                <!-- ✅ Submit & Cancel Buttons -->
+                                <div class="modal-footer">
+                                    <button type="submit" class="btn btn-primary">Submit</button>
+                                    <button type="button" class="btn btn-danger" id="clearForm">Cancel</button>  
+                                </div>
 
-                                </form>
-                            </div>
+                            </form>
                         </div>
                     </div>
                 </div>
+            </div>
 
 
 
@@ -198,25 +204,96 @@
                 </li>
             </ul>
 
-            <!-- ✅ SCORM Sub-Tab Content -->
-            <div class="tab-content mt-3">
-                <div class="tab-pane show active" id="scorm-1.2"> <!-- Ensure "show active" is set -->
-                    <h4>SCORM 1.2 Content</h4>
-                    <p>Details about SCORM 1.2...</p>
-                </div>
-                <div class="tab-pane" id="scorm-2004">
-                    <h4>SCORM 2004 Content</h4>
-                    <p>Details about SCORM 2004...</p>
-                </div>
-                <div class="tab-pane" id="tin-can-api">
-                    <h4>Tin Can API (xAPI) Content</h4>
-                    <p>Details about Tin Can API...</p>
-                </div>
-                <div class="tab-pane" id="cmi5">
-                    <h4>CMI5 Content</h4>
-                    <p>Details about CMI5...</p>
-                </div>
+                <!-- ✅ SCORM Sub-Tab Content -->
+                 
+                <?php
+// Validate if $scormPackages is set
+if (!isset($scormPackages)) {
+    $scormPackages = [];
+}
+
+
+// Categorize SCORM packages
+$scormCategories = [
+    'scorm-1.2' => [],
+    'scorm-2004' => [],
+    'tin-can-api' => [],
+    'cmi5' => []
+];
+
+// Distribute packages into categories
+foreach ($scormPackages as $package) {
+    $category = strtolower(str_replace(' ', '-', $package['scorm_category']));
+    if (isset($scormCategories[$category])) {
+        $scormCategories[$category][] = $package;
+    }
+}
+?>
+<div class="tab-content mt-3">
+    <?php
+    // Define tab IDs corresponding to scorm_category
+    $categories = [
+        'scorm1.2' => 'scorm-1.2',
+        'scorm2004' => 'scorm-2004',
+        'xapi' => 'tin-can-api',
+        'cmi5' => 'cmi5'
+    ];
+
+    // Initialize empty arrays to group data by category
+    $groupedScormData = [
+        'scorm-1.2' => [],
+        'scorm-2004' => [],
+        'tin-can-api' => [],
+        'cmi5' => []
+    ];
+
+    // Group SCORM packages by category
+    foreach ($scormPackages as $package) {
+        $categoryKey = $categories[$package['scorm_category']] ?? null;
+        if ($categoryKey) {
+            $groupedScormData[$categoryKey][] = $package;
+        }
+    }
+
+    // Loop through categories and display data accordingly
+    foreach ($categories as $key => $tabId) :
+    ?>
+        <div class="tab-pane <?= $tabId === 'scorm-1.2' ? 'show active' : ''; ?>" id="<?= $tabId ?>">
+            <h4><?= strtoupper(str_replace('-', ' ', $tabId)) ?> Content</h4>
+            <div class="row">
+                <?php if (!empty($groupedScormData[$tabId])) : ?>
+                    <?php foreach ($groupedScormData[$tabId] as $scorm) : ?>
+                        <div class="col-md-4">
+                            <div class="scorm-card">
+                                <div class="card-body">
+                                    <div class="scorm-icon">
+                                        <i class="fas fa-file-archive"></i>
+                                    </div>
+                                    <?php
+                                    $displayTitle = strlen($scorm['title']) > 20 ? substr($scorm['title'], 0, 17) . '...' : $scorm['title'];
+                                    ?>
+                                    <h5 class="scorm-title" title="<?= htmlspecialchars($scorm['title']) ?>">
+                                        <?= htmlspecialchars($displayTitle) ?>
+                                    </h5>
+                                    <div class="scorm-actions">
+                                    <a href="#" class="edit-scorm" data-scorm='<?= json_encode($scorm); ?>'>
+                                    <i class="fas fa-edit edit-icon" title="Edit"></i>
+                                </a>
+                                        <a href="index.php?controller=VLRController&action=delete&id=<?= $scorm['id'] ?>" onclick="return confirm('Are you sure you want to delete this SCORM package?');"> <i class="fas fa-trash-alt delete-icon" title="Delete"></i></a>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    <?php endforeach; ?>
+                <?php else : ?>
+                    <p>No SCORM packages found for this category.</p>
+                <?php endif; ?>
             </div>
+        </div>
+    <?php endforeach; ?>
+</div>
+
+
         </div>
 
 
@@ -414,4 +491,5 @@
 </div>
 </div>
 <script src="public/js/scorm_validation.js"></script>
+<script src="public/js/scorm_package.js"></script>
 <?php include 'includes/footer.php'; ?>
