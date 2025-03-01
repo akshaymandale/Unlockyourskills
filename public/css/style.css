@@ -692,6 +692,8 @@ html, body {
     background: #ffffff;
     border-radius: 8px;
     transition: all 0.3s ease-in-out;
+    border-radius: 12px;
+    box-shadow: 2px 4px 10px rgba(0, 0, 0, 0.1);
 }
 
 .card h5 {
@@ -702,6 +704,11 @@ html, body {
     transform: scale(1.03);
     box-shadow: 0px 4px 8px rgba(106, 13, 173, 0.2);
 }
+
+.card-body i {
+    color: #6c757d;
+}
+
 
 .tag-input-container {
     display: flex;
@@ -733,4 +740,61 @@ html, body {
     border: none;
     outline: none;
     flex-grow: 1;
+}
+
+
+/* ✅ SCORM Card Styling */
+.scorm-card {
+    background: #fff;
+    border: 2px solid #6a0dad; /* Theme color */
+    border-radius: 10px;
+    padding: 15px;
+    margin: 10px 0;
+    text-align: center;
+    box-shadow: 2px 2px 10px rgba(0, 0, 0, 0.1);
+    position: relative;
+    transition: transform 0.2s ease-in-out;
+}
+
+.scorm-card:hover {
+    transform: scale(1.05);
+}
+
+.scorm-icon {
+    font-size: 40px;
+    color: #6a0dad; /* Theme color */
+    margin-bottom: 10px;
+}
+
+.scorm-title {
+    font-size: 16px;
+    font-weight: bold;
+    color: #333;
+    margin-bottom: 5px;
+}
+
+.scorm-actions {
+    position: absolute;
+    top: 10px;
+    right: 15px;
+}
+
+.scorm-actions .edit-icon {
+    color: #007bff; /* Blue */
+    margin-right: 10px;
+    cursor: pointer;
+}
+
+.scorm-actions .delete-icon {
+    color: #dc3545; /* Red */
+    cursor: pointer;
+}
+
+.scorm-actions i {
+    font-size: 18px;
+    transition: color 0.2s;
+}
+
+.scorm-actions i:hover {
+    opacity: 0.7;
 }

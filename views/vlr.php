@@ -1,5 +1,8 @@
 <?php
 // views/vlr.php
+//echo '<pre>'; print_r($_SESSION);
+
+$clientName = $_SESSION['username'] ?? 'DEFAULT';
 ?>
 
 <?php include 'includes/header.php'; ?>
@@ -69,7 +72,7 @@
                                 </button>
                             </div>
                             <div class="modal-body">
-                                <form id="scormForm" enctype="multipart/form-data">
+                            <form id="scormForm" action="index.php?controller=VLRController&action=addScormPackage" method="POST" enctype="multipart/form-data">
                                     
                                     <!-- ✅ Title & Upload Zip (Side by Side) -->
                                     <div class="row">
@@ -198,25 +201,95 @@
                 </li>
             </ul>
 
-            <!-- ✅ SCORM Sub-Tab Content -->
-            <div class="tab-content mt-3">
-                <div class="tab-pane show active" id="scorm-1.2"> <!-- Ensure "show active" is set -->
-                    <h4>SCORM 1.2 Content</h4>
-                    <p>Details about SCORM 1.2...</p>
-                </div>
-                <div class="tab-pane" id="scorm-2004">
-                    <h4>SCORM 2004 Content</h4>
-                    <p>Details about SCORM 2004...</p>
-                </div>
-                <div class="tab-pane" id="tin-can-api">
-                    <h4>Tin Can API (xAPI) Content</h4>
-                    <p>Details about Tin Can API...</p>
-                </div>
-                <div class="tab-pane" id="cmi5">
-                    <h4>CMI5 Content</h4>
-                    <p>Details about CMI5...</p>
-                </div>
+                <!-- ✅ SCORM Sub-Tab Content -->
+                 
+                <?php
+// Validate if $scormPackages is set
+if (!isset($scormPackages)) {
+    $scormPackages = [];
+}
+
+
+// Categorize SCORM packages
+$scormCategories = [
+    'scorm-1.2' => [],
+    'scorm-2004' => [],
+    'tin-can-api' => [],
+    'cmi5' => []
+];
+
+// Distribute packages into categories
+foreach ($scormPackages as $package) {
+    $category = strtolower(str_replace(' ', '-', $package['scorm_category']));
+    if (isset($scormCategories[$category])) {
+        $scormCategories[$category][] = $package;
+    }
+}
+?>
+<div class="tab-content mt-3">
+    <?php
+    // Define tab IDs corresponding to scorm_category
+    $categories = [
+        'scorm1.2' => 'scorm-1.2',
+        'scorm2004' => 'scorm-2004',
+        'xapi' => 'tin-can-api',
+        'cmi5' => 'cmi5'
+    ];
+
+    // Initialize empty arrays to group data by category
+    $groupedScormData = [
+        'scorm-1.2' => [],
+        'scorm-2004' => [],
+        'tin-can-api' => [],
+        'cmi5' => []
+    ];
+
+    // Group SCORM packages by category
+    foreach ($scormPackages as $package) {
+        $categoryKey = $categories[$package['scorm_category']] ?? null;
+        if ($categoryKey) {
+            $groupedScormData[$categoryKey][] = $package;
+        }
+    }
+
+    // Loop through categories and display data accordingly
+    foreach ($categories as $key => $tabId) :
+    ?>
+        <div class="tab-pane <?= $tabId === 'scorm-1.2' ? 'show active' : ''; ?>" id="<?= $tabId ?>">
+            <h4><?= strtoupper(str_replace('-', ' ', $tabId)) ?> Content</h4>
+            <div class="row">
+                <?php if (!empty($groupedScormData[$tabId])) : ?>
+                    <?php foreach ($groupedScormData[$tabId] as $scorm) : ?>
+                        <div class="col-md-4">
+                            <div class="scorm-card">
+                                <div class="card-body">
+                                    <div class="scorm-icon">
+                                        <i class="fas fa-file-archive"></i>
+                                    </div>
+                                    <?php
+                                    $displayTitle = strlen($scorm['title']) > 20 ? substr($scorm['title'], 0, 17) . '...' : $scorm['title'];
+                                    ?>
+                                    <h5 class="scorm-title" title="<?= htmlspecialchars($scorm['title']) ?>">
+                                        <?= htmlspecialchars($displayTitle) ?>
+                                    </h5>
+                                    <div class="scorm-actions">
+                                        <i class="fas fa-edit edit-icon" title="Edit"></i>
+                            
+                                        <a href="index.php?controller=VLRController&action=delete&id=<?= $scorm['id'] ?>" onclick="return confirm('Are you sure you want to delete this SCORM package?');"> <i class="fas fa-trash-alt delete-icon" title="Delete"></i></a>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    <?php endforeach; ?>
+                <?php else : ?>
+                    <p>No SCORM packages found for this category.</p>
+                <?php endif; ?>
             </div>
+        </div>
+    <?php endforeach; ?>
+</div>
+
+
         </div>
 
 

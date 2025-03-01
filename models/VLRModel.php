@@ -9,19 +9,18 @@ class VLRModel {
         $this->conn = $database->connect();
     }
 
-
     // ✅ Insert SCORM Package
     public function insertScormPackage($data) {
-        // Backend Validation
+        // Backend Validation: Ensure required fields are filled
         if (empty($data['title']) || empty($data['zip_file']) || empty($data['version']) || empty($data['scorm_category']) || empty($data['mobile_support']) || empty($data['assessment'])) {
-            return ['status' => 'error', 'message' => 'Required fields cannot be empty.'];
+            return false;
         }
 
         $stmt = $this->conn->prepare("INSERT INTO scorm_packages 
-            (title, zip_file, description, tags, version, language, scorm_category, time_limit, mobile_support, assessment, created_by, is_deleted) 
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0)");
+            (title, zip_file, description, tags, version, language, scorm_category, time_limit, mobile_support, assessment, created_by, is_deleted, created_at) 
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, NOW())");
 
-        $result = $stmt->execute([
+        return $stmt->execute([
             $data['title'], 
             $data['zip_file'], 
             $data['description'], 
@@ -32,14 +31,26 @@ class VLRModel {
             $data['time_limit'], 
             $data['mobile_support'], 
             $data['assessment'], 
-            $_SESSION['full_name']
+            $data['created_by']
         ]);
+    }
 
-        if ($result) {
-            return ['status' => 'success', 'message' => 'SCORM package added successfully.'];
-        } else {
-            return ['status' => 'error', 'message' => 'Failed to insert SCORM package.'];
-        }
+    // Get data for display on VLR 
+    public function getScormPackages() {
+        $stmt = $this->conn->prepare("SELECT * FROM scorm_packages WHERE is_deleted = 0");
+        $stmt->execute();
+        $data = $stmt->fetchAll(PDO::FETCH_ASSOC);
+    
+        // Debugging - Check if data is fetched
+        error_log(print_r($data, true)); // Logs to XAMPP/PHP logs
+    
+        return $data;
+    }
+
+    // Delete respective SCROM 
+    public function deleteScormPackage($id) {
+        $stmt = $this->conn->prepare("UPDATE scorm_packages SET is_deleted = 1 WHERE id = ?");
+        return $stmt->execute([$id]);
     }
 }
 ?>
