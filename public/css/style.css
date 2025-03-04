@@ -805,3 +805,81 @@ html, body {
 .scorm-actions a:hover {
     text-decoration: none; /* Ensures no underline on hover */
 }
+
+/* External content CSS for card */
+/* ✅ General Styling */
+/* ✅ External Content Card Styling */
+.content-card {
+    background: #fff;
+    border: 2px solid #6c5ce7; /* Theme color - Purple */
+    border-radius: 10px;
+    padding: 15px;
+    margin: 10px 0;
+    text-align: center;
+    box-shadow: 2px 2px 10px rgba(0, 0, 0, 0.1);
+    position: relative;
+    transition: transform 0.2s ease-in-out;
+}
+
+.content-card:hover {
+    transform: scale(1.05);
+}
+
+/* ✅ Dynamic Icons Based on Content Type */
+.content-icon {
+    font-size: 40px;
+    margin-bottom: 10px;
+}
+
+/* ✅ Specific Icons for Different Sub-tabs */
+.content-icon.video { color: #e84118; }       /* Red for YouTube/Vimeo */
+.content-icon.course { color: #0984e3; }      /* Blue for LinkedIn/Udemy */
+.content-icon.article { color: #2d3436; }     /* Dark Gray for Web Articles/Blogs */
+.content-icon.podcast { color: #e67e22; }     /* Orange for Podcasts/Audio */
+
+/* ✅ Title Styling */
+.content-title {
+    font-size: 16px;
+    font-weight: bold;
+    color: #333;
+    margin-bottom: 5px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* ✅ Action Buttons (Edit & Delete) */
+.content-actions {
+    position: absolute;
+    top: 10px;
+    right: 15px;
+}
+
+.content-actions .edit-icon {
+    color: #00a8ff; /* Light Blue */
+    margin-right: 10px;
+    cursor: pointer;
+}
+
+.content-actions .delete-icon {
+    color: #e74c3c; /* Red */
+    cursor: pointer;
+}
+
+.content-actions i {
+    font-size: 18px;
+    transition: color 0.2s;
+}
+
+.content-actions i:hover {
+    opacity: 0.7;
+}
+
+/* ✅ Ensuring No Underlines on Links */
+.content-actions a {
+    text-decoration: none;
+}
+
+.content-actions a:hover {
+    text-decoration: none;
+}
