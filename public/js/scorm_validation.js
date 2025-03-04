@@ -102,6 +102,7 @@ document.addEventListener("DOMContentLoaded", function () {
                     hideError(field);
                 }
                 break;
+                
         }
 
         return isValid;

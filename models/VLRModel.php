@@ -79,5 +79,38 @@ public function updateScormPackage($id, $data) {
         return $stmt->execute([$id]);
     }
 
+    // Add external content package 
+
+    public function insertExternalContent($data)
+    {
+        $sql = "INSERT INTO external_content 
+            (title, content_type, version_number, mobile_support, language_support, time_limit, description, tags, video_url, thumbnail, course_url, platform_name, article_url, author, audio_source, audio_url, audio_file, speaker, created_by) 
+            VALUES (:title, :content_type, :version_number, :mobile_support, :language_support, :time_limit, :description, :tags, :video_url, :thumbnail, :course_url, :platform_name, :article_url, :author, :audio_source, :audio_url, :audio_file, :speaker, :created_by)";
+
+        $stmt = $this->conn->prepare($sql);
+        
+        return $stmt->execute($data);
+    }
+
+    // Get data for External Content
+    public function getExternalContent() {
+        $stmt = $this->conn->prepare("SELECT * FROM external_content WHERE is_deleted = 0");
+        $stmt->execute();
+        $data = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+        // Debugging - Check if data is fetched
+        error_log(print_r($data, true)); // Logs to XAMPP/PHP logs
+
+        return $data;
+    }
+
+    // Delete respective External Content 
+    public function deleteExternalContent($id) {
+        $stmt = $this->conn->prepare("UPDATE external_content SET is_deleted = 1 WHERE id = ?");
+        return $stmt->execute([$id]);
+    }
+
+
+
 }
 ?>
