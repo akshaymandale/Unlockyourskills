@@ -182,13 +182,12 @@ document.addEventListener("DOMContentLoaded", function () {
             }
         });
 
-       
         // Clear validation errors when modal opens
         $("#externalContentModal").on("show.bs.modal", function () {
             $("#externalTagError").text("").hide();
 
             // Reset the form fields
-            $("#externalContentForm")[0].reset(); 
+           // $("#externalContentForm")[0].reset(); 
 
             // Manually clear select dropdowns and text areas
             $("#content_type, #mobile_support, #audio_source").val("").trigger("change");
@@ -208,7 +207,61 @@ document.addEventListener("DOMContentLoaded", function () {
             $("#externalTagError").text("").hide(); // Hide any validation errors
             $("#contentType").val(""); // Reset dropdown selection
             $("#dynamicFields").html(""); // Clear dynamically generated fields
-            $("#externalContentForm")[0].reset(); // Reset the entire form
+           // $("#externalContentForm")[0].reset(); // Reset the entire form
         });
+
+        // ✅ New Fix: Handle Edit Functionality
+        $(document).on("click", ".edit-content", function (e) {
+            e.preventDefault();
+            
+            let contentData = $(this).attr("data-content");
+            console.log("Raw Data:", contentData);
+        
+            if (!contentData || contentData === "undefined") {
+                console.error("data-content is missing or invalid.");
+                return;
+            }
+        
+            try {
+                let parsedData = JSON.parse(contentData);
+                console.log("Parsed Data:", parsedData);
+        
+                $("#external_id").val(parsedData.id);
+                $("#title").val(parsedData.title);
+                $("#contentType").val(parsedData.content_type).trigger("change");
+                $("#versionNumber").val(parsedData.version_number);
+                $("#languageSupport").val(parsedData.language_support);
+                $("#timeLimit").val(parsedData.time_limit);
+                $("#description").val(parsedData.description);
+                $("#externalTagList").val(parsedData.tags);
+        
+                // Handle optional fields properly
+                $("#videoUrl").val(parsedData.video_url || "");
+                $("#thumbnail").val(parsedData.thumbnail || "");
+                $("#courseUrl").val(parsedData.course_url || "");
+                $("#platformName").val(parsedData.platform_name || "");
+                $("#articleUrl").val(parsedData.article_url || "");
+                $("#author").val(parsedData.author || "");
+                $("#audioUrl").val(parsedData.audio_url || "");
+                $("#speaker").val(parsedData.speaker || "");
+        
+                $('input[name="mobile_support"][value="' + parsedData.mobile_support + '"]').prop("checked", true);
+                $('input[name="audio_source"][value="' + parsedData.audio_source + '"]').prop("checked", true);
+        
+                console.log("Opening modal...");
+                $("#externalContentModal").modal("show");
+            } catch (error) {
+                console.error("Error parsing JSON:", error);
+            }
+        
+            document.getElementById("externalModalLabel").textContent = "Edit External Package"; 
+        });
+        
+        // ✅ Ensure Tags Load Properly When Editing
+        $("#externalContentModal").on("shown.bs.modal", function () {
+            updateTagList(); // Refresh the tag list
+        });
+
     });
 });
+

@@ -88,123 +88,137 @@ class VLRController {
 
     // Add External content data
     
-        public function addExternalContent()
-        {
-            if ($_SERVER["REQUEST_METHOD"] === "POST") {
-                // Sanitize and fetch input values
-                $title = trim($_POST['title']);
-                $contentType = trim($_POST['content_type']);
-                $versionNumber = trim($_POST['version_number']);
-                $mobileSupport = trim($_POST['mobile_support']);
-                $languageSupport = trim($_POST['language_support']);
-                $timeLimit = isset($_POST['time_limit']) ? intval($_POST['time_limit']) : null;
-                $description = trim($_POST['description']);
-                $tags = trim($_POST['tags']);
-                $createdBy = $_SESSION['username']; // Session-based user
+       public function addOrEditExternalContent()
+{
+    if ($_SERVER["REQUEST_METHOD"] === "POST") {
+        // Check if it's an update (edit) operation
+        $isEdit = isset($_POST['id']) && !empty($_POST['id']);
+        $id = $isEdit ? intval($_POST['id']) : null;
 
-                // Content type specific fields
-                $videoUrl = !empty($_POST['video_url']) ? filter_var($_POST['video_url'], FILTER_VALIDATE_URL) : null;
-                $thumbnail = !empty($_POST['thumbnail']) ? trim($_POST['thumbnail']) : null;
-                $courseUrl = !empty($_POST['course_url']) ? filter_var($_POST['course_url'], FILTER_VALIDATE_URL) : null;
-                $platformName = !empty($_POST['platform_name']) ? trim($_POST['platform_name']) : null;
-                $articleUrl = !empty($_POST['article_url']) ? filter_var($_POST['article_url'], FILTER_VALIDATE_URL) : null;
-                $author = !empty($_POST['author']) ? trim($_POST['author']) : null;
-                $audioSource = !empty($_POST['audio_source']) ? trim($_POST['audio_source']) : null;
-                $audioUrl = !empty($_POST['audio_url']) ? filter_var($_POST['audio_url'], FILTER_VALIDATE_URL) : null;
-                $speaker = !empty($_POST['speaker']) ? trim($_POST['speaker']) : null;
+        // Sanitize and fetch input values
+        $title = trim($_POST['title']);
+        $contentType = trim($_POST['content_type']);
+        $versionNumber = trim($_POST['version_number']);
+        $mobileSupport = trim($_POST['mobile_support']);
+        $languageSupport = trim($_POST['language_support']);
+        $timeLimit = isset($_POST['time_limit']) ? intval($_POST['time_limit']) : null;
+        $description = trim($_POST['description']);
+        $tags = trim($_POST['tags']);
+        $modifiedBy = $_SESSION['username']; // Session-based user
 
-                // Backend validation
-                $errors = [];
+        // Content type specific fields
+        $videoUrl = !empty($_POST['video_url']) ? filter_var($_POST['video_url'], FILTER_VALIDATE_URL) : null;
+        $thumbnail = !empty($_POST['thumbnail']) ? trim($_POST['thumbnail']) : null;
+        $courseUrl = !empty($_POST['course_url']) ? filter_var($_POST['course_url'], FILTER_VALIDATE_URL) : null;
+        $platformName = !empty($_POST['platform_name']) ? trim($_POST['platform_name']) : null;
+        $articleUrl = !empty($_POST['article_url']) ? filter_var($_POST['article_url'], FILTER_VALIDATE_URL) : null;
+        $author = !empty($_POST['author']) ? trim($_POST['author']) : null;
+        $audioSource = !empty($_POST['audio_source']) ? trim($_POST['audio_source']) : null;
+        $audioUrl = !empty($_POST['audio_url']) ? filter_var($_POST['audio_url'], FILTER_VALIDATE_URL) : null;
+        $speaker = !empty($_POST['speaker']) ? trim($_POST['speaker']) : null;
 
-                if (empty($title)) $errors[] = "Title is required.";
-                if (!in_array($contentType, ['youtube-vimeo', 'linkedin-udemy', 'web-links-blogs', 'podcasts-audio'])) {
-                    $errors[] = "Invalid content type.";
-                }
-                if (empty($versionNumber)) $errors[] = "Version number is required.";
-                if (!in_array($mobileSupport, ['Yes', 'No'])) $errors[] = "Invalid mobile support value.";
-                if (empty($languageSupport)) $errors[] = "Language support is required.";
-                if (!empty($timeLimit) && !is_numeric($timeLimit)) $errors[] = "Time limit must be a number.";
-                if (empty($description)) $errors[] = "Description is required.";
-                if (empty($tags)) $errors[] = "At least one tag is required.";
+        // Backend validation
+        $errors = [];
 
-                // Validate content type-specific fields
-                if ($contentType === "youtube-vimeo" && !$videoUrl) $errors[] = "Invalid video URL.";
-                if ($contentType === "linkedin-udemy" && (!$courseUrl || empty($platformName))) $errors[] = "Course URL and Platform Name are required.";
-                if ($contentType === "web-links-blogs" && (!$articleUrl || empty($author))) $errors[] = "Article URL and Author/Publisher are required.";
-                if ($contentType === "podcasts-audio") {
-                    if ($audioSource === "url" && !$audioUrl) $errors[] = "Valid audio URL is required.";
-                    if ($audioSource === "upload" && empty($_FILES['audio_file']['name'])) $errors[] = "Audio file is required.";
-                    if (empty($speaker)) $errors[] = "Speaker/Host is required.";
-                }
-                //print_r($_FILES['audio_file']);
-            // File upload validation (if applicable)
-                $audioFile = null;
-                if ($audioSource === "upload" && isset($_FILES['audio_file'])) {
-                    $allowedExtensions = ['mp3', 'wav'];
-                    $fileName = $_FILES['audio_file']['name'];
-                    $fileTmp = $_FILES['audio_file']['tmp_name'];
-                    $fileSize = $_FILES['audio_file']['size'];
-                    
-                    // Get file extension
-                    $fileExt = strtolower(pathinfo($fileName, PATHINFO_EXTENSION));
+        if (empty($title)) $errors[] = "Title is required.";
+        if (!in_array($contentType, ['youtube-vimeo', 'linkedin-udemy', 'web-links-blogs', 'podcasts-audio'])) {
+            $errors[] = "Invalid content type.";
+        }
+        if (empty($versionNumber)) $errors[] = "Version number is required.";
+        if (!in_array($mobileSupport, ['Yes', 'No'])) $errors[] = "Invalid mobile support value.";
+        if (empty($languageSupport)) $errors[] = "Language support is required.";
+        if (!empty($timeLimit) && !is_numeric($timeLimit)) $errors[] = "Time limit must be a number.";
+        if (empty($description)) $errors[] = "Description is required.";
+        if (empty($tags)) $errors[] = "At least one tag is required.";
 
-                    // Check extension instead of MIME type
-                    if (!in_array($fileExt, $allowedExtensions)) {
-                        $errors[] = "Only MP3 and WAV files are allowed.";
-                    } elseif ($fileSize > 5 * 1024 * 1024) { // Optional: 5MB limit
-                        $errors[] = "File size should not exceed 5MB.";
-                    } else {
-                        // Save file
-                        $newFileName = time() . "_" . basename($fileName);
-                        $uploadPath = "uploads/external/audio/" . $newFileName;
+        // Validate content type-specific fields
+        if ($contentType === "youtube-vimeo" && !$videoUrl) $errors[] = "Invalid video URL.";
+        if ($contentType === "linkedin-udemy" && (!$courseUrl || empty($platformName))) $errors[] = "Course URL and Platform Name are required.";
+        if ($contentType === "web-links-blogs" && (!$articleUrl || empty($author))) $errors[] = "Article URL and Author/Publisher are required.";
+        if ($contentType === "podcasts-audio") {
+            if ($audioSource === "url" && !$audioUrl) $errors[] = "Valid audio URL is required.";
+            if ($audioSource === "upload" && empty($_FILES['audio_file']['name']) && !$isEdit) {
+                $errors[] = "Audio file is required.";
+            }
+            if (empty($speaker)) $errors[] = "Speaker/Host is required.";
+        }
 
-                        if (move_uploaded_file($fileTmp, $uploadPath)) {
-                            $audioFile = $newFileName;
-                        } else {
-                            $errors[] = "Failed to upload audio file.";
-                        }
-                    }
-                }
+        // File upload validation (if applicable)
+        $audioFile = null;
+        if ($audioSource === "upload" && isset($_FILES['audio_file']) && !empty($_FILES['audio_file']['name'])) {
+            $allowedExtensions = ['mp3', 'wav'];
+            $fileName = $_FILES['audio_file']['name'];
+            $fileTmp = $_FILES['audio_file']['tmp_name'];
+            $fileSize = $_FILES['audio_file']['size'];
 
-                // If errors exist, return response
-                if (!empty($errors)) {
-                    echo json_encode(["status" => "error", "messages" => $errors]);
-                    return;
-                }
+            // Get file extension
+            $fileExt = strtolower(pathinfo($fileName, PATHINFO_EXTENSION));
 
-                // Insert into database
-                $insertData = [
-                    'title' => $title,
-                    'content_type' => $contentType,
-                    'version_number' => $versionNumber,
-                    'mobile_support' => $mobileSupport,
-                    'language_support' => $languageSupport,
-                    'time_limit' => $timeLimit,
-                    'description' => $description,
-                    'tags' => $tags,
-                    'video_url' => $videoUrl,
-                    'thumbnail' => $thumbnail,
-                    'course_url' => $courseUrl,
-                    'platform_name' => $platformName,
-                    'article_url' => $articleUrl,
-                    'author' => $author,
-                    'audio_source' => $audioSource,
-                    'audio_url' => $audioUrl,
-                    'audio_file' => $audioFile,
-                    'speaker' => $speaker,
-                    'created_by' => $createdBy
-                ];
-                
-                $result = $this->VLRModel->insertExternalContent($insertData);
+            // Check extension
+            if (!in_array($fileExt, $allowedExtensions)) {
+                $errors[] = "Only MP3 and WAV files are allowed.";
+            } elseif ($fileSize > 5 * 1024 * 1024) { // Optional: 5MB limit
+                $errors[] = "File size should not exceed 5MB.";
+            } else {
+                // Save file
+                $newFileName = time() . "_" . basename($fileName);
+                $uploadPath = "uploads/external/audio/" . $newFileName;
 
-                // Return JSON response based on result
-                if ($result) {
-                    echo json_encode(["status" => "success", "message" => "External Content package added successfully."]);
+                if (move_uploaded_file($fileTmp, $uploadPath)) {
+                    $audioFile = $newFileName;
                 } else {
-                    echo json_encode(["status" => "error", "message" => "Failed to insert External Content package."]);
+                    $errors[] = "Failed to upload audio file.";
                 }
             }
         }
+
+        // If errors exist, return response
+        if (!empty($errors)) {
+            echo json_encode(["status" => "error", "messages" => $errors]);
+            return;
+        }
+
+        // Prepare data for insert/update
+        $data = [
+            'title' => $title,
+            'content_type' => $contentType,
+            'version_number' => $versionNumber,
+            'mobile_support' => $mobileSupport,
+            'language_support' => $languageSupport,
+            'time_limit' => $timeLimit,
+            'description' => $description,
+            'tags' => $tags,
+            'video_url' => $videoUrl,
+            'thumbnail' => $thumbnail,
+            'course_url' => $courseUrl,
+            'platform_name' => $platformName,
+            'article_url' => $articleUrl,
+            'author' => $author,
+            'audio_source' => $audioSource,
+            'audio_url' => $audioUrl,
+            'speaker' => $speaker,
+            'updated_by' => $modifiedBy,
+        ];
+
+        // Include audio file in update only if a new file is uploaded
+        if ($audioFile) {
+            $data['audio_file'] = $audioFile;
+        }
+
+        // Insert or update the database
+        if ($isEdit) {
+            $result = $this->VLRModel->updateExternalContent($id, $data);
+            $message = $result ? "External Content package updated successfully." : "Failed to update External Content package.";
+        } else {
+            $data['created_by'] = $modifiedBy;
+            $result = $this->VLRModel->insertExternalContent($data);
+            $message = $result ? "External Content package added successfully." : "Failed to insert External Content package.";
+        }
+
+        // Return JSON response based on result
+        echo json_encode(["status" => $result ? "success" : "error", "message" => $message]);
+    }
+}
 
          // Delete External content data
         public function deleteExternal() {

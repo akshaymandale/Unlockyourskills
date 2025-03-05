@@ -15,7 +15,7 @@ document.addEventListener("DOMContentLoaded", function () {
     function attachValidation() {
         console.log("Attaching validation events to form inputs...");
         const form = document.getElementById("externalContentForm");
-        const submitButton = document.getElementById("submit");
+        const submitButton = document.getElementById("submit_button");
     
         if (!form) {
             console.error("❌ External Content Form NOT found!");
@@ -128,20 +128,20 @@ document.addEventListener("DOMContentLoaded", function () {
         }
     }
 
-    function validateURL(field, value) {
-        let urlPattern = /^(https?:\/\/)?(www\.)?([\w-]+\.)+[\w]{2,}(:\d+)?(\/[\w/_-]*(\?\S+)?)?$/i;
-    
-        if (value.trim() === "") {
-            showError(field, "URL is required");
-            return false;
-        } else if (!urlPattern.test(value)) {
-            showError(field, "Enter a valid URL (e.g., https://example.com)");
-            return false;
-        } else {
-            hideError(field);
-            return true;
-        }
+  function validateURL(field, value) {
+    let urlPattern = /^(https?:\/\/)?(www\.)?([\w-]+\.)+[\w]{2,}(:\d+)?(\/[\w/_-]*(\?\S+)?)?$/i;
+
+    if (value.trim() === "") {
+        showError(field, "URL is required");
+        return false;
+    } else if (!urlPattern.test(value)) {
+        showError(field, "Enter a valid URL (e.g., https://example.com)");
+        return false;
+    } else {
+        hideError(field);
+        return true;
     }
+}
 
     function validateAudioFile(field) {
         let file = field.files[0];

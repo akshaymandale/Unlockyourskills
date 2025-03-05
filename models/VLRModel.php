@@ -83,13 +83,119 @@ public function updateScormPackage($id, $data) {
 
     public function insertExternalContent($data)
     {
-        $sql = "INSERT INTO external_content 
-            (title, content_type, version_number, mobile_support, language_support, time_limit, description, tags, video_url, thumbnail, course_url, platform_name, article_url, author, audio_source, audio_url, audio_file, speaker, created_by) 
-            VALUES (:title, :content_type, :version_number, :mobile_support, :language_support, :time_limit, :description, :tags, :video_url, :thumbnail, :course_url, :platform_name, :article_url, :author, :audio_source, :audio_url, :audio_file, :speaker, :created_by)";
+        try {
+            // Debugging: Print data before inserting
+        // echo "<pre>";
+        // print_r($data);
+        // echo "</pre>";
+            // exit;
 
-        $stmt = $this->conn->prepare($sql);
-        
-        return $stmt->execute($data);
+            // Ensure audio_file exists in data
+            $audioFile = isset($data['audio_file']) ? $data['audio_file'] : null;
+
+            $sql = "INSERT INTO external_content (
+                title, content_type, version_number, mobile_support, language_support, time_limit, 
+                description, tags, video_url, thumbnail, course_url, platform_name, article_url, 
+                author, audio_source, audio_url, audio_file, speaker, created_by
+            ) VALUES (
+                :title, :content_type, :version_number, :mobile_support, :language_support, :time_limit, 
+                :description, :tags, :video_url, :thumbnail, :course_url, :platform_name, :article_url, 
+                :author, :audio_source, :audio_url, :audio_file, :speaker, :created_by
+            )";
+
+            $stmt = $this->conn->prepare($sql);
+
+            // Bind parameters
+            $stmt->execute([
+                ':title'           => $data['title'],
+                ':content_type'    => $data['content_type'],
+                ':version_number'  => $data['version_number'],
+                ':mobile_support'  => $data['mobile_support'],
+                ':language_support'=> $data['language_support'],
+                ':time_limit'      => $data['time_limit'],
+                ':description'     => $data['description'],
+                ':tags'            => $data['tags'],
+                ':video_url'       => $data['video_url'],
+                ':thumbnail'       => $data['thumbnail'],
+                ':course_url'      => $data['course_url'],
+                ':platform_name'   => $data['platform_name'],
+                ':article_url'     => $data['article_url'],
+                ':author'          => $data['author'],
+                ':audio_source'    => $data['audio_source'],
+                ':audio_url'       => $data['audio_url'],
+                ':audio_file'      => $audioFile, // Now ensuring this is always set
+                ':speaker'         => $data['speaker'],
+                ':created_by'      => $data['created_by']
+            ]);
+
+            return true;
+        } catch (PDOException $e) {
+            error_log("Insert Error: " . $e->getMessage());
+            return false;
+        }
+    }
+
+
+    // Update for External Content 
+
+    public function updateExternalContent($id, $data)
+    {
+        try {
+            // Ensure audio_file exists in data
+            $audioFile = isset($data['audio_file']) ? $data['audio_file'] : null;
+
+            $sql = "UPDATE external_content SET
+                title = :title,
+                content_type = :content_type,
+                version_number = :version_number,
+                mobile_support = :mobile_support,
+                language_support = :language_support,
+                time_limit = :time_limit,
+                description = :description,
+                tags = :tags,
+                video_url = :video_url,
+                thumbnail = :thumbnail,
+                course_url = :course_url,
+                platform_name = :platform_name,
+                article_url = :article_url,
+                author = :author,
+                audio_source = :audio_source,
+                audio_url = :audio_url,
+                audio_file = :audio_file,
+                speaker = :speaker,
+                updated_at = NOW()
+            WHERE id = :id";
+
+            $stmt = $this->db->prepare($sql);
+
+            // Bind parameters
+            $stmt->execute([
+                ':id'              => $id,
+                ':title'           => $data['title'],
+                ':content_type'    => $data['content_type'],
+                ':version_number'  => $data['version_number'],
+                ':mobile_support'  => $data['mobile_support'],
+                ':language_support'=> $data['language_support'],
+                ':time_limit'      => $data['time_limit'],
+                ':description'     => $data['description'],
+                ':tags'            => $data['tags'],
+                ':video_url'       => $data['video_url'],
+                ':thumbnail'       => $data['thumbnail'],
+                ':course_url'      => $data['course_url'],
+                ':platform_name'   => $data['platform_name'],
+                ':article_url'     => $data['article_url'],
+                ':author'          => $data['author'],
+                ':audio_source'    => $data['audio_source'],
+                ':audio_url'       => $data['audio_url'],
+                ':audio_file'      => $audioFile, // Ensuring it is always set
+                ':speaker'         => $data['speaker']
+            ]);
+
+            return true;
+        } catch (PDOException $e) {
+            error_log("Update Error: " . $e->getMessage());
+            return false;
+        }
     }
 
     // Get data for External Content

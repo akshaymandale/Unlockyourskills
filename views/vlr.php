@@ -397,13 +397,15 @@ foreach ($scormPackages as $package) {
                             <div class="modal-dialog modal-lg">
                                 <div class="modal-content">
                                     <div class="modal-header">
-                                        <h5 class="modal-title">Add External Content</h5>
+                                         <h5 class="modal-title" id="externalModalLabel">Add External Content</h5>
                                         <button type="button" class="close" data-dismiss="modal" aria-label="Close">
                                             <span aria-hidden="true">&times;</span>
                                         </button>
                                     </div>
                                     <div class="modal-body">
-                                    <form id="externalContentForm" action="index.php?controller=VLRController&action=addExternalContent" method="POST" enctype="multipart/form-data">
+                                    <form id="externalContentForm" action="index.php?controller=VLRController&action=addOrEditExternalContent" method="POST" enctype="multipart/form-data">
+                                    <input type="hidden" id="external_id" name="id">
+                                  <!-- Store -->
                                         <div class="row">
                                             <div class="col-md-6">
                                             <div class="form-group">
@@ -500,7 +502,7 @@ foreach ($scormPackages as $package) {
 
                                         <div id="dynamicFields" class="mt-3"></div>
                                         <div class="modal-footer">
-                                            <button type="submit" id="submit" class="btn btn-primary">Submit</button>
+                                            <button type="submit" id="submit_button" class="btn btn-primary">Submit</button>
                                             <button type="button" class="btn btn-danger" data-dismiss="modal" id="clearForm">Cancel</button>
                                         </div>
                                     </form> 
