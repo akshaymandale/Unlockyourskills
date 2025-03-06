@@ -472,7 +472,7 @@ foreach ($scormPackages as $package) {
                                             <div class="col-md-6">
                                             <div class="form-group">
                                                 <label for="timeLimit">Time Limit (in minutes)</label>
-                                                <input type="number" class="form-control" id="timeLimit" name="time_limit">
+                                                <input type="number" class="form-control" id="external_timeLimit" name="time_limit">
                                             </div>
                                             </div>
                                         </div>
@@ -481,7 +481,7 @@ foreach ($scormPackages as $package) {
                                             <div class="col-md-12">
                                             <div class="form-group">
                                                 <label for="description">Description</label>
-                                                <textarea class="form-control" id="description" name="description" rows="3"></textarea>
+                                                <textarea class="form-control" id="external_description" name="description" rows="3"></textarea>
                                             </div>
                                             </div>
                                         </div>

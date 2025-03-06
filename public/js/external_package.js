@@ -15,7 +15,9 @@ function toggleContentFields() {
                 <div class="col-md-6">
                 <div class="form-group">
                     <label for="thumbnail">Thumbnail Preview</label>
-                    <input type="file" class="form-control" id="thumbnail" name = "thumbnail">
+                    <input type="file" class="form-control" id="thumbnail" name="thumbnail" accept="image/*" onchange="validateThumbnail(this)">
+                    <img id="thumbnailPreview" src="" alt="Thumbnail Preview" style="display:none; max-width: 100px; margin-top: 10px;">
+                    <div id="thumbnailFileLink" style="display:none;"></div>
                 </div>
                 </div>
             </div>
@@ -46,12 +48,16 @@ function toggleContentFields() {
         fields += `
             <div class="row">
                 <div class="col-md-6">
+                <div class="form-group">
                     <label for="articleUrl">URL <span class="text-danger">*</span></label>
                     <input type="url" class="form-control" id="articleUrl" name="article_url" required>
                 </div>
+                </div>
                 <div class="col-md-6">
+                <div class="form-group">
                     <label for="author">Author/Publisher</label>
                     <input type="text" class="form-control" id="author" name = "author">
+                </div>
                 </div>
             </div>
         `;
@@ -78,8 +84,9 @@ function toggleContentFields() {
                 <div class="col-md-6">
                 <div class="form-group">
                     <label for="audioFile">Upload Audio (MP3/WAV) <span class="text-danger">*</span></label>
-                    <input type="file" class="form-control" id="audioFile"  name = "audio_file" accept=".mp3, .wav">
+                    <input type="file" class="form-control" id="audioFile" name="audio_file" accept=".mp3, .wav">
                     <small class="text-muted">Allowed formats: MP3, WAV</small>
+                    <div id="audioFileDisplay" style="margin-top: 10px;"></div>
                 </div>
                 </div>
             </div>
@@ -199,10 +206,12 @@ document.addEventListener("DOMContentLoaded", function () {
             // Clear validation errors (if applicable)
             $(".error-message").text("");
         });
+        
 
         // Clear previous content type and tags when modal closes
         $("#externalContentModal").on("hidden.bs.modal", function () {
             $("#externalTagDisplay").empty(); // Remove all tags
+            $("#externalModalLabel").text("Add External Content"); // Reset title
             $("#externalTagList").val(""); // Clear hidden input storing tags
             $("#externalTagError").text("").hide(); // Hide any validation errors
             $("#contentType").val(""); // Reset dropdown selection
@@ -213,31 +222,22 @@ document.addEventListener("DOMContentLoaded", function () {
         // ✅ New Fix: Handle Edit Functionality
         $(document).on("click", ".edit-content", function (e) {
             e.preventDefault();
-            
             let contentData = $(this).attr("data-content");
-            console.log("Raw Data:", contentData);
-        
             if (!contentData || contentData === "undefined") {
                 console.error("data-content is missing or invalid.");
                 return;
             }
-        
             try {
                 let parsedData = JSON.parse(contentData);
-                console.log("Parsed Data:", parsedData);
-        
                 $("#external_id").val(parsedData.id);
                 $("#title").val(parsedData.title);
                 $("#contentType").val(parsedData.content_type).trigger("change");
                 $("#versionNumber").val(parsedData.version_number);
                 $("#languageSupport").val(parsedData.language_support);
-                $("#timeLimit").val(parsedData.time_limit);
-                $("#description").val(parsedData.description);
+                $("#external_timeLimit").val(parsedData.time_limit);
+                $("#external_description").val(parsedData.description);
                 $("#externalTagList").val(parsedData.tags);
-        
-                // Handle optional fields properly
                 $("#videoUrl").val(parsedData.video_url || "");
-                $("#thumbnail").val(parsedData.thumbnail || "");
                 $("#courseUrl").val(parsedData.course_url || "");
                 $("#platformName").val(parsedData.platform_name || "");
                 $("#articleUrl").val(parsedData.article_url || "");
@@ -248,12 +248,41 @@ document.addEventListener("DOMContentLoaded", function () {
                 $('input[name="mobile_support"][value="' + parsedData.mobile_support + '"]').prop("checked", true);
                 $('input[name="audio_source"][value="' + parsedData.audio_source + '"]').prop("checked", true);
         
-                console.log("Opening modal...");
+                
+               // ✅ Show previously uploaded thumbnail with correct path
+                if (parsedData.thumbnail) {
+                    let thumbnailPath = "uploads/external/thumbnails/" + parsedData.thumbnail; // Ensure correct path
+                    $("#thumbnailPreview").attr("src", thumbnailPath).show();
+                    $("#thumbnailFileLink").html(`<a href="${thumbnailPath}" target="_blank">View Uploaded Thumbnail</a>`).show();
+                } else {
+                    $("#thumbnailPreview").hide();
+                    $("#thumbnailFileLink").hide();
+                }
+
+                // ✅ Show previously uploaded audio file
+                if (parsedData.audio_file) {
+                    $("#audioFileDisplay").html(`Current File: <a href="uploads/audio/${parsedData.audio_file}" target="_blank">${parsedData.audio_file}</a>`).show();
+                } else {
+                    $("#audioFileDisplay").html("No audio file uploaded.").show();
+                }
+        
+                let tagContainer = document.getElementById("externalTagDisplay");
+                tagContainer.innerHTML = "";
+                if (parsedData.tags) {
+                    parsedData.tags.split(",").forEach(tag => {
+                        $("#externalTagDisplay").append(
+                            `<span class="tag">${tag.trim()} <span class="remove-tag">&times;</span></span>`
+                        );
+                    });
+                }
+        
+                // ✅ Ensure Modal Opens
+               // $("#externalContentModal").modal({ show: true, backdrop: "static" });
                 $("#externalContentModal").modal("show");
+        
             } catch (error) {
                 console.error("Error parsing JSON:", error);
             }
-        
             document.getElementById("externalModalLabel").textContent = "Edit External Package"; 
         });
         

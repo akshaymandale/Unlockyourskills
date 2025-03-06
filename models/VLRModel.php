@@ -166,7 +166,7 @@ public function updateScormPackage($id, $data) {
                 updated_at = NOW()
             WHERE id = :id";
 
-            $stmt = $this->db->prepare($sql);
+            $stmt = $this->conn->prepare($sql);
 
             // Bind parameters
             $stmt->execute([

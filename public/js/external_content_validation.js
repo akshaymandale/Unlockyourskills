@@ -113,6 +113,10 @@ document.addEventListener("DOMContentLoaded", function () {
             case "audioFile":
                 isValid = validateAudioFile(field);
                 break;
+
+            case "thumbnail":
+            isValid = validateThumbnail(field);
+            break;
         }
 
         return isValid;
@@ -156,6 +160,28 @@ document.addEventListener("DOMContentLoaded", function () {
             return false;
         }
 
+        hideError(field);
+        return true;
+    }
+
+    function validateThumbnail(field) {
+        let file = field.files[0];
+        if (!file) {
+            showError(field, "Please upload an image file (JPG, PNG, GIF, WebP).");
+            return false;
+        }
+    
+        let allowedTypes = ["image/jpeg", "image/png", "image/gif", "image/webp"];
+        if (!allowedTypes.includes(file.type)) {
+            showError(field, "Invalid file type. Only JPG, PNG, GIF, and WebP are allowed.");
+            return false;
+        }
+    
+        if (file.size > 5 * 1024 * 1024) { // 5MB limit
+            showError(field, "File size should not exceed 5MB.");
+            return false;
+        }
+    
         hideError(field);
         return true;
     }
