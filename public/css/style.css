@@ -87,33 +87,77 @@ html, body {
     border-radius: 20px;
 }
 
-/* ✅ Fix Profile Menu */
-.profile-menu {
+/* ✅ Common Dropdown Styles */
+.language-menu, .profile-menu {
     position: relative;
+    display: inline-block;
 }
-.profile-btn {
+
+.language-btn, .profile-btn {
     border-radius: 50%;
-    padding: 5px 10px;
+    padding: 8px;
+    background: none;
+    border: none;
+    cursor: pointer;
+    font-size: 1.2em;
+    color: #4b0082; /* Dark Purple (Same as Sidebar Toggle) */
+    transition: background 0.3s ease;
 }
+
+.language-btn:hover, .profile-btn:hover {
+    background: rgba(75, 0, 130, 0.1); /* Light Purple Hover Effect */
+}
+
+/* ✅ Dropdown Menu Styling */
 .dropdown-menu {
     display: none;
     position: absolute;
     right: 0;
-    background: white;
-    border: 1px solid #ddd;
+    background: #fff; /* White Background */
+    border: 1px solid #d9b3ff; /* Light Purple Border */
     padding: 10px;
-    width: 150px;
+    width: 160px;
     flex-direction: column;
     text-align: left;
+    box-shadow: 0px 4px 6px rgba(0, 0, 0, 0.1);
+    z-index: 100;
+    border-radius: 5px;
 }
+
+/* ✅ Dropdown Menu Items */
 .dropdown-menu a {
-    display: block;
+    display: flex;
+    align-items: center;
     padding: 10px;
-    border-bottom: 1px solid #ddd;
+    border-bottom: 1px solid #d9b3ff; /* Light Purple Divider */
+    text-decoration: none;
+    color: #4b0082; /* Dark Purple Text */
+    transition: background 0.2s ease-in-out;
 }
+
+/* ✅ Font Awesome Icons Styling */
+.dropdown-menu a i {
+    margin-right: 10px;
+}
+
+/* ✅ Remove Border for Last Item */
+.dropdown-menu a:last-child {
+    border-bottom: none;
+}
+
+/* ✅ Hover Effect */
+.dropdown-menu a:hover {
+    background: #d9b3ff; /* Light Purple Hover Background */
+    color: #fff; /* White Text */
+}
+
+/* ✅ Display Dropdown When Active */
+.language-menu.active .dropdown-menu,
 .profile-menu.active .dropdown-menu {
     display: block;
 }
+
+
 
 /* ✅ Fix Sidebar */
 .sidebar {

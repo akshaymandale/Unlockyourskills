@@ -3,7 +3,10 @@
 document.addEventListener("DOMContentLoaded", function() {
 
     let profileToggle = document.getElementById("profileToggle");
-    let profileDropdown = document.getElementById("profileDropdown");
+    const profileMenu = document.querySelector(".profile-menu");
+
+    const languageToggle = document.getElementById("languageToggle");
+    const languageMenu = document.querySelector(".language-menu");
     
     let sidebar = document.getElementById("sidebar");
     let container = document.querySelector(".container");
@@ -47,19 +50,21 @@ document.addEventListener("DOMContentLoaded", function() {
         });
     }
 
-    if (profileToggle) {
-        profileToggle.addEventListener("click", function(event) {
-            event.stopPropagation();
-            profileDropdown.style.display = profileDropdown.style.display === "block" ? "none" : "block";
-        });
-    }
+    profileToggle.addEventListener("click", function (event) {
+        event.stopPropagation();
+        profileMenu.classList.toggle("active");
+        languageMenu.classList.remove("active");
+    });
 
-    document.addEventListener("click", function(event) {
-        if (profileDropdown && profileDropdown.style.display === "block") {
-            if (!profileToggle.contains(event.target) && !profileDropdown.contains(event.target)) {
-                profileDropdown.style.display = "none";
-            }
-        }
+    languageToggle.addEventListener("click", function (event) {
+        event.stopPropagation();
+        languageMenu.classList.toggle("active");
+        profileMenu.classList.remove("active");
+    });
+
+    document.addEventListener("click", function () {
+        profileMenu.classList.remove("active");
+        languageMenu.classList.remove("active");
     });
 
     document.querySelectorAll(".tab-pane").forEach(pane => {
