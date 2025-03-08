@@ -15,7 +15,7 @@ document.addEventListener("DOMContentLoaded", function () {
     const externalForm = document.getElementById("externalContentForm");
     let tags = [];
 
-    // ✅ Corrected mapping of content type values to section IDs
+    // ✅ Mapping of content type values to section IDs
     const contentTypeMap = {
         "youtube-vimeo": "youtubeVimeoFields",
         "linkedin-udemy": "linkedinUdemyFields",
@@ -35,18 +35,22 @@ document.addEventListener("DOMContentLoaded", function () {
         hideAllSections(); // Hide all sections first
 
         const selectedType = contentType.value;
-        const sectionId = contentTypeMap[selectedType]; // Get correct ID
+        const sectionId = contentTypeMap[selectedType];
 
         console.log(`🔍 Checking if section exists: ${sectionId}`);
 
         const selectedSection = document.getElementById(sectionId);
-        console.log("Selected Section:", selectedSection); // Debugging log
 
         if (selectedSection) {
             selectedSection.style.display = "block";
             console.log(`✅ Displaying section: ${sectionId}`);
         } else {
             console.warn(`⚠️ Missing section for content type: ${selectedType}`);
+        }
+
+        // ✅ Ensure audio fields toggle properly when Podcasts & Audio is selected
+        if (selectedType === "podcasts-audio") {
+            toggleAudioFields();
         }
     }
 
@@ -55,6 +59,16 @@ document.addEventListener("DOMContentLoaded", function () {
 
     // ✅ Function to toggle audio fields visibility based on selection
     function toggleAudioFields() {
+        if (!audioSource || !audioFile || !audioUrl) {
+            console.error("❌ Missing audio elements in DOM!");
+            return;
+        }
+
+        // Set default value if empty
+        if (!audioSource.value) {
+            audioSource.value = "upload"; // Default to "Upload File"
+        }
+
         if (audioSource.value === "upload") {
             audioFile.parentElement.style.display = "block";
             audioUrl.parentElement.style.display = "none";
@@ -121,8 +135,6 @@ document.addEventListener("DOMContentLoaded", function () {
         }
     });
 
-
-
     // ✅ Validation functions
     function validateTags() {
         let tagField = document.getElementById("externalTagList");
@@ -138,8 +150,8 @@ document.addEventListener("DOMContentLoaded", function () {
         }
     }
 
-      // ✅ Show error function
-      function showError(input, message) {
+    // ✅ Show error function
+    function showError(input, message) {
         let formGroup = input.closest(".form-group");
         if (!formGroup) {
             console.error(`❌ .form-group NOT found for ${input.name}`);
@@ -157,12 +169,11 @@ document.addEventListener("DOMContentLoaded", function () {
         input.classList.add("is-invalid");
     }
 
-
     // ✅ Prevent form submission if validation fails
     externalForm.addEventListener("submit", function (event) {
         if (!validateForm()) {
             console.error("❌ Form validation failed. Please fix errors before submitting.");
-            event.preventDefault(); // Stop form submission
+            event.preventDefault();
         }
     });
 
@@ -202,13 +213,8 @@ document.addEventListener("DOMContentLoaded", function () {
         }
     });
 
-    // ✅ Ensure audio selection updates properly
-    audioSource.addEventListener("change", function () {
-        toggleAudioFields();
-    });
-
-    // ✅ Hide all sections on initial load
-    hideAllSections();
+    // ✅ Ensure correct audio field visibility on edit
+    audioSource.addEventListener("change", toggleAudioFields);
 
     // ✅ Handle edit content modal
     document.querySelectorAll(".edit-content").forEach(button => {

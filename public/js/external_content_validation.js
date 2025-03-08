@@ -76,18 +76,30 @@ document.addEventListener("DOMContentLoaded", function () {
     function validateForm() {
         let isValid = true;
         const selectedType = document.getElementById("contentType")?.value;
+        const audioSource = document.getElementById("audioSource")?.value;
+        const audioFile = document.getElementById("audioFile");
+        const audioUrl = document.getElementById("audioUrl");
     
         // ✅ Define required fields based on content type
         const validationRules = {
             "youtube-vimeo": ["videoUrl"],
             "linkedin-udemy": ["courseUrl", "platformName"],
             "web-links-blogs": ["articleUrl", "author"],
-            "podcasts-audio": ["audioSource", "audioUrl", "audioFile"],
+            "podcasts-audio": ["audioSource"], // Only include audioSource initially
         };
     
         let requiredFields = validationRules[selectedType] || [];
     
-        // ✅ Always validate the standard required fields
+        // ✅ Ensure audio validation applies only to the selected option
+        if (selectedType === "podcasts-audio") {
+            if (audioSource === "upload") {
+                requiredFields.push("audioFile"); // Validate only file upload
+            } else if (audioSource === "url") {
+                requiredFields.push("audioUrl"); // Validate only URL
+            }
+        }
+    
+        // ✅ Always validate standard required fields
         const standardFields = ["title", "contentType", "versionNumber", "description", "externalTagList"];
         requiredFields = [...new Set([...requiredFields, ...standardFields])]; // Merge required fields
     
