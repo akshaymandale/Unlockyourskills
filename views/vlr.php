@@ -555,6 +555,11 @@ foreach ($scormPackages as $package) {
                                                     <label for="audioUrl">Audio URL</label>
                                                     <input type="url" class="form-control" id="audioUrl" name="audio_url">
                                                 </div>
+                                                <div class="form-group">
+                                                    <label for="speaker">Speaker / Host</label>
+                                                    <input type="text" class="form-control" id="speaker" name = "speaker">
+                                                </div>
+                                                
                                             </div>
                                         </div>
 

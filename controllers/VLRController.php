@@ -139,7 +139,6 @@ class VLRController {
                 if ($audioSource === "upload" && empty($_FILES['audio_file']['name']) && !$isEdit) {
                     $errors[] = "Audio file is required.";
                 }
-                if (empty($speaker)) $errors[] = "Speaker/Host is required.";
             }
     
             // ✅ Thumbnail Upload Handling (NEW)
