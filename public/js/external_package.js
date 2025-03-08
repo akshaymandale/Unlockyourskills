@@ -1,296 +1,246 @@
-function toggleContentFields() {
-    let contentType = document.getElementById("contentType").value;
-    let dynamicFields = document.getElementById("dynamicFields");
-    let fields = "";
+document.addEventListener("DOMContentLoaded", function () {
+    console.log("✅ JS Loaded Successfully!");
 
-    if (contentType === "youtube-vimeo") {
-        fields += `
-            <div class="row">
-                <div class="col-md-6">
-                <div class="form-group">
-                    <label for="videoUrl">Video URL <span class="text-danger">*</span></label>
-                    <input type="url" class="form-control" id="videoUrl" name="video_url" required>
-                </div>
-                </div>
-                <div class="col-md-6">
-                <div class="form-group">
-                    <label for="thumbnail">Thumbnail Preview</label>
-                    <input type="file" class="form-control" id="thumbnail" name="thumbnail" accept="image/*" onchange="validateThumbnail(this)">
-                    <img id="thumbnailPreview" src="" alt="Thumbnail Preview" style="display:none; max-width: 100px; margin-top: 10px;">
-                    <div id="thumbnailFileLink" style="display:none;"></div>
-                </div>
-                </div>
-            </div>
-        `;
-    } else if (contentType === "linkedin-udemy") {
-        fields += `
-            <div class="row">
-                <div class="col-md-6">
-                <div class="form-group">
-                    <label for="courseUrl">Course URL <span class="text-danger">*</span></label>
-                    <input type="url" class="form-control" id="courseUrl" name = "course_url" required>
-                </div>
-                </div>
-                <div class="col-md-6">
-                <div class="form-group">
-                    <label for="platformName">Platform Name <span class="text-danger">*</span></label>
-                    <select class="form-control" id="platformName" name="platform_name" required>
-                        <option value="">Select</option>
-                        <option value="LinkedIn Learning">LinkedIn Learning</option>
-                        <option value="Udemy">Udemy</option>
-                        <option value="Coursera">Coursera</option>
-                    </select>
-                </div>
-                </div>
-            </div>
-        `;
-    } else if (contentType === "web-links-blogs") {
-        fields += `
-            <div class="row">
-                <div class="col-md-6">
-                <div class="form-group">
-                    <label for="articleUrl">URL <span class="text-danger">*</span></label>
-                    <input type="url" class="form-control" id="articleUrl" name="article_url" required>
-                </div>
-                </div>
-                <div class="col-md-6">
-                <div class="form-group">
-                    <label for="author">Author/Publisher</label>
-                    <input type="text" class="form-control" id="author" name = "author">
-                </div>
-                </div>
-            </div>
-        `;
-    } else if (contentType === "podcasts-audio") {
-        fields += `
-          <div class="row">
-                <div class="col-md-6">
-                <div class="form-group">
-                    <label for="audioSource">Audio Source <span class="text-danger">*</span></label>
-                    <select class="form-control" id="audioSource" name = "audio_source" required onchange="toggleAudioFields()">
-                        <option value="upload">Upload File</option>
-                        <option value="url">Audio URL</option>
-                    </select>
-                </div>
-                </div>
-                <div class="col-md-6">
-                <div class="form-group">
-                    <label for="speaker">Speaker / Host</label>
-                    <input type="text" class="form-control" id="speaker" name = "speaker">
-                </div>
-                </div>
-            </div>
-            <div class="row mt-3" id="audioUploadField">
-                <div class="col-md-6">
-                <div class="form-group">
-                    <label for="audioFile">Upload Audio (MP3/WAV) <span class="text-danger">*</span></label>
-                    <input type="file" class="form-control" id="audioFile" name="audio_file" accept=".mp3, .wav">
-                    <small class="text-muted">Allowed formats: MP3, WAV</small>
-                    <div id="audioFileDisplay" style="margin-top: 10px;"></div>
-                </div>
-                </div>
-            </div>
-            <div class="row mt-3" id="audioUrlField" style="display: none;">
-                <div class="col-md-12">
-                <div class="form-group">
-                    <label for="audioUrl">Audio URL <span class="text-danger">*</span></label>
-                    <input type="url" class="form-control" id="audioUrl" name = "audio_url">
-                </div>
-                </div>
-            </div>
-        `;
+    // ✅ Selecting necessary DOM elements
+    const contentGroups = document.querySelectorAll(".content-group");
+    const contentType = document.getElementById("contentType");
+    const tagInput = document.getElementById("externalTagInput");
+    const tagContainer = document.getElementById("externalTagDisplay");
+    const hiddenTagList = document.getElementById("externalTagList");
+    const thumbnailPreview = document.getElementById("thumbnailPreview");
+    const audioFile = document.getElementById("audioFile");
+    const audioUrl = document.getElementById("audioUrl");
+    const audioSource = document.getElementById("audioSource");
+    const modalTitle = document.getElementById("externalModalLabel");
+    const externalForm = document.getElementById("externalContentForm");
+    let tags = [];
+
+    // ✅ Corrected mapping of content type values to section IDs
+    const contentTypeMap = {
+        "youtube-vimeo": "youtubeVimeoFields",
+        "linkedin-udemy": "linkedinUdemyFields",
+        "web-links-blogs": "webLinksBlogsFields",
+        "podcasts-audio": "podcastsAudioFields",
+    };
+
+    // ✅ Hide all sections initially
+    function hideAllSections() {
+        document.querySelectorAll(".content-group").forEach(group => {
+            group.style.display = "none";
+        });
     }
 
-    dynamicFields.innerHTML = fields;
-    // ✅ Re-attach validation to new fields
-    attachValidation();
-}
+    // ✅ Show the selected content type section
+    function showSelectedSection() {
+        hideAllSections(); // Hide all sections first
 
-function toggleAudioFields() {
-    let audioSource = document.getElementById("audioSource").value;
-    document.getElementById("audioUploadField").style.display = audioSource === "url" ? "none" : "flex";
-    document.getElementById("audioUrlField").style.display = audioSource === "url" ? "flex" : "none";
-}
+        const selectedType = contentType.value;
+        const sectionId = contentTypeMap[selectedType]; // Get correct ID
 
-// External Modal Tags Functionality
-document.addEventListener("DOMContentLoaded", function () {
-    const externalTagInput = document.getElementById("externalTagInput");
-    const externalTagContainer = document.getElementById("externalTagDisplay");
-    const externalHiddenTagList = document.getElementById("externalTagList");
-    const externalTagError = document.getElementById("externalTagError");
-    const externalContentForm = document.getElementById("externalContentForm");
+        console.log(`🔍 Checking if section exists: ${sectionId}`);
 
-    $(document).ready(function () {
-        function updateTagList() {
-            let tagsArray = [];
-            $("#externalTagDisplay .tag").each(function () {
-                tagsArray.push($(this).text().replace(" ×", "").trim());
-            });
-            $("#externalTagList").val(tagsArray.join(",")); // Store tags as comma-separated values
+        const selectedSection = document.getElementById(sectionId);
+        console.log("Selected Section:", selectedSection); // Debugging log
+
+        if (selectedSection) {
+            selectedSection.style.display = "block";
+            console.log(`✅ Displaying section: ${sectionId}`);
+        } else {
+            console.warn(`⚠️ Missing section for content type: ${selectedType}`);
+        }
+    }
+
+    // ✅ Attach event listener for content type selection
+    contentType.addEventListener("change", showSelectedSection);
+
+    // ✅ Function to toggle audio fields visibility based on selection
+    function toggleAudioFields() {
+        if (audioSource.value === "upload") {
+            audioFile.parentElement.style.display = "block";
+            audioUrl.parentElement.style.display = "none";
+        } else {
+            audioFile.parentElement.style.display = "none";
+            audioUrl.parentElement.style.display = "block";
+        }
+    }
+
+    // ✅ Attach event listener for audio source change
+    if (audioSource) {
+        audioSource.addEventListener("change", toggleAudioFields);
+    }
+
+    // ✅ Initially hide all sections on page load
+    hideAllSections();
+
+    // ✅ Functions to handle tag input & display
+    function addTag(tagText) {
+        if (tagText.trim() === "" || tags.includes(tagText)) return;
+        tags.push(tagText);
+        updateTagDisplay();
+        validateTags();
+    }
+
+    function removeTag(tagText) {
+        tags = tags.filter(tag => tag !== tagText);
+        updateTagDisplay();
+        validateTags();
+    }
+
+    function updateTagDisplay() {
+        tagContainer.innerHTML = "";
+        tags.forEach(tag => {
+            const tagElement = document.createElement("span");
+            tagElement.classList.add("tag");
+            tagElement.innerHTML = `${tag} <button type="button" class="remove-tag" data-tag="${tag}">&times;</button>`;
+            tagContainer.appendChild(tagElement);
+        });
+        hiddenTagList.value = tags.join(",");
+    }
+
+    // ✅ Event listeners for handling tag inputs
+    tagInput.addEventListener("keypress", function (event) {
+        if (event.key === "Enter") {
+            event.preventDefault();
+            addTag(tagInput.value.trim());
+            tagInput.value = "";
+        }
+    });
+
+    tagContainer.addEventListener("click", function (event) {
+        if (event.target.classList.contains("remove-tag")) {
+            const tagText = event.target.getAttribute("data-tag");
+            removeTag(tagText);
+        }
+    });
+
+    tagInput.addEventListener("blur", validateTags);
+
+    tagInput.addEventListener("keydown", function (event) {
+        if (event.key === "Backspace" && tagInput.value === "" && tags.length > 0) {
+            removeTag(tags[tags.length - 1]);
+        }
+    });
+
+
+
+    // ✅ Validation functions
+    function validateTags() {
+        let tagField = document.getElementById("externalTagList");
+        let tagContainer = document.getElementById("externalTagDisplay");
+        let tagsValue = tagField.value.trim();
+
+        if (tagsValue === "") {
+            showError(tagContainer, "Tags/Keywords are required");
+            return false;
+        } else {
+            hideError(tagContainer);
+            return true;
+        }
+    }
+
+      // ✅ Show error function
+      function showError(input, message) {
+        let formGroup = input.closest(".form-group");
+        if (!formGroup) {
+            console.error(`❌ .form-group NOT found for ${input.name}`);
+            return;
         }
 
-        // Add Tag on Enter
-        $("#externalTagInput").keypress(function (e) {
-            if (e.which === 13) {
-                e.preventDefault();
-                let tag = $(this).val().trim();
-                if (tag !== "" && !isDuplicateTag(tag)) {
-                    $("#externalTagDisplay").append(
-                        `<span class="tag">${tag} <span class="remove-tag">&times;</span></span>`
-                    );
-                    updateTagList();
-                    $(this).val(""); // Clear input
-                    $("#externalTagError").text("").hide();
-                } else {
-                    $("#externalTagError").text("Duplicate or empty tag is not allowed.").show();
-                }
-            }
-        });
-
-        // Remove Tag
-        $(document).on("click", ".remove-tag", function () {
-            $(this).parent().remove();
-            updateTagList();
-            checkTagValidation();
-        });
-
-        function isDuplicateTag(tag) {
-            let isDuplicate = false;
-            $("#externalTagDisplay .tag").each(function () {
-                if ($(this).text().replace(" ×", "").trim() === tag) {
-                    isDuplicate = true;
-                    return false;
-                }
-            });
-            return isDuplicate;
+        let errorElement = formGroup.querySelector(".error-message");
+        if (!errorElement) {
+            errorElement = document.createElement("small");
+            errorElement.className = "error-message text-danger";
+            formGroup.appendChild(errorElement);
         }
 
-        function checkTagValidation() {
-            let tags = $("#externalTagList").val().trim();
-            if (tags === "") {
-                $("#externalTagError").text("Tags/Keywords are required.").show();
-                return false;
-            } else {
-                $("#externalTagError").text("").hide();
-                return true;
-            }
+        errorElement.textContent = message;
+        input.classList.add("is-invalid");
+    }
+
+
+    // ✅ Prevent form submission if validation fails
+    externalForm.addEventListener("submit", function (event) {
+        if (!validateForm()) {
+            console.error("❌ Form validation failed. Please fix errors before submitting.");
+            event.preventDefault(); // Stop form submission
         }
+    });
 
-        // Validate on Focus Out
-        $("#externalTagInput").focusout(function () {
-            checkTagValidation();
+    function hideError(input) {
+        let formGroup = input.closest(".form-group");
+        if (!formGroup) return;
+
+        let errorElement = formGroup.querySelector(".error-message");
+        if (errorElement) {
+            errorElement.textContent = "";
+        }
+        input.classList.remove("is-invalid");
+    }
+
+    // ✅ Handle modal reset on close
+    $("#externalContentModal").on("hidden.bs.modal", function () {
+        document.getElementById("externalContentForm").reset();
+        hideAllSections();
+        tags = [];
+        updateTagDisplay();
+        thumbnailPreview.style.display = "none";
+        modalTitle.textContent = "Add External Content";
+    });
+
+    // ✅ Handle thumbnail preview
+    document.getElementById("thumbnail").addEventListener("change", function (event) {
+        const file = event.target.files[0];
+        if (file) {
+            const reader = new FileReader();
+            reader.onload = function (e) {
+                thumbnailPreview.src = e.target.result;
+                thumbnailPreview.style.display = "block";
+            };
+            reader.readAsDataURL(file);
+        } else {
+            thumbnailPreview.style.display = "none";
+        }
+    });
+
+    // ✅ Ensure audio selection updates properly
+    audioSource.addEventListener("change", function () {
+        toggleAudioFields();
+    });
+
+    // ✅ Hide all sections on initial load
+    hideAllSections();
+
+    // ✅ Handle edit content modal
+    document.querySelectorAll(".edit-content").forEach(button => {
+        button.addEventListener("click", function (event) {
+            event.preventDefault();
+
+            const contentData = JSON.parse(this.getAttribute("data-content"));
+
+            modalTitle.textContent = "Edit External Content";
+
+            document.getElementById("external_id").value = contentData.id || "";
+            document.getElementById("title").value = contentData.title || "";
+            document.getElementById("versionNumber").value = contentData.version_number || "";
+            document.getElementById("languageSupport").value = contentData.language_support || "English";
+            document.getElementById("external_timeLimit").value = contentData.time_limit || "";
+            document.getElementById("external_description").value = contentData.description || "";
+            document.getElementById("contentType").value = contentData.content_type || "";
+
+            showSelectedSection(); // Ensure correct section is shown
+
+            tags = contentData.tags ? contentData.tags.split(",") : [];
+            updateTagDisplay();
+
+            document.getElementById("videoUrl").value = contentData.video_url || "";
+            document.getElementById("courseUrl").value = contentData.course_url || "";
+            document.getElementById("platformName").value = contentData.platform_name || "";
+            document.getElementById("articleUrl").value = contentData.article_url || "";
+            document.getElementById("author").value = contentData.author || "";
+            document.getElementById("audioSource").value = contentData.audio_source || "upload";
+            document.getElementById("audioUrl").value = contentData.audio_url || "";
+
+            $("#externalContentModal").modal("show");
         });
-
-        // Validate on Submit
-        $("#externalContentForm").submit(function (e) {
-            let isValid = checkTagValidation();
-            if (!isValid) {
-                e.preventDefault(); // Prevent form submission
-            }
-        });
-
-        // Clear validation errors when modal opens
-        $("#externalContentModal").on("show.bs.modal", function () {
-            $("#externalTagError").text("").hide();
-
-            // Reset the form fields
-           // $("#externalContentForm")[0].reset(); 
-
-            // Manually clear select dropdowns and text areas
-            $("#content_type, #mobile_support, #audio_source").val("").trigger("change");
-            
-            // Clear hidden fields and file inputs
-            $("#video_url, #thumbnail, #course_url, #platform_name, #article_url, #author, #audio_url, #speaker").val("");
-            $("#audio_file").val(null);
-
-            // Clear validation errors (if applicable)
-            $(".error-message").text("");
-        });
-        
-
-        // Clear previous content type and tags when modal closes
-        $("#externalContentModal").on("hidden.bs.modal", function () {
-            $("#externalTagDisplay").empty(); // Remove all tags
-            $("#externalModalLabel").text("Add External Content"); // Reset title
-            $("#externalTagList").val(""); // Clear hidden input storing tags
-            $("#externalTagError").text("").hide(); // Hide any validation errors
-            $("#contentType").val(""); // Reset dropdown selection
-            $("#dynamicFields").html(""); // Clear dynamically generated fields
-           // $("#externalContentForm")[0].reset(); // Reset the entire form
-        });
-
-        // ✅ New Fix: Handle Edit Functionality
-        $(document).on("click", ".edit-content", function (e) {
-            e.preventDefault();
-            let contentData = $(this).attr("data-content");
-            if (!contentData || contentData === "undefined") {
-                console.error("data-content is missing or invalid.");
-                return;
-            }
-            try {
-                let parsedData = JSON.parse(contentData);
-                $("#external_id").val(parsedData.id);
-                $("#title").val(parsedData.title);
-                $("#contentType").val(parsedData.content_type).trigger("change");
-                $("#versionNumber").val(parsedData.version_number);
-                $("#languageSupport").val(parsedData.language_support);
-                $("#external_timeLimit").val(parsedData.time_limit);
-                $("#external_description").val(parsedData.description);
-                $("#externalTagList").val(parsedData.tags);
-                $("#videoUrl").val(parsedData.video_url || "");
-                $("#courseUrl").val(parsedData.course_url || "");
-                $("#platformName").val(parsedData.platform_name || "");
-                $("#articleUrl").val(parsedData.article_url || "");
-                $("#author").val(parsedData.author || "");
-                $("#audioUrl").val(parsedData.audio_url || "");
-                $("#speaker").val(parsedData.speaker || "");
-        
-                $('input[name="mobile_support"][value="' + parsedData.mobile_support + '"]').prop("checked", true);
-                $('input[name="audio_source"][value="' + parsedData.audio_source + '"]').prop("checked", true);
-        
-                
-               // ✅ Show previously uploaded thumbnail with correct path
-                if (parsedData.thumbnail) {
-                    let thumbnailPath = "uploads/external/thumbnails/" + parsedData.thumbnail; // Ensure correct path
-                    $("#thumbnailPreview").attr("src", thumbnailPath).show();
-                    $("#thumbnailFileLink").html(`<a href="${thumbnailPath}" target="_blank">View Uploaded Thumbnail</a>`).show();
-                } else {
-                    $("#thumbnailPreview").hide();
-                    $("#thumbnailFileLink").hide();
-                }
-
-                // ✅ Show previously uploaded audio file
-                if (parsedData.audio_file) {
-                    $("#audioFileDisplay").html(`Current File: <a href="uploads/audio/${parsedData.audio_file}" target="_blank">${parsedData.audio_file}</a>`).show();
-                } else {
-                    $("#audioFileDisplay").html("No audio file uploaded.").show();
-                }
-        
-                let tagContainer = document.getElementById("externalTagDisplay");
-                tagContainer.innerHTML = "";
-                if (parsedData.tags) {
-                    parsedData.tags.split(",").forEach(tag => {
-                        $("#externalTagDisplay").append(
-                            `<span class="tag">${tag.trim()} <span class="remove-tag">&times;</span></span>`
-                        );
-                    });
-                }
-        
-                // ✅ Ensure Modal Opens
-               // $("#externalContentModal").modal({ show: true, backdrop: "static" });
-                $("#externalContentModal").modal("show");
-        
-            } catch (error) {
-                console.error("Error parsing JSON:", error);
-            }
-            document.getElementById("externalModalLabel").textContent = "Edit External Package"; 
-        });
-        
-        // ✅ Ensure Tags Load Properly When Editing
-        $("#externalContentModal").on("shown.bs.modal", function () {
-            updateTagList(); // Refresh the tag list
-        });
-
     });
 });
-

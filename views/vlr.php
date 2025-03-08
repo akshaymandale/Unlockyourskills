@@ -393,125 +393,181 @@ foreach ($scormPackages as $package) {
 
                     <!-- ✅ Modal for Adding External Content -->
                     <!-- Modal Popup -->
-                        <div class="modal fade" id="externalContentModal" tabindex="-1" aria-labelledby="externalContentModalLabel" aria-hidden="true">
-                            <div class="modal-dialog modal-lg">
-                                <div class="modal-content">
-                                    <div class="modal-header">
-                                         <h5 class="modal-title" id="externalModalLabel">Add External Content</h5>
-                                        <button type="button" class="close" data-dismiss="modal" aria-label="Close">
-                                            <span aria-hidden="true">&times;</span>
-                                        </button>
-                                    </div>
-                                    <div class="modal-body">
+                    <div class="modal fade" id="externalContentModal" tabindex="-1" aria-labelledby="externalContentModalLabel" aria-hidden="true">
+                        <div class="modal-dialog modal-lg">
+                            <div class="modal-content">
+                                <div class="modal-header">
+                                    <h5 class="modal-title" id="externalModalLabel">Add External Content</h5>
+                                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                                        <span aria-hidden="true">&times;</span>
+                                    </button>
+                                </div>
+                                <div class="modal-body">
                                     <form id="externalContentForm" action="index.php?controller=VLRController&action=addOrEditExternalContent" method="POST" enctype="multipart/form-data">
-                                    <input type="hidden" id="external_id" name="id">
-                                  <!-- Store -->
+                                        <input type="hidden" id="external_id" name="id">
+
+                                        <!-- Title -->
+                                        <div class="form-group">
+                                            <label for="title">Title <span class="text-danger">*</span></label>
+                                            <input type="text" class="form-control" id="title" name="title" required>
+                                            <span class="text-danger error-message"></span>
+                                        </div>
+
+                                        <!-- Version & Mobile Support -->
                                         <div class="row">
                                             <div class="col-md-6">
-                                            <div class="form-group">
-                                                <label for="title">Title <span class="text-danger">*</span></label>
-                                                <input type="text" class="form-control" id="title" name="title" required>
-                                                <span class="text-danger error-message"></span>
-                                            </div>
+                                                <div class="form-group">
+                                                    <label for="versionNumber">Version Number <span class="text-danger">*</span></label>
+                                                    <input type="text" class="form-control" id="versionNumber" name="version_number" required>
+                                                    <span class="text-danger error-message"></span>
+                                                </div>
                                             </div>
                                             <div class="col-md-6">
                                                 <div class="form-group">
-                                                <label for="contentType">Content Type <span class="text-danger">*</span></label>
-                                                <select class="form-control" id="contentType" name="content_type" required onchange="toggleContentFields()">
-                                                    <option value="">Select</option>
-                                                    <option value="youtube-vimeo">YouTube & Vimeo</option>
-                                                    <option value="linkedin-udemy">LinkedIn Learning, Udemy, Coursera</option>
-                                                    <option value="web-links-blogs">Web Links & Blogs</option>
-                                                    <option value="podcasts-audio">Podcasts & Audio Lessons</option>
-                                                </select>
-                                                <span class="text-danger error-message"></span>
-                                            </div>
-                                            </div>
-                                        </div>
-
-                                        <div class="row mt-3">
-                                            <div class="col-md-6">
-                                            <div class="form-group">
-                                                <label for="versionNumber">Version Number <span class="text-danger">*</span></label>
-                                                <input type="text" class="form-control" id="versionNumber" name="version_number" required>
-                                                <span class="text-danger error-message"></span>
-                                            </div>
-                                            </div>
-                                            <div class="col-md-6">
-                                            <div class="form-group">
-                                                <label>Mobile & Tablet Support</label>
-                                                <div class="d-flex mt-2">
-                                                    <div class="form-check mr-3">
-                                                        <input class="form-check-input" type="radio" name="mobile_support" id="mobileYes" value="Yes">
-                                                        <label class="form-check-label" for="mobileYes">Yes</label>
-                                                    </div>
-                                                    <div class="form-check">
-                                                        <input class="form-check-input" type="radio" name="mobile_support" id="mobileNo" value="No" checked>
-                                                        <label class="form-check-label" for="mobileNo">No</label>
+                                                    <label>Mobile & Tablet Support</label>
+                                                    <div class="d-flex mt-2">
+                                                        <div class="form-check mr-3">
+                                                            <input class="form-check-input" type="radio" name="mobile_support" id="mobileYes" value="Yes">
+                                                            <label class="form-check-label" for="mobileYes">Yes</label>
+                                                        </div>
+                                                        <div class="form-check">
+                                                            <input class="form-check-input" type="radio" name="mobile_support" id="mobileNo" value="No" checked>
+                                                            <label class="form-check-label" for="mobileNo">No</label>
+                                                        </div>
                                                     </div>
                                                 </div>
-                                             </div>
                                             </div>
                                         </div>
 
-                                        <div class="row mt-3">
+                                        <!-- Language & Time Limit -->
+                                        <div class="row">
                                             <div class="col-md-6">
-                                            <div class="form-group">
-                                                <label for="languageSupport">Language Support</label>
-                                                <select class="form-control" id="languageSupport" name="language_support">
-                                                    <option value="English">English</option>
-                                                    <option value="Hindi">Hindi</option>
-                                                    <option value="Marathi">Marathi</option>
-                                                    <option value="Spanish">Spanish</option>
-                                                    <option value="French">French</option>
-                                                    <option value="German">German</option>
-                                                    <option value="Chinese">Chinese</option>
-                                                </select>
-                                            </div>
-                                            </div>
-                                            <div class="col-md-6">
-                                            <div class="form-group">
-                                                <label for="timeLimit">Time Limit (in minutes)</label>
-                                                <input type="number" class="form-control" id="external_timeLimit" name="time_limit">
-                                            </div>
-                                            </div>
-                                        </div>
-
-                                        <div class="row mt-3">
-                                            <div class="col-md-12">
-                                            <div class="form-group">
-                                                <label for="description">Description</label>
-                                                <textarea class="form-control" id="external_description" name="description" rows="3"></textarea>
-                                            </div>
-                                            </div>
-                                        </div>
-
-                                        <div class="row mt-3">
-                                            <div class="col-md-12">
-                                            <div class="form-group">
-                                                <label for="externalTagInput">Tags/Keywords <span class="text-danger">*</span></label>
-                                                <div class="tag-input-container form-control">
-                                                    <span id="externalTagDisplay"></span>
-                                                    <input type="text" id="externalTagInput" placeholder="Add a tag and press Enter">
+                                                <div class="form-group">
+                                                    <label for="languageSupport">Language Support</label>
+                                                    <select class="form-control" id="languageSupport" name="language_support">
+                                                        <option value="English">English</option>
+                                                        <option value="Hindi">Hindi</option>
+                                                        <option value="Marathi">Marathi</option>
+                                                        <option value="Spanish">Spanish</option>
+                                                        <option value="French">French</option>
+                                                        <option value="German">German</option>
+                                                        <option value="Chinese">Chinese</option>
+                                                    </select>
                                                 </div>
-                                                <input type="hidden" name="tags" id="externalTagList">
-                                                <span class="text-danger error-message" id="externalTagError"></span>
                                             </div>
+                                            <div class="col-md-6">
+                                                <div class="form-group">
+                                                    <label for="timeLimit">Time Limit (in minutes)</label>
+                                                    <input type="number" class="form-control" id="external_timeLimit" name="time_limit">
+                                                </div>
                                             </div>
                                         </div>
 
-                                        <div id="dynamicFields" class="mt-3"></div>
+                                        <!-- Description -->
+                                        <div class="form-group">
+                                            <label for="description">Description</label>
+                                            <textarea class="form-control" id="external_description" name="description" rows="3"></textarea>
+                                        </div>
+
+                                        <!-- Tags/Keywords -->
+                                        <div class="form-group">
+                                            <label for="externalTagInput">Tags/Keywords <span class="text-danger">*</span></label>
+                                            <div class="tag-input-container form-control">
+                                                <span id="externalTagDisplay"></span>
+                                                <input type="text"  id="externalTagInput" placeholder="Add a tag and press Enter">
+                                            </div>
+                                            <input type="hidden" name="tags" id="externalTagList">
+                                            <span class="text-danger error-message" id="externalTagError"></span>
+                                        </div>
+
+                                        <!-- Content Type -->
+                                        <div class="form-group">
+                                            <label for="contentType">Content Type <span class="text-danger">*</span></label>
+                                            <select class="form-control" id="contentType" name="content_type" onchange="showSelectedSection()" required>
+                                                <option value="">Select</option>
+                                                <option value="youtube-vimeo">YouTube & Vimeo</option>
+                                                <option value="linkedin-udemy">LinkedIn Learning, Udemy, Coursera</option>
+                                                <option value="web-links-blogs">Web Links & Blogs</option>
+                                                <option value="podcasts-audio">Podcasts & Audio Lessons</option>
+                                            </select>
+                                        </div>
+
+                                        <!-- Dynamic Content Sections -->
+                                        <!-- Dynamic Fields Section -->
+                                        <div id="dynamicFields">
+                                            <!-- YouTube/Vimeo Fields -->
+                                            <div class="content-group" id="youtubeVimeoFields">
+                                                <div class="form-group">
+                                                    <label for="videoUrl">Video URL <span class="text-danger">*</span></label>
+                                                    <input type="url" class="form-control" id="videoUrl" name="video_url">
+                                                </div>
+                                                <div class="form-group">
+                                                    <label for="thumbnail">Thumbnail Preview</label>
+                                                    <input type="file" class="form-control" id="thumbnail" name="thumbnail" accept="image/*">
+                                                    <img id="thumbnailPreview" src="" alt="Thumbnail Preview" style="display:none; max-width: 100px; margin-top: 10px;">
+                                                    <div id="thumbnailFileLink" style="display:none;"></div>
+                                                </div>
+                                            </div>
+
+                                            <!-- LinkedIn/Udemy Fields -->
+                                            <div class="content-group" id="linkedinUdemyFields">
+                                                <div class="form-group">
+                                                    <label for="courseUrl">Course URL <span class="text-danger">*</span></label>
+                                                    <input type="url" class="form-control" id="courseUrl" name="course_url">
+                                                </div>
+                                                <div class="form-group">
+                                                    <label for="platformName">Platform Name <span class="text-danger">*</span></label>
+                                                    <select class="form-control" id="platformName" name="platform_name">
+                                                        <option value="">Select</option>
+                                                        <option value="LinkedIn Learning">LinkedIn Learning</option>
+                                                        <option value="Udemy">Udemy</option>
+                                                        <option value="Coursera">Coursera</option>
+                                                    </select>
+                                                </div>
+                                            </div>
+
+                                            <!-- Web Links/Blogs Fields -->
+                                            <div class="content-group" id="webLinksBlogsFields">
+                                                <div class="form-group">
+                                                    <label for="articleUrl">URL <span class="text-danger">*</span></label>
+                                                    <input type="url" class="form-control" id="articleUrl" name="article_url">
+                                                </div>
+                                                <div class="form-group">
+                                                    <label for="author">Author/Publisher</label>
+                                                    <input type="text" class="form-control" id="author" name="author">
+                                                </div>
+                                            </div>
+
+                                            <!-- Podcasts/Audio Fields -->
+                                            <div class="content-group" id="podcastsAudioFields">
+                                                <div class="form-group">
+                                                    <label for="audioSource">Audio Source <span class="text-danger">*</span></label>
+                                                    <select class="form-control" id="audioSource" name="audio_source">
+                                                        <option value="upload">Upload File</option>
+                                                        <option value="url">Audio URL</option>
+                                                    </select>
+                                                </div>
+                                                <div class="form-group">
+                                                    <label for="audioFile">Upload Audio (MP3/WAV)</label>
+                                                    <input type="file" class="form-control" id="audioFile" name="audio_file" accept=".mp3, .wav">
+                                                </div>
+                                                <div class="form-group">
+                                                    <label for="audioUrl">Audio URL</label>
+                                                    <input type="url" class="form-control" id="audioUrl" name="audio_url">
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <!-- Modal Footer -->
                                         <div class="modal-footer">
                                             <button type="submit" id="submit_button" class="btn btn-primary">Submit</button>
                                             <button type="button" class="btn btn-danger" data-dismiss="modal" id="clearForm">Cancel</button>
                                         </div>
-                                    </form> 
-                                    </div>
-                                    
+                                    </form>
                                 </div>
                             </div>
                         </div>
-
+                    </div>
 
 
 

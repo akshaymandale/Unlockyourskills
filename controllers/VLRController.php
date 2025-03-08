@@ -128,7 +128,6 @@ class VLRController {
             if (!in_array($mobileSupport, ['Yes', 'No'])) $errors[] = "Invalid mobile support value.";
             if (empty($languageSupport)) $errors[] = "Language support is required.";
             if (!empty($timeLimit) && !is_numeric($timeLimit)) $errors[] = "Time limit must be a number.";
-            if (empty($description)) $errors[] = "Description is required.";
             if (empty($tags)) $errors[] = "At least one tag is required.";
     
             // Validate content type-specific fields
