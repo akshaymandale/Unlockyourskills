@@ -27,12 +27,17 @@ document.addEventListener("DOMContentLoaded", function () {
             return;
         }
     
+        // ✅ Attach event listener for form submission
         submitButton.removeEventListener("click", formSubmitHandler);
         submitButton.addEventListener("click", formSubmitHandler);
     
+        // ✅ Attach real-time validation when users type or leave a field
         document.querySelectorAll("#externalContentForm input, #externalContentForm select").forEach(field => {
             field.removeEventListener("blur", fieldBlurHandler);
             field.addEventListener("blur", fieldBlurHandler);
+    
+            field.removeEventListener("input", fieldBlurHandler);
+            field.addEventListener("input", fieldBlurHandler);
         });
     
         let clearFormBtn = document.getElementById("clearForm");
@@ -41,6 +46,7 @@ document.addEventListener("DOMContentLoaded", function () {
             clearFormBtn.addEventListener("click", resetForm);
         }
     }
+    
     
     // ✅ Ensure the function is available globally
     window.attachValidation = attachValidation;
@@ -51,14 +57,15 @@ document.addEventListener("DOMContentLoaded", function () {
     });
     
     function formSubmitHandler(event) {
-        event.preventDefault();  // ✅ Prevent form submission
+        event.preventDefault();  // Prevent form submission by default
+    
         let isValid = validateForm();
-        
+    
         if (isValid) {
             console.log("✅ Form is valid! Submitting...");
-            document.getElementById("externalContentForm").submit();  
+            document.getElementById("externalContentForm").submit();
         } else {
-            console.log("❌ Form validation failed. Please fix errors before submitting.");
+            console.log("❌ Form validation failed. Fix the errors before submitting.");
         }
     }
 
@@ -68,13 +75,34 @@ document.addEventListener("DOMContentLoaded", function () {
 
     function validateForm() {
         let isValid = true;
+        const selectedType = document.getElementById("contentType")?.value;
+    
+        // ✅ Define required fields based on content type
+        const validationRules = {
+            "youtube-vimeo": ["videoUrl"],
+            "linkedin-udemy": ["courseUrl", "platformName"],
+            "web-links-blogs": ["articleUrl", "author"],
+            "podcasts-audio": ["audioSource", "audioUrl", "audioFile"],
+        };
+    
+        let requiredFields = validationRules[selectedType] || [];
+    
+        // ✅ Always validate the standard required fields
+        const standardFields = ["title", "contentType", "versionNumber", "description", "externalTagList"];
+        requiredFields = [...new Set([...requiredFields, ...standardFields])]; // Merge required fields
+    
         document.querySelectorAll("#externalContentForm input, #externalContentForm select").forEach(field => {
-            if (!validateField(field)) {
-                isValid = false;
+            if (requiredFields.includes(field.id)) {
+                if (!validateField(field)) {
+                    isValid = false;
+                }
             }
         });
+    
         return isValid;
     }
+    
+    
 
     function validateField(field) {
         let isValid = true;
@@ -94,8 +122,8 @@ document.addEventListener("DOMContentLoaded", function () {
                 isValid = validateRequired(field, value, "Version is required");
                 break;
 
-            case "tags":
-                isValid = validateRequired(field, value, "Tags/Keywords are required");
+            case "externalTagList":
+                isValid = validateTags();
                 break;
 
             case "videoUrl":
@@ -113,6 +141,10 @@ document.addEventListener("DOMContentLoaded", function () {
             case "audioFile":
                 isValid = validateAudioFile(field);
                 break;
+
+            case "thumbnail":
+            isValid = validateThumbnail(field);
+            break;
         }
 
         return isValid;
@@ -124,6 +156,20 @@ document.addEventListener("DOMContentLoaded", function () {
             return false;
         } else {
             hideError(field);
+            return true;
+        }
+    }
+
+    function validateTags() {
+        let tagField = document.getElementById("externalTagList"); // Hidden input storing tags
+        let tagContainer = document.getElementById("externalTagDisplay"); // Where tags are shown
+        let tags = tagField.value.trim();
+    
+        if (tags === "") {
+            showError(tagContainer, "Tags/Keywords are required");
+            return false;
+        } else {
+            hideError(tagContainer);
             return true;
         }
     }
@@ -156,6 +202,28 @@ document.addEventListener("DOMContentLoaded", function () {
             return false;
         }
 
+        hideError(field);
+        return true;
+    }
+
+    function validateThumbnail(field) {
+        let file = field.files[0];
+        if (!file) {
+            showError(field, "Please upload an image file (JPG, PNG, GIF, WebP).");
+            return false;
+        }
+    
+        let allowedTypes = ["image/jpeg", "image/png", "image/gif", "image/webp"];
+        if (!allowedTypes.includes(file.type)) {
+            showError(field, "Invalid file type. Only JPG, PNG, GIF, and WebP are allowed.");
+            return false;
+        }
+    
+        if (file.size > 5 * 1024 * 1024) { // 5MB limit
+            showError(field, "File size should not exceed 5MB.");
+            return false;
+        }
+    
         hideError(field);
         return true;
     }
