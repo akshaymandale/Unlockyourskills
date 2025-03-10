@@ -7,6 +7,9 @@ document.addEventListener("DOMContentLoaded", function() {
 
     const languageToggle = document.getElementById("languageToggle");
     const languageMenu = document.querySelector(".language-menu");
+    const languageDropdown = document.getElementById("languageDropdown");
+    const languageSearch = document.getElementById("languageSearch");
+    const languageItems = document.querySelectorAll(".language-item");
     
     let sidebar = document.getElementById("sidebar");
     let container = document.querySelector(".container");
@@ -50,21 +53,45 @@ document.addEventListener("DOMContentLoaded", function() {
         });
     }
 
-    profileToggle.addEventListener("click", function (event) {
-        event.stopPropagation();
-        profileMenu.classList.toggle("active");
-        languageMenu.classList.remove("active");
+   // Toggle Profile Dropdown
+   profileToggle.addEventListener("click", function (event) {
+    event.stopPropagation();
+    profileMenu.classList.toggle("active");
+    languageMenu.classList.remove("active");
     });
 
+    // Toggle Language Dropdown
     languageToggle.addEventListener("click", function (event) {
         event.stopPropagation();
         languageMenu.classList.toggle("active");
         profileMenu.classList.remove("active");
+        languageDropdown.classList.toggle("active");
     });
 
-    document.addEventListener("click", function () {
+    // ✅ Prevent dropdown from closing when clicking inside it
+    languageDropdown.addEventListener("click", function (event) {
+        event.stopPropagation();
+    });
+
+    // ✅ Keep dropdown open when clicking inside the search box
+    languageSearch.addEventListener("click", function (event) {
+        event.stopPropagation();
+    });
+
+    // Close dropdown when clicking outside
+    document.addEventListener("click", function (event) {
         profileMenu.classList.remove("active");
         languageMenu.classList.remove("active");
+    });
+
+    // Filter languages in real-time
+    languageSearch.addEventListener("input", function () {
+        const searchValue = this.value.toLowerCase();
+
+        languageItems.forEach(function (item) {
+            const text = item.textContent.toLowerCase();
+            item.style.display = text.includes(searchValue) ? "block" : "none";
+        });
     });
 
     document.querySelectorAll(".tab-pane").forEach(pane => {

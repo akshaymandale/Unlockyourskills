@@ -1,9 +1,10 @@
 <?php
 // views/includes/navbar.php
+// ✅ Load Navbar (Before other controllers)
+require_once 'controllers/NavbarController.php'; // Include NavbarController
+$navbarController = new NavbarController();
+$languages = $navbarController->showNavbar(); // This will include navbar.php
 ?>
-
-<!-- Include Font Awesome -->
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
 
 <nav class="navbar">
     <div class="navbar-left">
@@ -19,13 +20,21 @@
         </form>
     </div>
     <div class="navbar-right">
-        <!-- Language Menu -->
+       <!-- Language Menu -->
         <div class="language-menu">
             <button class="language-btn" id="languageToggle"><i class="fas fa-globe"></i></button>
             <div class="dropdown-menu" id="languageDropdown">
-                <a class="dropdown-item" href="?lang=en"><i class="fas fa-flag-usa"></i> English</a>
-                <a class="dropdown-item" href="?lang=fr"><i class="fas fa-flag"></i> Français</a>
-                <a class="dropdown-item" href="?lang=es"><i class="fas fa-flag"></i> Español</a>
+                <!-- Search Box -->
+                <input type="text" id="languageSearch" class="language-search" placeholder="Search language...">
+                
+                <!-- Language List (Scrollable) -->
+                <div class="language-list">
+                    <?php foreach ($languages as $lang): ?>
+                        <a href="?lang=<?= htmlspecialchars($lang['language_code']); ?>" class="language-item">
+                            <i class="fas fa-language"></i> <?= htmlspecialchars($lang['language_name']); ?>
+                        </a>
+                    <?php endforeach; ?>
+                </div>
             </div>
         </div>
 
