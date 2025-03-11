@@ -27,6 +27,9 @@ class LoginController {
                     $_SESSION['loggedin'] = true;
                     $_SESSION['username'] = $username;
                     $_SESSION['client_code'] = $client_code;
+                    $_SESSION['id'] = $user['id'];
+
+                    //print_r($_SESSION); die;
 
                     header('Location: index.php?controller=DashboardController&action=index');
                     exit();
