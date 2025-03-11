@@ -1,5 +1,6 @@
 <?php
 require_once 'config/autoload.php';
+require_once 'config/Localization.php';
 
 error_reporting(E_ALL);
 ini_set('display_errors', 1);
@@ -7,6 +8,15 @@ ini_set('display_errors', 1);
 if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
+
+// Check if user selected a language
+if (isset($_GET['lang'])) {
+    $_SESSION['lang'] = $_GET['lang'];
+}
+
+// Set default language or use saved language
+$lang = $_SESSION['lang'] ?? 'en';
+Localization::loadLanguage($lang);
 
 // Get the controller and action from the request
 $controller = isset($_GET['controller']) ? $_GET['controller'] : 'LoginController';
