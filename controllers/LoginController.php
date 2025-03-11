@@ -28,6 +28,7 @@ class LoginController {
                     $_SESSION['username'] = $username;
                     $_SESSION['client_code'] = $client_code;
                     $_SESSION['id'] = $user['id'];
+                    $_SESSION['lang'] = $user['language'];
 
                     //print_r($_SESSION); die;
 

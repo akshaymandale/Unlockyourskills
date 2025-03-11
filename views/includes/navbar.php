@@ -76,8 +76,8 @@ if (isset($_GET['lang'])) {
         <div class="profile-menu">
             <button class="profile-btn" id="profileToggle"><i class="fas fa-user"></i></button>
             <div class="dropdown-menu" id="profileDropdown">
-                <a class="dropdown-item" href="#"><i class="fas fa-user-circle"></i> Profile</a>
-                <a class="dropdown-item" href="index.php?controller=LoginController&action=logout"><i class="fas fa-sign-out-alt"></i> Logout</a>
+                <a class="dropdown-item" href="#"><i class="fas fa-user-circle"></i> <?= Localization::translate('profile'); ?></a>
+                <a class="dropdown-item" href="index.php?controller=LoginController&action=logout"><i class="fas fa-sign-out-alt"></i> <?= Localization::translate('logout'); ?></a>
             </div>
         </div>
     </div>

@@ -1,0 +1,9 @@
+{
+    "home": "Accueil",
+    "about": "À propos",
+    "profile": "ESProfile",
+    "logout": "Déconnexion",
+    "search_placeholder": "Rechercher...",
+    "welcome": "Bienvenue, {name}!",
+    "error": "Une erreur s'est produite. Veuillez réessayer."
+}

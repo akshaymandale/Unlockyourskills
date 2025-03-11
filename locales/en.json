@@ -1,0 +1,9 @@
+{
+    "home": "Home",
+    "about": "About",
+    "profile": "Profile",
+    "logout": "Logout",
+    "search_placeholder": "Search...",
+    "welcome": "Welcome, {name}!",
+    "error": "Something went wrong. Please try again."
+}
