@@ -8,13 +8,6 @@ if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
 
-// ✅ Load Navbar (Before other controllers)
-require_once 'controllers/NavbarController.php'; // Include NavbarController
-$navbarController = new NavbarController();
-$languages = $navbarController->showNavbar(); // This will include navbar.php
-
-//require 'views/includes/navbar.php';
-
 // Get the controller and action from the request
 $controller = isset($_GET['controller']) ? $_GET['controller'] : 'LoginController';
 $action = isset($_GET['action']) ? $_GET['action'] : 'index';

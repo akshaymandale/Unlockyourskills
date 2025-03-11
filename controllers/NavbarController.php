@@ -1,7 +1,5 @@
-
 <?php
 require_once 'models/NavbarModel.php';
-
 
 class NavbarController {
     private $navbarModel;
@@ -10,8 +8,16 @@ class NavbarController {
         $this->navbarModel = new NavbarModel();
     }
 
-    public function showNavbar() {
-        return $languages = $this->navbarModel->getLanguages();
+    public function getNavbarData() {
+        if (!isset($_SESSION)) {
+            session_start();
+        }
+
+        $userId = $_SESSION['id'] ?? null;
+        return [
+            'languages' => $this->navbarModel->getLanguages(),
+            'userLanguage' => $userId ? $this->navbarModel->getUserLanguage($userId) : null
+        ];
     }
 }
 ?>
