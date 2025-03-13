@@ -1,7 +1,7 @@
 {
     "home": "Accueil",
     "about": "À propos",
-    "profile": "ESProfile",
+    "search_language": "ESProfile",
     "logout": "Déconnexion",
     "search_placeholder": "Rechercher...",
     "welcome": "Bienvenue, {name}!",

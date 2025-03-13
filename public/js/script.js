@@ -1,7 +1,4 @@
-// public/js/script.js
-
-document.addEventListener("DOMContentLoaded", function() {
-
+document.addEventListener("DOMContentLoaded", function () {
     let profileToggle = document.getElementById("profileToggle");
     const profileMenu = document.querySelector(".profile-menu");
 
@@ -10,14 +7,11 @@ document.addEventListener("DOMContentLoaded", function() {
     const languageDropdown = document.getElementById("languageDropdown");
     const languageSearch = document.getElementById("languageSearch");
     const languageItems = document.querySelectorAll(".language-item");
-    
+
     let sidebar = document.getElementById("sidebar");
     let container = document.querySelector(".container");
 
-
-
-
-    // ✅ Adjust on page load
+    // ✅ Adjust container width on load
     adjustContainerWidth();
 
     function adjustContainerWidth() {
@@ -30,7 +24,7 @@ document.addEventListener("DOMContentLoaded", function() {
         }
     }
 
-    // ✅ Adjust container margin based on sidebar state on page load
+    // ✅ Ensure correct container margin based on sidebar state
     if (sidebar.classList.contains("collapsed")) {
         container.style.marginLeft = "80px"; // Sidebar is collapsed
     } else {
@@ -44,31 +38,38 @@ document.addEventListener("DOMContentLoaded", function() {
             sidebar.classList.toggle("collapsed");
 
             if (sidebar.classList.contains("collapsed")) {
-                container.style.marginLeft = "80px"; // Adjusted for collapsed sidebar
+                container.style.marginLeft = "80px"; // Adjust for collapsed sidebar
             } else {
-                container.style.marginLeft = "250px"; // Adjusted for expanded sidebar
+                container.style.marginLeft = "250px"; // Adjust for expanded sidebar
             }
 
             adjustContainerWidth();
         });
     }
 
-   // Toggle Profile Dropdown
-   profileToggle.addEventListener("click", function (event) {
-    event.stopPropagation();
-    profileMenu.classList.toggle("active");
-    languageMenu.classList.remove("active");
+    // ✅ Toggle Profile Dropdown
+    profileToggle.addEventListener("click", function (event) {
+        event.stopPropagation();
+        profileMenu.classList.toggle("active");
+        languageMenu.classList.remove("active");
     });
 
-    // Toggle Language Dropdown
+    // ✅ Toggle Language Dropdown
     languageToggle.addEventListener("click", function (event) {
         event.stopPropagation();
         languageMenu.classList.toggle("active");
         profileMenu.classList.remove("active");
         languageDropdown.classList.toggle("active");
+
+        // ✅ Clear search box and show all languages again
+        languageSearch.value = "";
+        languageItems.forEach(item => item.style.display = "block");
+
+        // ✅ Ensure the currently selected language is highlighted
+        highlightSelectedLanguage();
     });
 
-    // ✅ Prevent dropdown from closing when clicking inside it
+    // ✅ Prevent dropdown from closing when clicking inside
     languageDropdown.addEventListener("click", function (event) {
         event.stopPropagation();
     });
@@ -78,13 +79,13 @@ document.addEventListener("DOMContentLoaded", function() {
         event.stopPropagation();
     });
 
-    // Close dropdown when clicking outside
-    document.addEventListener("click", function (event) {
+    // ✅ Close dropdown when clicking outside
+    document.addEventListener("click", function () {
         profileMenu.classList.remove("active");
         languageMenu.classList.remove("active");
     });
 
-    // Filter languages in real-time
+    // ✅ Filter languages in real-time
     languageSearch.addEventListener("input", function () {
         const searchValue = this.value.toLowerCase();
 
@@ -93,6 +94,51 @@ document.addEventListener("DOMContentLoaded", function() {
             item.style.display = text.includes(searchValue) ? "block" : "none";
         });
     });
+
+    // ✅ Language selection without full-page reload
+    languageItems.forEach(item => {
+        item.addEventListener("click", function (event) {
+            event.preventDefault();
+            let selectedLang = this.getAttribute("data-lang");
+
+            // ✅ Update URL without reloading the page
+            let url = new URL(window.location.href);
+            url.searchParams.set("lang", selectedLang);
+
+            fetch(url.href)
+                .then(() => {
+                    // ✅ Update Navbar Language
+                    document.getElementById("selectedLanguage").textContent = selectedLang.toUpperCase();
+                    document.querySelector(".language-btn i").className = "fas fa-language";
+
+                    // ✅ Mark selected language in the dropdown
+                    highlightSelectedLanguage(selectedLang);
+
+                    // ✅ Close the dropdown
+                    languageDropdown.classList.remove("active");
+                    languageMenu.classList.remove("active");
+                    // ✅ FORCE PAGE RELOAD TO APPLY LOCALIZATION
+                    location.reload(); 
+                })
+                .catch(err => console.error("Language switch error:", err));
+        });
+    });
+
+    // ✅ Function to highlight the selected language in the dropdown
+    function highlightSelectedLanguage(selectedLang = null) {
+        let currentLang = selectedLang || document.getElementById("selectedLanguage").textContent.toLowerCase();
+
+        languageItems.forEach(langItem => {
+            langItem.classList.remove("selected");
+            if (langItem.getAttribute("data-lang").toLowerCase() === currentLang) {
+                langItem.classList.add("selected");
+            }
+        });
+    }
+
+    // ✅ Ensure selected language is highlighted on page load
+    highlightSelectedLanguage();
+
 
     document.querySelectorAll(".tab-pane").forEach(pane => {
         if (pane.id === "user-details") {

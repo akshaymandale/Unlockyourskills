@@ -1,32 +1,24 @@
 <?php
-// ✅ Load Navbar Data from Controller
+// ✅ Load Navbar Data
 require_once 'controllers/NavbarController.php';
-// ✅ Load Navbar Data from Controller
 $navbarController = new NavbarController();
-$navbarData = $navbarController->getNavbarData(); // ✅ Correct method
+$navbarData = $navbarController->getNavbarData();
 
 $languages = $navbarData['languages'];
 $userLanguage = $navbarData['userLanguage'];
 
-
-// ✅ Default selected language
+// ✅ Default values
 $selectedLanguage = "EN";
 $selectedIcon = "fas fa-globe";
 
-if ($userLanguage) {
-   $selectedLanguage = strtoupper($userLanguage['language_code']);
-    $selectedIcon = "fas fa-language"; // Custom icon for languages
-}
+// ✅ Set the selected language based on session
+$langCode = $_SESSION['lang'] ?? 'en';
 
-// ✅ Check if user selected a language
-if (isset($_GET['lang'])) {
-    $selectedCode = htmlspecialchars($_GET['lang']);
-
-    foreach ($languages as $lang) {
-        if ($lang['language_code'] === $selectedCode) {
-            $selectedLanguage = strtoupper($lang['language_code']);
-            break;
-        }
+foreach ($languages as $lang) {
+    if ($lang['language_code'] === $langCode) {
+        $selectedLanguage = strtoupper($lang['language_code']);
+        $selectedIcon = "fas fa-language"; // Customize icon per language if needed
+        break;
     }
 }
 ?>
@@ -41,7 +33,7 @@ if (isset($_GET['lang'])) {
     
     <div class="navbar-center">
         <form class="d-flex">
-            <input class="search-input" type="search" placeholder="Search..." aria-label="Search">
+            <input class="search-input" type="search" placeholder="<?= Localization::translate('search'); ?>" aria-label="Search">
             <button class="search-btn" type="submit"><i class="fas fa-search"></i></button>
         </form>
     </div>
@@ -51,17 +43,17 @@ if (isset($_GET['lang'])) {
         <div class="language-menu">
             <button class="language-btn" id="languageToggle">
                 <i class="<?= $selectedIcon; ?>"></i>
-                <?= htmlspecialchars($selectedLanguage); ?>
+                <span id="selectedLanguage"><?= htmlspecialchars($selectedLanguage); ?></span>
             </button>
             
             <div class="dropdown-menu" id="languageDropdown">
                 <!-- ✅ Search Box -->
-                <input type="text" id="languageSearch" class="language-search" placeholder="Search language...">
+                <input type="text" id="languageSearch" class="language-search" placeholder="<?= Localization::translate('search_language'); ?>">
                 
                 <!-- ✅ Language List (Scrollable) -->
                 <div class="language-list">
                     <?php foreach ($languages as $lang): ?>
-                        <a href="?lang=<?= htmlspecialchars($lang['language_code']); ?>" class="language-item">
+                        <a href="#" class="language-item" data-lang="<?= htmlspecialchars($lang['language_code']); ?>">
                             <i class="fas fa-language"></i> <?= htmlspecialchars($lang['language_name']); ?>
                         </a>
                     <?php endforeach; ?>
