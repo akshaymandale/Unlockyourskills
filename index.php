@@ -9,14 +9,33 @@ if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
 
-// Check if user selected a language
+// ✅ Preserve user session (Avoid logging out on language change)
+$previousLang = $_SESSION['lang'] ?? 'en';
+
+// ✅ Handle language selection
 if (isset($_GET['lang'])) {
-    $_SESSION['lang'] = $_GET['lang'];
+    $selectedLang = htmlspecialchars($_GET['lang']);
+    
+    // Only update language if it's different
+    if ($selectedLang !== $previousLang) {
+        $_SESSION['lang'] = $selectedLang;
+        setcookie('lang', $selectedLang, time() + (86400 * 30), "/"); // Save language for 30 days
+    }
+
+    error_log("New Selected Language: " . $_SESSION['lang']);
+    // ✅ Prevent redirect to login page
+    header("Location: " . strtok($_SERVER["REQUEST_URI"], '?')); // Remove ?lang= from URL
+    exit();
 }
 
-// Set default language or use saved language
-$lang = $_SESSION['lang'] ?? 'en';
+// ✅ Set default language or use saved one
+$lang = $_SESSION['lang'] ?? $_COOKIE['lang'] ?? 'en';
+
+
+error_log("Language file loaded for: " . $lang);
+// ✅ Load language file
 Localization::loadLanguage($lang);
+
 
 // Get the controller and action from the request
 $controller = isset($_GET['controller']) ? $_GET['controller'] : 'LoginController';
