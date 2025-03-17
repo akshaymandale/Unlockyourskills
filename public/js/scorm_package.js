@@ -119,7 +119,8 @@ document.addEventListener("DOMContentLoaded", function () {
                 scormData.tags.split(",").forEach(tag => addTag(tag.trim()));
             }
 
-            document.getElementById("scormModalLabel").textContent = "Edit SCORM Package"; // Change modal title
+           
+            document.getElementById("scormModalLabel").textContent = translations["scorm.modal.edit"] || "Edit SCORM Package"; // Change modal title
             scormModal.show(); // Open modal
         });
     });
@@ -146,7 +147,9 @@ document.addEventListener("DOMContentLoaded", function () {
             document.querySelector('input[name="assessment"][value="No"]').checked = true;
 
             // Set Modal Title to "Add SCORM Package"
-            document.getElementById("scormModalLabel").textContent = "Add SCORM Package";
+            
+            document.getElementById("scormModalLabel").textContent = translations["scorm.modal.add"] || "Add SCORM Package";
+
 
             scormModal.show();
         });

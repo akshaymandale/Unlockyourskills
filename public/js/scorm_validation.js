@@ -1,20 +1,19 @@
 document.addEventListener("DOMContentLoaded", function () {
-    console.log("JS Loaded Successfully!");
+    console.log("SCORM Validation Script Loaded!");
 
-    // ✅ When the SCORM modal is opened, set up event listeners
+    // ✅ When SCORM Modal Opens, Attach Validation
     $('#scormModal').on('shown.bs.modal', function () {
         console.log("SCORM Modal Opened!");
-
-        attachValidation(); // Attach validation functions
+        attachScormValidation();
     });
 
-    // ✅ When the modal is hidden, reset form and errors
+    // ✅ When Modal Closes, Reset the Form
     $('#scormModal').on('hidden.bs.modal', function () {
         console.log("SCORM Modal Closed. Resetting form...");
-        resetForm();
+        resetScormForm();
     });
 
-    function attachValidation() {
+    function attachScormValidation() {
         const scormForm = document.getElementById("scormForm");
 
         if (!scormForm) {
@@ -23,33 +22,33 @@ document.addEventListener("DOMContentLoaded", function () {
         }
 
         // ✅ Prevent duplicate event listeners
-        scormForm.removeEventListener("submit", formSubmitHandler);
-        scormForm.addEventListener("submit", formSubmitHandler);
+        scormForm.removeEventListener("submit", scormFormSubmitHandler);
+        scormForm.addEventListener("submit", scormFormSubmitHandler);
 
-        // ✅ Attach blur (focus out) validation
+        // ✅ Attach Blur Validation on Input Fields
         document.querySelectorAll("#scormForm input, #scormForm select, #scormForm textarea").forEach(field => {
-            field.removeEventListener("blur", fieldBlurHandler);
-            field.addEventListener("blur", fieldBlurHandler);
+            field.removeEventListener("blur", scormFieldBlurHandler);
+            field.addEventListener("blur", scormFieldBlurHandler);
         });
 
-        // ✅ Clear form on Cancel button click
-        document.getElementById("clearForm").addEventListener("click", resetForm);
+        // ✅ Reset Form on "Clear" Button Click
+        document.getElementById("clearForm").addEventListener("click", resetScormForm);
     }
 
-    function formSubmitHandler(event) {
+    function scormFormSubmitHandler(event) {
         event.preventDefault();
         let isValid = validateScormForm();
         if (isValid) {
-            console.log("Form is valid! Submitting...");
+            console.log("SCORM Form is valid! Submitting...");
             this.submit();
         }
     }
 
-    function fieldBlurHandler(event) {
+    function scormFieldBlurHandler(event) {
         validateScormField(event.target);
     }
 
-    // ✅ Function to Validate Entire Form
+    // ✅ Validate Entire Form
     function validateScormForm() {
         let isValid = true;
         document.querySelectorAll("#scormForm input, #scormForm select, #scormForm textarea").forEach(field => {
@@ -60,7 +59,7 @@ document.addEventListener("DOMContentLoaded", function () {
         return isValid;
     }
 
-    // ✅ Function to Validate a Single Field
+    // ✅ Validate Single Field
     function validateScormField(field) {
         let isValid = true;
         let value = field.value.trim();
@@ -69,7 +68,7 @@ document.addEventListener("DOMContentLoaded", function () {
         switch (fieldName) {
             case "scorm_title":
                 if (value === "") {
-                    showError(field, "SCORM Title is required");
+                    showError(field, "validation.scorm_title_required");
                     isValid = false;
                 } else {
                     hideError(field);
@@ -78,7 +77,7 @@ document.addEventListener("DOMContentLoaded", function () {
 
             case "zipFile":
                 if (field.files.length === 0) {
-                    showError(field, "SCORM Zip File is required");
+                    showError(field, "validation.scorm_zip_required");
                     isValid = false;
                 } else {
                     hideError(field);
@@ -87,7 +86,7 @@ document.addEventListener("DOMContentLoaded", function () {
 
             case "version":
                 if (value === "") {
-                    showError(field, "Version is required");
+                    showError(field, "validation.version_required");
                     isValid = false;
                 } else {
                     hideError(field);
@@ -96,20 +95,21 @@ document.addEventListener("DOMContentLoaded", function () {
 
             case "scormCategory":
                 if (value === "") {
-                    showError(field, "Please select a SCORM Category");
+                    showError(field, "validation.scorm_category_required");
                     isValid = false;
                 } else {
                     hideError(field);
                 }
                 break;
-                
         }
 
         return isValid;
     }
 
-    // ✅ Function to Show Error with Bootstrap Red Border
-    function showError(input, message) {
+    // ✅ Show Error Messages with Translations
+    function showError(input, key) {
+        let message = translations[key] || key; // Use translated message or fallback to key
+
         let errorElement = input.parentNode.querySelector(".error-message");
         if (!errorElement) {
             errorElement = document.createElement("span");
@@ -125,7 +125,7 @@ document.addEventListener("DOMContentLoaded", function () {
         input.classList.add("is-invalid");
     }
 
-    // ✅ Function to Hide Error
+    // ✅ Hide Error Messages
     function hideError(input) {
         let errorElement = input.parentNode.querySelector(".error-message");
         if (errorElement) {
@@ -135,8 +135,8 @@ document.addEventListener("DOMContentLoaded", function () {
         input.classList.remove("is-invalid");
     }
 
-    // ✅ Function to Reset Form and Remove Errors
-    function resetForm() {
+    // ✅ Reset SCORM Form and Remove Errors
+    function resetScormForm() {
         document.getElementById("scormForm").reset();
         document.querySelectorAll(".error-message").forEach(el => el.textContent = "");
         document.querySelectorAll(".is-invalid").forEach(el => el.classList.remove("is-invalid"));

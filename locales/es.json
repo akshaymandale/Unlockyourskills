@@ -1,9 +1,0 @@
-{
-    "home": "Accueil",
-    "about": "À propos",
-    "search_language": "ESProfile",
-    "logout": "Déconnexion",
-    "search_placeholder": "Rechercher...",
-    "welcome": "Bienvenue, {name}!",
-    "error": "Une erreur s'est produite. Veuillez réessayer."
-}

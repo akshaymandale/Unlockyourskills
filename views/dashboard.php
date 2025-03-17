@@ -15,8 +15,8 @@ include 'views/includes/sidebar.php';
 ?>
 
 <div class="container add-user-container">
-    <h2>Welcome to the Dashboard</h2>
-    <p>This is your e-learning admin panel.</p>
+    <h2><?= Localization::translate('dashboard_welcome'); ?></h2>
+    <p><?= Localization::translate('dashboard_description'); ?></p>
 </div>
 
 </body>

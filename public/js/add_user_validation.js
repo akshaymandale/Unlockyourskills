@@ -39,7 +39,7 @@ document.addEventListener("DOMContentLoaded", function () {
         switch (fieldName) {
             case "full_name":
                 if (value === "") {
-                    showError(field, "Full Name is required");
+                    showError(field, "validation.full_name_required");
                     isValid = false;
                 } else {
                     hideError(field);
@@ -49,10 +49,10 @@ document.addEventListener("DOMContentLoaded", function () {
             case "email":
                 let emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
                 if (value === "") {
-                    showError(field, "Email is required");
+                    showError(field, "validation.email_required");
                     isValid = false;
                 } else if (!emailPattern.test(value)) {
-                    showError(field, "Enter a valid email address");
+                    showError(field, "validation.email_invalid");
                     isValid = false;
                 } else {
                     hideError(field);
@@ -62,10 +62,10 @@ document.addEventListener("DOMContentLoaded", function () {
             case "contact_number":
                 let contactPattern = /^[0-9]{10}$/;
                 if (value === "") {
-                    showError(field, "Contact Number is required");
+                    showError(field, "validation.contact_required");
                     isValid = false;
                 } else if (!contactPattern.test(value)) {
-                    showError(field, "Enter a valid 10-digit phone number");
+                    showError(field, "validation.contact_invalid");
                     isValid = false;
                 } else {
                     hideError(field);
@@ -75,10 +75,10 @@ document.addEventListener("DOMContentLoaded", function () {
             case "dob":
                 let today = new Date().toISOString().split("T")[0];
                 if (value === "") {
-                    showError(field, "Date of Birth is required");
+                    showError(field, "validation.dob_required");
                     isValid = false;
                 } else if (value > today) {
-                    showError(field, "Date of Birth cannot be in the future");
+                    showError(field, "validation.dob_future");
                     isValid = false;
                 } else {
                     hideError(field);
@@ -87,7 +87,7 @@ document.addEventListener("DOMContentLoaded", function () {
 
             case "user_role":
                 if (value === "") {
-                    showError(field, "User Role is required");
+                    showError(field, "validation.user_role_required");
                     isValid = false;
                 } else {
                     hideError(field);
@@ -98,7 +98,7 @@ document.addEventListener("DOMContentLoaded", function () {
                 let expiryDate = new Date(value);
                 let todayDate = new Date();
                 if (value !== "" && expiryDate < todayDate) {
-                    showError(field, "Profile Expiry Date cannot be before today");
+                    showError(field, "validation.profile_expiry_invalid");
                     isValid = false;
                 } else {
                     hideError(field);
@@ -112,10 +112,10 @@ document.addEventListener("DOMContentLoaded", function () {
                     let maxSize = 5 * 1024 * 1024; // 5MB
 
                     if (!allowedExtensions.includes(file.type)) {
-                        showError(field, "Only JPG and PNG files are allowed");
+                        showError(field, "validation.image_format");
                         isValid = false;
                     } else if (file.size > maxSize) {
-                        showError(field, "File size should not exceed 5MB");
+                        showError(field, "validation.image_size");
                         isValid = false;
                     } else {
                         hideError(field);
@@ -128,7 +128,9 @@ document.addEventListener("DOMContentLoaded", function () {
     }
 
     // ✅ Function to Show Error Beside Label & Add Red Border
-    function showError(input, message) {
+    function showError(input, key) {
+        let message = translations[key] || key; // Use translation or fallback to key
+
         let errorElement = input.parentNode.querySelector(".error-message");
         if (!errorElement) {
             errorElement = document.createElement("span");
