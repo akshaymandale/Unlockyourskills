@@ -27,28 +27,30 @@ foreach ($languages as $lang) {
     <div class="navbar-left">
         <button class="sidebar-toggle" id="sidebarToggle"><i class="fas fa-bars"></i></button>
         <a class="navbar-brand" href="#">
-            <img src="public/images/logo.png" alt="Client Logo">
+            <img src="public/images/logo.png" alt="<?= Localization::translate('client_logo'); ?>">
         </a>
     </div>
     
     <div class="navbar-center">
         <form class="d-flex">
-            <input class="search-input" type="search" placeholder="<?= Localization::translate('search'); ?>" aria-label="Search">
-            <button class="search-btn" type="submit"><i class="fas fa-search"></i></button>
+            <input class="search-input" type="search" placeholder="<?= Localization::translate('search'); ?>" aria-label="<?= Localization::translate('search'); ?>">
+            <button class="search-btn" type="submit" title="<?= Localization::translate('search'); ?>">
+                <i class="fas fa-search"></i>
+            </button>
         </form>
     </div>
     
     <div class="navbar-right">
         <!-- ✅ Language Menu -->
         <div class="language-menu">
-            <button class="language-btn" id="languageToggle">
+            <button class="language-btn" id="languageToggle" title="<?= Localization::translate('change_language'); ?>">
                 <i class="<?= $selectedIcon; ?>"></i>
                 <span id="selectedLanguage"><?= htmlspecialchars($selectedLanguage); ?></span>
             </button>
             
             <div class="dropdown-menu" id="languageDropdown">
                 <!-- ✅ Search Box -->
-                <input type="text" id="languageSearch" class="language-search" placeholder="<?= Localization::translate('search_language'); ?>">
+                <input type="text" id="languageSearch" class="language-search" placeholder="<?= Localization::translate('search_language'); ?>" aria-label="<?= Localization::translate('search_language'); ?>">
                 
                 <!-- ✅ Language List (Scrollable) -->
                 <div class="language-list">
@@ -66,11 +68,16 @@ foreach ($languages as $lang) {
 
         <!-- ✅ Profile Menu -->
         <div class="profile-menu">
-            <button class="profile-btn" id="profileToggle"><i class="fas fa-user"></i></button>
+            <button class="profile-btn" id="profileToggle" title="<?= Localization::translate('profile'); ?>">
+                <i class="fas fa-user"></i>
+            </button>
             <div class="dropdown-menu" id="profileDropdown">
                 <a class="dropdown-item" href="#"><i class="fas fa-user-circle"></i> <?= Localization::translate('profile'); ?></a>
-                <a class="dropdown-item" href="index.php?controller=LoginController&action=logout"><i class="fas fa-sign-out-alt"></i> <?= Localization::translate('logout'); ?></a>
+                <a class="dropdown-item" href="index.php?controller=LoginController&action=logout">
+                    <i class="fas fa-sign-out-alt"></i> <?= Localization::translate('logout'); ?>
+                </a>
             </div>
         </div>
     </div>
 </nav>
+

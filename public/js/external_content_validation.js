@@ -18,12 +18,12 @@ document.addEventListener("DOMContentLoaded", function () {
         const submitButton = document.getElementById("submit_button");
     
         if (!form) {
-            console.error("❌ External Content Form NOT found!");
+            console.error("❌ " + (translations["error.form_not_found"] || "External Content Form NOT found!"));
             return;
         }
-    
+
         if (!submitButton) {
-            console.error("❌ Submit button NOT found! Check your HTML.");
+            console.error("❌ " + (translations["error.submit_button_missing"] || "Submit button NOT found! Check your HTML."));
             return;
         }
     
@@ -62,10 +62,10 @@ document.addEventListener("DOMContentLoaded", function () {
         let isValid = validateForm();
     
         if (isValid) {
-            console.log("✅ Form is valid! Submitting...");
+            console.log("✅ " + (translations["form.valid"] || "Form is valid! Submitting..."));
             document.getElementById("externalContentForm").submit();
         } else {
-            console.log("❌ Form validation failed. Fix the errors before submitting.");
+            console.log("❌ " + (translations["form.invalid"] || "Form validation failed. Fix the errors before submitting."));
         }
     }
 
@@ -123,15 +123,15 @@ document.addEventListener("DOMContentLoaded", function () {
 
         switch (fieldName) {
             case "title":
-                isValid = validateRequired(field, value, "Title is required");
+                isValid = validateRequired(field, value, translations["validation.required.title"] || "Title is required");
                 break;
 
             case "contentType":
-                isValid = validateRequired(field, value, "Please select a content type");
+                isValid = validateRequired(field, value, translations["validation.required.content_type"] || "Please select a content type");
                 break;
 
             case "versionNumber":
-                isValid = validateRequired(field, value, "Version is required");
+                isValid = validateRequired(field, value, translations["validation.required.version"] || "Version is required");
                 break;
 
             case "externalTagList":
@@ -147,7 +147,7 @@ document.addEventListener("DOMContentLoaded", function () {
 
             case "platformName":
             case "audioSource":
-                isValid = validateRequired(field, value, "This field is required");
+                isValid = validateRequired(field, value, translations["validation.required.field"] || "This field is required");
                 break;
 
             case "audioFile":
@@ -178,7 +178,7 @@ document.addEventListener("DOMContentLoaded", function () {
         let tags = tagField.value.trim();
     
         if (tags === "") {
-            showError(tagContainer, "Tags/Keywords are required");
+            showError(tagContainer, translations["validation.required.tags"] || "Tags/Keywords are required");
             return false;
         } else {
             hideError(tagContainer);
@@ -186,53 +186,53 @@ document.addEventListener("DOMContentLoaded", function () {
         }
     }
 
-  function validateURL(field, value) {
-    let urlPattern = /^(https?:\/\/)?(www\.)?([\w-]+\.)+[\w]{2,}(:\d+)?(\/[\w/_-]*(\?\S+)?)?$/i;
+    function validateURL(field, value) {
+        let urlPattern = /^(https?:\/\/)?(www\.)?([\w-]+\.)+[\w]{2,}(:\d+)?(\/[\w/_-]*(\?\S+)?)?$/i;
 
-    if (value.trim() === "") {
-        showError(field, "URL is required");
-        return false;
-    } else if (!urlPattern.test(value)) {
-        showError(field, "Enter a valid URL (e.g., https://example.com)");
-        return false;
-    } else {
-        hideError(field);
-        return true;
+        if (value.trim() === "") {
+            showError(field, translations["validation.required.url"] || "URL is required");
+            return false;
+        } else if (!urlPattern.test(value)) {
+            showError(field, translations["validation.invalid.url"] || "Enter a valid URL (e.g., https://example.com)");
+            return false;
+        } else {
+            hideError(field);
+            return true;
+        }
     }
-}
 
     function validateAudioFile(field) {
         let file = field.files[0];
         if (!file) {
-            showError(field, "Please upload an audio file (MP3/WAV)");
+            showError(field, translations["validation.required.audio_file"] || "Please upload an audio file (MP3/WAV)");
             return false;
         }
-
+    
         let allowedTypes = ["audio/mpeg", "audio/wav"];
         if (!allowedTypes.includes(file.type)) {
-            showError(field, "Invalid file type. Only MP3 and WAV are allowed.");
+            showError(field, translations["validation.invalid.audio_file"] || "Invalid file type. Only MP3 and WAV are allowed.");
             return false;
         }
-
+    
         hideError(field);
         return true;
     }
-
+    
     function validateThumbnail(field) {
         let file = field.files[0];
         if (!file) {
-            showError(field, "Please upload an image file (JPG, PNG, GIF, WebP).");
+            showError(field, translations["validation.required.thumbnail"] || "Please upload an image file (JPG, PNG, GIF, WebP).");
             return false;
         }
     
         let allowedTypes = ["image/jpeg", "image/png", "image/gif", "image/webp"];
         if (!allowedTypes.includes(file.type)) {
-            showError(field, "Invalid file type. Only JPG, PNG, GIF, and WebP are allowed.");
+            showError(field, translations["validation.invalid.thumbnail"] || "Invalid file type. Only JPG, PNG, GIF, and WebP are allowed.");
             return false;
         }
     
         if (file.size > 5 * 1024 * 1024) { // 5MB limit
-            showError(field, "File size should not exceed 5MB.");
+            showError(field, translations["validation.file_size_exceeded"] || "File size should not exceed 5MB.");
             return false;
         }
     
@@ -241,36 +241,36 @@ document.addEventListener("DOMContentLoaded", function () {
     }
 
     function showError(input, message) {
-        let formGroup = input.closest(".form-group"); // Find the closest form-group
+        let formGroup = input.closest(".form-group");
         if (!formGroup) {
-            console.error(`❌ .form-group NOT found for ${input.name}`);
+            console.error(`❌ ${translations["error.form_group_missing"] || ".form-group NOT found for"} ${input.name}`);
             return;
         }
-    
+
         let errorElement = formGroup.querySelector(".error-message");
         if (!errorElement) {
             errorElement = document.createElement("small");
             errorElement.className = "error-message text-danger";
             formGroup.appendChild(errorElement);
         }
-        
+
         errorElement.textContent = message;
         input.classList.add("is-invalid");
-    
-        console.log(`🚨 Error on ${input.name}: ${message}`);
+
+        console.log(`🚨 ${translations["error.validation"] || "Error on"} ${input.name}: ${message}`);
     }
     
     function hideError(input) {
         let formGroup = input.closest(".form-group");
         if (!formGroup) return;
-    
+
         let errorElement = formGroup.querySelector(".error-message");
         if (errorElement) {
             errorElement.textContent = "";
         }
         input.classList.remove("is-invalid");
-    
-        console.log(`✅ Cleared error for ${input.name}`);
+
+        console.log(`✅ ${translations["success.validation_clear"] || "Cleared error for"} ${input.name}`);
     }
 
 

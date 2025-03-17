@@ -14,7 +14,7 @@
 
     <footer id="colophon" class="site-footer">
         <div class="site-info">
-            &copy; 2025 Deeplaxmi Communications. All Rights Reserved.
+            &copy; 2025 <?= Localization::translate('company_name'); ?>. <?= Localization::translate('all_rights_reserved'); ?>
         </div><!-- .site-info -->
     </footer><!-- #colophon -->
 
