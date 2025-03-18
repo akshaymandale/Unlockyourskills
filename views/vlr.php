@@ -373,11 +373,12 @@ $clientName = $_SESSION['username'] ?? 'DEFAULT';
             </div>
 
 
-           <!-- ✅ NON-SCORM -->
+            <!-- ✅ NON-SCORM -->
             <div class="tab-pane" id="non-scorm">
                 <div class="d-flex justify-content-between align-items-center">
                     <h3><?= Localization::translate('non_scorm'); ?></h3>
-                    <button class="btn btn-sm btn-primary" onclick="openAddModal('NON-SCORM')">+ <?= Localization::translate('add'); ?></button>
+                    <button class="btn btn-sm btn-primary" onclick="openAddModal('NON-SCORM')">+
+                        <?= Localization::translate('add'); ?></button>
                 </div>
                 <div id="non-scorm-items"></div>
             </div>
@@ -386,7 +387,8 @@ $clientName = $_SESSION['username'] ?? 'DEFAULT';
             <div class="tab-pane" id="assessment">
                 <div class="d-flex justify-content-between align-items-center">
                     <h3><?= Localization::translate('assessment'); ?></h3>
-                    <button class="btn btn-sm btn-primary" onclick="openAddModal('Assessment')">+ <?= Localization::translate('add'); ?></button>
+                    <button class="btn btn-sm btn-primary" onclick="openAddModal('Assessment')">+
+                        <?= Localization::translate('add'); ?></button>
                 </div>
                 <div id="assessment-items"></div>
             </div>
@@ -395,7 +397,8 @@ $clientName = $_SESSION['username'] ?? 'DEFAULT';
             <div class="tab-pane" id="audio">
                 <div class="d-flex justify-content-between align-items-center">
                     <h3><?= Localization::translate('audio'); ?></h3>
-                    <button class="btn btn-sm btn-primary" onclick="openAddModal('Audio')">+ <?= Localization::translate('add'); ?></button>
+                    <button class="btn btn-sm btn-primary" onclick="openAddModal('Audio')">+
+                        <?= Localization::translate('add'); ?></button>
                 </div>
                 <div id="audio-items"></div>
             </div>
@@ -404,7 +407,8 @@ $clientName = $_SESSION['username'] ?? 'DEFAULT';
             <div class="tab-pane" id="video">
                 <div class="d-flex justify-content-between align-items-center">
                     <h3><?= Localization::translate('video'); ?></h3>
-                    <button class="btn btn-sm btn-primary" onclick="openAddModal('Video')">+ <?= Localization::translate('add'); ?></button>
+                    <button class="btn btn-sm btn-primary" onclick="openAddModal('Video')">+
+                        <?= Localization::translate('add'); ?></button>
                 </div>
                 <div id="video-items"></div>
             </div>
@@ -415,7 +419,177 @@ $clientName = $_SESSION['username'] ?? 'DEFAULT';
                 <!-- Document Header Section -->
                 <div class="d-flex justify-content-between align-items-center mb-3">
                     <h3><?= Localization::translate('documents'); ?></h3>
-                    <button class="btn btn-sm btn-primary" onclick="openAddModal('Document')">+ <?= Localization::translate('add'); ?></button>
+                    <button class="btn btn-sm btn-primary" data-bs-toggle="modal" data-bs-target="#documentModal"
+                        id="addDocumentBtn">
+                        + <?= Localization::translate('addk'); ?>
+                    </button>
+
+                    <div class="modal fade" id="documentModal" tabindex="-1" aria-labelledby="documentModalLabel"
+                        aria-hidden="true">
+                        <div class="modal-dialog modal-lg">
+                            <div class="modal-content">
+                                <div class="modal-header">
+                                    <h5 class="modal-title" id="documentModalLabel">
+                                        <?= Localization::translate('document.modal.add'); ?>
+                                    </h5>
+                                    <button type="button" class="close" data-dismiss="modal"
+                                        aria-label="<?= Localization::translate('close'); ?>">
+                                        <span aria-hidden="true">&times;</span>
+                                    </button>
+
+                                </div>
+                                <div class="modal-body">
+                                    <form id="documentForm">
+                                        <div class="row">
+                                            <!-- Title -->
+                                            <div class="col-md-6 form-group mb-3">
+                                                <label for="document_title" class="form-label">Title <span
+                                                        class="text-danger">*</span></label>
+                                                <input type="text" class="form-control" id="document_title">
+                                            </div>
+
+                                            <!-- Category -->
+                                            <div class="col-md-6 form-group mb-3">
+                                                <label for="documentCategory" class="form-label">Category <span
+                                                        class="text-danger">*</span></label>
+                                                <select class="form-control" id="documentCategory">
+                                                    <option value="">Select Category</option>
+                                                    <option value="Word/Excel/PPT Files">Word/Excel/PPT Files</option>
+                                                    <option value="E-Book & Manual">E-Book & Manual</option>
+                                                    <option value="Research Paper & Case Studies">Research Paper & Case
+                                                        Studies</option>
+                                                </select>
+                                            </div>
+                                        </div>
+
+                                        <!-- Dynamic Category Fields -->
+                                        <div class="row">
+                                            <div id="wordExcelPptFields" class="col-md-12 form-group mb-3"
+                                                style="display: none;">
+                                                <label for="documentFile">Upload File (.docx, .xlsx, .pptx,
+                                                    .pdf)</label>
+                                                <input type="file" class="form-control" id="documentFile"
+                                                    accept=".docx, .xlsx, .pptx, .pdf">
+                                            </div>
+
+                                            <div id="ebookManualFields" class="col-md-12 form-group mb-3"
+                                                style="display: none;">
+                                                <label for="documentFile">Upload File (.pdf, .epub, .mobi)</label>
+                                                <input type="file" class="form-control" id="documentFile"
+                                                    accept=".pdf, .epub, .mobi">
+                                            </div>
+
+                                            <div id="researchFields" class="col-md-12 form-group mb-3"
+                                                style="display: none;">
+                                                <label for="documentFile">Upload File (.pdf, .docx)</label>
+                                                <input type="file" class="form-control" id="documentFile"
+                                                    accept=".pdf, .docx">
+                                            </div>
+                                        </div>
+
+                                        <!-- Research-Specific Fields -->
+                                        <div id="researchDetails" class="row" style="display: none;">
+                                            <!-- Authors -->
+                                            <div class="col-md-6 form-group mb-3">
+                                                <label for="research_authors">Authors</label>
+                                                <input type="text" class="form-control" id="research_authors">
+                                            </div>
+
+                                            <!-- Publication Date -->
+                                            <div class="col-md-6 form-group mb-3">
+                                                <label for="research_publication_date">Publication Date</label>
+                                                <input type="date" class="form-control" id="research_publication_date">
+                                            </div>
+
+                                            <!-- Reference Links -->
+                                            <div class="col-md-12 form-group mb-3">
+                                                <label for="research_references">Reference Links</label>
+                                                <input type="text" class="form-control" id="research_references">
+                                            </div>
+                                        </div>
+
+                                        <!-- Description -->
+                                        <div class="form-group mb-3">
+                                            <label for="description" class="form-label">Description</label>
+                                            <textarea class="form-control" id="description"></textarea>
+                                        </div>
+
+                                        <!-- Tags -->
+
+                                        <div class="form-group mb-3">
+    <label for="documentTagInput" class="form-label">
+        <?= Localization::translate('tags_keywords'); ?> <span class="text-danger">*</span>
+    </label>
+    <div id="documentTagContainer" class="tag-input-container form-control">
+        <span id="documentTagDisplay"></span>
+        <input type="text" id="documentTagInput" class="tag-input"
+            placeholder="<?= Localization::translate('add_tag_placeholder'); ?>">
+    </div>
+    <input type="hidden" name="documentTagList" id="documentTagList">
+    <div class="invalid-feedback">
+        <?= Localization::translate('tags_required'); ?>
+    </div>
+</div>
+
+
+                                        <div class="row">
+                                            <!-- Language -->
+                                            <div class="col-md-6 form-group mb-3">
+                                                <label for="language" class="form-label">Language</label>
+                                                <select class="form-control" id="language">
+                                                    <option value="en">English</option>
+                                                    <option value="hi">Hindi</option>
+                                                </select>
+                                            </div>
+
+                                            <!-- Mobile Support -->
+                                            <div class="col-md-6 form-group mb-3">
+                                                <label class="form-label">Mobile Support</label>
+                                                <div>
+                                                    <input type="radio" id="mobile_yes" name="mobile_support"
+                                                        value="Yes">
+                                                    Yes
+                                                    <input type="radio" id="mobile_no" name="mobile_support" value="No"
+                                                        checked> No
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <div class="row">
+                                            <!-- Version -->
+                                            <div class="col-md-6 form-group mb-3">
+                                                <label for="doc_version" class="form-label">Version Number <span
+                                                        class="text-danger">*</span></label>
+                                                <input type="number" class="form-control" id="doc_version"
+                                                    name="doc_version">
+                                            </div>
+
+                                            <!-- Time Limit -->
+                                            <div class="col-md-6 form-group mb-3">
+                                                <label for="doc_time_limit" class="form-label">Time Limit
+                                                    (minutes)</label>
+                                                <input type="number" class="form-control" id="doc_time_limit"
+                                                    name="doc_time_limit" min="1">
+                                            </div>
+                                        </div>
+
+
+
+                                        <div class="text-end">
+                                            <button type="submit" class="btn btn-primary">Submit</button>
+                                            <button type="button" class="btn btn-secondary"
+                                                data-bs-dismiss="modal">Cancel</button>
+                                        </div>
+                                    </form>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+
+
+
+
                 </div>
 
                 <!-- ✅ Document Sub-Tabs -->
@@ -431,7 +605,7 @@ $clientName = $_SESSION['username'] ?? 'DEFAULT';
                         </a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link" data-toggle="tab" href="#research_case_studies">
+                        <a class="nav-link" data-toggle="tab" href="#research-case-studies">
                             <?= Localization::translate('research_case_studies'); ?>
                         </a>
                     </li>
@@ -458,7 +632,8 @@ $clientName = $_SESSION['username'] ?? 'DEFAULT';
             <div class="tab-pane" id="image">
                 <div class="d-flex justify-content-between align-items-center">
                     <h3><?= Localization::translate('image'); ?></h3>
-                    <button class="btn btn-sm btn-primary" onclick="openAddModal('Image')">+ <?= Localization::translate('add'); ?></button>
+                    <button class="btn btn-sm btn-primary" onclick="openAddModal('Image')">+
+                        <?= Localization::translate('add'); ?></button>
                 </div>
                 <div id="image-items"></div>
             </div>
@@ -470,9 +645,9 @@ $clientName = $_SESSION['username'] ?? 'DEFAULT';
                 <!-- External Content Header Section -->
                 <div class="d-flex justify-content-between align-items-center mb-3">
                     <h3><?= Localization::translate('external_content'); ?></h3>
-                        <button class="btn btn-sm btn-primary" data-toggle="modal" data-target="#externalContentModal">
-                            + <?= Localization::translate('add_external_content'); ?>
-                        </button>
+                    <button class="btn btn-sm btn-primary" data-toggle="modal" data-target="#externalContentModal">
+                        + <?= Localization::translate('add_external_content'); ?>
+                    </button>
 
                     <!-- ✅ Modal for Adding External Content -->
                     <!-- Modal Popup -->
@@ -481,7 +656,9 @@ $clientName = $_SESSION['username'] ?? 'DEFAULT';
                         <div class="modal-dialog modal-lg">
                             <div class="modal-content">
                                 <div class="modal-header">
-                                <h5 class="modal-title" id="externalModalLabel"><?= Localization::translate('add_external_content'); ?></h5>
+                                    <h5 class="modal-title" id="externalModalLabel">
+                                        <?= Localization::translate('add_external_content'); ?>
+                                    </h5>
                                     <button type="button" class="close" data-dismiss="modal" aria-label="Close">
                                         <span aria-hidden="true">&times;</span>
                                     </button>
@@ -494,7 +671,8 @@ $clientName = $_SESSION['username'] ?? 'DEFAULT';
 
                                         <!-- Title -->
                                         <div class="form-group">
-                                            <label for="title"><?= Localization::translate('title'); ?> <span class="text-danger">*</span></label>
+                                            <label for="title"><?= Localization::translate('title'); ?> <span
+                                                    class="text-danger">*</span></label>
                                             <input type="text" class="form-control" id="title" name="title" required>
                                             <span class="text-danger error-message"></span>
                                         </div>
@@ -503,7 +681,9 @@ $clientName = $_SESSION['username'] ?? 'DEFAULT';
                                         <div class="row">
                                             <div class="col-md-6">
                                                 <div class="form-group">
-                                                    <label for="versionNumber"><?= Localization::translate('version_number'); ?> <span class="text-danger">*</span></label>
+                                                    <label
+                                                        for="versionNumber"><?= Localization::translate('version_number'); ?>
+                                                        <span class="text-danger">*</span></label>
                                                     <input type="text" class="form-control" id="versionNumber"
                                                         name="version_number" required>
                                                     <span class="text-danger error-message"></span>
@@ -516,12 +696,14 @@ $clientName = $_SESSION['username'] ?? 'DEFAULT';
                                                         <div class="form-check mr-3">
                                                             <input class="form-check-input" type="radio"
                                                                 name="mobile_support" id="mobileYes" value="Yes">
-                                                                <label class="form-check-label" for="mobileYes"><?= Localization::translate('yes'); ?></label>
+                                                            <label class="form-check-label"
+                                                                for="mobileYes"><?= Localization::translate('yes'); ?></label>
                                                         </div>
                                                         <div class="form-check">
                                                             <input class="form-check-input" type="radio"
                                                                 name="mobile_support" id="mobileNo" value="No" checked>
-                                                                <label class="form-check-label" for="mobileNo"><?= Localization::translate('no'); ?></label>
+                                                            <label class="form-check-label"
+                                                                for="mobileNo"><?= Localization::translate('no'); ?></label>
                                                         </div>
                                                     </div>
                                                 </div>
@@ -529,41 +711,61 @@ $clientName = $_SESSION['username'] ?? 'DEFAULT';
                                         </div>
 
                                         <!-- Language & Time Limit -->
-                                            <div class="row">
-                                                <div class="col-md-6">
-                                                    <div class="form-group">
-                                                        <label for="languageSupport"><?= Localization::translate('language_support'); ?></label>
-                                                        <select class="form-control" id="languageSupport" name="language_support">
-                                                            <option value="English"><?= Localization::translate('english'); ?></option>
-                                                            <option value="Hindi"><?= Localization::translate('hindi'); ?></option>
-                                                            <option value="Marathi"><?= Localization::translate('marathi'); ?></option>
-                                                            <option value="Spanish"><?= Localization::translate('spanish'); ?></option>
-                                                            <option value="French"><?= Localization::translate('french'); ?></option>
-                                                            <option value="German"><?= Localization::translate('german'); ?></option>
-                                                            <option value="Chinese"><?= Localization::translate('chinese'); ?></option>
-                                                        </select>
-                                                    </div>
-                                                </div>
-                                                <div class="col-md-6">
-                                                    <div class="form-group">
-                                                        <label for="timeLimit"><?= Localization::translate('time_limit'); ?> (<?= Localization::translate('minutes'); ?>)</label>
-                                                        <input type="number" class="form-control" id="external_timeLimit" name="time_limit">
-                                                    </div>
+                                        <div class="row">
+                                            <div class="col-md-6">
+                                                <div class="form-group">
+                                                    <label
+                                                        for="languageSupport"><?= Localization::translate('language_support'); ?></label>
+                                                    <select class="form-control" id="languageSupport"
+                                                        name="language_support">
+                                                        <option value="English">
+                                                            <?= Localization::translate('english'); ?>
+                                                        </option>
+                                                        <option value="Hindi"><?= Localization::translate('hindi'); ?>
+                                                        </option>
+                                                        <option value="Marathi">
+                                                            <?= Localization::translate('marathi'); ?>
+                                                        </option>
+                                                        <option value="Spanish">
+                                                            <?= Localization::translate('spanish'); ?>
+                                                        </option>
+                                                        <option value="French"><?= Localization::translate('french'); ?>
+                                                        </option>
+                                                        <option value="German"><?= Localization::translate('german'); ?>
+                                                        </option>
+                                                        <option value="Chinese">
+                                                            <?= Localization::translate('chinese'); ?>
+                                                        </option>
+                                                    </select>
                                                 </div>
                                             </div>
+                                            <div class="col-md-6">
+                                                <div class="form-group">
+                                                    <label for="timeLimit"><?= Localization::translate('time_limit'); ?>
+                                                        (<?= Localization::translate('minutes'); ?>)</label>
+                                                    <input type="number" class="form-control" id="external_timeLimit"
+                                                        name="time_limit">
+                                                </div>
+                                            </div>
+                                        </div>
 
-                                       <!-- Description -->
+                                        <!-- Description -->
                                         <div class="form-group">
-                                            <label for="description"><?= Localization::translate('description'); ?></label>
-                                            <textarea class="form-control" id="external_description" name="description" rows="3"></textarea>
+                                            <label
+                                                for="description"><?= Localization::translate('description'); ?></label>
+                                            <textarea class="form-control" id="external_description" name="description"
+                                                rows="3"></textarea>
                                         </div>
 
                                         <!-- Tags/Keywords -->
                                         <div class="form-group">
-                                            <label for="externalTagInput"><?= Localization::translate('tags_keywords'); ?> <span class="text-danger">*</span></label>
+                                            <label
+                                                for="externalTagInput"><?= Localization::translate('tags_keywords'); ?>
+                                                <span class="text-danger">*</span></label>
                                             <div class="tag-input-container form-control">
                                                 <span id="externalTagDisplay"></span>
-                                                <input type="text" id="externalTagInput" placeholder="<?= Localization::translate('add_tag_placeholder'); ?>">
+                                                <input type="text" id="externalTagInput"
+                                                    placeholder="<?= Localization::translate('add_tag_placeholder'); ?>">
                                             </div>
                                             <input type="hidden" name="tags" id="externalTagList">
                                             <span class="text-danger error-message" id="externalTagError"></span>
@@ -572,13 +774,23 @@ $clientName = $_SESSION['username'] ?? 'DEFAULT';
 
                                         <!-- Content Type -->
                                         <div class="form-group">
-                                            <label for="contentType"><?= Localization::translate('content_type'); ?> <span class="text-danger">*</span></label>
-                                            <select class="form-control" id="contentType" name="content_type" onchange="showSelectedSection()" required>
+                                            <label for="contentType"><?= Localization::translate('content_type'); ?>
+                                                <span class="text-danger">*</span></label>
+                                            <select class="form-control" id="contentType" name="content_type"
+                                                onchange="showSelectedSection()" required>
                                                 <option value=""><?= Localization::translate('select'); ?></option>
-                                                <option value="youtube-vimeo"><?= Localization::translate('youtube_vimeo'); ?></option>
-                                                <option value="linkedin-udemy"><?= Localization::translate('linkedin_udemy'); ?></option>
-                                                <option value="web-links-blogs"><?= Localization::translate('web_links_blogs'); ?></option>
-                                                <option value="podcasts-audio"><?= Localization::translate('podcasts_audio'); ?></option>
+                                                <option value="youtube-vimeo">
+                                                    <?= Localization::translate('youtube_vimeo'); ?>
+                                                </option>
+                                                <option value="linkedin-udemy">
+                                                    <?= Localization::translate('linkedin_udemy'); ?>
+                                                </option>
+                                                <option value="web-links-blogs">
+                                                    <?= Localization::translate('web_links_blogs'); ?>
+                                                </option>
+                                                <option value="podcasts-audio">
+                                                    <?= Localization::translate('podcasts_audio'); ?>
+                                                </option>
                                             </select>
                                         </div>
 
@@ -588,13 +800,18 @@ $clientName = $_SESSION['username'] ?? 'DEFAULT';
                                             <!-- YouTube/Vimeo Fields -->
                                             <div class="content-group" id="youtubeVimeoFields">
                                                 <div class="form-group">
-                                                    <label for="videoUrl"><?= Localization::translate('video_url'); ?> <span class="text-danger">*</span></label>
-                                                    <input type="url" class="form-control" id="videoUrl" name="video_url">
+                                                    <label for="videoUrl"><?= Localization::translate('video_url'); ?>
+                                                        <span class="text-danger">*</span></label>
+                                                    <input type="url" class="form-control" id="videoUrl"
+                                                        name="video_url">
                                                 </div>
                                                 <div class="form-group">
-                                                    <label for="thumbnail"><?= Localization::translate('thumbnail_preview'); ?></label>
-                                                    <input type="file" class="form-control" id="thumbnail" name="thumbnail" accept="image/*">
-                                                    <img id="thumbnailPreview" src="" alt="<?= Localization::translate('thumbnail_preview'); ?>"
+                                                    <label
+                                                        for="thumbnail"><?= Localization::translate('thumbnail_preview'); ?></label>
+                                                    <input type="file" class="form-control" id="thumbnail"
+                                                        name="thumbnail" accept="image/*">
+                                                    <img id="thumbnailPreview" src=""
+                                                        alt="<?= Localization::translate('thumbnail_preview'); ?>"
                                                         style="display:none; max-width: 100px; margin-top: 10px;">
                                                     <div id="thumbnailFileLink" style="display:none;"></div>
                                                 </div>
@@ -603,29 +820,38 @@ $clientName = $_SESSION['username'] ?? 'DEFAULT';
                                             <!-- LinkedIn/Udemy Fields -->
                                             <div class="content-group" id="linkedinUdemyFields">
                                                 <div class="form-group">
-                                                    <label for="courseUrl"><?= Localization::translate('course_url'); ?> <span class="text-danger">*</span></label>
-                                                    <input type="url" class="form-control" id="courseUrl" name="course_url">
+                                                    <label for="courseUrl"><?= Localization::translate('course_url'); ?>
+                                                        <span class="text-danger">*</span></label>
+                                                    <input type="url" class="form-control" id="courseUrl"
+                                                        name="course_url">
                                                 </div>
                                                 <div class="form-group">
-                                                    <label for="platformName"><?= Localization::translate('platform_name'); ?> <span class="text-danger">*</span></label>
+                                                    <label
+                                                        for="platformName"><?= Localization::translate('platform_name'); ?>
+                                                        <span class="text-danger">*</span></label>
                                                     <select class="form-control" id="platformName" name="platform_name">
-                                                        <option value=""><?= Localization::translate('select'); ?></option>
+                                                        <option value=""><?= Localization::translate('select'); ?>
+                                                        </option>
                                                         <option value="LinkedIn Learning">LinkedIn Learning</option>
                                                         <option value="Udemy">Udemy</option>
                                                         <option value="Coursera">Coursera</option>
                                                     </select>
                                                 </div>
                                             </div>
-                                            
+
 
                                             <!-- Web Links/Blogs Fields -->
                                             <div class="content-group" id="webLinksBlogsFields">
                                                 <div class="form-group">
-                                                    <label for="articleUrl"><?= Localization::translate('article_url'); ?> <span class="text-danger">*</span></label>
-                                                    <input type="url" class="form-control" id="articleUrl" name="article_url">
+                                                    <label
+                                                        for="articleUrl"><?= Localization::translate('article_url'); ?>
+                                                        <span class="text-danger">*</span></label>
+                                                    <input type="url" class="form-control" id="articleUrl"
+                                                        name="article_url">
                                                 </div>
                                                 <div class="form-group">
-                                                    <label for="author"><?= Localization::translate('author_publisher'); ?></label>
+                                                    <label
+                                                        for="author"><?= Localization::translate('author_publisher'); ?></label>
                                                     <input type="text" class="form-control" id="author" name="author">
                                                 </div>
                                             </div>
@@ -633,22 +859,33 @@ $clientName = $_SESSION['username'] ?? 'DEFAULT';
                                             <!-- Podcasts/Audio Fields -->
                                             <div class="content-group" id="podcastsAudioFields">
                                                 <div class="form-group">
-                                                    <label for="audioSource"><?= Localization::translate('audio_source'); ?> <span class="text-danger">*</span></label>
+                                                    <label
+                                                        for="audioSource"><?= Localization::translate('audio_source'); ?>
+                                                        <span class="text-danger">*</span></label>
                                                     <select class="form-control" id="audioSource" name="audio_source">
-                                                        <option value="upload"><?= Localization::translate('upload_file'); ?></option>
-                                                        <option value="url"><?= Localization::translate('audio_url'); ?></option>
+                                                        <option value="upload">
+                                                            <?= Localization::translate('upload_file'); ?>
+                                                        </option>
+                                                        <option value="url"><?= Localization::translate('audio_url'); ?>
+                                                        </option>
                                                     </select>
                                                 </div>
                                                 <div class="form-group">
-                                                    <label for="audioFile"><?= Localization::translate('upload_audio'); ?> (MP3/WAV)</label>
-                                                    <input type="file" class="form-control" id="audioFile" name="audio_file" accept=".mp3, .wav">
+                                                    <label
+                                                        for="audioFile"><?= Localization::translate('upload_audio'); ?>
+                                                        (MP3/WAV)</label>
+                                                    <input type="file" class="form-control" id="audioFile"
+                                                        name="audio_file" accept=".mp3, .wav">
                                                 </div>
                                                 <div class="form-group">
-                                                    <label for="audioUrl"><?= Localization::translate('audio_url'); ?></label>
-                                                    <input type="url" class="form-control" id="audioUrl" name="audio_url">
+                                                    <label
+                                                        for="audioUrl"><?= Localization::translate('audio_url'); ?></label>
+                                                    <input type="url" class="form-control" id="audioUrl"
+                                                        name="audio_url">
                                                 </div>
                                                 <div class="form-group">
-                                                    <label for="speaker"><?= Localization::translate('speaker_host'); ?></label>
+                                                    <label
+                                                        for="speaker"><?= Localization::translate('speaker_host'); ?></label>
                                                     <input type="text" class="form-control" id="speaker" name="speaker">
                                                 </div>
                                             </div>
@@ -656,8 +893,10 @@ $clientName = $_SESSION['username'] ?? 'DEFAULT';
 
                                         <!-- Modal Footer -->
                                         <div class="modal-footer">
-                                            <button type="submit" id="submit_button" class="btn btn-primary"><?= Localization::translate('submit'); ?></button>
-                                            <button type="button" class="btn btn-danger" data-dismiss="modal" id="clearForm"><?= Localization::translate('cancel'); ?></button>
+                                            <button type="submit" id="submit_button"
+                                                class="btn btn-primary"><?= Localization::translate('submit'); ?></button>
+                                            <button type="button" class="btn btn-danger" data-dismiss="modal"
+                                                id="clearForm"><?= Localization::translate('cancel'); ?></button>
                                         </div>
                                     </form>
                                 </div>
@@ -781,11 +1020,13 @@ $clientName = $_SESSION['username'] ?? 'DEFAULT';
                                                     <div class="content-actions">
                                                         <a href="#" class="edit-content"
                                                             data-content='<?= json_encode($content); ?>'>
-                                                            <i class="fas fa-edit edit-icon" title="<?= Localization::translate('edit'); ?>"></i>
+                                                            <i class="fas fa-edit edit-icon"
+                                                                title="<?= Localization::translate('edit'); ?>"></i>
                                                         </a>
                                                         <a href="index.php?controller=VLRController&action=deleteExternal&id=<?= $content['id'] ?>"
                                                             onclick="return confirm('<?= Localization::translate('confirm_delete'); ?>');">
-                                                            <i class="fas fa-trash-alt delete-icon" title="<?= Localization::translate('delete'); ?>"></i>
+                                                            <i class="fas fa-trash-alt delete-icon"
+                                                                title="<?= Localization::translate('delete'); ?>"></i>
                                                         </a>
                                                     </div>
                                                 </div>
@@ -905,6 +1146,8 @@ $clientName = $_SESSION['username'] ?? 'DEFAULT';
 
 <script src="public/js/scorm_validation.js"></script>
 <script src="public/js/scorm_package.js"></script>
+<script src="public/js/document_validation.js"></script>
+<script src="public/js/document_package.js"></script>
 <script src="public/js/external_content_validation.js"></script>
 <script src="public/js/external_package.js"></script>
 <?php include 'includes/footer.php'; ?>
