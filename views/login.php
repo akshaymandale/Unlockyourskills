@@ -8,7 +8,7 @@
     <div class="login-box">
         <!-- Left Section with Logo -->
         <div class="login-left">
-            <img src="public/images/logo.png" alt="Logo">
+            <img src="public/images/UYSlogo.png" alt="Logo">
         </div>
 
         <!-- Right Section with Login Form -->

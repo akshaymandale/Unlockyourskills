@@ -27,7 +27,7 @@ foreach ($languages as $lang) {
     <div class="navbar-left">
         <button class="sidebar-toggle" id="sidebarToggle"><i class="fas fa-bars"></i></button>
         <a class="navbar-brand" href="#">
-            <img src="public/images/logo.png" alt="<?= Localization::translate('client_logo'); ?>">
+            <img src="public/images/UYSlogo.png" alt="<?= Localization::translate('client_logo'); ?>">
         </a>
     </div>
     
