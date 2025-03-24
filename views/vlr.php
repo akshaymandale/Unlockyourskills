@@ -3,11 +3,17 @@
 //echo '<pre>'; print_r($_SESSION);
 
 $clientName = $_SESSION['username'] ?? 'DEFAULT';
+
+$vlrController = new VLRController();
+$languageList = $vlrController->getLanguages();
 ?>
 
 <?php include 'includes/header.php'; ?>
 <?php include 'includes/navbar.php'; ?>
 <?php include 'includes/sidebar.php'; ?>
+
+
+
 
 <div class="main-content">
     <div class="container mt-4">
@@ -417,73 +423,59 @@ $clientName = $_SESSION['username'] ?? 'DEFAULT';
             <!-- ✅ DOCUMENTS Tab Content -->
             <div class="tab-pane" id="document">
                 <!-- Document Header Section -->
-                <div class="d-flex justify-content-between align-items-center mb-3">
+               <div class="d-flex justify-content-between align-items-center mb-3">
                     <h3><?= Localization::translate('documents'); ?></h3>
-                    <button class="btn btn-sm btn-primary" data-bs-toggle="modal" data-bs-target="#documentModal"
-                        id="addDocumentBtn">
+                    <button class="btn btn-sm btn-primary" data-bs-toggle="modal" data-bs-target="#documentModal" id="addDocumentBtn">
                         + <?= Localization::translate('addk'); ?>
                     </button>
 
-                    <div class="modal fade" id="documentModal" tabindex="-1" aria-labelledby="documentModalLabel"
-                        aria-hidden="true">
+                    <div class="modal fade" id="documentModal" tabindex="-1" aria-labelledby="documentModalLabel" aria-hidden="true">
                         <div class="modal-dialog modal-lg">
                             <div class="modal-content">
                                 <div class="modal-header">
                                     <h5 class="modal-title" id="documentModalLabel">
                                         <?= Localization::translate('document.modal.add'); ?>
                                     </h5>
-                                    <button type="button" class="close" data-dismiss="modal"
-                                        aria-label="<?= Localization::translate('close'); ?>">
+                                    <button type="button" class="close" data-dismiss="modal" aria-label="<?= Localization::translate('close'); ?>">
                                         <span aria-hidden="true">&times;</span>
                                     </button>
-
                                 </div>
                                 <div class="modal-body">
-                                    <form id="documentForm">
+                                    <form id="documentForm" method="POST" action="index.php?controller=VLRController&action=addOrEditDocument" enctype="multipart/form-data">
                                         <div class="row">
                                             <!-- Title -->
                                             <div class="col-md-6 form-group mb-3">
-                                                <label for="document_title" class="form-label">Title <span
-                                                        class="text-danger">*</span></label>
-                                                <input type="text" class="form-control" id="document_title">
+                                                <label for="document_title" class="form-label">Title <span class="text-danger">*</span></label>
+                                                <input type="text" class="form-control" id="document_title" name="document_title">
                                             </div>
 
                                             <!-- Category -->
                                             <div class="col-md-6 form-group mb-3">
-                                                <label for="documentCategory" class="form-label">Category <span
-                                                        class="text-danger">*</span></label>
-                                                <select class="form-control" id="documentCategory">
+                                                <label for="documentCategory" class="form-label">Category <span class="text-danger">*</span></label>
+                                                <select class="form-control" id="documentCategory" name="documentCategory">
                                                     <option value="">Select Category</option>
                                                     <option value="Word/Excel/PPT Files">Word/Excel/PPT Files</option>
                                                     <option value="E-Book & Manual">E-Book & Manual</option>
-                                                    <option value="Research Paper & Case Studies">Research Paper & Case
-                                                        Studies</option>
+                                                    <option value="Research Paper & Case Studies">Research Paper & Case Studies</option>
                                                 </select>
                                             </div>
                                         </div>
 
                                         <!-- Dynamic Category Fields -->
                                         <div class="row">
-                                            <div id="wordExcelPptFields" class="col-md-12 form-group mb-3"
-                                                style="display: none;">
-                                                <label for="documentFile">Upload File (.docx, .xlsx, .pptx,
-                                                    .pdf)</label>
-                                                <input type="file" class="form-control" id="documentFile"
-                                                    accept=".docx, .xlsx, .pptx, .pdf">
+                                            <div id="wordExcelPptFields" class="col-md-12 form-group mb-3" style="display: none;">
+                                                <label for="documentFileWordExcelPpt">Upload File (.docx, .xlsx, .pptx, .pdf)</label>
+                                                <input type="file" class="form-control" id="documentFileWordExcelPpt" name="documentFileWordExcelPpt" accept=".docx, .xlsx, .pptx, .pdf">
                                             </div>
 
-                                            <div id="ebookManualFields" class="col-md-12 form-group mb-3"
-                                                style="display: none;">
-                                                <label for="documentFile">Upload File (.pdf, .epub, .mobi)</label>
-                                                <input type="file" class="form-control" id="documentFile"
-                                                    accept=".pdf, .epub, .mobi">
+                                            <div id="ebookManualFields" class="col-md-12 form-group mb-3" style="display: none;">
+                                                <label for="documentFileEbookManual">Upload File (.pdf, .epub, .mobi)</label>
+                                                <input type="file" class="form-control" id="documentFileEbookManual" name="documentFileEbookManual" accept=".pdf, .epub, .mobi">
                                             </div>
 
-                                            <div id="researchFields" class="col-md-12 form-group mb-3"
-                                                style="display: none;">
-                                                <label for="documentFile">Upload File (.pdf, .docx)</label>
-                                                <input type="file" class="form-control" id="documentFile"
-                                                    accept=".pdf, .docx">
+                                            <div id="researchFields" class="col-md-12 form-group mb-3" style="display: none;">
+                                                <label for="documentFileResearch">Upload File (.pdf, .docx)</label>
+                                                <input type="file" class="form-control" id="documentFileResearch" name="documentFileResearch" accept=".pdf, .docx">
                                             </div>
                                         </div>
 
@@ -492,53 +484,62 @@ $clientName = $_SESSION['username'] ?? 'DEFAULT';
                                             <!-- Authors -->
                                             <div class="col-md-6 form-group mb-3">
                                                 <label for="research_authors">Authors</label>
-                                                <input type="text" class="form-control" id="research_authors">
+                                                <input type="text" class="form-control" id="research_authors" name="research_authors">
                                             </div>
 
                                             <!-- Publication Date -->
                                             <div class="col-md-6 form-group mb-3">
                                                 <label for="research_publication_date">Publication Date</label>
-                                                <input type="date" class="form-control" id="research_publication_date">
+                                                <input type="date" class="form-control" id="research_publication_date" name="research_publication_date">
                                             </div>
 
                                             <!-- Reference Links -->
                                             <div class="col-md-12 form-group mb-3">
                                                 <label for="research_references">Reference Links</label>
-                                                <input type="text" class="form-control" id="research_references">
+                                                <input type="text" class="form-control" id="research_references" name="research_references">
                                             </div>
                                         </div>
 
                                         <!-- Description -->
                                         <div class="form-group mb-3">
                                             <label for="description" class="form-label">Description</label>
-                                            <textarea class="form-control" id="description"></textarea>
+                                            <textarea class="form-control" id="description" name="description"></textarea>
                                         </div>
 
                                         <!-- Tags -->
-
                                         <div class="form-group mb-3">
-    <label for="documentTagInput" class="form-label">
-        <?= Localization::translate('tags_keywords'); ?> <span class="text-danger">*</span>
-    </label>
-    <div id="documentTagContainer" class="tag-input-container form-control">
-        <span id="documentTagDisplay"></span>
-        <input type="text" id="documentTagInput" class="tag-input"
-            placeholder="<?= Localization::translate('add_tag_placeholder'); ?>">
-    </div>
-    <input type="hidden" name="documentTagList" id="documentTagList">
-    <div class="invalid-feedback">
-        <?= Localization::translate('tags_required'); ?>
-    </div>
-</div>
-
+                                            <label for="documentTagInput" class="form-label">
+                                                <?= Localization::translate('tags_keywords'); ?> <span class="text-danger">*</span>
+                                            </label>
+                                            <div id="documentTagContainer" class="tag-input-container form-control">
+                                                <span id="documentTagDisplay"></span>
+                                                <input type="text" id="documentTagInput" class="tag-input" placeholder="<?= Localization::translate('add_tag_placeholder'); ?>">
+                                            </div>
+                                            <input type="hidden" name="documentTagList" id="documentTagList">
+                                            <div class="invalid-feedback">
+                                                <?= Localization::translate('tags_required'); ?>
+                                            </div>
+                                        </div>
 
                                         <div class="row">
                                             <!-- Language -->
                                             <div class="col-md-6 form-group mb-3">
                                                 <label for="language" class="form-label">Language</label>
-                                                <select class="form-control" id="language">
-                                                    <option value="en">English</option>
-                                                    <option value="hi">Hindi</option>
+                                                <select class="form-control" id="language" name="language">
+                                                    <option value="">Select Language</option>
+                                                    <?php
+                                                    if (!empty($languageList) && is_array($languageList)) {
+                                                        foreach ($languageList as $lang) {
+                                                            if (isset($lang['id']) && isset($lang['language_name'])) {
+                                                                $langId = htmlspecialchars($lang['id'], ENT_QUOTES, 'UTF-8');
+                                                                $langName = htmlspecialchars($lang['language_name'], ENT_QUOTES, 'UTF-8');
+                                                                echo "<option value=\"$langId\">$langName</option>";
+                                                            }
+                                                        }
+                                                    } else {
+                                                        echo '<option value="">No languages available</option>';
+                                                    }
+                                                    ?>
                                                 </select>
                                             </div>
 
@@ -546,11 +547,8 @@ $clientName = $_SESSION['username'] ?? 'DEFAULT';
                                             <div class="col-md-6 form-group mb-3">
                                                 <label class="form-label">Mobile Support</label>
                                                 <div>
-                                                    <input type="radio" id="mobile_yes" name="mobile_support"
-                                                        value="Yes">
-                                                    Yes
-                                                    <input type="radio" id="mobile_no" name="mobile_support" value="No"
-                                                        checked> No
+                                                    <input type="radio" id="mobile_yes" name="mobile_support" value="Yes"> Yes
+                                                    <input type="radio" id="mobile_no" name="mobile_support" value="No" checked> No
                                                 </div>
                                             </div>
                                         </div>
@@ -558,39 +556,33 @@ $clientName = $_SESSION['username'] ?? 'DEFAULT';
                                         <div class="row">
                                             <!-- Version -->
                                             <div class="col-md-6 form-group mb-3">
-                                                <label for="doc_version" class="form-label">Version Number <span
-                                                        class="text-danger">*</span></label>
-                                                <input type="number" class="form-control" id="doc_version"
-                                                    name="doc_version">
+                                                <label for="doc_version" class="form-label">Version Number <span class="text-danger">*</span></label>
+                                                <input type="number" class="form-control" id="doc_version" name="doc_version">
                                             </div>
 
                                             <!-- Time Limit -->
                                             <div class="col-md-6 form-group mb-3">
-                                                <label for="doc_time_limit" class="form-label">Time Limit
-                                                    (minutes)</label>
-                                                <input type="number" class="form-control" id="doc_time_limit"
-                                                    name="doc_time_limit" min="1">
+                                                <label for="doc_time_limit" class="form-label">Time Limit (minutes)</label>
+                                                <input type="number" class="form-control" id="doc_time_limit" name="doc_time_limit" min="1">
                                             </div>
                                         </div>
 
-
-
-                                        <div class="text-end">
-                                            <button type="submit" class="btn btn-primary">Submit</button>
-                                            <button type="button" class="btn btn-secondary"
-                                                data-bs-dismiss="modal">Cancel</button>
+                                        <!-- Modal Footer -->
+                                        <div class="modal-footer">
+                                            <button type="submit" class="btn btn-primary">
+                                                <?= Localization::translate('submit'); ?>
+                                            </button>
+                                            <button type="button" class="btn btn-danger" id="cancelForm">
+                                                <?= Localization::translate('cancel'); ?>
+                                            </button>
                                         </div>
                                     </form>
                                 </div>
                             </div>
                         </div>
                     </div>
-
-
-
-
-
                 </div>
+
 
                 <!-- ✅ Document Sub-Tabs -->
                 <ul class="nav nav-tabs" id="documentSubTabs">

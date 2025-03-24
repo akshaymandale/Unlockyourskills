@@ -4,6 +4,9 @@ document.addEventListener("DOMContentLoaded", function () {
     const documentForm = document.getElementById("documentForm");
     const documentCategory = document.getElementById("documentCategory");
 
+    const cancelButton = document.getElementById("cancelForm"); // Assuming the cancel button has this ID
+
+
     // Tag Elements
     const tagInput = document.getElementById("documentTagInput");
     const tagContainer = document.getElementById("documentTagDisplay");
@@ -96,4 +99,32 @@ document.addEventListener("DOMContentLoaded", function () {
             removeTag(tags[tags.length - 1]);
         }
     });
+
+    // Handle Cancel Button (Clear Fields but Keep Modal Open)
+    cancelButton.addEventListener("click", function () {
+        // Clear only user-input fields (text, textarea, select, file)
+        document.querySelectorAll("#documentForm input, #documentForm textarea, #documentForm select").forEach(field => {
+            if (field.type !== "radio" && field.type !== "checkbox") {
+                field.value = "";
+            }
+        });
+
+        // Clear File Inputs
+        document.querySelectorAll("#documentForm input[type='file']").forEach(fileInput => {
+            fileInput.value = "";
+        });
+
+        // Clear Tags
+        tags = [];
+        tagContainer.innerHTML = "";
+        hiddenTagList.value = "";
+
+        // Clear Validation Errors
+        document.querySelectorAll(".error-message").forEach(el => el.textContent = "");
+        document.querySelectorAll(".is-invalid").forEach(el => el.classList.remove("is-invalid"));
+
+        // Reset category-based sections
+        toggleCategoryFields();
+    });
+
 });
