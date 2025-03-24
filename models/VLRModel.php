@@ -217,6 +217,160 @@ public function updateScormPackage($id, $data) {
     }
 
 
+    // Documents package
+    // Fetch all documents with language names
+    public function getAllDocuments() {
+        $query = "SELECT d.*, l.language_name FROM documents d 
+                  LEFT JOIN languages l ON d.language_id = l.id 
+                  WHERE d.is_deleted = 0";
+        return $this->conn->fetchAll($query);
+    }
+
+    // Fetch a single document by ID
+    public function getDocumentById($id) {
+        $query = "SELECT * FROM documents WHERE id = ? AND is_deleted = 0";
+        return $this->conn->fetchOne($query, [$id]);
+    }
+
+    // Add document
+  // Server-side validation
+  private function validateDocument($data, $isUpdate = false) {
+    $errors = [];
+
+    if (empty($data['document_title'])) {
+        $errors['document_title'] = "Title is required.";
+    }
+
+    if (empty($data['documentCategory'])) {
+        $errors['documentCategory'] = "Category is required.";
+    }
+
+    if (empty($data['documentTagList'])) {
+        $errors['documentTagList'] = "At least one tag is required.";
+    }
+
+    if (empty($data['language'])) {
+        $errors['language'] = "Language is required.";
+    }
+
+    if (empty($data['doc_version'])) {
+        $errors['doc_version'] = "Version number is required.";
+    }
+
+    if ($data['documentCategory'] == "Research Paper & Case Studies") {
+        if (empty($data['research_authors'])) {
+            $errors['research_authors'] = "Authors are required.";
+        }
+
+        if (empty($data['research_publication_date'])) {
+            $errors['research_publication_date'] = "Publication date is required.";
+        }
+    }
+
+    if (!$isUpdate) {
+        if ($data['documentCategory'] == "Word/Excel/PPT Files" && empty($data['word_excel_ppt_file'])) {
+            $errors['word_excel_ppt_file'] = "File upload is required.";
+        }
+
+        if ($data['documentCategory'] == "E-Book & Manual" && empty($data['ebook_manual_file'])) {
+            $errors['ebook_manual_file'] = "File upload is required.";
+        }
+
+        if ($data['documentCategory'] == "Research Paper & Case Studies" && empty($data['research_file'])) {
+            $errors['research_file'] = "File upload is required.";
+        }
+    }
+
+    return $errors;
+}
+
+// Insert document into database
+public function insertDocument($data) {
+    $errors = $this->validateDocument($data);
+    if (!empty($errors)) {
+        return ['success' => false, 'errors' => $errors];
+    }
+
+    $query = "INSERT INTO documents (title, category, description, tags, language_id, mobile_support, version_number, time_limit, 
+              authors, publication_date, reference_links, created_by, created_at, is_deleted, word_excel_ppt_file, ebook_manual_file, research_file)
+              VALUES (:title, :category, :description, :tags, :language_id, :mobile_support, :version_number, :time_limit, 
+              :authors, :publication_date, :reference_links, :created_by, NOW(), 0, :word_excel_ppt_file, :ebook_manual_file, :research_file)";
+              
+    $stmt = $this->conn->prepare($query);
+
+    $stmt->execute([
+        ':title' => $data['document_title'],
+        ':category' => $data['documentCategory'],
+        ':description' => $data['description'],
+        ':tags' => $data['documentTagList'],
+        ':language_id' => $data['language'],
+        ':mobile_support' => $data['mobile_support'],
+        ':version_number' => $data['doc_version'],
+        ':time_limit' => $data['doc_time_limit'],
+        ':authors' => $data['research_authors'] ?? null,
+        ':publication_date' => $data['research_publication_date'] ?? null,
+        ':reference_links' => $data['research_references'] ?? null,
+        ':created_by' => $data['created_by'],
+        ':word_excel_ppt_file' => $data['word_excel_ppt_file'] ?? null,
+        ':ebook_manual_file' => $data['ebook_manual_file'] ?? null,
+        ':research_file' => $data['research_file'] ?? null
+    ]);
+
+    return ['success' => true, 'message' => "Document added successfully."];
+}
+
+// Update document 
+public function updateDocument($data, $id) {
+    $errors = $this->validateDocument($data, true);
+    if (!empty($errors)) {
+        return ['success' => false, 'errors' => $errors];
+    }
+
+    $query = "UPDATE documents SET title = :title, category = :category, description = :description, tags = :tags, 
+              language_id = :language_id, mobile_support = :mobile_support, version_number = :version_number, time_limit = :time_limit, 
+              authors = :authors, publication_date = :publication_date, reference_links = :reference_links, updated_at = NOW(), 
+              word_excel_ppt_file = COALESCE(:word_excel_ppt_file, word_excel_ppt_file), 
+              ebook_manual_file = COALESCE(:ebook_manual_file, ebook_manual_file), 
+              research_file = COALESCE(:research_file, research_file)
+              WHERE id = :id";
+
+    $stmt = $this->conn->prepare($query);
+    $stmt->execute([
+        ':title' => $data['document_title'],
+        ':category' => $data['documentCategory'],
+        ':description' => $data['description'],
+        ':tags' => $data['documentTagList'],
+        ':language_id' => $data['language'],
+        ':mobile_support' => $data['mobile_support'],
+        ':version_number' => $data['doc_version'],
+        ':time_limit' => $data['doc_time_limit'],
+        ':authors' => $data['research_authors'] ?? null,
+        ':publication_date' => $data['research_publication_date'] ?? null,
+        ':reference_links' => $data['research_references'] ?? null,
+        ':word_excel_ppt_file' => $data['word_excel_ppt_file'] ?? null,
+        ':ebook_manual_file' => $data['ebook_manual_file'] ?? null,
+        ':research_file' => $data['research_file'] ?? null,
+        ':id' => $id
+    ]);
+
+    return ['success' => true, 'message' => "Document updated successfully."];
+}
+
+    // Soft delete a document
+    public function deleteDocument($id) {
+        $query = "UPDATE documents SET is_deleted = 1 WHERE id = ?";
+        return $this->conn->execute($query, [$id]);
+    }
+
+    // Fetch all languages
+    public function getLanguages() {
+        $sql = "SELECT id, language_name, language_code FROM languages"; // Ensure 'id' is selected
+        $stmt = $this->conn->prepare($sql);
+        $stmt->execute();
+    
+        return $stmt->fetchAll(PDO::FETCH_ASSOC); // Fetch as associative array
+       // print_r($stmt);die;
+    }
 
 }
 ?>

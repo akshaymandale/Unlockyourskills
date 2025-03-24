@@ -259,6 +259,143 @@ class VLRController {
             }
             
         }
+
+   // ===================== Document Management =====================
+
+    /**
+     * List all documents
+     */
+    public function listDocuments() {
+        $documents = $this->VLRModel->getAllDocuments();
+        require 'views/documents/index.php';
+    }
+
+    /**
+     * Add/Edit a new document
+     */
+    public function addOrEditDocument() {
+        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            $errors = [];
+    
+            // Server-side validation
+            $documentTitle = trim($_POST['document_title'] ?? '');
+            $documentCategory = trim($_POST['documentCategory'] ?? '');
+            $docVersion = trim($_POST['doc_version'] ?? '');
+            $documentTagList = trim($_POST['documentTagList'] ?? '');
+    
+            if ($documentTitle === '') {
+                $errors['document_title'] = "Document title is required.";
+            }
+            if ($documentCategory === '') {
+                $errors['documentCategory'] = "Document category is required.";
+            }
+            if ($docVersion === '') {
+                $errors['doc_version'] = "Document version is required.";
+            }
+            if ($documentTagList === '') {
+                $errors['documentTagList'] = "At least one tag is required.";
+            }
+    
+            // File Upload Handling
+            $allowedExtensions = ["pdf", "doc", "docx", "xls", "xlsx", "ppt", "pptx", "epub", "mobi"];
+            $maxSize = 10 * 1024 * 1024; // 10MB
+            $uploadDir = "uploads/documents/";
+    
+            function processFileUpload($file, $expectedCategory, $selectedCategory, $allowedExtensions, $maxSize, $uploadDir) {
+                global $errors;
+    
+                if (!$file || $file['error'] === UPLOAD_ERR_NO_FILE) {
+                    if ($selectedCategory === $expectedCategory) {
+                        $errors[$expectedCategory] = "File upload is required.";
+                    }
+                    return null;
+                }
+    
+                $fileName = $file['name'];
+                $fileSize = $file['size'];
+                $fileTmpPath = $file['tmp_name'];
+                $fileExtension = strtolower(pathinfo($fileName, PATHINFO_EXTENSION));
+    
+                if (!in_array($fileExtension, $allowedExtensions, true)) {
+                    $errors[$expectedCategory] = "Invalid file format. Allowed formats: " . implode(", ", $allowedExtensions);
+                    return null;
+                }
+                if ($fileSize > $maxSize) {
+                    $errors[$expectedCategory] = "File size should not exceed 10MB.";
+                    return null;
+                }
+    
+                // Generate a unique file name
+                $newFileName = "document_" . time() . "_" . uniqid() . "." . $fileExtension;
+                $destinationPath = $uploadDir . $newFileName;
+    
+                if (move_uploaded_file($fileTmpPath, $destinationPath)) {
+                    return $newFileName;
+                } else {
+                    $errors[$expectedCategory] = "File upload failed.";
+                    return null;
+                }
+            }
+    
+            // Upload files based on selected category
+            $wordExcelPptFile = processFileUpload($_FILES['documentFileWordExcelPpt'] ?? null, 'Word/Excel/PPT Files', $documentCategory, $allowedExtensions, $maxSize, $uploadDir);
+            $ebookManualFile = processFileUpload($_FILES['documentFileEbookManual'] ?? null, 'E-Book & Manual', $documentCategory, $allowedExtensions, $maxSize, $uploadDir);
+            $researchFile = processFileUpload($_FILES['documentFileResearch'] ?? null, 'Research Paper & Case Studies', $documentCategory, $allowedExtensions, $maxSize, $uploadDir);
+    
+            if (!empty($errors)) {
+                echo json_encode(["success" => false, "errors" => $errors]);
+                exit;
+            }
+    
+            $data = [
+                'document_title' => $documentTitle,
+                'documentCategory' => $documentCategory,
+                'description' => $_POST['description'] ?? '',
+                'documentTagList' => $documentTagList,
+                'language' => $_POST['language'] ?? '',
+                'mobile_support' => $_POST['mobile_support'] ?? 'No',
+                'doc_version' => $docVersion,
+                'doc_time_limit' => $_POST['doc_time_limit'] ?? '',
+                'research_authors' => $_POST['research_authors'] ?? '',
+                'research_publication_date' => !empty($_POST['research_publication_date']) ? $_POST['research_publication_date'] : NULL,
+                'research_references' => $_POST['research_references'] ?? '',
+                'created_by' => $_SESSION['username'],
+                'word_excel_ppt_file' => $wordExcelPptFile,
+                'ebook_manual_file' => $ebookManualFile,
+                'research_file' => $researchFile
+            ];
+    
+            if (!empty($_POST['document_id'])) {
+                $result = $this->VLRModel->updateDocument($data, $_POST['document_id']);
+            } else {
+                $result = $this->VLRModel->insertDocument($data);
+            }
+    
+            echo json_encode($result);
+            exit;
+        }
+    }
+    
+    
+    
+    
+    
+   
+
+    /**
+     * Delete a document
+     */
+    public function deleteDocument($id) {
+        $this->VLRModel->deleteDocument($id);
+        header("Location: index.php?controller=VLRController&action=listDocuments");
+    }
+
+    /**
+     * Fetch all languages for dropdowns
+     */
+    public function getLanguages() {
+        return $this->VLRModel->getLanguages();
+    }
    
 }
 ?>
