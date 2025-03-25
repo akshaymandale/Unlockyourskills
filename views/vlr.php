@@ -423,59 +423,77 @@ $languageList = $vlrController->getLanguages();
             <!-- ✅ DOCUMENTS Tab Content -->
             <div class="tab-pane" id="document">
                 <!-- Document Header Section -->
-               <div class="d-flex justify-content-between align-items-center mb-3">
+                <div class="d-flex justify-content-between align-items-center mb-3">
                     <h3><?= Localization::translate('documents'); ?></h3>
-                    <button class="btn btn-sm btn-primary" data-bs-toggle="modal" data-bs-target="#documentModal" id="addDocumentBtn">
+                    <button class="btn btn-sm btn-primary" data-bs-toggle="modal" data-bs-target="#documentModal"
+                        id="addDocumentBtn">
                         + <?= Localization::translate('addk'); ?>
                     </button>
 
-                    <div class="modal fade" id="documentModal" tabindex="-1" aria-labelledby="documentModalLabel" aria-hidden="true">
+                    <div class="modal fade" id="documentModal" tabindex="-1" aria-labelledby="documentModalLabel"
+                        aria-hidden="true">
                         <div class="modal-dialog modal-lg">
                             <div class="modal-content">
                                 <div class="modal-header">
                                     <h5 class="modal-title" id="documentModalLabel">
                                         <?= Localization::translate('document.modal.add'); ?>
                                     </h5>
-                                    <button type="button" class="close" data-dismiss="modal" aria-label="<?= Localization::translate('close'); ?>">
+                                    <button type="button" class="close" data-dismiss="modal"
+                                        aria-label="<?= Localization::translate('close'); ?>">
                                         <span aria-hidden="true">&times;</span>
                                     </button>
                                 </div>
                                 <div class="modal-body">
-                                    <form id="documentForm" method="POST" action="index.php?controller=VLRController&action=addOrEditDocument" enctype="multipart/form-data">
+                                    <form id="documentForm" method="POST"
+                                        action="index.php?controller=VLRController&action=addOrEditDocument"
+                                        enctype="multipart/form-data">
                                         <div class="row">
                                             <!-- Title -->
                                             <div class="col-md-6 form-group mb-3">
-                                                <label for="document_title" class="form-label">Title <span class="text-danger">*</span></label>
-                                                <input type="text" class="form-control" id="document_title" name="document_title">
+                                                <label for="document_title" class="form-label">Title <span
+                                                        class="text-danger">*</span></label>
+                                                <input type="text" class="form-control" id="document_title"
+                                                    name="document_title">
                                             </div>
 
                                             <!-- Category -->
                                             <div class="col-md-6 form-group mb-3">
-                                                <label for="documentCategory" class="form-label">Category <span class="text-danger">*</span></label>
-                                                <select class="form-control" id="documentCategory" name="documentCategory">
+                                                <label for="documentCategory" class="form-label">Category <span
+                                                        class="text-danger">*</span></label>
+                                                <select class="form-control" id="documentCategory"
+                                                    name="documentCategory">
                                                     <option value="">Select Category</option>
                                                     <option value="Word/Excel/PPT Files">Word/Excel/PPT Files</option>
                                                     <option value="E-Book & Manual">E-Book & Manual</option>
-                                                    <option value="Research Paper & Case Studies">Research Paper & Case Studies</option>
+                                                    <option value="Research Paper & Case Studies">Research Paper & Case
+                                                        Studies</option>
                                                 </select>
                                             </div>
                                         </div>
 
                                         <!-- Dynamic Category Fields -->
                                         <div class="row">
-                                            <div id="wordExcelPptFields" class="col-md-12 form-group mb-3" style="display: none;">
-                                                <label for="documentFileWordExcelPpt">Upload File (.docx, .xlsx, .pptx, .pdf)</label>
-                                                <input type="file" class="form-control" id="documentFileWordExcelPpt" name="documentFileWordExcelPpt" accept=".docx, .xlsx, .pptx, .pdf">
+                                            <div id="wordExcelPptFields" class="col-md-12 form-group mb-3"
+                                                style="display: none;">
+                                                <label for="documentFileWordExcelPpt">Upload File (.docx, .xlsx, .pptx,
+                                                    .pdf)</label>
+                                                <input type="file" class="form-control" id="documentFileWordExcelPpt"
+                                                    name="documentFileWordExcelPpt" accept=".docx, .xlsx, .pptx, .pdf">
                                             </div>
 
-                                            <div id="ebookManualFields" class="col-md-12 form-group mb-3" style="display: none;">
-                                                <label for="documentFileEbookManual">Upload File (.pdf, .epub, .mobi)</label>
-                                                <input type="file" class="form-control" id="documentFileEbookManual" name="documentFileEbookManual" accept=".pdf, .epub, .mobi">
+                                            <div id="ebookManualFields" class="col-md-12 form-group mb-3"
+                                                style="display: none;">
+                                                <label for="documentFileEbookManual">Upload File (.pdf, .epub,
+                                                    .mobi)</label>
+                                                <input type="file" class="form-control" id="documentFileEbookManual"
+                                                    name="documentFileEbookManual" accept=".pdf, .epub, .mobi">
                                             </div>
 
-                                            <div id="researchFields" class="col-md-12 form-group mb-3" style="display: none;">
+                                            <div id="researchFields" class="col-md-12 form-group mb-3"
+                                                style="display: none;">
                                                 <label for="documentFileResearch">Upload File (.pdf, .docx)</label>
-                                                <input type="file" class="form-control" id="documentFileResearch" name="documentFileResearch" accept=".pdf, .docx">
+                                                <input type="file" class="form-control" id="documentFileResearch"
+                                                    name="documentFileResearch" accept=".pdf, .docx">
                                             </div>
                                         </div>
 
@@ -484,36 +502,42 @@ $languageList = $vlrController->getLanguages();
                                             <!-- Authors -->
                                             <div class="col-md-6 form-group mb-3">
                                                 <label for="research_authors">Authors</label>
-                                                <input type="text" class="form-control" id="research_authors" name="research_authors">
+                                                <input type="text" class="form-control" id="research_authors"
+                                                    name="research_authors">
                                             </div>
 
                                             <!-- Publication Date -->
                                             <div class="col-md-6 form-group mb-3">
                                                 <label for="research_publication_date">Publication Date</label>
-                                                <input type="date" class="form-control" id="research_publication_date" name="research_publication_date">
+                                                <input type="date" class="form-control" id="research_publication_date"
+                                                    name="research_publication_date">
                                             </div>
 
                                             <!-- Reference Links -->
                                             <div class="col-md-12 form-group mb-3">
                                                 <label for="research_references">Reference Links</label>
-                                                <input type="text" class="form-control" id="research_references" name="research_references">
+                                                <input type="text" class="form-control" id="research_references"
+                                                    name="research_references">
                                             </div>
                                         </div>
 
                                         <!-- Description -->
                                         <div class="form-group mb-3">
                                             <label for="description" class="form-label">Description</label>
-                                            <textarea class="form-control" id="description" name="description"></textarea>
+                                            <textarea class="form-control" id="description"
+                                                name="description"></textarea>
                                         </div>
 
                                         <!-- Tags -->
                                         <div class="form-group mb-3">
                                             <label for="documentTagInput" class="form-label">
-                                                <?= Localization::translate('tags_keywords'); ?> <span class="text-danger">*</span>
+                                                <?= Localization::translate('tags_keywords'); ?> <span
+                                                    class="text-danger">*</span>
                                             </label>
                                             <div id="documentTagContainer" class="tag-input-container form-control">
                                                 <span id="documentTagDisplay"></span>
-                                                <input type="text" id="documentTagInput" class="tag-input" placeholder="<?= Localization::translate('add_tag_placeholder'); ?>">
+                                                <input type="text" id="documentTagInput" class="tag-input"
+                                                    placeholder="<?= Localization::translate('add_tag_placeholder'); ?>">
                                             </div>
                                             <input type="hidden" name="documentTagList" id="documentTagList">
                                             <div class="invalid-feedback">
@@ -547,8 +571,10 @@ $languageList = $vlrController->getLanguages();
                                             <div class="col-md-6 form-group mb-3">
                                                 <label class="form-label">Mobile Support</label>
                                                 <div>
-                                                    <input type="radio" id="mobile_yes" name="mobile_support" value="Yes"> Yes
-                                                    <input type="radio" id="mobile_no" name="mobile_support" value="No" checked> No
+                                                    <input type="radio" id="mobile_yes" name="mobile_support"
+                                                        value="Yes"> Yes
+                                                    <input type="radio" id="mobile_no" name="mobile_support" value="No"
+                                                        checked> No
                                                 </div>
                                             </div>
                                         </div>
@@ -556,14 +582,18 @@ $languageList = $vlrController->getLanguages();
                                         <div class="row">
                                             <!-- Version -->
                                             <div class="col-md-6 form-group mb-3">
-                                                <label for="doc_version" class="form-label">Version Number <span class="text-danger">*</span></label>
-                                                <input type="number" class="form-control" id="doc_version" name="doc_version">
+                                                <label for="doc_version" class="form-label">Version Number <span
+                                                        class="text-danger">*</span></label>
+                                                <input type="number" class="form-control" id="doc_version"
+                                                    name="doc_version">
                                             </div>
 
                                             <!-- Time Limit -->
                                             <div class="col-md-6 form-group mb-3">
-                                                <label for="doc_time_limit" class="form-label">Time Limit (minutes)</label>
-                                                <input type="number" class="form-control" id="doc_time_limit" name="doc_time_limit" min="1">
+                                                <label for="doc_time_limit" class="form-label">Time Limit
+                                                    (minutes)</label>
+                                                <input type="number" class="form-control" id="doc_time_limit"
+                                                    name="doc_time_limit" min="1">
                                             </div>
                                         </div>
 
@@ -604,20 +634,100 @@ $languageList = $vlrController->getLanguages();
                 </ul>
 
                 <!-- ✅ Document Sub-Tab Content -->
+                <!-- ✅ Document Sub-Tab Content -->
+                 
+                <?php
+                // Fetch documents from the controller
+                if (!isset($documents)) {
+                    $documents = [];
+                }
+
+                // Define categories for Documents based on DB values
+                $documentCategories = [
+                    'Word/Excel/PPT Files' => [],
+                    'E-Book & Manual' => [],
+                    'Research Paper & Case Studies' => []
+                ];
+
+                // Distribute documents into categories
+                foreach ($documents as $document) {
+                    $category = $document['category'] ?? ''; // Get category from DB
+                    if (isset($documentCategories[$category])) {
+                        $documentCategories[$category][] = $document;
+                    }
+                }
+                ?>
+
                 <div class="tab-content mt-3">
-                    <div class="tab-pane show active" id="word-excel-ppt">
-                        <h4><?= Localization::translate('word_excel_ppt'); ?></h4>
-                        <p><?= Localization::translate('word_excel_ppt_desc'); ?></p>
-                    </div>
-                    <div class="tab-pane" id="ebook-manual">
-                        <h4><?= Localization::translate('ebook_manual'); ?></h4>
-                        <p><?= Localization::translate('ebook_manual_desc'); ?></p>
-                    </div>
-                    <div class="tab-pane" id="research-case-studies">
-                        <h4><?= Localization::translate('research_case_studies'); ?></h4>
-                        <p><?= Localization::translate('research_case_studies_desc'); ?></p>
-                    </div>
+                    <?php
+                    // Define tab IDs and their localized titles based on DB values
+                    $contentCategories = [
+                        'Word/Excel/PPT Files' => ['id' => 'word-excel-ppt', 'label' => 'word_excel_ppt'],
+                        'E-Book & Manual' => ['id' => 'ebook-manual', 'label' => 'ebook_manual'],
+                        'Research Paper & Case Studies' => ['id' => 'research-case-studies', 'label' => 'research_case_studies']
+                    ];
+
+                    // Loop through categories and display data accordingly
+                    foreach ($contentCategories as $dbCategory => $tabInfo): ?>
+                        <div class="tab-pane <?= $tabInfo['id'] === 'word-excel-ppt' ? 'show active' : ''; ?>"
+                            id="<?= $tabInfo['id'] ?>">
+                            <h4><?= Localization::translate($tabInfo['label']) ?></h4>
+                            <div class="row">
+                                <?php if (!empty($documentCategories[$dbCategory])): ?>
+                                    <?php foreach ($documentCategories[$dbCategory] as $document): ?>
+                                        <?php
+                                        // Determine the icon class based on document category
+                                        $iconClass = '';
+                                        switch ($dbCategory) {
+                                            case 'Word/Excel/PPT Files':
+                                                $iconClass = 'fas fa-file-word text-primary'; // Blue for Word/Excel/PPT
+                                                break;
+                                            case 'E-Book & Manual':
+                                                $iconClass = 'fas fa-book text-success'; // Green for E-Books/Manuals
+                                                break;
+                                            case 'Research Paper & Case Studies':
+                                                $iconClass = 'fas fa-scroll text-warning'; // Orange for Research/Case Studies
+                                                break;
+                                        }
+
+                                        // Truncate long titles
+                                        $displayTitle = strlen($document['title']) > 20 ? substr($document['title'], 0, 17) . '...' : $document['title'];
+                                        ?>
+                                        <div class="col-md-4">
+                                            <div class="content-card">
+                                                <div class="card-body">
+                                                    <div class="content-icon">
+                                                        <i class="<?= $iconClass; ?>"></i>
+                                                    </div>
+                                                    <h5 class="content-title" title="<?= htmlspecialchars($document['title']) ?>">
+                                                        <?= htmlspecialchars($displayTitle) ?>
+                                                    </h5>
+                                               
+                                                    <div class="content-actions">
+                                                        <a href="#" class="edit-document"
+                                                            data-document='<?= json_encode($document); ?>'>
+                                                            <i class="fas fa-edit edit-icon"
+                                                                title="<?= Localization::translate('edit'); ?>"></i>
+                                                        </a>
+                                                        <a href="index.php?controller=VLRController&action=deleteDocument&id=<?= $document['id'] ?>"
+                                                            onclick="return confirm('<?= Localization::translate('confirm_delete'); ?>');">
+                                                            <i class="fas fa-trash-alt delete-icon"
+                                                                title="<?= Localization::translate('delete'); ?>"></i>
+                                                        </a>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    <?php endforeach; ?>
+                                <?php else: ?>
+                                    <p><?= Localization::translate('no_documents_available'); ?></p>
+                                <?php endif; ?>
+                            </div>
+                        </div>
+                    <?php endforeach; ?>
                 </div>
+
+
             </div>
 
             <!-- ✅ Image -->

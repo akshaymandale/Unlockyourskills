@@ -219,15 +219,24 @@ public function updateScormPackage($id, $data) {
 
     // Documents package
     // Fetch all documents with language names
+
+    // Get data for display on VLR 
     public function getAllDocuments() {
-        $query = "SELECT d.*, l.language_name FROM documents d 
+        $stmt = $this->conn->prepare("SELECT d.*, l.language_name FROM documents d 
                   LEFT JOIN languages l ON d.language_id = l.id 
-                  WHERE d.is_deleted = 0";
-        return $this->conn->fetchAll($query);
+                  WHERE d.is_deleted = 0");
+        $stmt->execute();
+        $data = $stmt->fetchAll(PDO::FETCH_ASSOC);
+    
+        // Debugging - Check if data is fetched
+        error_log(print_r($data, true)); // Logs to XAMPP/PHP logs
+    
+        return $data;
     }
 
-    // Fetch a single document by ID
-    public function getDocumentById($id) {
+
+      // Fetch a single document by ID
+      public function getDocumentById($id) {
         $query = "SELECT * FROM documents WHERE id = ? AND is_deleted = 0";
         return $this->conn->fetchOne($query, [$id]);
     }
@@ -358,8 +367,8 @@ public function updateDocument($data, $id) {
 
     // Soft delete a document
     public function deleteDocument($id) {
-        $query = "UPDATE documents SET is_deleted = 1 WHERE id = ?";
-        return $this->conn->execute($query, [$id]);
+        $stmt = $this->conn->prepare("UPDATE documents SET is_deleted = 1 WHERE id = ?");
+        return $stmt->execute([$id]);
     }
 
     // Fetch all languages
