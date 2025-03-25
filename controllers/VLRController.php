@@ -12,6 +12,7 @@ class VLRController {
     public function index() {
         $scormPackages = $this->VLRModel->getScormPackages();
         $externalContent = $this->VLRModel->getExternalContent();
+        $documents = $this->VLRModel->getAllDocuments();
         require 'views/vlr.php';
     }
 
@@ -262,13 +263,8 @@ class VLRController {
 
    // ===================== Document Management =====================
 
-    /**
-     * List all documents
-     */
-    public function listDocuments() {
-        $documents = $this->VLRModel->getAllDocuments();
-        require 'views/documents/index.php';
-    }
+ 
+  
 
     /**
      * Add/Edit a new document
@@ -376,19 +372,22 @@ class VLRController {
         }
     }
     
-    
-    
-    
-    
-   
 
     /**
      * Delete a document
      */
-    public function deleteDocument($id) {
-        $this->VLRModel->deleteDocument($id);
-        header("Location: index.php?controller=VLRController&action=listDocuments");
+  public function deleteDocument() {
+    if (isset($_GET['id'])) {
+        $id = $_GET['id'];
+        $result = $this->VLRModel->deleteDocument($id);
+
+        if ($result) {
+            echo "<script>alert('Document deleted successfully.'); window.location.href='index.php?controller=VLRController';</script>";
+        } else {
+            echo "<script>alert('Failed to delete document.'); window.location.href='index.php?controller=VLRController';</script>";
+        }
     }
+}
 
     /**
      * Fetch all languages for dropdowns
