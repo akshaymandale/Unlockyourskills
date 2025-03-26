@@ -447,6 +447,7 @@ $languageList = $vlrController->getLanguages();
                                     <form id="documentForm" method="POST"
                                         action="index.php?controller=VLRController&action=addOrEditDocument"
                                         enctype="multipart/form-data">
+                                        <input type="hidden" id="documentId" name="documentId">
                                         <div class="row">
                                             <!-- Title -->
                                             <div class="col-md-6 form-group mb-3">
@@ -524,7 +525,7 @@ $languageList = $vlrController->getLanguages();
                                         <!-- Description -->
                                         <div class="form-group mb-3">
                                             <label for="description" class="form-label">Description</label>
-                                            <textarea class="form-control" id="description"
+                                            <textarea class="form-control" id="document_description"
                                                 name="description"></textarea>
                                         </div>
 
@@ -549,7 +550,7 @@ $languageList = $vlrController->getLanguages();
                                             <!-- Language -->
                                             <div class="col-md-6 form-group mb-3">
                                                 <label for="language" class="form-label">Language</label>
-                                                <select class="form-control" id="language" name="language">
+                                                <select class="form-control" id="document_language" name="language">
                                                     <option value="">Select Language</option>
                                                     <?php
                                                     if (!empty($languageList) && is_array($languageList)) {
@@ -635,7 +636,7 @@ $languageList = $vlrController->getLanguages();
 
                 <!-- ✅ Document Sub-Tab Content -->
                 <!-- ✅ Document Sub-Tab Content -->
-                 
+
                 <?php
                 // Fetch documents from the controller
                 if (!isset($documents)) {
@@ -702,7 +703,7 @@ $languageList = $vlrController->getLanguages();
                                                     <h5 class="content-title" title="<?= htmlspecialchars($document['title']) ?>">
                                                         <?= htmlspecialchars($displayTitle) ?>
                                                     </h5>
-                                               
+
                                                     <div class="content-actions">
                                                         <a href="#" class="edit-document"
                                                             data-document='<?= json_encode($document); ?>'>

@@ -245,7 +245,7 @@ html, body {
 /* ✅ Override Bootstrap's Max-Width */
 /* ✅ Ensure Full-Width Without Overflow */
 .container {
-    max-width: calc(100% - 250px) !important; /* Adjust width based on sidebar */
+  /*   max-width: calc(100% - 250px) !important; Adjust width based on sidebar */
     width: 100%;
     transition: margin-left 0.1s ease-in-out;
     overflow-x: hidden; /* Prevents horizontal scroll */
