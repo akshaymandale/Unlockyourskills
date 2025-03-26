@@ -43,6 +43,70 @@ document.addEventListener("DOMContentLoaded", function () {
         documentModal.show();
     });
 
+
+    // Open Modal for Editing Document
+    const editButtons = document.querySelectorAll(".edit-document");
+    console.log("📌 Debug: Found", editButtons.length, "edit buttons.");
+
+    editButtons.forEach(editButton => {
+        editButton.addEventListener("click", function () {
+            console.log("✅ Debug: Edit button clicked.");
+
+            const documentDataStr = this.getAttribute("data-document");
+            console.log("📌 Debug: Raw data-document attribute:", documentDataStr);
+
+            try {
+                const documentData = JSON.parse(documentDataStr);
+                console.log("✅ Debug: Parsed document datacheck :", documentData);
+
+                // Populate Form Fields
+                document.getElementById("documentId").value = documentData.id;
+                document.getElementById("document_title").value = documentData.title;
+                document.getElementById("document_description").value = documentData.description;
+                document.getElementById("documentCategory").value = documentData.category;
+                document.getElementById("document_language").value = documentData.language_id;
+                document.getElementById("research_authors").value = documentData.authors;
+           
+                const publicationDateField = document.getElementById("research_publication_date");
+if (publicationDateField) {
+    publicationDateField.value = documentData.publication_date || "";  // Handle null case
+} else {
+    console.warn("⚠️ Debug: Publication Date field is missing, skipping assignment.");
+}
+                document.getElementById("research_references").value = documentData.reference_links;
+                document.getElementById("doc_version").value = documentData.version_number;
+                document.getElementById("doc_time_limit").value = documentData.time_limit;
+
+                // Handle Mobile Support Selection
+                if (documentData.mobile_support === "Yes") {
+                    document.querySelector('input[name="mobile_support"][value="Yes"]').checked = true;
+                } else {
+                    document.querySelector('input[name="mobile_support"][value="No"]').checked = true;
+                }
+
+                // ✅ Display existing file names instead of setting input value
+                document.getElementById("documentFileWordExcelPpt").textContent = documentData.word_excel_ppt_file || "No file selected";
+                document.getElementById("documentFileEbookManual").textContent = documentData.ebook_manual_file || "No file selected";
+                document.getElementById("documentFileResearch").textContent = documentData.research_file || "No file selected";
+
+                // Load Tags
+                tags = documentData.tags ? documentData.tags.split(",") : [];
+                tagContainer.innerHTML = "";
+                tags.forEach(tag => addTag(tag));
+
+                toggleCategoryFields();
+
+                document.getElementById("documentModalLabel").textContent = translations["document.modal.edit"] || "Edit Document";
+
+                console.log("✅ Debug: Showing Edit Document modal.");
+                documentModal.show();
+            } catch (error) {
+                console.error("❌ Debug: Error parsing JSON data:", error);
+            }
+        });
+    });
+
+
     // Listen for Category Change
     documentCategory.addEventListener("change", toggleCategoryFields);
 
