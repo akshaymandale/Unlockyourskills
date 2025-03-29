@@ -530,21 +530,22 @@ $languageList = $vlrController->getLanguages();
                                         </div>
 
                                         <!-- Tags -->
-                                        <div class="form-group mb-3">
-                                            <label for="documentTagInput" class="form-label">
-                                                <?= Localization::translate('tags_keywords'); ?> <span
-                                                    class="text-danger">*</span>
-                                            </label>
-                                            <div id="documentTagContainer" class="tag-input-container form-control">
-                                                <span id="documentTagDisplay"></span>
-                                                <input type="text" id="documentTagInput" class="tag-input"
-                                                    placeholder="<?= Localization::translate('add_tag_placeholder'); ?>">
-                                            </div>
-                                            <input type="hidden" name="documentTagList" id="documentTagList">
-                                            <div class="invalid-feedback">
-                                                <?= Localization::translate('tags_required'); ?>
-                                            </div>
-                                        </div>
+
+
+                                        <div class="row">
+  
+        <div class="form-group mb-3">
+            <label for="documentTags"><?= Localization::translate('tags_keywords'); ?>
+                <span class="text-danger">*</span></label>
+            <div class="tag-input-container form-control">
+                <span id="documentTagDisplay"></span> <!-- Updated ID -->
+                <input type="text" id="documentTagInput" 
+                    placeholder="<?= Localization::translate('add_tag_placeholder'); ?>">
+            </div>
+            <input type="hidden" name="documentTagList" id="documentTagList">
+        </div>
+    </div>
+
 
                                         <div class="row">
                                             <!-- Language -->

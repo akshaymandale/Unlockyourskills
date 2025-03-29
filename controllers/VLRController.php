@@ -361,8 +361,9 @@ class VLRController {
                 'research_file' => $researchFile
             ];
     
-            if (!empty($_POST['document_id'])) {
-                $result = $this->VLRModel->updateDocument($data, $_POST['document_id']);
+           // print_r($_POST); die;
+            if (!empty($_POST['documentId'])) {
+                $result = $this->VLRModel->updateDocument($data, $_POST['documentId']);
             } else {
                 $result = $this->VLRModel->insertDocument($data);
             }
