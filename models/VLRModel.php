@@ -266,16 +266,6 @@ public function updateScormPackage($id, $data) {
         $errors['doc_version'] = "Version number is required.";
     }
 
-    if ($data['documentCategory'] == "Research Paper & Case Studies") {
-        if (empty($data['research_authors'])) {
-            $errors['research_authors'] = "Authors are required.";
-        }
-
-        if (empty($data['research_publication_date'])) {
-            $errors['research_publication_date'] = "Publication date is required.";
-        }
-    }
-
     if (!$isUpdate) {
         if ($data['documentCategory'] == "Word/Excel/PPT Files" && empty($data['word_excel_ppt_file'])) {
             $errors['word_excel_ppt_file'] = "File upload is required.";

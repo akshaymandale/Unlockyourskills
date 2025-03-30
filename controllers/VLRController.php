@@ -297,14 +297,12 @@ class VLRController {
             $maxSize = 10 * 1024 * 1024; // 10MB
             $uploadDir = "uploads/documents/";
     
-            function processFileUpload($file, $expectedCategory, $selectedCategory, $allowedExtensions, $maxSize, $uploadDir) {
+            function processFileUpload($file, $expectedCategory, $selectedCategory, $allowedExtensions, $maxSize, $uploadDir, $existingFile) {
                 global $errors;
     
+                // If no new file is uploaded, return the existing file
                 if (!$file || $file['error'] === UPLOAD_ERR_NO_FILE) {
-                    if ($selectedCategory === $expectedCategory) {
-                        $errors[$expectedCategory] = "File upload is required.";
-                    }
-                    return null;
+                    return $existingFile;
                 }
     
                 $fileName = $file['name'];
@@ -333,16 +331,23 @@ class VLRController {
                 }
             }
     
-            // Upload files based on selected category
-            $wordExcelPptFile = processFileUpload($_FILES['documentFileWordExcelPpt'] ?? null, 'Word/Excel/PPT Files', $documentCategory, $allowedExtensions, $maxSize, $uploadDir);
-            $ebookManualFile = processFileUpload($_FILES['documentFileEbookManual'] ?? null, 'E-Book & Manual', $documentCategory, $allowedExtensions, $maxSize, $uploadDir);
-            $researchFile = processFileUpload($_FILES['documentFileResearch'] ?? null, 'Research Paper & Case Studies', $documentCategory, $allowedExtensions, $maxSize, $uploadDir);
+            // Get existing file names from hidden fields
+            $existingWordExcelPptFile = $_POST['existing_word_excel_ppt_file'] ?? null;
+            $existingEbookManualFile = $_POST['existing_ebook_manual_file'] ?? null;
+            $existingResearchFile = $_POST['existing_research_file'] ?? null;
     
+            // Upload new files or retain existing ones
+            $wordExcelPptFile = processFileUpload($_FILES['documentFileWordExcelPpt'] ?? null, 'Word/Excel/PPT Files', $documentCategory, $allowedExtensions, $maxSize, $uploadDir, $existingWordExcelPptFile);
+            $ebookManualFile = processFileUpload($_FILES['documentFileEbookManual'] ?? null, 'E-Book & Manual', $documentCategory, $allowedExtensions, $maxSize, $uploadDir, $existingEbookManualFile);
+            $researchFile = processFileUpload($_FILES['documentFileResearch'] ?? null, 'Research Paper & Case Studies', $documentCategory, $allowedExtensions, $maxSize, $uploadDir, $existingResearchFile);
+    
+            // If there are validation errors, return them as JSON
             if (!empty($errors)) {
                 echo json_encode(["success" => false, "errors" => $errors]);
                 exit;
             }
     
+            // Prepare data for insertion/updating
             $data = [
                 'document_title' => $documentTitle,
                 'documentCategory' => $documentCategory,
@@ -361,7 +366,7 @@ class VLRController {
                 'research_file' => $researchFile
             ];
     
-           // print_r($_POST); die;
+            // Insert or update document
             if (!empty($_POST['documentId'])) {
                 $result = $this->VLRModel->updateDocument($data, $_POST['documentId']);
             } else {
@@ -372,6 +377,7 @@ class VLRController {
             exit;
         }
     }
+    
     
 
     /**

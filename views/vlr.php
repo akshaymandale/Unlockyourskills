@@ -448,6 +448,10 @@ $languageList = $vlrController->getLanguages();
                                         action="index.php?controller=VLRController&action=addOrEditDocument"
                                         enctype="multipart/form-data">
                                         <input type="hidden" id="documentId" name="documentId">
+                                        <!-- Hidden Fields for Existing Files -->
+                                        <input type="hidden" id="existingDocumentWordExcelPpt" name="existingDocumentWordExcelPpt">
+                                        <input type="hidden" id="existingDocumentEbookManual" name="existingDocumentEbookManual">
+                                        <input type="hidden" id="existingDocumentResearch" name="existingDocumentResearch">
                                         <div class="row">
                                             <!-- Title -->
                                             <div class="col-md-6 form-group mb-3">
@@ -480,6 +484,7 @@ $languageList = $vlrController->getLanguages();
                                                     .pdf)</label>
                                                 <input type="file" class="form-control" id="documentFileWordExcelPpt"
                                                     name="documentFileWordExcelPpt" accept=".docx, .xlsx, .pptx, .pdf">
+                                                    <p id="existingDocumentWordExcelPptDisplay"></p>
                                             </div>
 
                                             <div id="ebookManualFields" class="col-md-12 form-group mb-3"
@@ -488,6 +493,7 @@ $languageList = $vlrController->getLanguages();
                                                     .mobi)</label>
                                                 <input type="file" class="form-control" id="documentFileEbookManual"
                                                     name="documentFileEbookManual" accept=".pdf, .epub, .mobi">
+                                                    <p id="existingDocumentEbookManualDisplay"></p>
                                             </div>
 
                                             <div id="researchFields" class="col-md-12 form-group mb-3"
@@ -495,6 +501,7 @@ $languageList = $vlrController->getLanguages();
                                                 <label for="documentFileResearch">Upload File (.pdf, .docx)</label>
                                                 <input type="file" class="form-control" id="documentFileResearch"
                                                     name="documentFileResearch" accept=".pdf, .docx">
+                                                    <p id="existingDocumentResearchDisplay"></p>
                                             </div>
                                         </div>
 
