@@ -427,7 +427,7 @@ $languageList = $vlrController->getLanguages();
                     <h3><?= Localization::translate('documents'); ?></h3>
                     <button class="btn btn-sm btn-primary" data-bs-toggle="modal" data-bs-target="#documentModal"
                         id="addDocumentBtn">
-                        + <?= Localization::translate('addk'); ?>
+                        + <?= Localization::translate('add_document'); ?>
                     </button>
 
                     <div class="modal fade" id="documentModal" tabindex="-1" aria-labelledby="documentModalLabel"
@@ -448,118 +448,125 @@ $languageList = $vlrController->getLanguages();
                                         action="index.php?controller=VLRController&action=addOrEditDocument"
                                         enctype="multipart/form-data">
                                         <input type="hidden" id="documentId" name="documentId">
-                                        <!-- Hidden Fields for Existing Files -->
-                                        <input type="hidden" id="existingDocumentWordExcelPpt" name="existingDocumentWordExcelPpt">
-                                        <input type="hidden" id="existingDocumentEbookManual" name="existingDocumentEbookManual">
-                                        <input type="hidden" id="existingDocumentResearch" name="existingDocumentResearch">
+                                        <input type="hidden" id="existingDocumentWordExcelPpt"
+                                            name="existingDocumentWordExcelPpt">
+                                        <input type="hidden" id="existingDocumentEbookManual"
+                                            name="existingDocumentEbookManual">
+                                        <input type="hidden" id="existingDocumentResearch"
+                                            name="existingDocumentResearch">
+
                                         <div class="row">
-                                            <!-- Title -->
                                             <div class="col-md-6 form-group mb-3">
-                                                <label for="document_title" class="form-label">Title <span
-                                                        class="text-danger">*</span></label>
+                                                <label for="document_title" class="form-label">
+                                                    <?= Localization::translate('title'); ?> <span
+                                                        class="text-danger">*</span>
+                                                </label>
                                                 <input type="text" class="form-control" id="document_title"
                                                     name="document_title">
                                             </div>
 
-                                            <!-- Category -->
                                             <div class="col-md-6 form-group mb-3">
-                                                <label for="documentCategory" class="form-label">Category <span
-                                                        class="text-danger">*</span></label>
+                                                <label for="documentCategory" class="form-label">
+                                                    <?= Localization::translate('category'); ?> <span
+                                                        class="text-danger">*</span>
+                                                </label>
                                                 <select class="form-control" id="documentCategory"
                                                     name="documentCategory">
-                                                    <option value="">Select Category</option>
-                                                    <option value="Word/Excel/PPT Files">Word/Excel/PPT Files</option>
-                                                    <option value="E-Book & Manual">E-Book & Manual</option>
-                                                    <option value="Research Paper & Case Studies">Research Paper & Case
-                                                        Studies</option>
+                                                    <option value=""><?= Localization::translate('select_category'); ?>
+                                                    </option>
+                                                    <option value="Word/Excel/PPT Files">
+                                                        <?= Localization::translate('category.word_excel_ppt'); ?>
+                                                    </option>
+                                                    <option value="E-Book & Manual">
+                                                        <?= Localization::translate('category.ebook_manual'); ?>
+                                                    </option>
+                                                    <option value="Research Paper & Case Studies">
+                                                        <?= Localization::translate('category.research_paper'); ?>
+                                                    </option>
                                                 </select>
                                             </div>
                                         </div>
 
-                                        <!-- Dynamic Category Fields -->
                                         <div class="row">
                                             <div id="wordExcelPptFields" class="col-md-12 form-group mb-3"
                                                 style="display: none;">
-                                                <label for="documentFileWordExcelPpt">Upload File (.docx, .xlsx, .pptx,
-                                                    .pdf)</label>
+                                                <label for="documentFileWordExcelPpt">
+                                                    <?= Localization::translate('upload_file.word_excel_ppt'); ?>
+                                                </label>
                                                 <input type="file" class="form-control" id="documentFileWordExcelPpt"
                                                     name="documentFileWordExcelPpt" accept=".docx, .xlsx, .pptx, .pdf">
-                                                    <p id="existingDocumentWordExcelPptDisplay"></p>
+                                                <p id="existingDocumentWordExcelPptDisplay"></p>
                                             </div>
 
                                             <div id="ebookManualFields" class="col-md-12 form-group mb-3"
                                                 style="display: none;">
-                                                <label for="documentFileEbookManual">Upload File (.pdf, .epub,
-                                                    .mobi)</label>
+                                                <label for="documentFileEbookManual">
+                                                    <?= Localization::translate('upload_file.ebook_manual'); ?>
+                                                </label>
                                                 <input type="file" class="form-control" id="documentFileEbookManual"
                                                     name="documentFileEbookManual" accept=".pdf, .epub, .mobi">
-                                                    <p id="existingDocumentEbookManualDisplay"></p>
+                                                <p id="existingDocumentEbookManualDisplay"></p>
                                             </div>
 
                                             <div id="researchFields" class="col-md-12 form-group mb-3"
                                                 style="display: none;">
-                                                <label for="documentFileResearch">Upload File (.pdf, .docx)</label>
+                                                <label for="documentFileResearch">
+                                                    <?= Localization::translate('upload_file.research'); ?>
+                                                </label>
                                                 <input type="file" class="form-control" id="documentFileResearch"
                                                     name="documentFileResearch" accept=".pdf, .docx">
-                                                    <p id="existingDocumentResearchDisplay"></p>
+                                                <p id="existingDocumentResearchDisplay"></p>
                                             </div>
                                         </div>
 
-                                        <!-- Research-Specific Fields -->
                                         <div id="researchDetails" class="row" style="display: none;">
-                                            <!-- Authors -->
                                             <div class="col-md-6 form-group mb-3">
-                                                <label for="research_authors">Authors</label>
+                                                <label
+                                                    for="research_authors"><?= Localization::translate('authors'); ?></label>
                                                 <input type="text" class="form-control" id="research_authors"
                                                     name="research_authors">
                                             </div>
 
-                                            <!-- Publication Date -->
                                             <div class="col-md-6 form-group mb-3">
-                                                <label for="research_publication_date">Publication Date</label>
+                                                <label
+                                                    for="research_publication_date"><?= Localization::translate('publication_date'); ?></label>
                                                 <input type="date" class="form-control" id="research_publication_date"
                                                     name="research_publication_date">
                                             </div>
 
-                                            <!-- Reference Links -->
                                             <div class="col-md-12 form-group mb-3">
-                                                <label for="research_references">Reference Links</label>
+                                                <label
+                                                    for="research_references"><?= Localization::translate('reference_links'); ?></label>
                                                 <input type="text" class="form-control" id="research_references"
                                                     name="research_references">
                                             </div>
                                         </div>
 
-                                        <!-- Description -->
                                         <div class="form-group mb-3">
-                                            <label for="description" class="form-label">Description</label>
+                                            <label for="description"
+                                                class="form-label"><?= Localization::translate('description'); ?></label>
                                             <textarea class="form-control" id="document_description"
                                                 name="description"></textarea>
                                         </div>
 
-                                        <!-- Tags -->
-
-
-                                        <div class="row">
-  
-        <div class="form-group mb-3">
-            <label for="documentTags"><?= Localization::translate('tags_keywords'); ?>
-                <span class="text-danger">*</span></label>
-            <div class="tag-input-container form-control">
-                <span id="documentTagDisplay"></span> <!-- Updated ID -->
-                <input type="text" id="documentTagInput" 
-                    placeholder="<?= Localization::translate('add_tag_placeholder'); ?>">
-            </div>
-            <input type="hidden" name="documentTagList" id="documentTagList">
-        </div>
-    </div>
-
+                                        <div class="form-group mb-3">
+                                            <label for="documentTags"><?= Localization::translate('tags_keywords'); ?>
+                                                <span class="text-danger">*</span></label>
+                                            <div class="tag-input-container form-control">
+                                                <span id="documentTagDisplay"></span>
+                                                <input type="text" id="documentTagInput"
+                                                    placeholder="<?= Localization::translate('add_tag_placeholder'); ?>">
+                                            </div>
+                                            <input type="hidden" name="documentTagList" id="documentTagList">
+                                        </div>
 
                                         <div class="row">
-                                            <!-- Language -->
                                             <div class="col-md-6 form-group mb-3">
-                                                <label for="language" class="form-label">Language</label>
+                                                <label for="language"
+                                                    class="form-label"><?= Localization::translate('language'); ?></label>
                                                 <select class="form-control" id="document_language" name="language">
-                                                    <option value="">Select Language</option>
+                                                    <option value=""><?= Localization::translate('select_language'); ?>
+                                                    </option>
                                                     <?php
                                                     if (!empty($languageList) && is_array($languageList)) {
                                                         foreach ($languageList as $lang) {
@@ -570,50 +577,50 @@ $languageList = $vlrController->getLanguages();
                                                             }
                                                         }
                                                     } else {
-                                                        echo '<option value="">No languages available</option>';
+                                                        echo '<option value="">' . Localization::translate('no_languages_available') . '</option>';
                                                     }
                                                     ?>
                                                 </select>
                                             </div>
 
-                                            <!-- Mobile Support -->
                                             <div class="col-md-6 form-group mb-3">
-                                                <label class="form-label">Mobile Support</label>
+                                                <label
+                                                    class="form-label"><?= Localization::translate('mobile_support'); ?></label>
                                                 <div>
                                                     <input type="radio" id="mobile_yes" name="mobile_support"
-                                                        value="Yes"> Yes
+                                                        value="Yes">
+                                                    <?= Localization::translate('yes'); ?>
                                                     <input type="radio" id="mobile_no" name="mobile_support" value="No"
-                                                        checked> No
+                                                        checked>
+                                                    <?= Localization::translate('no'); ?>
                                                 </div>
                                             </div>
                                         </div>
 
                                         <div class="row">
-                                            <!-- Version -->
                                             <div class="col-md-6 form-group mb-3">
-                                                <label for="doc_version" class="form-label">Version Number <span
-                                                        class="text-danger">*</span></label>
+                                                <label for="doc_version" class="form-label">
+                                                    <?= Localization::translate('version_number'); ?> <span
+                                                        class="text-danger">*</span>
+                                                </label>
                                                 <input type="number" class="form-control" id="doc_version"
                                                     name="doc_version">
                                             </div>
 
-                                            <!-- Time Limit -->
                                             <div class="col-md-6 form-group mb-3">
-                                                <label for="doc_time_limit" class="form-label">Time Limit
-                                                    (minutes)</label>
+                                                <label for="doc_time_limit"
+                                                    class="form-label"><?= Localization::translate('time_limit'); ?>
+                                                    (<?= Localization::translate('minutes'); ?>)</label>
                                                 <input type="number" class="form-control" id="doc_time_limit"
                                                     name="doc_time_limit" min="1">
                                             </div>
                                         </div>
 
-                                        <!-- Modal Footer -->
                                         <div class="modal-footer">
-                                            <button type="submit" class="btn btn-primary">
-                                                <?= Localization::translate('submit'); ?>
-                                            </button>
-                                            <button type="button" class="btn btn-danger" id="cancelForm">
-                                                <?= Localization::translate('cancel'); ?>
-                                            </button>
+                                            <button type="submit"
+                                                class="btn btn-primary"><?= Localization::translate('submit'); ?></button>
+                                            <button type="button" class="btn btn-danger"
+                                                id="cancelForm"><?= Localization::translate('cancel'); ?></button>
                                         </div>
                                     </form>
                                 </div>
@@ -1251,7 +1258,20 @@ $languageList = $vlrController->getLanguages();
         "validation.invalid.audio_file" => Localization::translate('validation.invalid.audio_file'),
         "validation.required.thumbnail" => Localization::translate('validation.required.thumbnail'),
         "validation.invalid.thumbnail" => Localization::translate('validation.invalid.thumbnail'),
-        "validation.file_size_exceeded" => Localization::translate('validation.file_size_exceeded')
+        "validation.file_size_exceeded" => Localization::translate('validation.file_size_exceeded'),
+        "error.document_form_not_found" => Localization::translate("error.document_form_not_found"),
+        "document.modal.add" => Localization::translate("document.modal.add"),
+        "validation.document_title_required" => Localization::translate("validation.document_title_required"),
+        "validation.document_category_required" => Localization::translate("validation.document_category_required"),
+        "validation.document_file_required" => Localization::translate("validation.document_file_required"),
+        "validation.invalid_file_format" => Localization::translate("validation.invalid_file_format"),
+        "validation.file_size_exceeded" => Localization::translate("validation.file_size_exceeded"),
+        "validation.version_required" => Localization::translate("validation.version_required"),
+        "validation.tags_required" => Localization::translate("validation.tags_required"),
+        "document.category.word_excel_ppt" => Localization::translate("document.category.word_excel_ppt"),
+        "document.category.ebook_manual" => Localization::translate("document.category.ebook_manual"),
+        "document.category.research_paper" => Localization::translate("document.category.research_paper"),
+        "document.modal.edit" => Localization::translate('document.modal.edit')
     ]); ?>;
 </script>
 
