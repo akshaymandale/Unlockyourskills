@@ -258,10 +258,6 @@ public function updateScormPackage($id, $data) {
         $errors['documentTagList'] = "At least one tag is required.";
     }
 
-    if (empty($data['language'])) {
-        $errors['language'] = "Language is required.";
-    }
-
     if (empty($data['doc_version'])) {
         $errors['doc_version'] = "Version number is required.";
     }
@@ -302,7 +298,7 @@ public function insertDocument($data) {
         ':category' => $data['documentCategory'],
         ':description' => $data['description'],
         ':tags' => $data['documentTagList'],
-        ':language_id' => $data['language'],
+        ':language_id' => !empty($data['language']) ? (int) $data['language'] : null,
         ':mobile_support' => $data['mobile_support'],
         ':version_number' => $data['doc_version'],
         ':time_limit' => $data['doc_time_limit'],
@@ -339,7 +335,7 @@ public function updateDocument($data, $id) {
         ':category' => $data['documentCategory'],
         ':description' => $data['description'],
         ':tags' => $data['documentTagList'],
-        ':language_id' => $data['language'],
+       ':language_id' => !empty($data['language']) ? (int) $data['language'] : null,
         ':mobile_support' => $data['mobile_support'],
         ':version_number' => $data['doc_version'],
         ':time_limit' => $data['doc_time_limit'],
