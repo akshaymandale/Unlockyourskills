@@ -10,32 +10,14 @@ document.addEventListener("DOMContentLoaded", function () {
     // Open Modal for Adding New Document
     document.getElementById("addDocumentBtn").addEventListener("click", function () {
         documentForm.reset();
-
-        // Clear validation errors
         document.querySelectorAll(".error-message").forEach(el => el.textContent = "");
         document.querySelectorAll(".is-invalid").forEach(el => el.classList.remove("is-invalid"));
 
-        // Reset hidden inputs storing existing file names
-        ["existingDocumentWordExcelPpt", "existingDocumentEbookManual", "existingDocumentResearch"].forEach(id => {
-            let hiddenInput = document.getElementById(id);
-            if (hiddenInput) hiddenInput.value = "";
-        });
-
-        // Clear file input fields (ensuring no previously selected file remains)
-        ["documentFileWordExcelPpt", "documentFileEbookManual", "documentFileResearch"].forEach(id => {
-            let fileInput = document.getElementById(id);
-            if (fileInput) {
-                fileInput.value = ""; 
-                fileInput.dispatchEvent(new Event('change')); // Ensure validation triggers
-            }
-        });
-
-        // Set modal title
         document.getElementById("documentModalLabel").textContent = translations["document.modal.add"] || "Add Document";
         documentModal.show();
     });
 
-    // Form Submission Validation
+    // Attach validation on form submission
     documentForm.addEventListener("submit", function (event) {
         event.preventDefault();
         let isValid = validateDocumentForm();
@@ -51,22 +33,24 @@ document.addEventListener("DOMContentLoaded", function () {
         });
     });
 
-    // Clear previous category validation when changing category
-    document.getElementById("documentCategory").addEventListener("change", function () {
-        ["documentFileWordExcelPpt", "documentFileEbookManual", "documentFileResearch"].forEach(fileFieldId => {
-            let fileInput = document.getElementById(fileFieldId);
-            if (fileInput) {
-                fileInput.value = ""; // Clear file input
-                hideError(fileInput); // Remove validation error
-            }
-        });
+    // clear previous slected category validation 
+document.getElementById("documentCategory").addEventListener("change", function () {
+    // Clear only file input fields and their validation errors
+    ["documentFileWordExcelPpt", "documentFileEbookManual", "documentFileResearch"].forEach(fileFieldId => {
+        let fileInput = document.getElementById(fileFieldId);
+        if (fileInput) {
+            fileInput.value = ""; // Clear file input
+            hideError(fileInput); // Remove validation error only for file inputs
+        }
     });
+});
 
     // Validate Entire Form
     function validateDocumentForm() {
         let isValid = true;
         let selectedCategory = document.getElementById("documentCategory").value;
 
+        // Ensure documentCategory is selected
         if (selectedCategory === "") {
             showError(document.getElementById("documentCategory"), "validation.document_category_required");
             isValid = false;
@@ -74,6 +58,7 @@ document.addEventListener("DOMContentLoaded", function () {
             hideError(document.getElementById("documentCategory"));
         }
 
+        // Validate all fields (to show errors on all missing fields)
         document.querySelectorAll("#documentForm input, #documentForm select, #documentForm textarea").forEach(field => {
             if (!validateDocumentField(field)) {
                 isValid = false;
@@ -109,47 +94,48 @@ document.addEventListener("DOMContentLoaded", function () {
                 }
                 break;
 
+            // Validate File Upload for Different Categories
             case "documentFileWordExcelPpt":
-            case "documentFileEbookManual":
-            case "documentFileResearch":
-                let categoryField = document.getElementById("documentCategory");
-                let selectedCategory = categoryField ? categoryField.value.trim() : "";
-
-                let isFileRequired = 
-                    (fieldName === "documentFileWordExcelPpt" && selectedCategory === "Word/Excel/PPT Files") ||
-                    (fieldName === "documentFileEbookManual" && selectedCategory === "E-Book & Manual") ||
-                    (fieldName === "documentFileResearch" && selectedCategory === "Research Paper & Case Studies");
-
-                let existingFileInput = document.getElementById("existing" + fieldName.charAt(0).toUpperCase() + fieldName.slice(1));
-                let hasExistingFile = existingFileInput && existingFileInput.value.trim() !== "";
-
-                if (isFileRequired && !hasExistingFile) {
-                    if (field.files.length === 0) {
-                        showError(field, "validation.document_file_required");
-                        isValid = false;
-                    } else {
-                        const file = field.files[0];
-                        const maxSize = 10 * 1024 * 1024;
-                        const allowedExtensions = ["pdf", "doc", "docx", "xls", "xlsx", "ppt", "pptx", "epub", "mobi"];
-
-                        const fileName = file.name.toLowerCase();
-                        const fileSize = file.size;
-                        const fileExtension = fileName.split('.').pop();
-
-                        if (!allowedExtensions.includes(fileExtension)) {
-                            showError(field, "validation.invalid_file_format");
-                            isValid = false;
-                        } else if (fileSize > maxSize) {
-                            showError(field, "validation.file_size_exceeded");
+                case "documentFileEbookManual":
+                case "documentFileResearch":
+                    const categoryField = document.getElementById("documentCategory");
+                    const selectedCategory = categoryField ? categoryField.value.trim() : "";
+                
+                    // Determine if file upload is required for the selected category
+                    let isFileRequired = 
+                        (fieldName === "documentFileWordExcelPpt" && selectedCategory === "Word/Excel/PPT Files") ||
+                        (fieldName === "documentFileEbookManual" && selectedCategory === "E-Book & Manual") ||
+                        (fieldName === "documentFileResearch" && selectedCategory === "Research Paper & Case Studies");
+                
+                    if (isFileRequired) {
+                        if (field.files.length === 0) {
+                            showError(field, "validation.document_file_required");
                             isValid = false;
                         } else {
-                            hideError(field);
+                            const file = field.files[0];
+                            const maxSize = 5 * 1024 * 1024; // 10MB
+                            const allowedExtensions = ["pdf", "doc", "docx", "xls", "xlsx", "ppt", "pptx", "epub", "mobi"];
+                            
+                
+                            const fileName = file.name.toLowerCase();
+                            const fileSize = file.size;
+                            const fileExtension = fileName.split('.').pop();
+                
+                            if (!allowedExtensions.includes(fileExtension)) {
+                                showError(field, "validation.invalid_file_format");
+                                isValid = false;
+                            } else if (fileSize > maxSize) {
+                                showError(field, "validation.file_size_exceeded");
+                                isValid = false;
+                            } else {
+                                hideError(field);
+                            }
                         }
+                    } else {
+                        hideError(field); // If file is not required, clear any existing error
                     }
-                } else {
-                    hideError(field); 
-                }
-                break;
+                    break;
+                
 
             case "doc_version":
                 if (value === "") {

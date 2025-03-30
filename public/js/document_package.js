@@ -26,20 +26,25 @@ document.addEventListener("DOMContentLoaded", function () {
     }
 
  // ✅ Open Modal for Adding New Document
-document.getElementById("addDocumentBtn").addEventListener("click", function () {
+ document.getElementById("addDocumentBtn").addEventListener("click", function () {
     documentForm.reset();
     tags = [];
     tagContainer.innerHTML = "";
     hiddenTagList.value = "";
 
-    // ✅ Clear validation messages and invalid fields
-    document.querySelectorAll(".error-message").forEach(el => el.textContent = "");
+    // ✅ Clear validation messages and ensure they are visible when needed
+    document.querySelectorAll(".error-message").forEach(el => {
+        el.textContent = "";
+        el.style.display = "block"; // Ensure error messages show up on next validation
+    });
+
     document.querySelectorAll(".is-invalid").forEach(el => el.classList.remove("is-invalid"));
 
     // ✅ Clear previous file display from edit modal
-    wordExcelPptDisplay.innerHTML = "";
-    ebookManualDisplay.innerHTML = "";
-    researchDisplay.innerHTML = "";
+    [wordExcelPptDisplay, ebookManualDisplay, researchDisplay].forEach(display => {
+        display.innerHTML = "";
+        display.style.display = "none"; // Hide the empty file display
+    });
 
     // ✅ Clear hidden input values (existing file names)
     ["existingDocumentWordExcelPpt", "existingDocumentEbookManual", "existingDocumentResearch"].forEach(id => {
@@ -58,32 +63,22 @@ document.getElementById("addDocumentBtn").addEventListener("click", function () 
 
     document.querySelector('input[name="mobileSupport"][value="No"]').checked = true;
 
-    // ✅ Function to clear the existing file display when a new file is uploaded
-    function clearExistingFileDisplay(fieldId, displayElement) {
-        document.getElementById(fieldId).addEventListener("change", function () {
-            hiddenInput.value = "";
-            displayElement.style.display = "none"; 
-        });
-    }
-
-    // ✅ Attach event listeners to clear existing file display when a new file is selected
-    clearExistingFileDisplay("documentFileWordExcelPpt", wordExcelPptDisplay);
-    clearExistingFileDisplay("documentFileEbookManual", ebookManualDisplay);
-    clearExistingFileDisplay("documentFileResearch", researchDisplay);
-
     // ✅ Clear Existing File Display on New Upload
-    function clearExistingFile(fieldId, hiddenInput) {
+    function clearExistingFile(fieldId, hiddenInput, displayElement) {
         document.getElementById(fieldId).addEventListener("change", function () {
             hiddenInput.value = "";
+            displayElement.innerHTML = "";
+            displayElement.style.display = "none"; // Hide empty file display
         });
     }
 
-    clearExistingFile("documentFileWordExcelPpt", existingWordExcelPpt);
-    clearExistingFile("documentFileEbookManual", existingEbookManual);
-    clearExistingFile("documentFileResearch", existingResearch);
+    clearExistingFile("documentFileWordExcelPpt", existingWordExcelPpt, wordExcelPptDisplay);
+    clearExistingFile("documentFileEbookManual", existingEbookManual, ebookManualDisplay);
+    clearExistingFile("documentFileResearch", existingResearch, researchDisplay);
 
     documentModal.show();
 });
+
 
 
     // ✅ Open Modal for Editing Document
@@ -97,12 +92,22 @@ document.getElementById("addDocumentBtn").addEventListener("click", function () 
             hiddenTagList.value = "";
     
             // ✅ Clear previous validation errors
-            document.querySelectorAll(".error-message").forEach(el => el.textContent = "");
+            document.querySelectorAll(".error-message").forEach(el => {
+                el.textContent = "";
+                el.style.display = "none"; // Hide validation message container
+            });
+    
             document.querySelectorAll(".is-invalid").forEach(el => el.classList.remove("is-invalid"));
     
             // ✅ Clear previous file selection
             document.querySelectorAll("#documentForm input[type='file']").forEach(fileInput => {
                 fileInput.value = "";
+            });
+    
+            // ✅ Clear file display and HIDE sections to remove blank gaps
+            [wordExcelPptDisplay, ebookManualDisplay, researchDisplay].forEach(display => {
+                display.innerHTML = "";
+                display.style.display = "none"; // Hide the section
             });
     
             const documentDataStr = this.getAttribute("data-document");
@@ -127,18 +132,21 @@ document.getElementById("addDocumentBtn").addEventListener("click", function () 
                 document.getElementById("doc_version").value = documentData.version_number;
                 document.getElementById("doc_time_limit").value = documentData.time_limit;
     
-                // ✅ Clear and Set Existing Files
-                wordExcelPptDisplay.innerHTML = documentData.word_excel_ppt_file 
-                    ? `Current File: <a href="uploads/documents/${documentData.word_excel_ppt_file}" target="_blank">${documentData.word_excel_ppt_file}</a>` 
-                    : "No file uploaded.";
+                // ✅ Display Existing Files and Show Sections if Files Exist
+                if (documentData.word_excel_ppt_file) {
+                    wordExcelPptDisplay.innerHTML = `Current File: <a href="uploads/documents/${documentData.word_excel_ppt_file}" target="_blank">${documentData.word_excel_ppt_file}</a>`;
+                    wordExcelPptDisplay.style.display = "block"; // Show only if file exists
+                }
     
-                ebookManualDisplay.innerHTML = documentData.ebook_manual_file 
-                    ? `Current File: <a href="uploads/documents/${documentData.ebook_manual_file}" target="_blank">${documentData.ebook_manual_file}</a>` 
-                    : "No file uploaded.";
+                if (documentData.ebook_manual_file) {
+                    ebookManualDisplay.innerHTML = `Current File: <a href="uploads/documents/${documentData.ebook_manual_file}" target="_blank">${documentData.ebook_manual_file}</a>`;
+                    ebookManualDisplay.style.display = "block"; // Show only if file exists
+                }
     
-                researchDisplay.innerHTML = documentData.research_file 
-                    ? `Current File: <a href="uploads/documents/${documentData.research_file}" target="_blank">${documentData.research_file}</a>` 
-                    : "No file uploaded.";
+                if (documentData.research_file) {
+                    researchDisplay.innerHTML = `Current File: <a href="uploads/documents/${documentData.research_file}" target="_blank">${documentData.research_file}</a>`;
+                    researchDisplay.style.display = "block"; // Show only if file exists
+                }
     
                 existingWordExcelPpt.value = documentData.word_excel_ppt_file || "";
                 existingEbookManual.value = documentData.ebook_manual_file || "";
@@ -163,6 +171,7 @@ document.getElementById("addDocumentBtn").addEventListener("click", function () 
             }
         });
     });
+    
     
 
     // ✅ Listen for Category Change

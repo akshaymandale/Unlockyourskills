@@ -353,7 +353,7 @@ class VLRController {
                 'documentCategory' => $documentCategory,
                 'description' => $_POST['description'] ?? '',
                 'documentTagList' => $documentTagList,
-                'language' => $_POST['language'] ?? '',
+                'language' => !empty($_POST['language']) ? (int) $_POST['language'] : null,
                 'mobile_support' => $_POST['mobile_support'] ?? 'No',
                 'doc_version' => $docVersion,
                 'doc_time_limit' => $_POST['doc_time_limit'] ?? '',
