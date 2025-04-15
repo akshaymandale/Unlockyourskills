@@ -29,14 +29,15 @@ $countries = $stmt->fetchAll(PDO::FETCH_ASSOC);
 <?php include 'includes/sidebar.php'; ?>
 
 <div class="main-content">
-<div class="container add-user-container">
-    <h1 class="page-title text-purple">
+    <div class="container add-user-container">
+        <h1 class="page-title text-purple">
             <?= Localization::translate('add_user_title'); ?>
         </h1>
-    <form action="index.php?controller=UserManagementController&action=storeUser" id="addUserForm" method="POST" enctype="multipart/form-data">  
-        <!-- ✅ Tabs Section -->
-        <!-- Tabs Navigation -->
-        <ul class="nav nav-tabs" id="addUserTabs">
+        <form action="index.php?controller=UserManagementController&action=storeUser" id="addUserForm" method="POST"
+            enctype="multipart/form-data">
+            <!-- ✅ Tabs Section -->
+            <!-- Tabs Navigation -->
+            <ul class="nav nav-tabs" id="addUserTabs">
                 <li class="nav-item">
                     <a class="nav-link active" data-toggle="tab" href="#basic-details">
                         <?= Localization::translate('basic_details'); ?>
@@ -52,11 +53,11 @@ $countries = $stmt->fetchAll(PDO::FETCH_ASSOC);
                         <?= Localization::translate('extra_details'); ?>
                     </a>
                 </li>
-        </ul>
+            </ul>
 
-        <!-- Tabs Content -->
-        <input type="hidden" name="client_id" id="clientName" value="<?php echo htmlspecialchars($clientName); ?>">
-        <div class="tab-content">
+            <!-- Tabs Content -->
+            <input type="hidden" name="client_id" id="clientName" value="<?php echo htmlspecialchars($clientName); ?>">
+            <div class="tab-content">
                 <div class="tab-pane show active" id="basic-details">
                     <div class="row">
                         <div class="col-lg-6 col-md-6 col-sm-12 form-group">
@@ -101,7 +102,8 @@ $countries = $stmt->fetchAll(PDO::FETCH_ASSOC);
                                 <option value="Admin"><?= Localization::translate('admin'); ?></option>
                                 <option value="End User"><?= Localization::translate('end_user'); ?></option>
                                 <option value="Instructor"><?= Localization::translate('instructor'); ?></option>
-                                <option value="Corporate Manager"><?= Localization::translate('corporate_manager'); ?></option>
+                                <option value="Corporate Manager"><?= Localization::translate('corporate_manager'); ?>
+                                </option>
                             </select>
                         </div>
                         <div class="col-lg-6 col-md-6 col-sm-12 form-group">
@@ -114,10 +116,12 @@ $countries = $stmt->fetchAll(PDO::FETCH_ASSOC);
                             <label><?= Localization::translate('user_status'); ?> :</label>
                             <div>
                                 <label>
-                                    <input type="radio" name="user_status" value="Active" checked> <?= Localization::translate('active'); ?>
+                                    <input type="radio" name="user_status" value="Active" checked>
+                                    <?= Localization::translate('active'); ?>
                                 </label>
                                 <label>
-                                    <input type="radio" name="user_status" value="Inactive"> <?= Localization::translate('inactive'); ?>
+                                    <input type="radio" name="user_status" value="Inactive">
+                                    <?= Localization::translate('inactive'); ?>
                                 </label>
                             </div>
                         </div>
@@ -126,10 +130,12 @@ $countries = $stmt->fetchAll(PDO::FETCH_ASSOC);
                             <label><?= Localization::translate('locked_status'); ?> :</label>
                             <div>
                                 <label>
-                                    <input type="radio" name="locked_status" value="1"> <?= Localization::translate('locked'); ?>
+                                    <input type="radio" name="locked_status" value="1">
+                                    <?= Localization::translate('locked'); ?>
                                 </label>
                                 <label>
-                                    <input type="radio" name="locked_status" value="0" checked> <?= Localization::translate('unlocked'); ?>
+                                    <input type="radio" name="locked_status" value="0" checked>
+                                    <?= Localization::translate('unlocked'); ?>
                                 </label>
                             </div>
                         </div>
@@ -139,17 +145,20 @@ $countries = $stmt->fetchAll(PDO::FETCH_ASSOC);
                             <label><?= Localization::translate('leaderboard'); ?> :</label>
                             <div>
                                 <label>
-                                    <input type="radio" name="leaderboard" value="Yes"> <?= Localization::translate('yes'); ?>
+                                    <input type="radio" name="leaderboard" value="Yes">
+                                    <?= Localization::translate('yes'); ?>
                                 </label>
                                 <label>
-                                    <input type="radio" name="leaderboard" value="No" checked> <?= Localization::translate('no'); ?>
+                                    <input type="radio" name="leaderboard" value="No" checked>
+                                    <?= Localization::translate('no'); ?>
                                 </label>
                             </div>
                         </div>
 
                         <div class="col-lg-6 col-md-6 col-sm-12 form-group">
                             <label><?= Localization::translate('profile_picture'); ?></label>
-                            <input type="file" id="profile_picture" name="profile_picture" accept="image/jpeg, image/png" class="input-field">
+                            <input type="file" id="profile_picture" name="profile_picture"
+                                accept="image/jpeg, image/png" class="input-field">
                         </div>
                     </div>
                 </div>
@@ -261,16 +270,16 @@ $countries = $stmt->fetchAll(PDO::FETCH_ASSOC);
                     </div>
                 </div>
 
-            
+
                 <div class="row mt-4">
                     <div class="col-md-12 form-actions">
                         <button type="submit" class="btn btn-primary"><?= Localization::translate('submit'); ?></button>
                         <button type="reset" class="btn btn-danger"><?= Localization::translate('cancel'); ?></button>
                     </div>
                 </div>
-        </div>
-    </form>
-</div>
+            </div>
+        </form>
+    </div>
 </div>
 <!-- ✅ Form Validation Script -->
 <script>
@@ -292,4 +301,3 @@ $countries = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
 <script src="public/js/add_user_validation.js"></script>
 <?php include 'includes/footer.php'; ?>
-

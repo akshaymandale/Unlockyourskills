@@ -73,16 +73,5 @@ if (class_exists($controller)) {
 }
 
 
-//user management grid table details 
-
-/* echo '$controller'; die;
-if ($controller == "UserManagementController" && $action == "index")
-{
-    require_once 'controllers/UserManagementController.php';
-    $userController = new UserManagementController();
-    $userController->index();
-    exit;
-} */
-
 ?>
 
