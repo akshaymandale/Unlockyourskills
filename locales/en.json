@@ -50,7 +50,7 @@
     "filters_locked_status": "Locked Status",
     "filters_search_placeholder": "Search by Profile ID, Name, Email, Contact...",
     "buttons_add_user": "+ Add User",
-    "buttons_import_user": "📥 Import",
+    "buttons_import_user": "Import",
     "user_grid_profile_id": "Profile ID",
     "user_grid_full_name": "Full Name",
     "user_grid_email": "Email",
@@ -236,6 +236,8 @@
     "select_language": "Select Language",
     "no_languages_available": "No languages available",
     "mobile_support": "Mobile Support",
+    "add_assessment": "Add Assessment",
+    "add_questions": "Add Assessment Questions",
     "_comment9": "add_user_validation.js",
     "validation.full_name_required": "Full Name is required",
     "validation.email_required": "Email is required",
@@ -295,5 +297,6 @@
     "validation.tags_required": "At least one tag is required.",
     "document.category.word_excel_ppt": "Word/Excel/PPT Files",
     "document.category.ebook_manual": "E-Book & Manual",
-    "document.category.research_paper": "Research Paper & Case Studies"
+    "document.category.research_paper": "Research Paper & Case Studies",
+    "_comment14": "assessment_package.js"
 }

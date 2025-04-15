@@ -393,8 +393,14 @@ $languageList = $vlrController->getLanguages();
             <div class="tab-pane" id="assessment">
                 <div class="d-flex justify-content-between align-items-center">
                     <h3><?= Localization::translate('assessment'); ?></h3>
-                    <button class="btn btn-sm btn-primary" onclick="openAddModal('Assessment')">+
-                        <?= Localization::translate('add'); ?></button>
+                    <div class="d-flex gap-2">
+                        <button class="btn btn-sm btn-primary" onclick="openAddModal('Assessment')">
+                            + <?= Localization::translate('add_assessment'); ?>
+                        </button>
+                        <a href="index.php?controller=QuestionController&action=index" class="btn btn-sm btn-primary">
+                            + <?= Localization::translate('add_questions'); ?>
+                        </a>
+                    </div>
                 </div>
                 <div id="assessment-items"></div>
             </div>

@@ -118,7 +118,7 @@ document.addEventListener("DOMContentLoaded", function () {
                     languageDropdown.classList.remove("active");
                     languageMenu.classList.remove("active");
                     // ✅ FORCE PAGE RELOAD TO APPLY LOCALIZATION
-                    location.reload(); 
+                    location.reload();
                 })
                 .catch(err => console.error("Language switch error:", err));
         });
@@ -146,8 +146,8 @@ document.addEventListener("DOMContentLoaded", function () {
         } else {
             pane.style.display = "none";
         }
-    });    
-    
+    });
+
     let activeTabPane = document.querySelector(".tab-pane.show.active");
     if (activeTabPane) {
         activeTabPane.style.display = "block";
@@ -159,7 +159,7 @@ document.addEventListener("DOMContentLoaded", function () {
     let managePortalTabs = document.querySelectorAll("#managePortalTabs a");
 
     managePortalTabs.forEach(tab => {
-        tab.addEventListener("click", function(event) {
+        tab.addEventListener("click", function (event) {
             event.preventDefault();
             const targetId = this.getAttribute("href").substring(1);
 
@@ -186,18 +186,16 @@ document.addEventListener("DOMContentLoaded", function () {
         });
     });
 
-
-
     let userManagementBtn = document.querySelector(".user-box[onclick]");
     if (userManagementBtn) {
-        userManagementBtn.addEventListener("click", function() {
+        userManagementBtn.addEventListener("click", function () {
             window.location.href = "index.php?controller=UserManagementController";
         });
     }
 
     let addUserBtn = document.querySelector(".add-user-btn");
     if (addUserBtn) {
-        addUserBtn.addEventListener("click", function() {
+        addUserBtn.addEventListener("click", function () {
             window.location.href = "index.php?controller=UserManagementController&action=addUser";
         });
     }
@@ -205,11 +203,11 @@ document.addEventListener("DOMContentLoaded", function () {
 
 
 
-// Add user page script for hide and show tab
+    // Add user page script for hide and show tab
     let addUserTabs = document.querySelectorAll("#addUserTabs a");
 
     addUserTabs.forEach(tab => {
-        tab.addEventListener("click", function(event) {
+        tab.addEventListener("click", function (event) {
             event.preventDefault();
             const targetId = this.getAttribute("href").substring(1);
 
@@ -238,7 +236,7 @@ document.addEventListener("DOMContentLoaded", function () {
 
 
     //VLR 
-    
+
     let mainTabs = document.querySelectorAll("#vlrTabs a"); // Main tabs
     let scormTabs = document.querySelectorAll("#scormSubTabs a"); // SCORM sub-tabs
     let documentTabs = document.querySelectorAll("#documentSubTabs a"); // Document sub-tabs
@@ -254,7 +252,7 @@ document.addEventListener("DOMContentLoaded", function () {
             // Hide all main tab panes
             document.querySelectorAll(".tab-content > .tab-pane").forEach(pane => {
                 pane.classList.remove("show", "active");
-                pane.style.display = "none"; 
+                pane.style.display = "none";
             });
 
             // Remove active class from all main tabs
@@ -298,8 +296,8 @@ document.addEventListener("DOMContentLoaded", function () {
                 }
             }
 
-              // ✅ IF RETURNING TO EXTERNAL CONTENT, ENSURE SUB-TAB CONTENT IS SHOWN ✅
-              if (targetId === "external") {
+            // ✅ IF RETURNING TO EXTERNAL CONTENT, ENSURE SUB-TAB CONTENT IS SHOWN ✅
+            if (targetId === "external") {
                 let activeExtSubTab = document.querySelector("#externalSubTabs a.active");
                 if (activeExtSubTab) {
                     let activeExtSubTabId = activeExtSubTab.getAttribute("href").substring(1);
@@ -385,36 +383,36 @@ document.addEventListener("DOMContentLoaded", function () {
         });
     });
 
-        // ✅ EXTERNAL CONTENT SUB-TABS FUNCTIONALITY ✅
-        externalTabs.forEach(tab => {
-            tab.addEventListener("click", function (event) {
-                event.preventDefault();
-                const targetId = this.getAttribute("href").substring(1);
-    
-                // Hide all External sub-tab panes
-                document.querySelectorAll("#external .tab-pane").forEach(pane => {
-                    pane.classList.remove("show", "active");
-                    pane.style.display = "none";
-                });
-    
-                // Remove active class from all External sub-tabs
-                externalTabs.forEach(tab => {
-                    tab.classList.remove("active");
-                });
-    
-                // Show the selected External sub-tab pane
-                let targetPane = document.getElementById(targetId);
-                if (targetPane) {
-                    targetPane.classList.add("show", "active");
-                    targetPane.style.display = "block";
-                }
-    
-                // Add active class to clicked External sub-tab
-                this.classList.add("active");
-            });
-        });
+    // ✅ EXTERNAL CONTENT SUB-TABS FUNCTIONALITY ✅
+    externalTabs.forEach(tab => {
+        tab.addEventListener("click", function (event) {
+            event.preventDefault();
+            const targetId = this.getAttribute("href").substring(1);
 
-           // ✅ INTERACTIVE & AI POWERED CONTENT SUB-TABS FUNCTIONALITY ✅
+            // Hide all External sub-tab panes
+            document.querySelectorAll("#external .tab-pane").forEach(pane => {
+                pane.classList.remove("show", "active");
+                pane.style.display = "none";
+            });
+
+            // Remove active class from all External sub-tabs
+            externalTabs.forEach(tab => {
+                tab.classList.remove("active");
+            });
+
+            // Show the selected External sub-tab pane
+            let targetPane = document.getElementById(targetId);
+            if (targetPane) {
+                targetPane.classList.add("show", "active");
+                targetPane.style.display = "block";
+            }
+
+            // Add active class to clicked External sub-tab
+            this.classList.add("active");
+        });
+    });
+
+    // ✅ INTERACTIVE & AI POWERED CONTENT SUB-TABS FUNCTIONALITY ✅
     interactiveTabs.forEach(tab => {
         tab.addEventListener("click", function (event) {
             event.preventDefault();
@@ -454,140 +452,130 @@ document.addEventListener("DOMContentLoaded", function () {
         }
     }
 
+    // Country - State - City script
+    const countrySelect = document.getElementById("countrySelect");
+    const stateSelect = document.getElementById("stateSelect");
+    const citySelect = document.getElementById("citySelect");
+    const timezoneSelect = document.getElementById("timezoneSelect");
+
+    // ✅ Fetch States on Country Select
+    countrySelect.addEventListener("change", function () {
+        const countryId = this.value;
+        stateSelect.innerHTML = '<option value="">Select State</option>';
+        citySelect.innerHTML = '<option value="">Select City</option>';
+        timezoneSelect.innerHTML = '<option value="">Select Timezone</option>';
+        citySelect.disabled = true;
+        timezoneSelect.disabled = true;
+
+        if (countryId) {
+            // ✅ Fetch States
+            fetch(`index.php?controller=LocationController&action=getStatesByCountry`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                body: `country_id=${countryId}`,
+            })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.length > 0) {
+                        data.forEach(state => {
+                            const option = document.createElement('option');
+                            option.value = state.id;
+                            option.textContent = state.name;
+                            stateSelect.appendChild(option);
+                        });
+                        stateSelect.disabled = false;
+                    } else {
+                        stateSelect.disabled = true;
+                    }
+                })
+                .catch(error => console.error('Error fetching states:', error));
+
+            // ✅ Fetch Timezones
+            fetch(`index.php?controller=LocationController&action=getTimezonesByCountry`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                body: `country_id=${countryId}`,
+            })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success && data.timezones.length > 0) {
+                        data.timezones.forEach(tz => {
+                            const option = document.createElement('option');
+                            option.value = tz.zoneName;
+                            option.textContent = `${tz.zoneName} (${tz.gmtOffsetName}) - ${tz.abbreviation} - ${tz.tzName}`;
+                            timezoneSelect.appendChild(option);
+                        });
+                        timezoneSelect.disabled = false;
+                    } else {
+                        timezoneSelect.disabled = true;
+                    }
+                })
+                .catch(error => console.error('Error fetching timezones:', error));
+        }
+    });
+
+    // ✅ Fetch Cities on State Select
+    stateSelect.addEventListener("change", function () {
+        const stateId = this.value;
+        citySelect.innerHTML = '<option value="">Select City</option>';
+        if (stateId) {
+            fetch(`index.php?controller=LocationController&action=getCitiesByState`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                body: `state_id=${stateId}`,
+            })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.length > 0) {
+                        data.forEach(city => {
+                            const option = document.createElement('option');
+                            option.value = city.id;
+                            option.textContent = city.name;
+                            citySelect.appendChild(option);
+                        });
+                        citySelect.disabled = false;
+                    } else {
+                        citySelect.disabled = true;
+                    }
+                })
+                .catch(error => console.error('Error fetching cities:', error));
+        }
+    });
     
-  
-    
-// Country - State - City script
+    // Disable date on datepicker
+    const dobInput = document.getElementById("dob");
+    const profileExpiryInput = document.getElementById("profile_expiry");
 
-const countrySelect = document.getElementById("countrySelect");
-const stateSelect = document.getElementById("stateSelect");
-const citySelect = document.getElementById("citySelect");
-const timezoneSelect = document.getElementById("timezoneSelect");
-
-// ✅ Fetch States on Country Select
-countrySelect.addEventListener("change", function() {
-    const countryId = this.value;
-    stateSelect.innerHTML = '<option value="">Select State</option>';
-    citySelect.innerHTML = '<option value="">Select City</option>';
-    timezoneSelect.innerHTML = '<option value="">Select Timezone</option>';
-    citySelect.disabled = true;
-    timezoneSelect.disabled = true;
-
-    if (countryId) {
-        // ✅ Fetch States
-        fetch(`index.php?controller=LocationController&action=getStatesByCountry`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-            body: `country_id=${countryId}`,
-        })
-        .then(response => response.json())
-        .then(data => {
-            if (data.length > 0) {
-                data.forEach(state => {
-                    const option = document.createElement('option');
-                    option.value = state.id;
-                    option.textContent = state.name;
-                    stateSelect.appendChild(option);
-                });
-                stateSelect.disabled = false;
-            } else {
-                stateSelect.disabled = true;
-            }
-        })
-        .catch(error => console.error('Error fetching states:', error));
-
-        // ✅ Fetch Timezones
-        fetch(`index.php?controller=LocationController&action=getTimezonesByCountry`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-            body: `country_id=${countryId}`,
-        })
-        .then(response => response.json())
-        .then(data => {
-            if (data.success && data.timezones.length > 0) {
-                data.timezones.forEach(tz => {
-                    const option = document.createElement('option');
-                    option.value = tz.zoneName;
-                    option.textContent = `${tz.zoneName} (${tz.gmtOffsetName}) - ${tz.abbreviation} - ${tz.tzName}`;
-                    timezoneSelect.appendChild(option);
-                });
-                timezoneSelect.disabled = false;
-            } else {
-                timezoneSelect.disabled = true;
-            }
-        })
-        .catch(error => console.error('Error fetching timezones:', error));
+    // ✅ Disable future dates for DOB
+    if (dobInput) {
+        const today = new Date().toISOString().split("T")[0];
+        dobInput.setAttribute("max", today);
     }
-});
 
-
-      
-
-// ✅ Fetch Cities on State Select
-stateSelect.addEventListener("change", function() {
-    const stateId = this.value;
-    citySelect.innerHTML = '<option value="">Select City</option>';
-    if (stateId) {
-        fetch(`index.php?controller=LocationController&action=getCitiesByState`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-            body: `state_id=${stateId}`,
-        })
-        .then(response => response.json())
-        .then(data => {
-            if (data.length > 0) {
-                data.forEach(city => {
-                    const option = document.createElement('option');
-                    option.value = city.id;
-                    option.textContent = city.name;
-                    citySelect.appendChild(option);
-                });
-                citySelect.disabled = false;
-            } else {
-                citySelect.disabled = true;
-            }
-        })
-        .catch(error => console.error('Error fetching cities:', error));
+    // ✅ Restrict Profile Expiry Date to be today or later
+    if (profileExpiryInput) {
+        const today = new Date().toISOString().split("T")[0];
+        profileExpiryInput.setAttribute("min", today);
     }
-});
-        // Disable date on datepicker
-        const dobInput = document.getElementById("dob");
-            const profileExpiryInput = document.getElementById("profile_expiry");
 
-            // ✅ Disable future dates for DOB
-            if (dobInput) {
-                const today = new Date().toISOString().split("T")[0];
-                dobInput.setAttribute("max", today);
-            }
+    let profileIdInput = document.getElementById("profile_id");
 
-            // ✅ Restrict Profile Expiry Date to be today or later
-            if (profileExpiryInput) {
-                const today = new Date().toISOString().split("T")[0];
-                profileExpiryInput.setAttribute("min", today);
-            }
+    // ✅ Fetch Client Name from Session (Injected via PHP)
+    let clientName = document.getElementById("clientName").value; // Hidden input in add_user.php
 
-            let profileIdInput = document.getElementById("profile_id");
+    if (clientName) {
+        // ✅ Extract First 3 Letters of Client Name
+        let clientPrefix = clientName.substring(0, 3).toUpperCase();
 
-            // ✅ Fetch Client Name from Session (Injected via PHP)
-            let clientName = document.getElementById("clientName").value; // Hidden input in add_user.php
-        
-            if (clientName) {
-                // ✅ Extract First 3 Letters of Client Name
-                let clientPrefix = clientName.substring(0, 3).toUpperCase();
-        
-                // ✅ Generate a Unique 7-Digit Number
-                let randomNumber = Math.floor(1000000 + Math.random() * 9000000);
-        
-                // ✅ Final Profile ID (Example: "DEE1234567")
-                let generatedProfileId = clientPrefix + randomNumber;
-        
-                // ✅ Auto-Fill Profile ID Field (Read-Only)
-                profileIdInput.value = generatedProfileId;
-            }
+        // ✅ Generate a Unique 7-Digit Number
+        let randomNumber = Math.floor(1000000 + Math.random() * 9000000);
 
-          
-            
+        // ✅ Final Profile ID (Example: "DEE1234567")
+        let generatedProfileId = clientPrefix + randomNumber;
 
+        // ✅ Auto-Fill Profile ID Field (Read-Only)
+        profileIdInput.value = generatedProfileId;
+    }
 
 });
 

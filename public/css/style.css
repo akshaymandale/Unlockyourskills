@@ -442,45 +442,6 @@ html, body {
 }
 
 /* ✅ User Management Page Styling */
-.user-management-toolbar {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 20px;
-    gap: 10px;
-}
-
-.filter-multiselect {
-    width: 220px;
-    padding: 8px;
-    border-radius: 5px;
-    border: 1px solid #ccc;
-    background: white;
-}
-
-.search-bar {
-    padding: 8px;
-    border-radius: 5px;
-    border: 1px solid #ccc;
-    width: 250px;
-}
-
-.add-user-btn, .import-user-btn {
-    background: #6a0dad;
-    color: white;
-    padding: 8px 12px;
-    border-radius: 5px;
-    border: none;
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    gap: 5px;
-}
-
-.add-user-btn i, .import-user-btn i {
-    font-size: 16px;
-}
-
 .user-grid {
     width: 100%;
     border-collapse: collapse;
@@ -969,4 +930,13 @@ html, body {
 
 .content-actions a:hover {
     text-decoration: none;
+}
+
+/* assessment validation errror message */
+.is-invalid {
+    border-color: red !important;
+}
+.invalid-feedback {
+    color: red;
+    font-size: 0.875em;
 }
