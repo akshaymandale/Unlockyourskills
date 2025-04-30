@@ -8,9 +8,16 @@ $isEdit = isset($question);
 
 <div class="main-content">
     <div class="container add-user-container">
-        <h1 class="page-title text-purple">
-            <?= $isEdit ? Localization::translate('edit_assessment_question_title') : Localization::translate('add_assessment_question_title'); ?>
-        </h1>
+        <div class="back-arrow-container">
+            <a href="index.php?controller=QuestionController&action=index" class="back-link">
+                <i class="fas fa-arrow-left"></i>
+            </a>
+            <span class="divider-line"></span>
+            <h1 class="page-title">
+                <?= $isEdit ? Localization::translate('edit_assessment_question_title') : Localization::translate('add_assessment_question_title'); ?>
+            </h1>
+        </div>
+
         <form id="addQuestionForm" method="POST" enctype="multipart/form-data"
             action="index.php?controller=QuestionController&action=<?= $isEdit ? 'edit&id=' . $question['id'] : 'store' ?>">
 
@@ -21,16 +28,18 @@ $isEdit = isset($question);
 
                 <div class="row mb-3">
                     <div class="col-md-8">
-                        <label for="questionText" class="form-label">Question <span class="text-danger">*</span></label>
+                        <label for="questionText" class="form-label"><?= Localization::translate('question_label'); ?>
+                            <span class="text-danger">*</span></label>
                         <textarea id="questionText" name="questionText" class="form-control"
                             rows="3"><?= $isEdit ? htmlspecialchars($question['question_text'] ?? '') : '' ?></textarea>
                     </div>
 
                     <div class="col-md-4">
-                        <label for="tagsInput" class="form-label">Tags/Keywords <span
+                        <label for="tagsInput" class="form-label"><?= Localization::translate('tags_keywords'); ?> <span
                                 class="text-danger">*</span></label>
                         <div id="tagsContainer" class="tag-container"></div>
-                        <input type="text" id="tagsInput" class="form-control" placeholder="Type and press enter...">
+                        <input type="text" id="tagsInput" class="form-control"
+                            placeholder="<?= Localization::translate('type_and_press_enter'); ?>">
                         <input type="hidden" name="tags" id="tagsHidden"
                             value="<?= $isEdit ? htmlspecialchars($question['tags'] ?? '') : '' ?>">
                     </div>
@@ -38,26 +47,29 @@ $isEdit = isset($question);
 
                 <div class="row mb-3">
                     <div class="col-md-4">
-                        <label for="skillsInput" class="form-label">Competency Skills</label>
+                        <label for="skillsInput"
+                            class="form-label"><?= Localization::translate('competency_skills'); ?></label>
                         <div id="skillsContainer" class="tag-container"></div>
-                        <input type="text" id="skillsInput" class="form-control" placeholder="Type and press enter...">
+                        <input type="text" id="skillsInput" class="form-control"
+                            placeholder="<?= Localization::translate('type_and_press_enter'); ?>">
                         <input type="hidden" name="skills" id="skillsHidden"
                             value="<?= $isEdit ? htmlspecialchars($question['skills'] ?? '') : '' ?>">
                     </div>
 
                     <div class="col-md-4">
-                        <label for="level" class="form-label">Question Level</label>
+                        <label for="level" class="form-label"><?= Localization::translate('question_level'); ?></label>
                         <select id="level" name="level" class="form-select">
                             <?php foreach (['Low', 'Medium', 'Hard'] as $level): ?>
                                 <option value="<?= $level ?>" <?= $isEdit && $question['level'] == $level ? 'selected' : '' ?>>
-                                    <?= $level ?>
+                                    <?= Localization::translate(strtolower($level)) ?>
                                 </option>
                             <?php endforeach; ?>
                         </select>
                     </div>
 
                     <div class="col-md-4">
-                        <label for="marks" class="form-label">Marks Per Question</label>
+                        <label for="marks"
+                            class="form-label"><?= Localization::translate('marks_per_question'); ?></label>
                         <select id="marks" name="marks" class="form-select">
                             <?php for ($i = 1; $i <= 10; $i++): ?>
                                 <option value="<?= $i ?>" <?= $isEdit && $question['marks'] == $i ? 'selected' : (!$isEdit && $i == 1 ? 'selected' : '') ?>><?= $i ?></option>
@@ -68,37 +80,41 @@ $isEdit = isset($question);
 
                 <div class="row mb-3">
                     <div class="col-md-4">
-                        <label class="form-label d-block">Status</label>
+                        <label class="form-label d-block"><?= Localization::translate('status'); ?></label>
                         <?php $status = $isEdit ? $question['status'] : 'Active'; ?>
                         <div class="form-check form-check-inline">
                             <input class="form-check-input" type="radio" name="status" id="active" value="Active"
                                 <?= $status == 'Active' ? 'checked' : '' ?>>
-                            <label class="form-check-label" for="active">Active</label>
+                            <label class="form-check-label"
+                                for="active"><?= Localization::translate('active'); ?></label>
                         </div>
                         <div class="form-check form-check-inline">
                             <input class="form-check-input" type="radio" name="status" id="inactive" value="Inactive"
                                 <?= $status == 'Inactive' ? 'checked' : '' ?>>
-                            <label class="form-check-label" for="inactive">Inactive</label>
+                            <label class="form-check-label"
+                                for="inactive"><?= Localization::translate('inactive'); ?></label>
                         </div>
                     </div>
 
                     <div class="col-md-4">
-                        <label class="form-label d-block">Question Type</label>
+                        <label class="form-label d-block"><?= Localization::translate('question_type'); ?></label>
                         <?php $type = $isEdit ? $question['question_type'] : 'Objective'; ?>
                         <div class="form-check form-check-inline">
                             <input class="form-check-input" type="radio" name="questionFormType" id="objective"
                                 value="Objective" <?= $type == 'Objective' ? 'checked' : '' ?>>
-                            <label class="form-check-label" for="objective">Objective</label>
+                            <label class="form-check-label"
+                                for="objective"><?= Localization::translate('objective'); ?></label>
                         </div>
                         <div class="form-check form-check-inline">
                             <input class="form-check-input" type="radio" name="questionFormType" id="subjective"
                                 value="Subjective" <?= $type == 'Subjective' ? 'checked' : '' ?>>
-                            <label class="form-check-label" for="subjective">Subjective</label>
+                            <label class="form-check-label"
+                                for="subjective"><?= Localization::translate('subjective'); ?></label>
                         </div>
                     </div>
-
                     <div class="col-md-4 objective-only">
-                        <label for="answerCount" class="form-label">How Many Answer Options</label>
+                        <label for="answerCount"
+                            class="form-label"><?= Localization::translate('how_many_answer_options'); ?></label>
                         <select id="answerCount" name="answerCount" class="form-select">
                             <?php for ($i = 1; $i <= 10; $i++): ?>
                                 <option value="<?= $i ?>" <?= $isEdit && count($options) == $i ? 'selected' : '' ?>><?= $i ?>
@@ -110,12 +126,13 @@ $isEdit = isset($question);
 
                 <div class="row mb-3 objective-only">
                     <div class="col-md-6">
-                        <label for="questionMediaType" class="form-label">Question Media Type</label>
+                        <label for="questionMediaType"
+                            class="form-label"><?= Localization::translate('question_media_type'); ?></label>
                         <?php $mediaType = $isEdit ? $question['media_type'] : 'text'; ?>
                         <select id="questionMediaType" name="questionMediaType" class="form-select">
                             <?php foreach (['text', 'image', 'audio', 'video'] as $type): ?>
                                 <option value="<?= $type ?>" <?= $mediaType == $type ? 'selected' : '' ?>>
-                                    <?= ucfirst($type) ?>
+                                    <?= Localization::translate($type); ?>
                                 </option>
                             <?php endforeach; ?>
                         </select>
@@ -126,12 +143,12 @@ $isEdit = isset($question);
                     ?>
 
                     <div class="col-md-6 <?= $mediaType == 'text' ? 'd-none' : '' ?>" id="mediaUploadContainer">
-                        <label for="mediaFile" class="form-label">Upload Media <span
+                        <label for="mediaFile" class="form-label"><?= Localization::translate('upload_media'); ?> <span
                                 class="text-danger">*</span></label>
                         <input type="file" id="mediaFile" name="mediaFile" class="form-control">
                         <div id="mediaPreview" class="mt-2">
                             <?php if ($isEdit && !empty($question['media_file'])): ?>
-                                <?php $mediaPath = '' . $question['media_file']; ?> <!-- Updated path -->
+                                <?php $mediaPath = '' . $question['media_file']; ?>
                                 <?php if ($mediaType == 'image'): ?>
                                     <img src="<?= $mediaPath ?>" class="img-thumbnail" width="200">
                                 <?php elseif ($mediaType == 'audio'): ?>
@@ -152,8 +169,8 @@ $isEdit = isset($question);
                         $isCorrect = $isVisible && $options[$i - 1]['is_correct'];
                         ?>
                         <div class="col-md-12 option-block <?= $isVisible ? '' : 'd-none' ?>" data-index="<?= $i ?>">
-                            <label for="option_<?= $i ?>" class="form-label">Option <?= $i ?> <span
-                                    class="text-danger">*</span></label>
+                            <label for="option_<?= $i ?>" class="form-label"><?= Localization::translate('option'); ?>
+                                <?= $i ?> <span class="text-danger">*</span></label>
                             <textarea id="option_<?= $i ?>" name="options[<?= $i ?>][text]" rows="2" maxlength="500"
                                 class="form-control option-textarea"><?= $optionText ?></textarea>
                             <small class="text-muted"><span
@@ -162,7 +179,8 @@ $isEdit = isset($question);
                             <div class="form-check mt-2">
                                 <input class="form-check-input" type="checkbox" name="options[<?= $i ?>][correct]"
                                     id="correct_<?= $i ?>" <?= $isCorrect ? 'checked' : '' ?>>
-                                <label class="form-check-label" for="correct_<?= $i ?>">Correct Answer</label>
+                                <label class="form-check-label"
+                                    for="correct_<?= $i ?>"><?= Localization::translate('correct_answer'); ?></label>
                             </div>
                         </div>
                     <?php endfor; ?>

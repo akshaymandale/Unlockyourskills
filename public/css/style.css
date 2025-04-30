@@ -940,3 +940,28 @@ html, body {
     color: red;
     font-size: 0.875em;
 }
+/* Back arrow button code */
+/* Container for back arrow and page title */
+.back-arrow-container {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 20px;
+}
+
+/* Back link with arrow icon */
+.back-link {
+    text-decoration: none;
+    font-size: 20px;
+    color: #6a0dad; /* Theme Purple */
+}
+
+.back-link:hover {
+    color: #4b0082; /* Accent color */
+}
+
+/* Vertical divider between icon and title */
+.divider-line {
+    border-left: 1px solid #ccc;
+    height: 24px;
+}
