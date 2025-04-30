@@ -36,7 +36,9 @@ document.addEventListener("DOMContentLoaded", function () {
         const label = getLabelText(input);
 
         if (value === "") {
-            showError(input, `${label} is required.`);
+            showError(input, translations["assessment.validation.required_field"]
+                ? translations["assessment.validation.required_field"].replace("{field}", label)
+                : `${label} is required.`);
             return false;
         } else {
             clearError(input);
@@ -62,7 +64,8 @@ document.addEventListener("DOMContentLoaded", function () {
             if (!error) {
                 error = document.createElement("div");
                 error.className = "text-danger mt-2 correct-answer-error";
-                error.textContent = "At least one option must be marked as the correct answer.";
+                error.textContent = translations["assessment.validation.correct_answer_required"] || 
+                    "At least one option must be marked as the correct answer.";
                 container.appendChild(error);
             }
             return false;
@@ -78,7 +81,7 @@ document.addEventListener("DOMContentLoaded", function () {
 
         const file = mediaFile.files[0];
         if (!file) {
-            showError(mediaFile, "Upload Media is required.");
+            showError(mediaFile, translations["assessment.validation.media_required"] || "Upload Media is required.");
             return false;
         }
 
@@ -94,12 +97,17 @@ document.addEventListener("DOMContentLoaded", function () {
 
         if (!isValidType) {
             const allowed = allowedTypes[selected].map(t => t.split('/')[1].toUpperCase()).join(', ');
-            showError(mediaFile, `Only ${allowed} files are allowed for ${selected}.`);
+            showError(mediaFile, translations["assessment.validation.invalid_media_type"]
+                ? translations["assessment.validation.invalid_media_type"]
+                    .replace("{type}", selected)
+                    .replace("{allowed}", allowed)
+                : `Only ${allowed} files are allowed for ${selected}.`);
             return false;
         }
 
         if (!isValidSize) {
-            showError(mediaFile, `File size must be less than or equal to 5MB.`);
+            showError(mediaFile, translations["assessment.validation.media_size_exceeded"] || 
+                "File size must be less than or equal to 5MB.");
             return false;
         }
 
@@ -116,7 +124,8 @@ document.addEventListener("DOMContentLoaded", function () {
             if (!existingError) {
                 existingError = document.createElement("div");
                 existingError.className = "text-danger mt-1 keyword-error";
-                existingError.textContent = "Tags/Keywords is required.";
+                existingError.textContent = translations["assessment.validation.tags_required"] || 
+                    "Tags/Keywords is required.";
                 container.appendChild(existingError);
             }
             return false;
