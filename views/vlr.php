@@ -389,21 +389,275 @@ $languageList = $vlrController->getLanguages();
                 <div id="non-scorm-items"></div>
             </div>
 
+
             <!-- ✅ Assessment -->
             <div class="tab-pane" id="assessment">
                 <div class="d-flex justify-content-between align-items-center">
                     <h3><?= Localization::translate('assessment'); ?></h3>
                     <div class="d-flex gap-2">
-                        <button class="btn btn-sm btn-primary" onclick="openAddModal('Assessment')">
+                        <!-- Add Assessment Button -->
+                        <button class="btn btn-sm btn-primary" id="addAssessmentBtn" data-bs-toggle="modal"
+                            data-bs-target="#assessment_assessmentModal">
                             + <?= Localization::translate('add_assessment'); ?>
                         </button>
+
+                        <!-- ✅ Assessment Modal -->
+                        <div class="modal fade" id="assessment_assessmentModal" tabindex="-1"
+                            aria-labelledby="assessment_assessmentModalLabel" aria-hidden="true">
+                            <div class="modal-dialog modal-lg"> <!-- WIDER modal -->
+                                <div class="modal-content">
+                                    <div class="modal-header">
+                                        <h5 class="modal-title" id="assessment_assessmentModalLabel">Add Assessment</h5>
+                                        <button type="button" class="btn-close" data-dismiss="modal"
+                                            aria-label="Close"></button>
+                                    </div>
+                                    <div class="modal-body">
+                                        <form id="assessment_assessmentForm">
+                                            <!-- Assessment Title -->
+                                            <div class="form-group mb-3">
+                                                <label for="assessment_assessmentTitle" class="form-label">Assessment
+                                                    Title</label>
+                                                <input type="text" class="form-control" id="assessment_assessmentTitle">
+                                            </div>
+
+                                            <div class="row">
+                                                <!-- Tags and Keywords -->
+                                                <div class="col-md-6">
+                                                    <div class="form-group mb-3">
+                                                        <label for="assessment_tags">
+                                                            <?= Localization::translate('tags_keywords'); ?>
+                                                            <span class="text-danger">*</span>
+                                                        </label>
+                                                        <div class="tag-input-container form-control">
+                                                            <span id="assessment_tagDisplay"></span>
+                                                            <input type="text" id="assessment_assessment_tagInput"
+                                                                placeholder="<?= Localization::translate('add_tag_placeholder'); ?>"
+                                                                class="form-control border-0">
+                                                        </div>
+                                                        <input type="hidden" id="assessment_tagList" name="tags">
+                                                    </div>
+                                                </div>
+
+                                                <!-- Number of Attempts -->
+                                                <div class="col-md-6">
+                                                    <div class="form-group mb-3">
+                                                        <label for="assessment_numAttempts" class="form-label">Number of
+                                                            Attempts</label>
+                                                        <select class="form-control" id="assessment_numAttempts">
+                                                            <?php for ($i = 1; $i <= 100; $i++): ?>
+                                                                <option value="<?= $i ?>"><?= $i ?></option>
+                                                            <?php endfor; ?>
+                                                        </select>
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            <div class="row">
+                                                <!-- Passing Percentage -->
+                                                <div class="col-md-6">
+                                                    <div class="form-group mb-3">
+                                                        <label for="assessment_passingPercentage"
+                                                            class="form-label">Passing Percentage (%)</label>
+                                                        <input type="text" class="form-control"
+                                                            id="assessment_passingPercentage">
+                                                    </div>
+                                                </div>
+
+                                                <!-- Time Limit -->
+                                                <div class="col-md-6">
+                                                    <div class="form-group mb-3">
+                                                        <label for="assessment_timeLimit" class="form-label">Time Limit
+                                                            (in minutes)</label>
+                                                        <input type="text" class="form-control"
+                                                            id="assessment_timeLimit">
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            <div class="row">
+                                                <!-- Negative Marking -->
+                                                <div class="col-md-6">
+                                                    <div class="form-group mb-3">
+                                                        <label class="form-label">Negative Marking</label><br>
+                                                        <div>
+                                                            <input type="radio" id="assessment_negativeMarkingNo"
+                                                                name="assessment_negativeMarking" value="No" checked> No
+                                                            <input type="radio" id="assessment_negativeMarkingYes"
+                                                                name="assessment_negativeMarking" value="Yes"> Yes
+                                                        </div>
+                                                    </div>
+                                                </div>
+
+                                                <!-- Negative Marking Percentage (Conditional) -->
+                                                <div class="col-md-6" id="assessment_negativeMarkingPercentageWrapper"
+                                                    style="display: none;">
+                                                    <div class="form-group mb-3">
+                                                        <label for="assessment_negativeMarkingPercentage"
+                                                            class="form-label">Negative Marking Percentage</label>
+                                                        <select class="form-control"
+                                                            id="assessment_negativeMarkingPercentage">
+                                                            <option value="">Select Negative Marking Percentage</option>
+                                                            <option value="25">25%</option>
+                                                            <option value="50">50%</option>
+                                                            <option value="75">75%</option>
+                                                            <option value="100">100%</option>
+                                                        </select>
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            <div class="row">
+                                                <!-- Assessment Type -->
+                                                <div class="col-md-6">
+                                                    <div class="form-group mb-3">
+                                                        <label class="form-label">Assessment Type</label><br>
+                                                        <div>
+                                                            <input type="radio" id="assessment_assessmentTypeFixed"
+                                                                name="assessment_assessmentType" value="Fixed" checked>
+                                                            Fixed
+                                                            <input type="radio" id="assessment_assessmentTypeDynamic"
+                                                                name="assessment_assessmentType" value="Dynamic">
+                                                            Dynamic
+                                                        </div>
+                                                    </div>
+                                                </div>
+
+                                                <!-- Number of Questions to Display (Conditional) -->
+                                                <div class="col-md-6" id="assessment_numberOfQuestionsWrapper"
+                                                    style="display: none;">
+                                                    <div class="form-group mb-3">
+                                                        <label for="assessment_numberOfQuestions"
+                                                            class="form-label">Number of Questions to Display</label>
+                                                        <input type="text" class="form-control"
+                                                            id="assessment_numberOfQuestions">
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            <!-- Add Question Button -->
+                                            <div class="form-group mb-3">
+                                                <button type="button" class="btn btn-primary"
+                                                    id="assessment_addQuestionBtn">Add Question</button>
+                                            </div>
+
+                                            <!-- Submit and Cancel Buttons -->
+                                            <div class="form-group mb-3">
+                                                <button type="submit" class="btn btn-success">Submit</button>
+                                                <button type="button" class="btn btn-secondary"
+                                                    data-bs-dismiss="modal">Cancel</button>
+                                            </div>
+                                        </form>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+
+                        <!-- Add this modal below your existing assessment modal -->
+                        <!-- Question Selection Modal -->
+                        <div class="modal fade" id="assessment_questionModal" tabindex="-1"
+                            aria-labelledby="assessment_questionModalLabel" aria-hidden="true">
+                            <div class="modal-dialog modal-xl modal-dialog-scrollable">
+                                <div class="modal-content">
+                                    <div class="modal-header">
+                                        <h5 class="modal-title" id="assessment_questionModalLabel">Select Questions</h5>
+                                        <button type="button" class="btn-close" data-dismiss="modal"
+                                            aria-label="Close"></button>
+                                    </div>
+
+                                    <div class="modal-body">
+                                        <!-- Filter Row -->
+                                        <div class="row mb-3">
+                                            <div class="col-md-3">
+                                                <input type="text" id="assessment_questionSearch" class="form-control"
+                                                    placeholder="Search questions...">
+                                            </div>
+                                            <div class="col-md-2">
+                                                <select id="assessment_filterMarks" class="form-select">
+                                                    <option value="">All Marks</option>
+                                                    <option value="1">1 Mark</option>
+                                                    <option value="2">2 Marks</option>
+                                                    <option value="5">5 Marks</option>
+                                                </select>
+                                            </div>
+                                            <div class="col-md-2">
+                                                <select id="assessment_filterType" class="form-select">
+                                                    <option value="">All Types</option>
+                                                    <option value="MCQ">MCQ</option>
+                                                    <option value="TrueFalse">True/False</option>
+                                                    <option value="Subjective">Subjective</option>
+                                                </select>
+                                            </div>
+                                            <div class="col-md-2">
+                                                <select id="assessment_showEntries" class="form-select">
+                                                    <option value="10" selected>Show 10</option>
+                                                    <option value="25">Show 25</option>
+                                                    <option value="50">Show 50</option>
+                                                    <option value="75">Show 75</option>
+                                                    <option value="100">Show 100</option>
+                                                </select>
+                                            </div>
+                                            <div class="col-md-3 text-end">
+                                                <button class="btn btn-outline-secondary" id="assessment_refreshBtn">
+                                                    <i class="bi bi-arrow-clockwise"></i> Refresh
+                                                </button>
+                                            </div>
+                                        </div>
+
+                                        <!-- Question Table -->
+                                        <div class="table-responsive">
+                                            <table class="table table-bordered table-hover">
+                                                <thead class="table-light">
+                                                    <tr>
+                                                        <th><input type="checkbox" id="assessment_selectAllQuestions">
+                                                        </th>
+                                                        <th>Question Title</th>
+                                                        <th>Tags / Keywords</th>
+                                                        <th>Marks</th>
+                                                        <th>Type</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody id="assessment_questionTableBody">
+                                                    <!-- JavaScript inserts rows here -->
+                                                </tbody>
+                                            </table>
+                                        </div>
+
+                                        <!-- Pagination (Optional Placeholder) -->
+                                        <nav>
+                                            <ul class="pagination justify-content-center" id="assessment_pagination">
+                                                <!-- JS can optionally update this if server-side paging is added -->
+                                            </ul>
+                                        </nav>
+                                    </div>
+
+                                    <div class="modal-footer">
+                                        <button type="button" class="btn btn-secondary"
+                                            data-bs-dismiss="modal">Cancel</button>
+                                        <button type="button" class="btn btn-success"
+                                            id="assessment_loopQuestionsBtn">Loop Selected Questions</button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+
+
+
+
+
+
+
                         <a href="index.php?controller=QuestionController&action=index" class="btn btn-sm btn-primary">
                             + <?= Localization::translate('add_questions'); ?>
                         </a>
                     </div>
                 </div>
+
                 <div id="assessment-items"></div>
             </div>
+
+
 
             <!-- ✅ Audio -->
             <div class="tab-pane" id="audio">
@@ -1283,6 +1537,9 @@ $languageList = $vlrController->getLanguages();
 
 <script src="public/js/scorm_validation.js"></script>
 <script src="public/js/scorm_package.js"></script>
+<script src="public/js/assessment_validation.js"></script>
+<script src="public/js/assessment_package.js"></script>
+<script src="public/js/add_question_on_assessment.js"></script>
 <script src="public/js/document_validation.js"></script>
 <script src="public/js/document_package.js"></script>
 <script src="public/js/external_content_validation.js"></script>
