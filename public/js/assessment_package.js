@@ -1,8 +1,6 @@
 document.addEventListener("DOMContentLoaded", function () {
     const assessmentForm = document.getElementById("assessment_assessmentForm");
     const assessmentTitle = document.getElementById("assessment_assessmentTitle");
-
-    // Tag Elements
     const tagInput = document.getElementById("assessment_assessment_tagInput");
     const tagContainer = document.getElementById("assessment_tagDisplay");
     const hiddenTagList = document.getElementById("assessment_tagList");
@@ -21,17 +19,17 @@ document.addEventListener("DOMContentLoaded", function () {
     const assessmentModalLabel = document.getElementById("assessment_assessmentModalLabel");
     const assessmentModal = new bootstrap.Modal(document.getElementById('assessment_assessmentModal'));
 
-    let tags = []; // Store tags
+    let tags = [];
 
     // Function to Create and Display Tags
     function addTag(tagText) {
-        if (tagText.trim() === "" || tags.includes(tagText)) return; // Prevent empty/duplicate tags
+        if (tagText.trim() === "" || tags.includes(tagText)) return;
 
-        tags.push(tagText); // Add tag to array
+        tags.push(tagText);
 
         const tagElement = document.createElement("span");
-        tagElement.classList.add("tag"); // You can add your custom class here if needed
-        tagElement.innerHTML = `${tagText} <button type="button" class="remove-tag" data-tag="${tagText}">&times;</button>`;
+        tagElement.classList.add("tag", "badge", "bg-primary", "me-2");
+        tagElement.innerHTML = `${tagText} <button type="button" class="remove-tag btn-close btn-close-white btn-sm ms-1" data-tag="${tagText}"></button>`;
 
         tagContainer.appendChild(tagElement);
         updateHiddenInput();
@@ -39,10 +37,9 @@ document.addEventListener("DOMContentLoaded", function () {
 
     // Function to Remove a Tag
     function removeTag(tagText) {
-        tags = tags.filter(tag => tag !== tagText); // Remove only the clicked tag
+        tags = tags.filter(tag => tag !== tagText);
         updateHiddenInput();
 
-        // Remove tag from display
         document.querySelectorAll(".tag").forEach(tagEl => {
             if (tagEl.textContent.includes(tagText)) {
                 tagEl.remove();
@@ -50,21 +47,28 @@ document.addEventListener("DOMContentLoaded", function () {
         });
     }
 
-    // Function to Update Hidden Input with Tags
+    // Function to Update Hidden Input
     function updateHiddenInput() {
         hiddenTagList.value = tags.join(",");
     }
 
-    // Listen for Enter Key in the Input Field
+    // Input: Add tag on Enter
     tagInput.addEventListener("keypress", function (event) {
         if (event.key === "Enter") {
             event.preventDefault();
             addTag(tagInput.value.trim());
-            tagInput.value = ""; // Clear input after adding
+            tagInput.value = "";
         }
     });
 
-    // Listen for Clicks on Remove Buttons
+    // Input: Remove last tag on Backspace
+    tagInput.addEventListener("keydown", function (event) {
+        if (event.key === "Backspace" && tagInput.value === "" && tags.length > 0) {
+            removeTag(tags[tags.length - 1]);
+        }
+    });
+
+    // Click: Remove tag
     tagContainer.addEventListener("click", function (event) {
         if (event.target.classList.contains("remove-tag")) {
             const tagText = event.target.getAttribute("data-tag");
@@ -72,25 +76,27 @@ document.addEventListener("DOMContentLoaded", function () {
         }
     });
 
-    // Remove Last Tag when Pressing Backspace in an Empty Input
-    tagInput.addEventListener("keydown", function (event) {
-        if (event.key === "Backspace" && tagInput.value === "" && tags.length > 0) {
-            removeTag(tags[tags.length - 1]); // Remove last tag
-        }
-    });
-
-    // Toggle functions for other form elements
+    // Toggle functions
     function toggleNegativeMarkingOptions() {
         const isYes = [...negativeMarkingRadios].find(r => r.checked)?.value === "Yes";
         negativeMarkingPercentageWrapper.style.display = isYes ? "block" : "none";
+        
+        // Clear the Negative Marking Percentage if switching to "No"
+        if (!isYes) {
+            negativeMarkingPercentage.value = "";  // Clear input when switching to "No"
+        }
     }
 
     function toggleNumberOfQuestionsField() {
         const isDynamic = [...assessmentTypeRadios].find(r => r.checked)?.value === "Dynamic";
         numberOfQuestionsWrapper.style.display = isDynamic ? "block" : "none";
+        
+        // Clear the number of questions input if changing to/from Dynamic
+        if (!isDynamic) {
+            numberOfQuestions.value = "";  // Clear input when switching to Fixed
+        }
     }
 
-    // Event Listeners for Toggle Functions
     negativeMarkingRadios.forEach(r => r.addEventListener("change", toggleNegativeMarkingOptions));
     assessmentTypeRadios.forEach(r => r.addEventListener("change", toggleNumberOfQuestionsField));
 
@@ -111,22 +117,36 @@ document.addEventListener("DOMContentLoaded", function () {
         assessmentModal.show();
     });
 
-    // Form submission
-    assessmentForm.addEventListener("submit", function (e) {
-        const isValid = validateAssessmentForm({
-            assessmentTitle,
-            tags,
-            numAttempts,
-            passingPercentage,
-            timeLimit,
-            negativeMarkingRadios,
-            negativeMarkingPercentage,
-            assessmentTypeRadios,
-            numberOfQuestions
-        });
+    // Cancel button click event
+    document.querySelector('button[data-bs-dismiss="modal"]').addEventListener('click', function () {
+        // Reset the form fields
+        assessmentForm.reset();
+        
+        // Reset tags (as they are not part of the form)
+        tags = [];
+        tagContainer.innerHTML = "";
+        updateHiddenInput();
+        
+        // Reset the default selections for radio buttons
+        document.querySelector('input[name="assessment_negativeMarking"][value="No"]').checked = true;
+        document.querySelector('input[name="assessment_assessmentType"][value="Fixed"]').checked = true;
+        
+        // Reset other dynamic fields
+        toggleNegativeMarkingOptions();
+        toggleNumberOfQuestionsField();
+    });
 
+    // Form Submit 
+    assessmentForm.addEventListener("submit", function (e) {
+        e.preventDefault();
+    
+        const isValid = validateAssessmentForm();
         if (!isValid) {
-            e.preventDefault();
+            console.log("Form validation failed.");
+            return;
         }
+    
+        alert("Form submitted successfully!");
+        assessmentModal.hide();
     });
 });
