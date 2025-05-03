@@ -19,7 +19,7 @@ $isEdit = isset($question);
         </div>
 
         <form id="addQuestionForm" method="POST" enctype="multipart/form-data"
-            action="index.php?controller=QuestionController&action=<?= $isEdit ? 'edit&id=' . $question['id'] : 'store' ?>">
+            action="index.php?controller=QuestionController&action=<?= $isEdit ? 'edit&id=' . $question['id'] : 'add' ?>">
 
             <?php if (isset($isEdit) && $isEdit && isset($question['id'])): ?>
                 <input type="hidden" name="question_id" value="<?= htmlspecialchars($question['id']) ?>">
@@ -318,4 +318,38 @@ $isEdit = isset($question);
 
 
 <script src="public/js/add_question_validation.js"></script>
+<!-- ✅ SCORM Validation Translations -->
+<script>
+   const translations = <?= json_encode([
+    // Document modal labels
+    "document.modal.add" => Localization::translate("document.modal.add"),
+    "document.modal.edit" => Localization::translate("document.modal.edit"),
+
+    // Document validation messages
+    "validation.document_title_required" => Localization::translate("validation.document_title_required"),
+    "validation.document_category_required" => Localization::translate("validation.document_category_required"),
+    "validation.document_file_required" => Localization::translate("validation.document_file_required"),
+    "validation.invalid_file_format" => Localization::translate("validation.invalid_file_format"),
+    "validation.file_size_exceeded" => Localization::translate("validation.file_size_exceeded"),
+    "validation.version_required" => Localization::translate("validation.version_required"),
+    "validation.tags_required" => Localization::translate("validation.tags_required"),
+    "error.document_form_not_found" => Localization::translate("error.document_form_not_found"),
+
+    // Document categories
+    "document.category.word_excel_ppt" => Localization::translate("document.category.word_excel_ppt"),
+    "document.category.ebook_manual" => Localization::translate("document.category.ebook_manual"),
+    "document.category.research_paper" => Localization::translate("document.category.research_paper"),
+
+    // Assessment validation messages
+    "assessment.validation.required_field" => Localization::translate("assessment.validation.required_field"),
+    "assessment.validation.correct_answer_required" => Localization::translate("assessment.validation.correct_answer_required"),
+    "assessment.validation.media_required" => Localization::translate("assessment.validation.media_required"),
+    "assessment.validation.invalid_media_type" => Localization::translate("assessment.validation.invalid_media_type"),
+    "assessment.validation.media_size_exceeded" => Localization::translate("assessment.validation.media_size_exceeded"),
+    "assessment.validation.tags_required" => Localization::translate("assessment.validation.tags_required")
+]); ?>;
+
+</script>
+
+
 <?php include 'includes/footer.php'; ?>
