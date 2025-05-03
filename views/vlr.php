@@ -540,6 +540,28 @@ $languageList = $vlrController->getLanguages();
                                                     id="assessment_addQuestionBtn">Add Question</button>
                                             </div>
 
+                                            <!-- Selected Questions Grid -->
+                                            <div class="table-responsive mt-3" id="assessment_selectedQuestionsWrapper"
+                                                style="display: none;">
+                                                <table class="table table-bordered table-hover">
+                                                    <thead class="table-light">
+                                                        <tr>
+                                                            <th><input type="checkbox"
+                                                                    id="assessment_selectAllLoopedQuestions"></th>
+                                                            <th>Question Title</th>
+                                                            <th>Tags / Keywords</th>
+                                                            <th>Marks</th>
+                                                            <th>Type</th>
+                                                            <th>Action</th>
+                                                        </tr>
+                                                    </thead>
+                                                    <tbody id="assessment_selectedQuestionsBody">
+                                                        <!-- JS will populate this -->
+                                                    </tbody>
+                                                </table>
+                                            </div>
+
+
                                             <!-- Submit and Cancel Buttons -->
                                             <div class="form-group mb-3">
                                                 <button type="submit" class="btn btn-success">Submit</button>
@@ -574,20 +596,15 @@ $languageList = $vlrController->getLanguages();
                                             </div>
                                             <div class="col-md-2">
                                                 <select id="assessment_filterMarks" class="form-select">
-                                                    <option value="">All Marks</option>
-                                                    <option value="1">1 Mark</option>
-                                                    <option value="2">2 Marks</option>
-                                                    <option value="5">5 Marks</option>
+                                                    <option value="">Loading...</option>
                                                 </select>
                                             </div>
                                             <div class="col-md-2">
                                                 <select id="assessment_filterType" class="form-select">
-                                                    <option value="">All Types</option>
-                                                    <option value="MCQ">MCQ</option>
-                                                    <option value="TrueFalse">True/False</option>
-                                                    <option value="Subjective">Subjective</option>
+                                                    <option value="">Loading...</option>
                                                 </select>
                                             </div>
+
                                             <div class="col-md-2">
                                                 <select id="assessment_showEntries" class="form-select">
                                                     <option value="10" selected>Show 10</option>
@@ -597,7 +614,12 @@ $languageList = $vlrController->getLanguages();
                                                     <option value="100">Show 100</option>
                                                 </select>
                                             </div>
+
                                             <div class="col-md-3 text-end">
+                                                <button class="btn btn-outline-secondary me-2"
+                                                    id="assessment_clearFiltersBtn">
+                                                    <i class="bi bi-x-circle"></i> Clear Filters
+                                                </button>
                                                 <button class="btn btn-outline-secondary" id="assessment_refreshBtn">
                                                     <i class="bi bi-arrow-clockwise"></i> Refresh
                                                 </button>
