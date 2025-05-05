@@ -19,7 +19,7 @@ class VLRController {
     public function addOrEditScormPackage() {
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             // Validate session (ensure user is logged in)
-            if (!isset($_SESSION['username'])) {
+            if (!isset($_SESSION['id'])) {
                 echo "<script>alert('Unauthorized access. Please log in.'); window.location.href='index.php?controller=VLRController';</script>";
                 exit();
             }
@@ -54,7 +54,7 @@ class VLRController {
                 'time_limit' => $_POST['timeLimit'] ?? null,
                 'mobile_support' => $_POST['mobileSupport'],
                 'assessment' => $_POST['assessment'],
-                'created_by' => $_SESSION['username']  // Store logged-in user
+                'created_by' => $_SESSION['id']  // Store logged-in user
             ];
     
             if ($scormId) {
@@ -105,7 +105,7 @@ class VLRController {
             $timeLimit = isset($_POST['time_limit']) ? intval($_POST['time_limit']) : null;
             $description = trim($_POST['description']);
             $tags = trim($_POST['tags']);
-            $modifiedBy = $_SESSION['username']; // Session-based user
+            $modifiedBy = $_SESSION['id']; // Session-based user
     
             // Content type specific fields
             $videoUrl = !empty($_POST['video_url']) ? filter_var($_POST['video_url'], FILTER_VALIDATE_URL) : null;
@@ -360,7 +360,7 @@ class VLRController {
                 'research_authors' => $_POST['research_authors'] ?? '',
                 'research_publication_date' => !empty($_POST['research_publication_date']) ? $_POST['research_publication_date'] : NULL,
                 'research_references' => $_POST['research_references'] ?? '',
-                'created_by' => $_SESSION['username'],
+                'created_by' => $_SESSION['id'],
                 'word_excel_ppt_file' => $wordExcelPptFile,
                 'ebook_manual_file' => $ebookManualFile,
                 'research_file' => $researchFile

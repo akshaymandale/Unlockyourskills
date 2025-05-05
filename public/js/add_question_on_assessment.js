@@ -1,10 +1,12 @@
 document.addEventListener("DOMContentLoaded", function () {
     const addQuestionBtn = document.getElementById("assessment_addQuestionBtn");
     const questionModalEl = document.getElementById("assessment_questionModal");
+    const parentModalEl = document.getElementById("assessment_assessmentModal");
+
     let questionModal;
     try {
-        questionModal = new bootstrap.Modal(questionModalEl);
-    } catch (e) { }
+        questionModal = new bootstrap.Modal(questionModalEl, { backdrop: 'static' });
+    } catch (e) {}
 
     const questionTableBody = document.getElementById("assessment_questionTableBody");
     const loopSelectedBtn = document.getElementById("assessment_loopQuestionsBtn");
@@ -13,8 +15,8 @@ document.addEventListener("DOMContentLoaded", function () {
     const gridBody = document.getElementById("assessment_selectedQuestionsBody");
 
     let questionsData = [];
-    let persistentSelectedQuestions = new Set(); // Only persisted on loop
-    let temporarySelections = new Set(); // For checkbox state during modal open
+    let persistentSelectedQuestions = new Set(); // Persisted after loop
+    let temporarySelections = new Set(); // Reset always
     let currentPage = 1;
 
     function normalizeId(id) {
@@ -40,7 +42,6 @@ document.addEventListener("DOMContentLoaded", function () {
 
     function renderQuestionsTable() {
         questionTableBody.innerHTML = "";
-
         questionsData.forEach((q) => {
             const qid = normalizeId(q.id);
             const checked = temporarySelections.has(qid) ? "checked" : "";
@@ -125,18 +126,11 @@ document.addEventListener("DOMContentLoaded", function () {
             });
 
             selectedWrapper.style.display = "block";
-
-            // Persist only after looping
             persistentSelectedQuestions = new Set(temporarySelections);
 
-            // ✅ Add this line to update hidden input for validation
             document.getElementById("assessment_selectedQuestionCount").value = temporarySelections.size;
-            
-            if (questionModal && typeof questionModal.hide === "function") {
-                questionModal.hide();
-            } else if (window.jQuery) {
-                $('#assessment_questionModal').modal('hide');
-            }
+
+            questionModal.hide();
 
         } catch (error) {
             alert("Error looping questions.");
@@ -146,17 +140,7 @@ document.addEventListener("DOMContentLoaded", function () {
 
     addQuestionBtn.addEventListener("click", function () {
         temporarySelections = new Set(persistentSelectedQuestions);
-
-        try {
-            if (questionModal && typeof questionModal.show === "function") {
-                questionModal.show();
-            } else if (window.jQuery) {
-                $('#assessment_questionModal').modal('show');
-            }
-        } catch (e) {
-            console.error("Error showing modal:", e);
-        }
-
+        questionModal.show();
         loadFilterOptions();
         fetchQuestions();
     });
@@ -184,14 +168,34 @@ document.addEventListener("DOMContentLoaded", function () {
         fetchQuestions(1);
     });
 
-    document.getElementById("assessment_modalCloseBtn").addEventListener("click", () => {
-        // Do not persist temporary selections
+    // ✅ Reset temp selections and backdrops when question modal closes
+    questionModalEl.addEventListener("hidden.bs.modal", () => {
         temporarySelections = new Set(persistentSelectedQuestions);
 
-        if (questionModal && typeof questionModal.hide === "function") {
-            questionModal.hide();
-        } else if (window.jQuery) {
-            $('#assessment_questionModal').modal('hide');
+        const backdrops = document.querySelectorAll('.modal-backdrop');
+        if (backdrops.length > 1) {
+            backdrops[backdrops.length - 1].remove();
         }
+
+        if (parentModalEl) {
+            parentModalEl.classList.add("show");
+            parentModalEl.style.display = "block";
+            parentModalEl.removeAttribute("aria-hidden");
+            parentModalEl.setAttribute("aria-modal", "true");
+
+            setTimeout(() => {
+                const focusable = parentModalEl.querySelector("button, [tabindex]:not([tabindex='-1'])");
+                if (focusable) focusable.focus();
+            }, 200);
+        }
+    });
+
+    // ✅ Clear selections & grid when parent (assessment) modal closes
+    parentModalEl.addEventListener("hidden.bs.modal", () => {
+        temporarySelections.clear();
+        persistentSelectedQuestions.clear();
+        gridBody.innerHTML = "";                  // Clear the question grid
+        selectedWrapper.style.display = "none";   // Hide the grid wrapper
+        document.getElementById("assessment_selectedQuestionCount").value = 0;
     });
 });
