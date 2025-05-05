@@ -1,7 +1,7 @@
 document.addEventListener("DOMContentLoaded", function () {
     const documentModal = new bootstrap.Modal(document.getElementById("documentModal"));
     const documentForm = document.getElementById("documentForm");
-
+    console.log('here4');
     if (!documentForm) {
         console.error(translations["error.document_form_not_found"] || "Document Form NOT found!");
         return;
@@ -19,9 +19,11 @@ document.addEventListener("DOMContentLoaded", function () {
 
     // Attach validation on form submission
     documentForm.addEventListener("submit", function (event) {
+        console.log('submit called22');
         event.preventDefault();
         let isValid = validateDocumentForm();
         if (isValid) {
+            console.log('submit called26');
             documentForm.submit();
         }
     });
@@ -48,16 +50,17 @@ document.addEventListener("DOMContentLoaded", function () {
     function validateDocumentForm() {
         let isValid = true;
         let selectedCategory = document.getElementById("documentCategory").value;
-
-        if (selectedCategory === "") {
+        
+       if (selectedCategory === "") {
             showError(document.getElementById("documentCategory"), "validation.document_category_required");
             isValid = false;
+            
         } else {
             hideError(document.getElementById("documentCategory"));
         }
 
         document.querySelectorAll("#documentForm input, #documentForm select, #documentForm textarea").forEach(field => {
-            if (!validateDocumentField(field)) {
+            if (!(field)) {
                 isValid = false;
             }
         });
@@ -73,7 +76,7 @@ document.addEventListener("DOMContentLoaded", function () {
         let selectedCategory = document.getElementById("documentCategory").value.trim();
 
         switch (fieldName) {
-            case "document_title":
+           case "document_title":
                 if (value === "") {
                     showError(field, "validation.document_title_required");
                     isValid = false;
@@ -82,7 +85,7 @@ document.addEventListener("DOMContentLoaded", function () {
                 }
                 break;
 
-            case "documentCategory":
+           case "documentCategory":
                 if (value === "") {
                     showError(field, "validation.document_category_required");
                     isValid = false;
@@ -130,7 +133,7 @@ document.addEventListener("DOMContentLoaded", function () {
                 }
                 break;
                 
-            case "doc_version":
+             case "doc_version":
                 if (value === "") {
                     showError(field, "validation.version_required");
                     isValid = false;
