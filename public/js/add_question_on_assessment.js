@@ -130,6 +130,9 @@ document.addEventListener("DOMContentLoaded", function () {
 
             document.getElementById("assessment_selectedQuestionCount").value = temporarySelections.size;
 
+            // ✅ Set the hidden input with selected question IDs
+            document.getElementById("assessment_selectedQuestionIds").value = Array.from(temporarySelections).join(',');
+
             questionModal.hide();
 
         } catch (error) {
@@ -168,7 +171,6 @@ document.addEventListener("DOMContentLoaded", function () {
         fetchQuestions(1);
     });
 
-    // ✅ Reset temp selections and backdrops when question modal closes
     questionModalEl.addEventListener("hidden.bs.modal", () => {
         temporarySelections = new Set(persistentSelectedQuestions);
 
@@ -190,12 +192,14 @@ document.addEventListener("DOMContentLoaded", function () {
         }
     });
 
-    // ✅ Clear selections & grid when parent (assessment) modal closes
     parentModalEl.addEventListener("hidden.bs.modal", () => {
         temporarySelections.clear();
         persistentSelectedQuestions.clear();
-        gridBody.innerHTML = "";                  // Clear the question grid
-        selectedWrapper.style.display = "none";   // Hide the grid wrapper
+        gridBody.innerHTML = "";
+        selectedWrapper.style.display = "none";
         document.getElementById("assessment_selectedQuestionCount").value = 0;
+
+        // ✅ Reset hidden input when modal is closed
+        document.getElementById("assessment_selectedQuestionIds").value = "";
     });
 });

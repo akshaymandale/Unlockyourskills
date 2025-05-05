@@ -105,7 +105,11 @@ document.addEventListener("DOMContentLoaded", function () {
                 break;
 
             case "assessment_numAttempts":
+                //do nothing
+                break;
             case "assessment_timeLimit":
+                //do nothing
+                break;
             case "assessment_numberOfQuestions":
                     if (value === "" || isNaN(value)) {
                         showError(field, "This field requires a numeric value.");

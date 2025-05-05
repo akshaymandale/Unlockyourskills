@@ -415,7 +415,7 @@ $languageList = $vlrController->getLanguages();
                                         <form id="assessment_assessmentForm"
                                             action="index.php?controller=AssessmentController&action=addOrEditAssessment"
                                             method="POST" enctype="multipart/form-data">
-
+                                            <input type="hidden" name="selected_question_ids" id="assessment_selectedQuestionIds">
                                             <!-- Assessment Title -->
                                             <div class="form-group mb-3">
                                                 <label for="assessment_assessmentTitle" class="form-label">Assessment
