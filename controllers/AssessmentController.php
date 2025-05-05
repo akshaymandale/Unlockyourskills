@@ -28,13 +28,23 @@ class AssessmentController {
         echo json_encode(['questions' => $questions, 'totalPages' => $totalPages]);
     }
 
-    public function getSelectedQuestions() {
-        $input = json_decode(file_get_contents("php://input"), true);
-        $ids = $input['ids'] ?? [];
-
-        $questions = $this->model->getQuestionsByIds($ids);
+    public function getSelectedQuestions()
+    {
+        header('Content-Type: application/json');
+    
+        $rawInput = file_get_contents("php://input");
+        $request = json_decode($rawInput, true);
+    
+        if (!isset($request['ids']) || !is_array($request['ids'])) {
+            echo json_encode(['error' => 'Invalid input']);
+            return;
+        }
+    
+        $questions = $this->model->getQuestionsByIds($request['ids']);
+    
         echo json_encode(['questions' => $questions]);
     }
+    
 
     public function getFilterOptions() {
         $marks = $this->model->getDistinctMarks();

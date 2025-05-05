@@ -90,7 +90,8 @@ $languageList = $vlrController->getLanguages();
                     <h3><?= Localization::translate('scorm'); ?></h3>
 
                     <!-- ✅ SCORM "Add" Button - Opens Modal -->
-                    <button class="btn btn-primary mb-3" data-toggle="modal" id="addScormBtn" data-target="#scormModal">
+                    <button class="btn btn-primary mb-3" data-bs-toggle="modal" id="addScormBtn"
+                        data-bs-target="#scormModal">
                         + <?= Localization::translate('add_scorm'); ?>
                     </button>
 
@@ -103,7 +104,7 @@ $languageList = $vlrController->getLanguages();
                                     <h5 class="modal-title" id="scormModalLabel">
                                         <?= Localization::translate('add_scorm_package'); ?>
                                     </h5>
-                                    <button type="button" class="close" data-dismiss="modal"
+                                    <button type="button" class="close" data-bs-dismiss="modal"
                                         aria-label="<?= Localization::translate('close'); ?>">
                                         <span aria-hidden="true">&times;</span>
                                     </button>
@@ -408,7 +409,7 @@ $languageList = $vlrController->getLanguages();
                                 <div class="modal-content">
                                     <div class="modal-header">
                                         <h5 class="modal-title" id="assessment_assessmentModalLabel">Add Assessment</h5>
-                                        <button type="button" class="btn-close" data-dismiss="modal"
+                                        <button type="button" class="btn-close" data-bs-dismiss="modal"
                                             aria-label="Close"></button>
                                     </div>
                                     <div class="modal-body">
@@ -530,6 +531,7 @@ $languageList = $vlrController->getLanguages();
                                                             class="form-label">Number of Questions to Display</label>
                                                         <input type="text" class="form-control"
                                                             id="assessment_numberOfQuestions">
+                                                            <input type="hidden" id="assessment_selectedQuestionCount" value="0">
                                                     </div>
                                                 </div>
                                             </div>
@@ -546,13 +548,10 @@ $languageList = $vlrController->getLanguages();
                                                 <table class="table table-bordered table-hover">
                                                     <thead class="table-light">
                                                         <tr>
-                                                            <th><input type="checkbox"
-                                                                    id="assessment_selectAllLoopedQuestions"></th>
                                                             <th>Question Title</th>
                                                             <th>Tags / Keywords</th>
                                                             <th>Marks</th>
                                                             <th>Type</th>
-                                                            <th>Action</th>
                                                         </tr>
                                                     </thead>
                                                     <tbody id="assessment_selectedQuestionsBody">
@@ -574,17 +573,17 @@ $languageList = $vlrController->getLanguages();
                             </div>
                         </div>
 
-
-                        <!-- Add this modal below your existing assessment modal -->
                         <!-- Question Selection Modal -->
+
                         <div class="modal fade" id="assessment_questionModal" tabindex="-1"
                             aria-labelledby="assessment_questionModalLabel" aria-hidden="true">
                             <div class="modal-dialog modal-xl modal-dialog-scrollable">
                                 <div class="modal-content">
                                     <div class="modal-header">
                                         <h5 class="modal-title" id="assessment_questionModalLabel">Select Questions</h5>
-                                        <button type="button" class="btn-close" data-dismiss="modal"
-                                            aria-label="Close"></button>
+                                        <button type="button" class="btn-close" aria-label="Close"
+                                            data-bs-dismiss="modal"></button>
+
                                     </div>
 
                                     <div class="modal-body">
@@ -654,20 +653,12 @@ $languageList = $vlrController->getLanguages();
                                     </div>
 
                                     <div class="modal-footer">
-                                        <button type="button" class="btn btn-secondary"
-                                            data-bs-dismiss="modal">Cancel</button>
                                         <button type="button" class="btn btn-success"
                                             id="assessment_loopQuestionsBtn">Loop Selected Questions</button>
                                     </div>
                                 </div>
                             </div>
                         </div>
-
-
-
-
-
-
 
 
                         <a href="index.php?controller=QuestionController&action=index" class="btn btn-sm btn-primary">
@@ -720,7 +711,7 @@ $languageList = $vlrController->getLanguages();
                                     <h5 class="modal-title" id="documentModalLabel">
                                         <?= Localization::translate('document.modal.add'); ?>
                                     </h5>
-                                    <button type="button" class="close" data-dismiss="modal"
+                                    <button type="button" class="close" data-bs-dismiss="modal"
                                         aria-label="<?= Localization::translate('close'); ?>">
                                         <span aria-hidden="true">&times;</span>
                                     </button>
@@ -1045,7 +1036,8 @@ $languageList = $vlrController->getLanguages();
                 <!-- External Content Header Section -->
                 <div class="d-flex justify-content-between align-items-center mb-3">
                     <h3><?= Localization::translate('external_content'); ?></h3>
-                    <button class="btn btn-sm btn-primary" data-toggle="modal" data-target="#externalContentModal">
+                    <button class="btn btn-sm btn-primary" data-bs-toggle="modal"
+                        data-bs-target="#externalContentModal">
                         + <?= Localization::translate('add_external_content'); ?>
                     </button>
 
@@ -1059,7 +1051,7 @@ $languageList = $vlrController->getLanguages();
                                     <h5 class="modal-title" id="externalModalLabel">
                                         <?= Localization::translate('add_external_content'); ?>
                                     </h5>
-                                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                                    <button type="button" class="close" data-bs-dismiss="modal" aria-label="Close">
                                         <span aria-hidden="true">&times;</span>
                                     </button>
                                 </div>
@@ -1295,7 +1287,7 @@ $languageList = $vlrController->getLanguages();
                                         <div class="modal-footer">
                                             <button type="submit" id="submit_button"
                                                 class="btn btn-primary"><?= Localization::translate('submit'); ?></button>
-                                            <button type="button" class="btn btn-danger" data-dismiss="modal"
+                                            <button type="button" class="btn btn-danger" data-bs-dismiss="modal"
                                                 id="clearForm"><?= Localization::translate('cancel'); ?></button>
                                         </div>
                                     </form>

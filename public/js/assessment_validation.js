@@ -107,13 +107,20 @@ document.addEventListener("DOMContentLoaded", function () {
             case "assessment_numAttempts":
             case "assessment_timeLimit":
             case "assessment_numberOfQuestions":
-                if (value === "" || isNaN(value)) {
-                    showError(field, "This field requires a numeric value.");
-                    isValid = false;
-                } else {
-                    hideError(field);
-                }
-                break;
+                    if (value === "" || isNaN(value)) {
+                        showError(field, "This field requires a numeric value.");
+                        isValid = false;
+                    } else {
+                        const selectedCount = parseInt(document.getElementById("assessment_selectedQuestionCount").value, 10) || 0;
+                        const requestedCount = parseInt(value, 10);
+                        if (requestedCount > selectedCount) {
+                            showError(field, `Cannot exceed ${selectedCount} selected question${selectedCount !== 1 ? 's' : ''}.`);
+                            isValid = false;
+                        } else {
+                            hideError(field);
+                        }
+                    }
+                    break;
 
             case "assessment_passingPercentage":
                 const num = parseFloat(value);
@@ -133,6 +140,8 @@ document.addEventListener("DOMContentLoaded", function () {
                     hideError(field);
                 }
                 break;
+
+            
         }
 
         return isValid;
