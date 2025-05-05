@@ -25,7 +25,7 @@ class QuestionController {
     public function add() {
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
-            if (!isset($_SESSION['username'])) {
+            if (!isset($_SESSION['id'])) {
                 echo "<script>alert('Unauthorized access. Please log in.'); window.location.href='index.php?controller=VLRController';</script>";
                 exit();
             }
@@ -42,7 +42,7 @@ class QuestionController {
             $questionType = $_POST['questionFormType'] ?? 'Objective';
             $answerCount = intval($_POST['answerCount'] ?? 0);
             $mediaType = $_POST['questionMediaType'] ?? 'text';
-            $createdBy = $_SESSION['username'] ?? 'Unknown';
+            $createdBy = $_SESSION['id'] ?? 'Unknown';
 
             // Validations
             if (empty($questionText)) $errors[] = "Question text is required.";
@@ -118,7 +118,7 @@ class QuestionController {
     }
 
     public function edit() {
-        if (!isset($_SESSION['username'])) {
+        if (!isset($_SESSION['id'])) {
             echo "<script>alert('Unauthorized access. Please log in.'); window.location.href='index.php?controller=VLRController';</script>";
             exit();
         }

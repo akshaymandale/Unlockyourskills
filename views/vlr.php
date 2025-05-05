@@ -409,16 +409,19 @@ $languageList = $vlrController->getLanguages();
                                 <div class="modal-content">
                                     <div class="modal-header">
                                         <h5 class="modal-title" id="assessment_assessmentModalLabel">Add Assessment</h5>
-                                        <button type="button" class="btn-close" data-bs-dismiss="modal"
-                                            aria-label="Close"></button>
+                                      <!--  <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button> -->
                                     </div>
                                     <div class="modal-body">
-                                        <form id="assessment_assessmentForm">
+                                        <form id="assessment_assessmentForm"
+                                            action="index.php?controller=AssessmentController&action=addOrEditAssessment"
+                                            method="POST" enctype="multipart/form-data">
+
                                             <!-- Assessment Title -->
                                             <div class="form-group mb-3">
                                                 <label for="assessment_assessmentTitle" class="form-label">Assessment
                                                     Title</label>
-                                                <input type="text" class="form-control" id="assessment_assessmentTitle">
+                                                <input type="text" class="form-control" id="assessment_assessmentTitle"
+                                                    name="title">
                                             </div>
 
                                             <div class="row">
@@ -444,7 +447,8 @@ $languageList = $vlrController->getLanguages();
                                                     <div class="form-group mb-3">
                                                         <label for="assessment_numAttempts" class="form-label">Number of
                                                             Attempts</label>
-                                                        <select class="form-control" id="assessment_numAttempts">
+                                                        <select class="form-control" id="assessment_numAttempts"
+                                                            name="num_attempts">
                                                             <?php for ($i = 1; $i <= 100; $i++): ?>
                                                                 <option value="<?= $i ?>"><?= $i ?></option>
                                                             <?php endfor; ?>
@@ -460,7 +464,7 @@ $languageList = $vlrController->getLanguages();
                                                         <label for="assessment_passingPercentage"
                                                             class="form-label">Passing Percentage (%)</label>
                                                         <input type="text" class="form-control"
-                                                            id="assessment_passingPercentage">
+                                                            id="assessment_passingPercentage" name="passing_percentage">
                                                     </div>
                                                 </div>
 
@@ -470,7 +474,7 @@ $languageList = $vlrController->getLanguages();
                                                         <label for="assessment_timeLimit" class="form-label">Time Limit
                                                             (in minutes)</label>
                                                         <input type="text" class="form-control"
-                                                            id="assessment_timeLimit">
+                                                            id="assessment_timeLimit" name="time_limit">
                                                     </div>
                                                 </div>
                                             </div>
@@ -489,14 +493,15 @@ $languageList = $vlrController->getLanguages();
                                                     </div>
                                                 </div>
 
-                                                <!-- Negative Marking Percentage (Conditional) -->
+                                                <!-- Negative Marking Percentage -->
                                                 <div class="col-md-6" id="assessment_negativeMarkingPercentageWrapper"
                                                     style="display: none;">
                                                     <div class="form-group mb-3">
                                                         <label for="assessment_negativeMarkingPercentage"
                                                             class="form-label">Negative Marking Percentage</label>
                                                         <select class="form-control"
-                                                            id="assessment_negativeMarkingPercentage">
+                                                            id="assessment_negativeMarkingPercentage"
+                                                            name="negative_marking_percentage">
                                                             <option value="">Select Negative Marking Percentage</option>
                                                             <option value="25">25%</option>
                                                             <option value="50">50%</option>
@@ -523,15 +528,17 @@ $languageList = $vlrController->getLanguages();
                                                     </div>
                                                 </div>
 
-                                                <!-- Number of Questions to Display (Conditional) -->
+                                                <!-- Number of Questions to Display -->
                                                 <div class="col-md-6" id="assessment_numberOfQuestionsWrapper"
                                                     style="display: none;">
                                                     <div class="form-group mb-3">
                                                         <label for="assessment_numberOfQuestions"
                                                             class="form-label">Number of Questions to Display</label>
                                                         <input type="text" class="form-control"
-                                                            id="assessment_numberOfQuestions">
-                                                            <input type="hidden" id="assessment_selectedQuestionCount" value="0">
+                                                            id="assessment_numberOfQuestions"
+                                                            name="num_questions_to_display">
+                                                        <input type="hidden" id="assessment_selectedQuestionCount"
+                                                            name="selected_question_count" value="0">
                                                     </div>
                                                 </div>
                                             </div>
@@ -560,13 +567,13 @@ $languageList = $vlrController->getLanguages();
                                                 </table>
                                             </div>
 
-
                                             <!-- Submit and Cancel Buttons -->
                                             <div class="form-group mb-3">
                                                 <button type="submit" class="btn btn-success">Submit</button>
-                                                <button type="button" class="btn btn-secondary"
-                                                    data-bs-dismiss="modal">Cancel</button>
+                                                <!-- <button type="button" class="btn btn-secondary"
+                                                    data-bs-dismiss="modal">Cancel</button>-->
                                             </div>
+
                                         </form>
                                     </div>
                                 </div>
