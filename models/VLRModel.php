@@ -367,5 +367,114 @@ public function updateDocument($data, $id) {
        // print_r($stmt);die;
     }
 
+// Assessment add and update 
+
+public function saveAssessmentWithQuestions($data)
+{
+    try {
+        $this->conn->beginTransaction();
+
+        // Insert into assessment_package
+        $sql = "INSERT INTO assessment_package (
+            title, tags, num_attempts, passing_percentage, time_limit,
+            negative_marking, negative_marking_percentage,
+            assessment_type, num_questions_to_display,
+            selected_question_count, created_by, created_at
+        ) VALUES (
+            :title, :tags, :num_attempts, :passing_percentage, :time_limit,
+            :negative_marking, :negative_marking_percentage,
+            :assessment_type, :num_questions_to_display,
+            :selected_question_count, :created_by, NOW()
+        )";
+
+        $stmt = $this->conn->prepare($sql);
+        $stmt->execute([
+            ':title' => $data['title'],
+            ':tags' => $data['tags'],
+            ':num_attempts' => $data['num_attempts'],
+            ':passing_percentage' => $data['passing_percentage'],
+            ':time_limit' => $data['time_limit'],
+            ':negative_marking' => $data['negative_marking'],
+            ':negative_marking_percentage' => $data['negative_marking_percentage'],
+            ':assessment_type' => $data['assessment_type'],
+            ':num_questions_to_display' => $data['num_questions_to_display'],
+            ':selected_question_count' => count($data['question_ids']),
+            ':created_by' => $data['created_by'],
+        ]);
+
+        $assessmentPackageId = $this->conn->lastInsertId();
+        if (!$assessmentPackageId) {
+            throw new Exception("Failed to retrieve last insert ID.");
+        }
+
+        // Insert into mapping table using correct column: assessment_package_id
+        $mapSql = "INSERT INTO assessment_question_mapping (
+            assessment_package_id, question_id, created_by, created_at
+        ) VALUES (
+            :assessment_package_id, :question_id, :created_by, NOW()
+        )";
+
+        $mapStmt = $this->conn->prepare($mapSql);
+        if (!is_array($data['question_ids'])) {
+            throw new Exception("question_ids is not an array.");
+        }
+
+        foreach ($data['question_ids'] as $qid) {
+            $success = $mapStmt->execute([
+                ':assessment_package_id' => $assessmentPackageId,
+                ':question_id' => $qid,
+                ':created_by' => $data['created_by']
+            ]);
+
+            if (!$success) {
+                $error = $mapStmt->errorInfo();
+                throw new Exception("Mapping insert failed for question_id $qid: " . $error[2]);
+            }
+        }
+
+        $this->conn->commit();
+        return true;
+
+    } catch (Exception $e) {
+        $this->conn->rollBack();
+        error_log("Assessment Save Error: " . $e->getMessage());
+        echo json_encode(['status' => 'error', 'message' => $e->getMessage()]);
+        exit;
+    }
+}
+
+
+    // Assessment get data for display 
+
+    public function getAllAssessments()
+    {
+        $stmt = $this->conn->prepare("SELECT id, title FROM assessment_package WHERE is_deleted = 0 ORDER BY created_at DESC");
+        $stmt->execute();
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
+    
+    public function deleteAssessment($id)
+    {
+        try {
+            $this->conn->beginTransaction();
+    
+            // Hard delete from mapping table
+            $stmt1 = $this->conn->prepare("DELETE FROM assessment_question_mapping WHERE assessment_package_id = ?");
+            $stmt1->execute([$id]);
+    
+            // Soft delete in assessment_package table
+            $stmt2 = $this->conn->prepare("UPDATE assessment_package SET is_deleted = 1 WHERE id = ?");
+            $stmt2->execute([$id]);
+    
+            $this->conn->commit();
+            return true;
+        } catch (Exception $e) {
+            $this->conn->rollBack();
+            error_log("Assessment Deletion Error: " . $e->getMessage());
+            return false;
+        }
+    }
+    
+
 }
 ?>

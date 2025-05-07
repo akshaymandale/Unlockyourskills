@@ -965,3 +965,81 @@ html, body {
     border-left: 1px solid #ccc;
     height: 24px;
 }
+
+/* ✅ Assessment Card Styling (Same as SCORM) */
+.assessment-card {
+    background: #fff;
+    border: 2px solid #6a0dad;
+    border-radius: 10px;
+    padding: 15px;
+    margin: 10px 0;
+    text-align: center;
+    box-shadow: 2px 2px 10px rgba(0, 0, 0, 0.1);
+    position: relative;
+    transition: transform 0.2s ease-in-out;
+}
+
+.assessment-card:hover {
+    transform: scale(1.05);
+}
+
+.assessment-icon {
+    font-size: 40px;
+    color: #6a0dad;
+    margin-bottom: 10px;
+}
+
+.assessment-title {
+    font-size: 16px;
+    font-weight: bold;
+    color: #333;
+    margin-bottom: 5px;
+}
+
+.assessment-actions {
+    position: absolute;
+    top: 10px;
+    right: 15px;
+}
+
+.assessment-actions .edit-icon {
+    color: #007bff;
+    margin-right: 10px;
+    cursor: pointer;
+}
+
+.assessment-actions .delete-icon {
+    color: #dc3545;
+    cursor: pointer;
+}
+
+.assessment-actions i {
+    font-size: 18px;
+    transition: color 0.2s;
+}
+
+.assessment-actions i:hover {
+    opacity: 0.7;
+}
+
+.assessment-actions a {
+    text-decoration: none;
+}
+
+.assessment-actions a:hover {
+    text-decoration: none;
+}
+
+.assessment-wrapper {
+    background: white;
+    padding: 20px;
+    border-radius: 5px;
+    box-shadow: 0px 4px 6px rgba(0, 0, 0, 0.1);
+    margin-top: 10px;
+}
+
+.assessment-wrapper-border{
+    padding: 20px;
+    background: white;
+    border: 1px solid #ddd;
+}

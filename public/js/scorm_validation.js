@@ -1,15 +1,15 @@
 document.addEventListener("DOMContentLoaded", function () {
-    console.log("SCORM Validation Script Loaded!");
+    //console.log("SCORM Validation Script Loaded!");
 
     // ✅ When SCORM Modal Opens, Attach Validation
     $('#scormModal').on('shown.bs.modal', function () {
-        console.log("SCORM Modal Opened!");
+       // console.log("SCORM Modal Opened!");
         attachScormValidation();
     });
 
     // ✅ When Modal Closes, Reset the Form
     $('#scormModal').on('hidden.bs.modal', function () {
-        console.log("SCORM Modal Closed. Resetting form...");
+       // console.log("SCORM Modal Closed. Resetting form...");
         resetScormForm();
     });
 
@@ -39,7 +39,7 @@ document.addEventListener("DOMContentLoaded", function () {
         event.preventDefault();
         let isValid = validateScormForm();
         if (isValid) {
-            console.log("SCORM Form is valid! Submitting...");
+            //console.log("SCORM Form is valid! Submitting...");
             this.submit();
         }
     }

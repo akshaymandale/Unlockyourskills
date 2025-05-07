@@ -1,25 +1,23 @@
 document.addEventListener("DOMContentLoaded", function () {
-    const assessmentForm = document.getElementById("assessment_assessmentForm");
-    const assessmentTitle = document.getElementById("assessment_assessmentTitle");
+    const scormModal = new bootstrap.Modal(document.getElementById("scormModal")); // Bootstrap Modal
+    const scormForm = document.getElementById("scormForm");
+    const scormTitle = document.getElementById("scorm_title");
+    const zipFile = document.getElementById("zipFile");
+    const version = document.getElementById("version");
+    const language = document.getElementById("language");
+    const scormCategory = document.getElementById("scormCategory");
+    const description = document.getElementById("description");
+    const timeLimit = document.getElementById("timeLimit");
+    const scormId = document.getElementById("scorm_id"); // Hidden input
+    const existingZip = document.getElementById("existing_zip");
+    const zipDisplay = document.getElementById("existingZipDisplay");
+    const mobileSupport = document.getElementsByName("mobileSupport");
+    const assessment = document.getElementsByName("assessment");
 
     // Tag Elements
-    const tagInput = document.getElementById("assessment_assessment_tagInput");
-    const tagContainer = document.getElementById("assessment_tagDisplay");
-    const hiddenTagList = document.getElementById("assessment_tagList");
-
-    const numAttempts = document.getElementById("assessment_numAttempts");
-    const passingPercentage = document.getElementById("assessment_passingPercentage");
-    const timeLimit = document.getElementById("assessment_timeLimit");
-    const negativeMarkingRadios = document.getElementsByName("assessment_negativeMarking");
-    const negativeMarkingPercentageWrapper = document.getElementById("assessment_negativeMarkingPercentageWrapper");
-    const negativeMarkingPercentage = document.getElementById("assessment_negativeMarkingPercentage");
-    const assessmentTypeRadios = document.getElementsByName("assessment_assessmentType");
-    const numberOfQuestionsWrapper = document.getElementById("assessment_numberOfQuestionsWrapper");
-    const numberOfQuestions = document.getElementById("assessment_numberOfQuestions");
-
-    const addAssessmentBtn = document.getElementById("addAssessmentBtn");
-    const assessmentModalLabel = document.getElementById("assessment_assessmentModalLabel");
-    const assessmentModal = new bootstrap.Modal(document.getElementById('assessment_assessmentModal'));
+    const tagInput = document.getElementById("tagInput");
+    const tagContainer = document.getElementById("tagDisplay");
+    const hiddenTagList = document.getElementById("tagList");
 
     let tags = []; // Store tags
 
@@ -30,7 +28,7 @@ document.addEventListener("DOMContentLoaded", function () {
         tags.push(tagText); // Add tag to array
 
         const tagElement = document.createElement("span");
-        tagElement.classList.add("tag"); // You can add your custom class here if needed
+        tagElement.classList.add("tag");
         tagElement.innerHTML = `${tagText} <button type="button" class="remove-tag" data-tag="${tagText}">&times;</button>`;
 
         tagContainer.appendChild(tagElement);
@@ -79,54 +77,78 @@ document.addEventListener("DOMContentLoaded", function () {
         }
     });
 
-    // Toggle functions for other form elements
-    function toggleNegativeMarkingOptions() {
-        const isYes = [...negativeMarkingRadios].find(r => r.checked)?.value === "Yes";
-        negativeMarkingPercentageWrapper.style.display = isYes ? "block" : "none";
-    }
+    // Open Modal for Editing SCORM
+    document.querySelectorAll(".edit-scorm").forEach(button => {
+        button.addEventListener("click", function () {
+            const scormData = JSON.parse(this.dataset.scorm); // Get data from button attribute
 
-    function toggleNumberOfQuestionsField() {
-        const isDynamic = [...assessmentTypeRadios].find(r => r.checked)?.value === "Dynamic";
-        numberOfQuestionsWrapper.style.display = isDynamic ? "block" : "none";
-    }
+            scormId.value = scormData.id; // Set ID for edit
+            scormTitle.value = scormData.title;
+            version.value = scormData.version;
+            language.value = scormData.language;
+            scormCategory.value = scormData.scorm_category;
+            description.value = scormData.description;
+            timeLimit.value = scormData.time_limit;
+            existingZip.value = scormData.zip_file;
 
-    // Event Listeners for Toggle Functions
-    negativeMarkingRadios.forEach(r => r.addEventListener("change", toggleNegativeMarkingOptions));
-    assessmentTypeRadios.forEach(r => r.addEventListener("change", toggleNumberOfQuestionsField));
+            // Display Existing ZIP File
+            if (scormData.zip_file) {
+                zipDisplay.innerHTML = `Current File: <a href="uploads/scorm/${scormData.zip_file}" target="_blank">${scormData.zip_file}</a>`;
+            } else {
+                zipDisplay.innerHTML = "No SCORM ZIP uploaded.";
+            }
 
-    // Reset modal and show
-    addAssessmentBtn.addEventListener("click", function () {
-        assessmentForm.reset();
-        tags = [];
-        tagContainer.innerHTML = "";
-        updateHiddenInput();
+            // Pre-select Mobile Support
+            mobileSupport.forEach(radio => {
+                if (radio.value === scormData.mobile_support) {
+                    radio.checked = true;
+                }
+            });
 
-        document.querySelector('input[name="assessment_negativeMarking"][value="No"]').checked = true;
-        document.querySelector('input[name="assessment_assessmentType"][value="Fixed"]').checked = true;
+            // Pre-select Assessment
+            assessment.forEach(radio => {
+                if (radio.value === scormData.assessment) {
+                    radio.checked = true;
+                }
+            });
 
-        toggleNegativeMarkingOptions();
-        toggleNumberOfQuestionsField();
+            // Pre-fill Tags
+            tagContainer.innerHTML = ""; // Clear existing tags
+            tags = []; // Reset tag array
+            if (scormData.tags) {
+                scormData.tags.split(",").forEach(tag => addTag(tag.trim()));
+            }
 
-        assessmentModalLabel.textContent = "Add Assessment";
-        assessmentModal.show();
-    });
-
-    // Form submission
-    assessmentForm.addEventListener("submit", function (e) {
-        const isValid = validateAssessmentForm({
-            assessmentTitle,
-            tags,
-            numAttempts,
-            passingPercentage,
-            timeLimit,
-            negativeMarkingRadios,
-            negativeMarkingPercentage,
-            assessmentTypeRadios,
-            numberOfQuestions
+            document.getElementById("scormModalLabel").textContent = "Edit SCORM Package"; // Change modal title
+            scormModal.show(); // Open modal
         });
-
-        if (!isValid) {
-            e.preventDefault();
-        }
     });
+
+    // Open Modal for Adding New SCORM
+    const addScormBtn = document.getElementById("addScormBtn");
+    if (addScormBtn) {
+        addScormBtn.addEventListener("click", function () {
+            // Reset Form Fields
+            scormForm.reset();
+            scormId.value = "";
+
+            // Clear Tags
+            tags = [];
+            tagContainer.innerHTML = "";
+            hiddenTagList.value = "";
+
+            // Clear Existing ZIP File Display
+            existingZip.value = "";
+            zipDisplay.innerHTML = "";
+
+            // 🚀 **Do NOT Reset Radio Buttons - Keep Default "No" Selected**
+            document.querySelector('input[name="mobileSupport"][value="No"]').checked = true;
+            document.querySelector('input[name="assessment"][value="No"]').checked = true;
+
+            // Set Modal Title to "Add SCORM Package"
+            document.getElementById("scormModalLabel").textContent = "Add SCORM Package";
+
+            scormModal.show();
+        });
+    }
 });

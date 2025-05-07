@@ -11,9 +11,20 @@ document.addEventListener("DOMContentLoaded", function () {
         attachAssessmentValidation();
     });
 
-    // Reset form on modal close
+    // Reset form on modal close, hide backdrop, and re-enable scrolling
     $('#assessment_assessmentModal').on('hidden.bs.modal', function () {
-        resetAssessmentForm();
+        resetAssessmentForm(); // Add this line
+        $(this).modal('hide');  // Explicitly hide the modal
+
+        // Ensure modal-open class is removed from body and restore scroll
+        $('body').removeClass('modal-open'); // Ensure the modal-open class is removed from body
+        document.body.style.overflow = 'auto'; // Ensure body scroll is enabled
+
+        // Remove any lingering backdrop
+        let backdrop = document.querySelector('.modal-backdrop');
+        if (backdrop) {
+            backdrop.remove();
+        }
     });
 
     function attachAssessmentValidation() {
@@ -27,7 +38,7 @@ document.addEventListener("DOMContentLoaded", function () {
             field.addEventListener("blur", assessmentFieldBlurHandler);
         });
 
-        // ✅ Observe tag list changes and re-validate
+        // Observe tag list changes and re-validate
         const tagDisplay = document.getElementById("assessment_tagDisplay");
         if (tagDisplay) {
             const observer = new MutationObserver(() => validateTagInput());
@@ -144,8 +155,6 @@ document.addEventListener("DOMContentLoaded", function () {
                     hideError(field);
                 }
                 break;
-
-            
         }
 
         return isValid;
@@ -181,10 +190,17 @@ document.addEventListener("DOMContentLoaded", function () {
         input.classList.remove("is-invalid");
     }
 
+    // Add the missing reset function for the assessment form
     function resetAssessmentForm() {
         assessmentForm.reset();
         document.querySelectorAll("#assessment_assessmentForm .error-message").forEach(el => el.textContent = "");
         document.querySelectorAll("#assessment_assessmentForm .is-invalid").forEach(el => el.classList.remove("is-invalid"));
         document.getElementById("assessment_tagList").value = "";
+
+        // Ensure the backdrop is removed correctly
+        let backdrop = document.querySelector('.modal-backdrop');
+        if (backdrop) {
+            backdrop.remove();
+        }
     }
 });
