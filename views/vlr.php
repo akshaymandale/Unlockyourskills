@@ -104,10 +104,11 @@ $languageList = $vlrController->getLanguages();
                                     <h5 class="modal-title" id="scormModalLabel">
                                         <?= Localization::translate('add_scorm_package'); ?>
                                     </h5>
-                                    <button type="button" class="close" data-bs-dismiss="modal"
-                                        aria-label="<?= Localization::translate('close'); ?>">
-                                        <span aria-hidden="true">&times;</span>
-                                    </button>
+
+                                    <button type="button" class="btn-close" data-bs-dismiss="modal"
+                                        aria-label="<?= Localization::translate('close'); ?>"></button>
+
+
                                 </div>
                                 <div class="modal-body">
                                     <form id="scormForm"
@@ -408,18 +409,24 @@ $languageList = $vlrController->getLanguages();
                             <div class="modal-dialog modal-lg"> <!-- WIDER modal -->
                                 <div class="modal-content">
                                     <div class="modal-header">
-                                        <h5 class="modal-title" id="assessment_assessmentModalLabel">Add Assessment</h5>
-                                      <!--  <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button> -->
+                                        <h5 class="modal-title" id="assessment_assessmentModalLabel">
+                                            <?= Localization::translate('assessment.modal.add_title'); ?>
+                                        </h5>
+                                        <button type="button" class="btn-close" data-bs-dismiss="modal"
+                                            aria-label="<?= Localization::translate('close'); ?>"></button>
                                     </div>
                                     <div class="modal-body">
                                         <form id="assessment_assessmentForm"
-                                            action="index.php?controller=AssessmentController&action=addOrEditAssessment"
+                                            action="index.php?controller=VLRController&action=addOrEditAssessment"
                                             method="POST" enctype="multipart/form-data">
-                                            <input type="hidden" name="selected_question_ids" id="assessment_selectedQuestionIds">
+                                            <input type="hidden" name="selected_question_ids"
+                                                id="assessment_selectedQuestionIds">
+
                                             <!-- Assessment Title -->
                                             <div class="form-group mb-3">
-                                                <label for="assessment_assessmentTitle" class="form-label">Assessment
-                                                    Title</label>
+                                                <label for="assessment_assessmentTitle" class="form-label">
+                                                    <?= Localization::translate('assessment.field.title'); ?>
+                                                </label>
                                                 <input type="text" class="form-control" id="assessment_assessmentTitle"
                                                     name="title">
                                             </div>
@@ -445,8 +452,9 @@ $languageList = $vlrController->getLanguages();
                                                 <!-- Number of Attempts -->
                                                 <div class="col-md-6">
                                                     <div class="form-group mb-3">
-                                                        <label for="assessment_numAttempts" class="form-label">Number of
-                                                            Attempts</label>
+                                                        <label for="assessment_numAttempts" class="form-label">
+                                                            <?= Localization::translate('assessment.field.num_attempts'); ?>
+                                                        </label>
                                                         <select class="form-control" id="assessment_numAttempts"
                                                             name="num_attempts">
                                                             <?php for ($i = 1; $i <= 100; $i++): ?>
@@ -461,8 +469,9 @@ $languageList = $vlrController->getLanguages();
                                                 <!-- Passing Percentage -->
                                                 <div class="col-md-6">
                                                     <div class="form-group mb-3">
-                                                        <label for="assessment_passingPercentage"
-                                                            class="form-label">Passing Percentage (%)</label>
+                                                        <label for="assessment_passingPercentage" class="form-label">
+                                                            <?= Localization::translate('assessment.field.passing_percentage'); ?>
+                                                        </label>
                                                         <input type="text" class="form-control"
                                                             id="assessment_passingPercentage" name="passing_percentage">
                                                     </div>
@@ -471,8 +480,9 @@ $languageList = $vlrController->getLanguages();
                                                 <!-- Time Limit -->
                                                 <div class="col-md-6">
                                                     <div class="form-group mb-3">
-                                                        <label for="assessment_timeLimit" class="form-label">Time Limit
-                                                            (in minutes)</label>
+                                                        <label for="assessment_timeLimit" class="form-label">
+                                                            <?= Localization::translate('assessment.field.time_limit'); ?>
+                                                        </label>
                                                         <input type="text" class="form-control"
                                                             id="assessment_timeLimit" name="time_limit">
                                                     </div>
@@ -483,12 +493,16 @@ $languageList = $vlrController->getLanguages();
                                                 <!-- Negative Marking -->
                                                 <div class="col-md-6">
                                                     <div class="form-group mb-3">
-                                                        <label class="form-label">Negative Marking</label><br>
+                                                        <label class="form-label">
+                                                            <?= Localization::translate('assessment.field.negative_marking'); ?>
+                                                        </label><br>
                                                         <div>
                                                             <input type="radio" id="assessment_negativeMarkingNo"
-                                                                name="assessment_negativeMarking" value="No" checked> No
+                                                                name="assessment_negativeMarking" value="No" checked>
+                                                            <?= Localization::translate('no'); ?>
                                                             <input type="radio" id="assessment_negativeMarkingYes"
-                                                                name="assessment_negativeMarking" value="Yes"> Yes
+                                                                name="assessment_negativeMarking" value="Yes">
+                                                            <?= Localization::translate('yes'); ?>
                                                         </div>
                                                     </div>
                                                 </div>
@@ -498,11 +512,15 @@ $languageList = $vlrController->getLanguages();
                                                     style="display: none;">
                                                     <div class="form-group mb-3">
                                                         <label for="assessment_negativeMarkingPercentage"
-                                                            class="form-label">Negative Marking Percentage</label>
+                                                            class="form-label">
+                                                            <?= Localization::translate('assessment.field.negative_percentage'); ?>
+                                                        </label>
                                                         <select class="form-control"
                                                             id="assessment_negativeMarkingPercentage"
                                                             name="negative_marking_percentage">
-                                                            <option value="">Select Negative Marking Percentage</option>
+                                                            <option value="">
+                                                                <?= Localization::translate('assessment.placeholder.select_negative_percentage'); ?>
+                                                            </option>
                                                             <option value="25">25%</option>
                                                             <option value="50">50%</option>
                                                             <option value="75">75%</option>
@@ -516,14 +534,16 @@ $languageList = $vlrController->getLanguages();
                                                 <!-- Assessment Type -->
                                                 <div class="col-md-6">
                                                     <div class="form-group mb-3">
-                                                        <label class="form-label">Assessment Type</label><br>
+                                                        <label class="form-label">
+                                                            <?= Localization::translate('assessment.field.type'); ?>
+                                                        </label><br>
                                                         <div>
                                                             <input type="radio" id="assessment_assessmentTypeFixed"
                                                                 name="assessment_assessmentType" value="Fixed" checked>
-                                                            Fixed
+                                                            <?= Localization::translate('assessment.type.fixed'); ?>
                                                             <input type="radio" id="assessment_assessmentTypeDynamic"
                                                                 name="assessment_assessmentType" value="Dynamic">
-                                                            Dynamic
+                                                            <?= Localization::translate('assessment.type.dynamic'); ?>
                                                         </div>
                                                     </div>
                                                 </div>
@@ -532,8 +552,9 @@ $languageList = $vlrController->getLanguages();
                                                 <div class="col-md-6" id="assessment_numberOfQuestionsWrapper"
                                                     style="display: none;">
                                                     <div class="form-group mb-3">
-                                                        <label for="assessment_numberOfQuestions"
-                                                            class="form-label">Number of Questions to Display</label>
+                                                        <label for="assessment_numberOfQuestions" class="form-label">
+                                                            <?= Localization::translate('assessment.field.num_questions_to_display'); ?>
+                                                        </label>
                                                         <input type="text" class="form-control"
                                                             id="assessment_numberOfQuestions"
                                                             name="num_questions_to_display">
@@ -546,7 +567,9 @@ $languageList = $vlrController->getLanguages();
                                             <!-- Add Question Button -->
                                             <div class="form-group mb-3">
                                                 <button type="button" class="btn btn-primary"
-                                                    id="assessment_addQuestionBtn">Add Question</button>
+                                                    id="assessment_addQuestionBtn">
+                                                    <?= Localization::translate('assessment.button.add_question'); ?>
+                                                </button>
                                             </div>
 
                                             <!-- Selected Questions Grid -->
@@ -555,10 +578,14 @@ $languageList = $vlrController->getLanguages();
                                                 <table class="table table-bordered table-hover">
                                                     <thead class="table-light">
                                                         <tr>
-                                                            <th>Question Title</th>
-                                                            <th>Tags / Keywords</th>
-                                                            <th>Marks</th>
-                                                            <th>Type</th>
+                                                            <th><?= Localization::translate('assessment.table.question_title'); ?>
+                                                            </th>
+                                                            <th><?= Localization::translate('assessment.table.tags'); ?>
+                                                            </th>
+                                                            <th><?= Localization::translate('assessment.table.marks'); ?>
+                                                            </th>
+                                                            <th><?= Localization::translate('assessment.table.type'); ?>
+                                                            </th>
                                                         </tr>
                                                     </thead>
                                                     <tbody id="assessment_selectedQuestionsBody">
@@ -569,9 +596,12 @@ $languageList = $vlrController->getLanguages();
 
                                             <!-- Submit and Cancel Buttons -->
                                             <div class="form-group mb-3">
-                                                <button type="submit" class="btn btn-success">Submit</button>
-                                                <!-- <button type="button" class="btn btn-secondary"
-                                                    data-bs-dismiss="modal">Cancel</button>-->
+                                                <button type="submit" class="btn btn-success">
+                                                    <?= Localization::translate('submit'); ?>
+                                                </button>
+                                                <!-- <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                            <?= Localization::translate('cancel'); ?>
+                        </button> -->
                                             </div>
 
                                         </form>
@@ -580,6 +610,7 @@ $languageList = $vlrController->getLanguages();
                             </div>
                         </div>
 
+
                         <!-- Question Selection Modal -->
 
                         <div class="modal fade" id="assessment_questionModal" tabindex="-1"
@@ -587,10 +618,12 @@ $languageList = $vlrController->getLanguages();
                             <div class="modal-dialog modal-xl modal-dialog-scrollable">
                                 <div class="modal-content">
                                     <div class="modal-header">
-                                        <h5 class="modal-title" id="assessment_questionModalLabel">Select Questions</h5>
-                                        <button type="button" class="btn-close" aria-label="Close"
+                                        <h5 class="modal-title" id="assessment_questionModalLabel">
+                                            <?= Localization::translate('select_questions'); ?>
+                                        </h5>
+                                        <button type="button" class="btn-close"
+                                            aria-label="<?= Localization::translate('close'); ?>"
                                             data-bs-dismiss="modal"></button>
-
                                     </div>
 
                                     <div class="modal-body">
@@ -598,36 +631,46 @@ $languageList = $vlrController->getLanguages();
                                         <div class="row mb-3">
                                             <div class="col-md-3">
                                                 <input type="text" id="assessment_questionSearch" class="form-control"
-                                                    placeholder="Search questions...">
+                                                    placeholder="<?= Localization::translate('search_questions'); ?>">
                                             </div>
                                             <div class="col-md-2">
                                                 <select id="assessment_filterMarks" class="form-select">
-                                                    <option value="">Loading...</option>
+                                                    <option value=""><?= Localization::translate('loading'); ?>...
+                                                    </option>
                                                 </select>
                                             </div>
                                             <div class="col-md-2">
                                                 <select id="assessment_filterType" class="form-select">
-                                                    <option value="">Loading...</option>
+                                                    <option value=""><?= Localization::translate('loading'); ?>...
+                                                    </option>
                                                 </select>
                                             </div>
 
                                             <div class="col-md-2">
                                                 <select id="assessment_showEntries" class="form-select">
-                                                    <option value="10" selected>Show 10</option>
-                                                    <option value="25">Show 25</option>
-                                                    <option value="50">Show 50</option>
-                                                    <option value="75">Show 75</option>
-                                                    <option value="100">Show 100</option>
+                                                    <option value="10" selected>
+                                                        <?= Localization::translate('show_10'); ?>
+                                                    </option>
+                                                    <option value="25"><?= Localization::translate('show_25'); ?>
+                                                    </option>
+                                                    <option value="50"><?= Localization::translate('show_50'); ?>
+                                                    </option>
+                                                    <option value="75"><?= Localization::translate('show_75'); ?>
+                                                    </option>
+                                                    <option value="100"><?= Localization::translate('show_100'); ?>
+                                                    </option>
                                                 </select>
                                             </div>
 
                                             <div class="col-md-3 text-end">
                                                 <button class="btn btn-outline-secondary me-2"
                                                     id="assessment_clearFiltersBtn">
-                                                    <i class="bi bi-x-circle"></i> Clear Filters
+                                                    <i class="bi bi-x-circle"></i>
+                                                    <?= Localization::translate('clear_filters'); ?>
                                                 </button>
                                                 <button class="btn btn-outline-secondary" id="assessment_refreshBtn">
-                                                    <i class="bi bi-arrow-clockwise"></i> Refresh
+                                                    <i class="bi bi-arrow-clockwise"></i>
+                                                    <?= Localization::translate('refresh'); ?>
                                                 </button>
                                             </div>
                                         </div>
@@ -639,10 +682,10 @@ $languageList = $vlrController->getLanguages();
                                                     <tr>
                                                         <th><input type="checkbox" id="assessment_selectAllQuestions">
                                                         </th>
-                                                        <th>Question Title</th>
-                                                        <th>Tags / Keywords</th>
-                                                        <th>Marks</th>
-                                                        <th>Type</th>
+                                                        <th><?= Localization::translate('question_title'); ?></th>
+                                                        <th><?= Localization::translate('tags_keywords'); ?></th>
+                                                        <th><?= Localization::translate('marks'); ?></th>
+                                                        <th><?= Localization::translate('type'); ?></th>
                                                     </tr>
                                                 </thead>
                                                 <tbody id="assessment_questionTableBody">
@@ -660,12 +703,14 @@ $languageList = $vlrController->getLanguages();
                                     </div>
 
                                     <div class="modal-footer">
-                                        <button type="button" class="btn btn-success"
-                                            id="assessment_loopQuestionsBtn">Loop Selected Questions</button>
+                                        <button type="button" class="btn btn-success" id="assessment_loopQuestionsBtn">
+                                            <?= Localization::translate('loop_selected_questions'); ?>
+                                        </button>
                                     </div>
                                 </div>
                             </div>
                         </div>
+
 
 
                         <a href="index.php?controller=QuestionController&action=index" class="btn btn-sm btn-primary">
@@ -674,7 +719,55 @@ $languageList = $vlrController->getLanguages();
                     </div>
                 </div>
 
-                <div id="assessment-items"></div>
+                <?php
+                // Validate if $assessmentPackages is set
+                if (!isset($assessmentPackages)) {
+                    $assessmentPackages = [];
+                }
+                ?>
+
+                <!-- ✅ Assessment Display -->
+                <div class="assessment-wrapper">
+                    <div class="assessment-wrapper-border">
+                        <div class="row">
+                            <?php if (!empty($assessmentPackages)): ?>
+                                <?php foreach ($assessmentPackages as $assessment): ?>
+                                    <div class="col-md-4">
+                                        <div class="assessment-card">
+                                            <div class="card-body">
+                                                <div class="assessment-icon">
+                                                    <i class="fas fa-file-alt"></i>
+                                                </div>
+                                                <h5 class="assessment-title"
+                                                    title="<?= htmlspecialchars($assessment['title']) ?>">
+                                                    <?= htmlspecialchars(strlen($assessment['title']) > 20 ? substr($assessment['title'], 0, 17) . '...' : $assessment['title']) ?>
+                                                </h5>
+                                                <div class="assessment-actions">
+                                                    <a href="#" class="edit-assessment"
+                                                        data-assessment='<?= json_encode($assessment); ?>'>
+                                                        <i class="fas fa-edit edit-icon"
+                                                            title="<?= Localization::translate('edit'); ?>"></i>
+                                                    </a>
+                                                    <a href="index.php?controller=VLRController&action=deleteAssessment&id=<?= $assessment['id'] ?>"
+                                                        onclick="return confirm('<?= Localization::translate('delete_confirmation'); ?>');">
+                                                        <i class="fas fa-trash-alt delete-icon"
+                                                            title="<?= Localization::translate('delete'); ?>"></i>
+                                                    </a>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                <?php endforeach; ?>
+                            <?php else: ?>
+                                <p><?= Localization::translate('no_assessment_found'); ?></p>
+                            <?php endif; ?>
+                        </div>
+                    </div>
+                </div>
+
+
+
+
             </div>
 
 
@@ -718,10 +811,9 @@ $languageList = $vlrController->getLanguages();
                                     <h5 class="modal-title" id="documentModalLabel">
                                         <?= Localization::translate('document.modal.add'); ?>
                                     </h5>
-                                    <button type="button" class="close" data-bs-dismiss="modal"
-                                        aria-label="<?= Localization::translate('close'); ?>">
-                                        <span aria-hidden="true">&times;</span>
-                                    </button>
+                                    <button type="button" class="btn-close" data-bs-dismiss="modal"
+                                        aria-label="Close"></button>
+
                                 </div>
                                 <div class="modal-body">
                                     <form id="documentForm" method="POST"

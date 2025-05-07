@@ -1,82 +1,96 @@
 document.addEventListener("DOMContentLoaded", function () {
-    const documentModal = new bootstrap.Modal(document.getElementById("documentModal"));
+    console.log("Document Validation Script Loaded!");
+
+    const documentModal = document.getElementById("documentModal");
     const documentForm = document.getElementById("documentForm");
-    console.log('here4');
-    if (!documentForm) {
-        console.error(translations["error.document_form_not_found"] || "Document Form NOT found!");
-        return;
-    }
+    const tagInput = document.getElementById("documentTagInput");
+    const hiddenTagList = document.getElementById("documentTagList");
 
-    // Open Modal for Adding New Document
-    document.getElementById("addDocumentBtn").addEventListener("click", function () {
-        documentForm.reset();
-        document.querySelectorAll(".error-message").forEach(el => el.textContent = "");
-        document.querySelectorAll(".is-invalid").forEach(el => el.classList.remove("is-invalid"));
-
-        document.getElementById("documentModalLabel").textContent = translations["document.modal.add"] || "Add Document";
-        documentModal.show();
+    // Show validation setup when modal is shown
+    $('#documentModal').on('shown.bs.modal', function () {
+        attachDocumentValidation();
     });
 
-    // Attach validation on form submission
-    documentForm.addEventListener("submit", function (event) {
-        console.log('submit called22');
-        event.preventDefault();
-        let isValid = validateDocumentForm();
-        if (isValid) {
-            console.log('submit called26');
-            documentForm.submit();
+    // Cleanup when modal is closed
+    $('#documentModal').on('hidden.bs.modal', function () {
+        resetDocumentForm();
+        $(this).modal('hide');
+
+        // Remove lingering modal-open class and restore scroll
+        $('body').removeClass('modal-open');
+        document.body.style.overflow = 'auto';
+
+        // Remove backdrop if exists
+        const backdrop = document.querySelector('.modal-backdrop');
+        if (backdrop) {
+            backdrop.remove();
         }
     });
 
-    // Attach blur validation to fields
-    document.querySelectorAll("#documentForm input, #documentForm select, #documentForm textarea").forEach(field => {
-        field.addEventListener("blur", function () {
-            validateDocumentField(this);
-        });
-    });
+    // Attach validation to form
+    function attachDocumentValidation() {
+        if (!documentForm) return;
 
-    // Clear previous selected category validation
-    document.getElementById("documentCategory").addEventListener("change", function () {
-        ["documentFileWordExcelPpt", "documentFileEbookManual", "documentFileResearch"].forEach(fileFieldId => {
-            let fileInput = document.getElementById(fileFieldId);
-            if (fileInput) {
-                fileInput.value = ""; 
-                hideError(fileInput); 
-            }
-        });
-    });
+        documentForm.removeEventListener("submit", documentFormSubmitHandler);
+        documentForm.addEventListener("submit", documentFormSubmitHandler);
 
-    // Validate Entire Form
+        document.querySelectorAll("#documentForm input, #documentForm select, #documentForm textarea").forEach(field => {
+            field.removeEventListener("blur", documentFieldBlurHandler);
+            field.addEventListener("blur", documentFieldBlurHandler);
+        });
+
+        if (tagInput) {
+            tagInput.removeEventListener("blur", validateTagInput);
+            tagInput.addEventListener("blur", validateTagInput);
+        }
+    }
+
+    function documentFormSubmitHandler(event) {
+        event.preventDefault();
+        if (validateDocumentForm()) {
+            console.log("Document form valid. Submitting...");
+            documentForm.submit();
+        }
+    }
+
+    function documentFieldBlurHandler(event) {
+        validateDocumentField(event.target);
+    }
+
     function validateDocumentForm() {
         let isValid = true;
-        let selectedCategory = document.getElementById("documentCategory").value;
-        
-       if (selectedCategory === "") {
+        const selectedCategory = document.getElementById("documentCategory").value.trim();
+
+        if (selectedCategory === "") {
             showError(document.getElementById("documentCategory"), "validation.document_category_required");
             isValid = false;
-            
         } else {
             hideError(document.getElementById("documentCategory"));
         }
 
         document.querySelectorAll("#documentForm input, #documentForm select, #documentForm textarea").forEach(field => {
-            if (!(field)) {
+            if (!validateDocumentField(field)) {
                 isValid = false;
             }
         });
 
+        if (!validateTagInput()) {
+            isValid = false;
+        }
+
         return isValid;
     }
 
-    // Validate Single Field
     function validateDocumentField(field) {
-        let isValid = true;
-        let value = field.value.trim();
-        let fieldName = field.getAttribute("id");
-        let selectedCategory = document.getElementById("documentCategory").value.trim();
+        if (!field) return true;
 
-        switch (fieldName) {
-           case "document_title":
+        const name = field.getAttribute("id");
+        const value = field.value.trim();
+        let isValid = true;
+        const selectedCategory = document.getElementById("documentCategory").value.trim();
+
+        switch (name) {
+            case "document_title":
                 if (value === "") {
                     showError(field, "validation.document_title_required");
                     isValid = false;
@@ -85,7 +99,7 @@ document.addEventListener("DOMContentLoaded", function () {
                 }
                 break;
 
-           case "documentCategory":
+            case "documentCategory":
                 if (value === "") {
                     showError(field, "validation.document_category_required");
                     isValid = false;
@@ -97,25 +111,21 @@ document.addEventListener("DOMContentLoaded", function () {
             case "documentFileWordExcelPpt":
             case "documentFileEbookManual":
             case "documentFileResearch":
-                const categoryField = document.getElementById("documentCategory");
-                const selectedCategory = categoryField ? categoryField.value.trim() : "";
-                
-                let isFileRequired = 
-                    (fieldName === "documentFileWordExcelPpt" && selectedCategory === translations["document.category.word_excel_ppt"] || "Word/Excel/PPT Files") ||
-                    (fieldName === "documentFileEbookManual" && selectedCategory === translations["document.category.ebook_manual"] || "E-Book & Manual") ||
-                    (fieldName === "documentFileResearch" && selectedCategory === translations["document.category.research_paper"] || "Research Paper & Case Studies");
-                
+                let isFileRequired =
+                    (name === "documentFileWordExcelPpt" && (selectedCategory === translations["document.category.word_excel_ppt"] || selectedCategory === "Word/Excel/PPT Files")) ||
+                    (name === "documentFileEbookManual" && (selectedCategory === translations["document.category.ebook_manual"] || selectedCategory === "E-Book & Manual")) ||
+                    (name === "documentFileResearch" && (selectedCategory === translations["document.category.research_paper"] || selectedCategory === "Research Paper & Case Studies"));
+
                 if (isFileRequired) {
                     if (field.files.length === 0) {
                         showError(field, "validation.document_file_required");
                         isValid = false;
                     } else {
                         const file = field.files[0];
-                        const maxSize = 10 * 1024 * 1024; // 10MB
-                        const allowedExtensions = ["pdf", "doc", "docx", "xls", "xlsx", "ppt", "pptx", "epub", "mobi"];
-                        
                         const fileName = file.name.toLowerCase();
                         const fileSize = file.size;
+                        const maxSize = 10 * 1024 * 1024;
+                        const allowedExtensions = ["pdf", "doc", "docx", "xls", "xlsx", "ppt", "pptx", "epub", "mobi"];
                         const fileExtension = fileName.split('.').pop();
 
                         if (!allowedExtensions.includes(fileExtension)) {
@@ -132,8 +142,8 @@ document.addEventListener("DOMContentLoaded", function () {
                     hideError(field);
                 }
                 break;
-                
-             case "doc_version":
+
+            case "doc_version":
                 if (value === "") {
                     showError(field, "validation.version_required");
                     isValid = false;
@@ -143,11 +153,8 @@ document.addEventListener("DOMContentLoaded", function () {
                 break;
 
             case "documentTagInput":
-                if (value === "" && document.getElementById("documentTagList").value === "") {
-                    showError(field, "validation.tags_required");
+                if (!validateTagInput()) {
                     isValid = false;
-                } else {
-                    hideError(field);
                 }
                 break;
         }
@@ -155,10 +162,19 @@ document.addEventListener("DOMContentLoaded", function () {
         return isValid;
     }
 
-    // Show Error Messages with Translations
-    function showError(input, key) {
-        let message = translations[key] || key;
+    function validateTagInput() {
+        const tags = hiddenTagList.value.split(",").filter(Boolean);
+        if (tags.length === 0) {
+            showError(tagInput, "validation.tags_required");
+            return false;
+        } else {
+            hideError(tagInput);
+            return true;
+        }
+    }
 
+    function showError(input, messageKey) {
+        const message = translations[messageKey] || messageKey;
         let errorElement = input.parentNode.querySelector(".error-message");
         if (!errorElement) {
             errorElement = document.createElement("span");
@@ -167,31 +183,25 @@ document.addEventListener("DOMContentLoaded", function () {
         }
         errorElement.textContent = message;
         errorElement.style.color = "red";
-        errorElement.style.marginLeft = "10px";
         errorElement.style.fontSize = "12px";
-
         input.classList.add("is-invalid");
     }
 
-    // Hide Error Messages
     function hideError(input) {
-        let errorElement = input.parentNode.querySelector(".error-message");
-        if (errorElement) {
-            errorElement.textContent = "";
-        }
+        const errorElement = input.parentNode.querySelector(".error-message");
+        if (errorElement) errorElement.textContent = "";
         input.classList.remove("is-invalid");
     }
 
-    // Reset Form on Modal Close or "Clear" Button Click
-    document.getElementById("documentModal").addEventListener("hidden.bs.modal", function () {
+    function resetDocumentForm() {
         documentForm.reset();
         document.querySelectorAll(".error-message").forEach(el => el.textContent = "");
         document.querySelectorAll(".is-invalid").forEach(el => el.classList.remove("is-invalid"));
-    });
+        hiddenTagList.value = "";
 
-    document.getElementById("clearForm").addEventListener("click", function () {
-        documentForm.reset();
-        document.querySelectorAll(".error-message").forEach(el => el.textContent = "");
-        document.querySelectorAll(".is-invalid").forEach(el => el.classList.remove("is-invalid"));
-    });
+        const backdrop = document.querySelector('.modal-backdrop');
+        if (backdrop) {
+            backdrop.remove();
+        }
+    }
 });
