@@ -436,12 +436,12 @@ class VLRController
             echo "Method Not Allowed";
             return;
         }
-
+    
         if (!isset($_SESSION['id'])) {
             echo "<script>alert('Unauthorized access. Please log in.'); window.location.href='index.php?controller=VLRController';</script>";
             exit();
         }
-
+    
         // Server-side validation
         $title = trim($_POST['title'] ?? '');
         $tags = trim($_POST['tags'] ?? '');
@@ -453,10 +453,11 @@ class VLRController
         $assessmentType = $_POST['assessment_assessmentType'] ?? 'Fixed';
         $numQuestionsToDisplay = $_POST['num_questions_to_display'] ?? null;
         $selectedQuestions = $_POST['selected_question_ids'] ?? ''; // Comma-separated string
-        $createdBy = $_SESSION['id'] ?? null;
-
+        $assessmentId = $_POST['assessmentId'] ?? null;
+        $createdBy = $_SESSION['id'];
+    
         $errors = [];
-
+    
         if (empty($title))
             $errors[] = "Assessment title is required.";
         if (empty($tags))
@@ -465,7 +466,6 @@ class VLRController
             $errors[] = "Number of attempts must be greater than 0.";
         if ($passingPercentage < 0 || $passingPercentage > 100)
             $errors[] = "Passing percentage must be between 0 and 100.";
-        //if ($timeLimit <= 0) $errors[] = "Time limit must be greater than 0.";
         if ($negativeMarking === 'Yes' && empty($negativeMarkingPercentage))
             $errors[] = "Negative marking percentage required.";
         if ($assessmentType === 'Dynamic') {
@@ -473,18 +473,16 @@ class VLRController
                 $errors[] = "Number of questions to display is required for dynamic assessments.";
             }
         }
-
         if (empty($selectedQuestions)) {
             $errors[] = "At least one question must be selected.";
         }
-
+    
         if (!empty($errors)) {
-            // TODO: send errors to the view if needed
             echo json_encode(['status' => 'error', 'errors' => $errors]);
             return;
         }
-
-        // Proceed to save
+    
+        // Prepare data
         $questionIds = explode(',', $selectedQuestions);
         $data = [
             'title' => $title,
@@ -493,15 +491,20 @@ class VLRController
             'passing_percentage' => $passingPercentage,
             'time_limit' => $timeLimit,
             'negative_marking' => $negativeMarking === 'Yes' ? 1 : 0,
-            'negative_marking_percentage' => $negativeMarking === 'Yes' ? (int) $negativeMarkingPercentage : null,
+            'negative_marking_percentage' => $negativeMarking === 'Yes' ? (int)$negativeMarkingPercentage : null,
             'assessment_type' => $assessmentType,
-            'num_questions_to_display' => $assessmentType === 'Dynamic' ? (int) $numQuestionsToDisplay : null,
+            'num_questions_to_display' => $assessmentType === 'Dynamic' ? (int)$numQuestionsToDisplay : null,
             'created_by' => $createdBy,
             'question_ids' => $questionIds
         ];
-
-        $result = $this->VLRModel->saveAssessmentWithQuestions($data);
-
+    
+        // Insert or update logic
+        if (!empty($assessmentId)) {
+            $result = $this->VLRModel->updateAssessmentWithQuestions($data, $assessmentId);
+        } else {
+            $result = $this->VLRModel->saveAssessmentWithQuestions($data);
+        }
+    
         if ($result) {
             $message = "Assessment saved successfully!";
             echo "<script>alert('$message'); window.location.href='index.php?controller=VLRController';</script>";
@@ -510,6 +513,8 @@ class VLRController
             echo "<script>alert('$message'); window.location.href='index.php?controller=VLRController';</script>";
         }
     }
+    
+
 
     public function deleteAssessment()
 {

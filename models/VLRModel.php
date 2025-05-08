@@ -1,80 +1,86 @@
 <?php
 require_once 'config/Database.php';
 
-class VLRModel {
+class VLRModel
+{
     private $conn;
 
-    public function __construct() {
+    public function __construct()
+    {
         $database = new Database();
         $this->conn = $database->connect();
     }
 
     // ✅ Insert SCORM Package
-public function insertScormPackage($data) {
-    // Backend Validation: Ensure required fields are filled
-    if (empty($data['title']) || empty($data['zip_file']) || empty($data['version']) || empty($data['scorm_category']) || empty($data['mobile_support']) || empty($data['assessment'])) {
-        return false;
-    }
+    public function insertScormPackage($data)
+    {
+        // Backend Validation: Ensure required fields are filled
+        if (empty($data['title']) || empty($data['zip_file']) || empty($data['version']) || empty($data['scorm_category']) || empty($data['mobile_support']) || empty($data['assessment'])) {
+            return false;
+        }
 
-    $stmt = $this->conn->prepare("INSERT INTO scorm_packages 
+        $stmt = $this->conn->prepare("INSERT INTO scorm_packages 
         (title, zip_file, description, tags, version, language, scorm_category, time_limit, mobile_support, assessment, created_by, is_deleted, created_at) 
         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, NOW())");
 
-    return $stmt->execute([
-        $data['title'], 
-        $data['zip_file'], 
-        $data['description'], 
-        $data['tags'], 
-        $data['version'], 
-        $data['language'], 
-        $data['scorm_category'], 
-        $data['time_limit'], 
-        $data['mobile_support'], 
-        $data['assessment'], 
-        $data['created_by']
-    ]);
-}
-
-// ✅ Update SCORM Package
-public function updateScormPackage($id, $data) {
-    // Ensure SCORM ID exists
-    if (empty($id)) {
-        return false;
+        return $stmt->execute([
+            $data['title'],
+            $data['zip_file'],
+            $data['description'],
+            $data['tags'],
+            $data['version'],
+            $data['language'],
+            $data['scorm_category'],
+            $data['time_limit'],
+            $data['mobile_support'],
+            $data['assessment'],
+            $data['created_by']
+        ]);
     }
 
-    $stmt = $this->conn->prepare("UPDATE scorm_packages 
+    // ✅ Update SCORM Package
+    public function updateScormPackage($id, $data)
+    {
+        // Ensure SCORM ID exists
+        if (empty($id)) {
+            return false;
+        }
+
+        $stmt = $this->conn->prepare("UPDATE scorm_packages 
         SET title = ?, zip_file = ?, description = ?, tags = ?, version = ?, language = ?, scorm_category = ?, time_limit = ?, mobile_support = ?, assessment = ?, updated_at = NOW()
         WHERE id = ?");
 
-    return $stmt->execute([
-        $data['title'], 
-        $data['zip_file'], 
-        $data['description'], 
-        $data['tags'], 
-        $data['version'], 
-        $data['language'], 
-        $data['scorm_category'], 
-        $data['time_limit'], 
-        $data['mobile_support'], 
-        $data['assessment'], 
-        $id
-    ]);
-}
+        return $stmt->execute([
+            $data['title'],
+            $data['zip_file'],
+            $data['description'],
+            $data['tags'],
+            $data['version'],
+            $data['language'],
+            $data['scorm_category'],
+            $data['time_limit'],
+            $data['mobile_support'],
+            $data['assessment'],
+            $id
+        ]);
+    }
 
     // Get data for display on VLR 
-    public function getScormPackages() {
+    public function getScormPackages()
+    {
         $stmt = $this->conn->prepare("SELECT * FROM scorm_packages WHERE is_deleted = 0");
         $stmt->execute();
         $data = $stmt->fetchAll(PDO::FETCH_ASSOC);
-    
+
         // Debugging - Check if data is fetched
         error_log(print_r($data, true)); // Logs to XAMPP/PHP logs
-    
+
         return $data;
     }
 
     // Delete respective SCROM 
-    public function deleteScormPackage($id) {
+    public function deleteScormPackage($id)
+    {
         $stmt = $this->conn->prepare("UPDATE scorm_packages SET is_deleted = 1 WHERE id = ?");
         return $stmt->execute([$id]);
     }
@@ -85,9 +91,9 @@ public function updateScormPackage($id, $data) {
     {
         try {
             // Debugging: Print data before inserting
-        // echo "<pre>";
-        // print_r($data);
-        // echo "</pre>";
+            // echo "<pre>";
+            // print_r($data);
+            // echo "</pre>";
             // exit;
 
             // Ensure audio_file exists in data
@@ -107,25 +113,25 @@ public function updateScormPackage($id, $data) {
 
             // Bind parameters
             $stmt->execute([
-                ':title'           => $data['title'],
-                ':content_type'    => $data['content_type'],
-                ':version_number'  => $data['version_number'],
-                ':mobile_support'  => $data['mobile_support'],
-                ':language_support'=> $data['language_support'],
-                ':time_limit'      => $data['time_limit'],
-                ':description'     => $data['description'],
-                ':tags'            => $data['tags'],
-                ':video_url'       => $data['video_url'],
-                ':thumbnail'       => $data['thumbnail'],
-                ':course_url'      => $data['course_url'],
-                ':platform_name'   => $data['platform_name'],
-                ':article_url'     => $data['article_url'],
-                ':author'          => $data['author'],
-                ':audio_source'    => $data['audio_source'],
-                ':audio_url'       => $data['audio_url'],
-                ':audio_file'      => $audioFile, // Now ensuring this is always set
-                ':speaker'         => $data['speaker'],
-                ':created_by'      => $data['created_by']
+                ':title' => $data['title'],
+                ':content_type' => $data['content_type'],
+                ':version_number' => $data['version_number'],
+                ':mobile_support' => $data['mobile_support'],
+                ':language_support' => $data['language_support'],
+                ':time_limit' => $data['time_limit'],
+                ':description' => $data['description'],
+                ':tags' => $data['tags'],
+                ':video_url' => $data['video_url'],
+                ':thumbnail' => $data['thumbnail'],
+                ':course_url' => $data['course_url'],
+                ':platform_name' => $data['platform_name'],
+                ':article_url' => $data['article_url'],
+                ':author' => $data['author'],
+                ':audio_source' => $data['audio_source'],
+                ':audio_url' => $data['audio_url'],
+                ':audio_file' => $audioFile, // Now ensuring this is always set
+                ':speaker' => $data['speaker'],
+                ':created_by' => $data['created_by']
             ]);
 
             return true;
@@ -170,25 +176,25 @@ public function updateScormPackage($id, $data) {
 
             // Bind parameters
             $stmt->execute([
-                ':id'              => $id,
-                ':title'           => $data['title'],
-                ':content_type'    => $data['content_type'],
-                ':version_number'  => $data['version_number'],
-                ':mobile_support'  => $data['mobile_support'],
-                ':language_support'=> $data['language_support'],
-                ':time_limit'      => $data['time_limit'],
-                ':description'     => $data['description'],
-                ':tags'            => $data['tags'],
-                ':video_url'       => $data['video_url'],
-                ':thumbnail'       => $data['thumbnail'],
-                ':course_url'      => $data['course_url'],
-                ':platform_name'   => $data['platform_name'],
-                ':article_url'     => $data['article_url'],
-                ':author'          => $data['author'],
-                ':audio_source'    => $data['audio_source'],
-                ':audio_url'       => $data['audio_url'],
-                ':audio_file'      => $audioFile, // Ensuring it is always set
-                ':speaker'         => $data['speaker']
+                ':id' => $id,
+                ':title' => $data['title'],
+                ':content_type' => $data['content_type'],
+                ':version_number' => $data['version_number'],
+                ':mobile_support' => $data['mobile_support'],
+                ':language_support' => $data['language_support'],
+                ':time_limit' => $data['time_limit'],
+                ':description' => $data['description'],
+                ':tags' => $data['tags'],
+                ':video_url' => $data['video_url'],
+                ':thumbnail' => $data['thumbnail'],
+                ':course_url' => $data['course_url'],
+                ':platform_name' => $data['platform_name'],
+                ':article_url' => $data['article_url'],
+                ':author' => $data['author'],
+                ':audio_source' => $data['audio_source'],
+                ':audio_url' => $data['audio_url'],
+                ':audio_file' => $audioFile, // Ensuring it is always set
+                ':speaker' => $data['speaker']
             ]);
 
             return true;
@@ -199,7 +205,8 @@ public function updateScormPackage($id, $data) {
     }
 
     // Get data for External Content
-    public function getExternalContent() {
+    public function getExternalContent()
+    {
         $stmt = $this->conn->prepare("SELECT * FROM external_content WHERE is_deleted = 0");
         $stmt->execute();
         $data = $stmt->fetchAll(PDO::FETCH_ASSOC);
@@ -211,7 +218,8 @@ public function updateScormPackage($id, $data) {
     }
 
     // Delete respective External Content 
-    public function deleteExternalContent($id) {
+    public function deleteExternalContent($id)
+    {
         $stmt = $this->conn->prepare("UPDATE external_content SET is_deleted = 1 WHERE id = ?");
         return $stmt->execute([$id]);
     }
@@ -221,107 +229,112 @@ public function updateScormPackage($id, $data) {
     // Fetch all documents with language names
 
     // Get data for display on VLR 
-    public function getAllDocuments() {
+    public function getAllDocuments()
+    {
         $stmt = $this->conn->prepare("SELECT d.*, l.language_name FROM documents d 
                   LEFT JOIN languages l ON d.language_id = l.id 
                   WHERE d.is_deleted = 0");
         $stmt->execute();
         $data = $stmt->fetchAll(PDO::FETCH_ASSOC);
-    
+
         // Debugging - Check if data is fetched
         error_log(print_r($data, true)); // Logs to XAMPP/PHP logs
-    
+
         return $data;
     }
 
 
-      // Fetch a single document by ID
-      public function getDocumentById($id) {
+    // Fetch a single document by ID
+    public function getDocumentById($id)
+    {
         $query = "SELECT * FROM documents WHERE id = ? AND is_deleted = 0";
         return $this->conn->fetchOne($query, [$id]);
     }
 
     // Add document
-  // Server-side validation
-  private function validateDocument($data, $isUpdate = false) {
-    $errors = [];
+    // Server-side validation
+    private function validateDocument($data, $isUpdate = false)
+    {
+        $errors = [];
 
-    if (empty($data['document_title'])) {
-        $errors['document_title'] = "Title is required.";
-    }
-
-    if (empty($data['documentCategory'])) {
-        $errors['documentCategory'] = "Category is required.";
-    }
-
-    if (empty($data['documentTagList'])) {
-        $errors['documentTagList'] = "At least one tag is required.";
-    }
-
-    if (empty($data['doc_version'])) {
-        $errors['doc_version'] = "Version number is required.";
-    }
-
-    if (!$isUpdate) {
-        if ($data['documentCategory'] == "Word/Excel/PPT Files" && empty($data['word_excel_ppt_file'])) {
-            $errors['word_excel_ppt_file'] = "File upload is required.";
+        if (empty($data['document_title'])) {
+            $errors['document_title'] = "Title is required.";
         }
 
-        if ($data['documentCategory'] == "E-Book & Manual" && empty($data['ebook_manual_file'])) {
-            $errors['ebook_manual_file'] = "File upload is required.";
+        if (empty($data['documentCategory'])) {
+            $errors['documentCategory'] = "Category is required.";
         }
 
-        if ($data['documentCategory'] == "Research Paper & Case Studies" && empty($data['research_file'])) {
-            $errors['research_file'] = "File upload is required.";
+        if (empty($data['documentTagList'])) {
+            $errors['documentTagList'] = "At least one tag is required.";
         }
+
+        if (empty($data['doc_version'])) {
+            $errors['doc_version'] = "Version number is required.";
+        }
+
+        if (!$isUpdate) {
+            if ($data['documentCategory'] == "Word/Excel/PPT Files" && empty($data['word_excel_ppt_file'])) {
+                $errors['word_excel_ppt_file'] = "File upload is required.";
+            }
+
+            if ($data['documentCategory'] == "E-Book & Manual" && empty($data['ebook_manual_file'])) {
+                $errors['ebook_manual_file'] = "File upload is required.";
+            }
+
+            if ($data['documentCategory'] == "Research Paper & Case Studies" && empty($data['research_file'])) {
+                $errors['research_file'] = "File upload is required.";
+            }
+        }
+
+        return $errors;
     }
 
-    return $errors;
-}
+    // Insert document into database
+    public function insertDocument($data)
+    {
+        $errors = $this->validateDocument($data);
+        if (!empty($errors)) {
+            return ['success' => false, 'errors' => $errors];
+        }
 
-// Insert document into database
-public function insertDocument($data) {
-    $errors = $this->validateDocument($data);
-    if (!empty($errors)) {
-        return ['success' => false, 'errors' => $errors];
-    }
-
-    $query = "INSERT INTO documents (title, category, description, tags, language_id, mobile_support, version_number, time_limit, 
+        $query = "INSERT INTO documents (title, category, description, tags, language_id, mobile_support, version_number, time_limit, 
               authors, publication_date, reference_links, created_by, created_at, is_deleted, word_excel_ppt_file, ebook_manual_file, research_file)
               VALUES (:title, :category, :description, :tags, :language_id, :mobile_support, :version_number, :time_limit, 
               :authors, :publication_date, :reference_links, :created_by, NOW(), 0, :word_excel_ppt_file, :ebook_manual_file, :research_file)";
-              
-    $stmt = $this->conn->prepare($query);
 
-    $stmt->execute([
-        ':title' => $data['document_title'],
-        ':category' => $data['documentCategory'],
-        ':description' => $data['description'],
-        ':tags' => $data['documentTagList'],
-        ':language_id' => !empty($data['language']) ? (int) $data['language'] : null,
-        ':mobile_support' => $data['mobile_support'],
-        ':version_number' => $data['doc_version'],
-        ':time_limit' => $data['doc_time_limit'],
-        ':authors' => $data['research_authors'] ?? null,
-        ':publication_date' => $data['research_publication_date'] ?? null,
-        ':reference_links' => $data['research_references'] ?? null,
-        ':created_by' => $data['created_by'],
-        ':word_excel_ppt_file' => $data['word_excel_ppt_file'] ?? null,
-        ':ebook_manual_file' => $data['ebook_manual_file'] ?? null,
-        ':research_file' => $data['research_file'] ?? null
-    ]);
+        $stmt = $this->conn->prepare($query);
 
-    return ['success' => true, 'message' => "Document added successfully."];
-}
+        $stmt->execute([
+            ':title' => $data['document_title'],
+            ':category' => $data['documentCategory'],
+            ':description' => $data['description'],
+            ':tags' => $data['documentTagList'],
+            ':language_id' => !empty($data['language']) ? (int) $data['language'] : null,
+            ':mobile_support' => $data['mobile_support'],
+            ':version_number' => $data['doc_version'],
+            ':time_limit' => $data['doc_time_limit'],
+            ':authors' => $data['research_authors'] ?? null,
+            ':publication_date' => $data['research_publication_date'] ?? null,
+            ':reference_links' => $data['research_references'] ?? null,
+            ':created_by' => $data['created_by'],
+            ':word_excel_ppt_file' => $data['word_excel_ppt_file'] ?? null,
+            ':ebook_manual_file' => $data['ebook_manual_file'] ?? null,
+            ':research_file' => $data['research_file'] ?? null
+        ]);
 
-// Update document 
-public function updateDocument($data, $id) {
-    $errors = $this->validateDocument($data, true);
-    if (!empty($errors)) {
-        return ['success' => false, 'errors' => $errors];
+        return ['success' => true, 'message' => "Document added successfully."];
     }
 
-    $query = "UPDATE documents SET title = :title, category = :category, description = :description, tags = :tags, 
+    // Update document 
+    public function updateDocument($data, $id)
+    {
+        $errors = $this->validateDocument($data, true);
+        if (!empty($errors)) {
+            return ['success' => false, 'errors' => $errors];
+        }
+
+        $query = "UPDATE documents SET title = :title, category = :category, description = :description, tags = :tags, 
               language_id = :language_id, mobile_support = :mobile_support, version_number = :version_number, time_limit = :time_limit, 
               authors = :authors, publication_date = :publication_date, reference_links = :reference_links, updated_at = NOW(), 
               word_excel_ppt_file = COALESCE(:word_excel_ppt_file, word_excel_ppt_file), 
@@ -329,53 +342,55 @@ public function updateDocument($data, $id) {
               research_file = COALESCE(:research_file, research_file)
               WHERE id = :id";
 
-    $stmt = $this->conn->prepare($query);
-    $stmt->execute([
-        ':title' => $data['document_title'],
-        ':category' => $data['documentCategory'],
-        ':description' => $data['description'],
-        ':tags' => $data['documentTagList'],
-       ':language_id' => !empty($data['language']) ? (int) $data['language'] : null,
-        ':mobile_support' => $data['mobile_support'],
-        ':version_number' => $data['doc_version'],
-        ':time_limit' => $data['doc_time_limit'],
-        ':authors' => $data['research_authors'] ?? null,
-        ':publication_date' => $data['research_publication_date'] ?? null,
-        ':reference_links' => $data['research_references'] ?? null,
-        ':word_excel_ppt_file' => $data['word_excel_ppt_file'] ?? null,
-        ':ebook_manual_file' => $data['ebook_manual_file'] ?? null,
-        ':research_file' => $data['research_file'] ?? null,
-        ':id' => $id
-    ]);
+        $stmt = $this->conn->prepare($query);
+        $stmt->execute([
+            ':title' => $data['document_title'],
+            ':category' => $data['documentCategory'],
+            ':description' => $data['description'],
+            ':tags' => $data['documentTagList'],
+            ':language_id' => !empty($data['language']) ? (int) $data['language'] : null,
+            ':mobile_support' => $data['mobile_support'],
+            ':version_number' => $data['doc_version'],
+            ':time_limit' => $data['doc_time_limit'],
+            ':authors' => $data['research_authors'] ?? null,
+            ':publication_date' => $data['research_publication_date'] ?? null,
+            ':reference_links' => $data['research_references'] ?? null,
+            ':word_excel_ppt_file' => $data['word_excel_ppt_file'] ?? null,
+            ':ebook_manual_file' => $data['ebook_manual_file'] ?? null,
+            ':research_file' => $data['research_file'] ?? null,
+            ':id' => $id
+        ]);
 
-    return ['success' => true, 'message' => "Document updated successfully."];
-}
+        return ['success' => true, 'message' => "Document updated successfully."];
+    }
 
     // Soft delete a document
-    public function deleteDocument($id) {
+    public function deleteDocument($id)
+    {
         $stmt = $this->conn->prepare("UPDATE documents SET is_deleted = 1 WHERE id = ?");
         return $stmt->execute([$id]);
     }
 
     // Fetch all languages
-    public function getLanguages() {
+    public function getLanguages()
+    {
         $sql = "SELECT id, language_name, language_code FROM languages"; // Ensure 'id' is selected
         $stmt = $this->conn->prepare($sql);
         $stmt->execute();
-    
+
         return $stmt->fetchAll(PDO::FETCH_ASSOC); // Fetch as associative array
-       // print_r($stmt);die;
+        // print_r($stmt);die;
     }
 
-// Assessment add and update 
+    // Assessment add and update 
 
-public function saveAssessmentWithQuestions($data)
-{
-    try {
-        $this->conn->beginTransaction();
+    public function saveAssessmentWithQuestions($data)
+    {
+        try {
+            $this->conn->beginTransaction();
 
-        // Insert into assessment_package
-        $sql = "INSERT INTO assessment_package (
+            // Insert into assessment_package
+            $sql = "INSERT INTO assessment_package (
             title, tags, num_attempts, passing_percentage, time_limit,
             negative_marking, negative_marking_percentage,
             assessment_type, num_questions_to_display,
@@ -387,85 +402,168 @@ public function saveAssessmentWithQuestions($data)
             :selected_question_count, :created_by, NOW()
         )";
 
-        $stmt = $this->conn->prepare($sql);
-        $stmt->execute([
-            ':title' => $data['title'],
-            ':tags' => $data['tags'],
-            ':num_attempts' => $data['num_attempts'],
-            ':passing_percentage' => $data['passing_percentage'],
-            ':time_limit' => $data['time_limit'],
-            ':negative_marking' => $data['negative_marking'],
-            ':negative_marking_percentage' => $data['negative_marking_percentage'],
-            ':assessment_type' => $data['assessment_type'],
-            ':num_questions_to_display' => $data['num_questions_to_display'],
-            ':selected_question_count' => count($data['question_ids']),
-            ':created_by' => $data['created_by'],
-        ]);
+            $stmt = $this->conn->prepare($sql);
+            $stmt->execute([
+                ':title' => $data['title'],
+                ':tags' => $data['tags'],
+                ':num_attempts' => $data['num_attempts'],
+                ':passing_percentage' => $data['passing_percentage'],
+                ':time_limit' => $data['time_limit'],
+                ':negative_marking' => $data['negative_marking'],
+                ':negative_marking_percentage' => $data['negative_marking_percentage'],
+                ':assessment_type' => $data['assessment_type'],
+                ':num_questions_to_display' => $data['num_questions_to_display'],
+                ':selected_question_count' => count($data['question_ids']),
+                ':created_by' => $data['created_by'],
+            ]);
 
-        $assessmentPackageId = $this->conn->lastInsertId();
-        if (!$assessmentPackageId) {
-            throw new Exception("Failed to retrieve last insert ID.");
-        }
+            $assessmentPackageId = $this->conn->lastInsertId();
+            if (!$assessmentPackageId) {
+                throw new Exception("Failed to retrieve last insert ID.");
+            }
 
-        // Insert into mapping table using correct column: assessment_package_id
-        $mapSql = "INSERT INTO assessment_question_mapping (
+            // Insert into mapping table using correct column: assessment_package_id
+            $mapSql = "INSERT INTO assessment_question_mapping (
             assessment_package_id, question_id, created_by, created_at
         ) VALUES (
             :assessment_package_id, :question_id, :created_by, NOW()
         )";
 
-        $mapStmt = $this->conn->prepare($mapSql);
-        if (!is_array($data['question_ids'])) {
-            throw new Exception("question_ids is not an array.");
-        }
+            $mapStmt = $this->conn->prepare($mapSql);
+            if (!is_array($data['question_ids'])) {
+                throw new Exception("question_ids is not an array.");
+            }
 
-        foreach ($data['question_ids'] as $qid) {
-            $success = $mapStmt->execute([
-                ':assessment_package_id' => $assessmentPackageId,
-                ':question_id' => $qid,
-                ':created_by' => $data['created_by']
+            foreach ($data['question_ids'] as $qid) {
+                $success = $mapStmt->execute([
+                    ':assessment_package_id' => $assessmentPackageId,
+                    ':question_id' => $qid,
+                    ':created_by' => $data['created_by']
+                ]);
+
+                if (!$success) {
+                    $error = $mapStmt->errorInfo();
+                    throw new Exception("Mapping insert failed for question_id $qid: " . $error[2]);
+                }
+            }
+
+            $this->conn->commit();
+            return true;
+
+        } catch (Exception $e) {
+            $this->conn->rollBack();
+            error_log("Assessment Save Error: " . $e->getMessage());
+            echo json_encode(['status' => 'error', 'message' => $e->getMessage()]);
+            exit;
+        }
+    }
+
+
+    public function updateAssessmentWithQuestions($data, $assessmentId)
+    {
+        try {
+            $this->conn->beginTransaction();
+
+            // Basic server-side validation (if needed beyond controller)
+            if (empty($assessmentId) || !is_numeric($assessmentId)) {
+                throw new Exception("Invalid assessment ID.");
+            }
+
+            if (!is_array($data['question_ids']) || count($data['question_ids']) === 0) {
+                throw new Exception("At least one question must be selected.");
+            }
+
+            // Update assessment_package
+            $sql = "UPDATE assessment_package SET
+            title = :title,
+            tags = :tags,
+            num_attempts = :num_attempts,
+            passing_percentage = :passing_percentage,
+            time_limit = :time_limit,
+            negative_marking = :negative_marking,
+            negative_marking_percentage = :negative_marking_percentage,
+            assessment_type = :assessment_type,
+            num_questions_to_display = :num_questions_to_display,
+            selected_question_count = :selected_question_count,
+            updated_at = NOW()
+        WHERE id = :id";
+
+            $stmt = $this->conn->prepare($sql);
+            $stmt->execute([
+                ':title' => $data['title'],
+                ':tags' => $data['tags'],
+                ':num_attempts' => $data['num_attempts'],
+                ':passing_percentage' => $data['passing_percentage'],
+                ':time_limit' => $data['time_limit'],
+                ':negative_marking' => $data['negative_marking'],
+                ':negative_marking_percentage' => $data['negative_marking_percentage'],
+                ':assessment_type' => $data['assessment_type'],
+                ':num_questions_to_display' => $data['num_questions_to_display'],
+                ':selected_question_count' => count($data['question_ids']),
+                ':id' => $assessmentId
             ]);
 
-            if (!$success) {
-                $error = $mapStmt->errorInfo();
-                throw new Exception("Mapping insert failed for question_id $qid: " . $error[2]);
+            // Delete old mappings
+            $deleteSql = "DELETE FROM assessment_question_mapping WHERE assessment_package_id = :assessment_id";
+            $deleteStmt = $this->conn->prepare($deleteSql);
+            $deleteStmt->execute([':assessment_id' => $assessmentId]);
+
+            // Insert new mappings
+            $mapSql = "INSERT INTO assessment_question_mapping (
+            assessment_package_id, question_id, created_by, created_at
+        ) VALUES (
+            :assessment_package_id, :question_id, :created_by, NOW()
+        )";
+
+            $mapStmt = $this->conn->prepare($mapSql);
+
+            foreach ($data['question_ids'] as $qid) {
+                $success = $mapStmt->execute([
+                    ':assessment_package_id' => $assessmentId,
+                    ':question_id' => $qid,
+                    ':created_by' => $data['created_by']
+                ]);
+
+                if (!$success) {
+                    $error = $mapStmt->errorInfo();
+                    throw new Exception("Mapping insert failed for question_id $qid: " . $error[2]);
+                }
             }
+
+            $this->conn->commit();
+            return true;
+
+        } catch (Exception $e) {
+            $this->conn->rollBack();
+            error_log("Assessment Update Error: " . $e->getMessage());
+            echo json_encode(['status' => 'error', 'message' => $e->getMessage()]);
+            exit;
         }
-
-        $this->conn->commit();
-        return true;
-
-    } catch (Exception $e) {
-        $this->conn->rollBack();
-        error_log("Assessment Save Error: " . $e->getMessage());
-        echo json_encode(['status' => 'error', 'message' => $e->getMessage()]);
-        exit;
     }
-}
 
 
     // Assessment get data for display 
 
     public function getAllAssessments()
     {
-        $stmt = $this->conn->prepare("SELECT id, title FROM assessment_package WHERE is_deleted = 0 ORDER BY created_at DESC");
+        $stmt = $this->conn->prepare("SELECT * FROM assessment_package WHERE is_deleted = 0 ORDER BY created_at DESC");
         $stmt->execute();
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
-    
+
     public function deleteAssessment($id)
     {
         try {
             $this->conn->beginTransaction();
-    
+
             // Hard delete from mapping table
             $stmt1 = $this->conn->prepare("DELETE FROM assessment_question_mapping WHERE assessment_package_id = ?");
             $stmt1->execute([$id]);
-    
+
             // Soft delete in assessment_package table
             $stmt2 = $this->conn->prepare("UPDATE assessment_package SET is_deleted = 1 WHERE id = ?");
             $stmt2->execute([$id]);
-    
+
             $this->conn->commit();
             return true;
         } catch (Exception $e) {
@@ -474,7 +572,7 @@ public function saveAssessmentWithQuestions($data)
             return false;
         }
     }
-    
+
 
 }
 ?>
