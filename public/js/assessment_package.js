@@ -19,23 +19,26 @@ document.addEventListener("DOMContentLoaded", function () {
     const assessmentModalLabel = document.getElementById("assessment_assessmentModalLabel");
     const assessmentModal = new bootstrap.Modal(document.getElementById('assessment_assessmentModal'));
 
+    const selectedQuestionsBody = document.getElementById("assessment_selectedQuestionsBody");
+    const selectedQuestionsWrapper = document.getElementById("assessment_selectedQuestionsWrapper");
+    const selectedQuestionIdsInput = document.getElementById("assessment_selectedQuestionIds");
+    const selectedQuestionCountInput = document.getElementById("assessment_selectedQuestionCount");
+
     let tags = [];
 
-    // Function to Create and Display Tags
     function addTag(tagText) {
         if (tagText.trim() === "" || tags.includes(tagText)) return;
 
         tags.push(tagText);
 
         const tagElement = document.createElement("span");
-        tagElement.classList.add("tag", "badge", "bg-primary", "me-2");
-        tagElement.innerHTML = `${tagText} <button type="button" class="remove-tag btn-close btn-close-white btn-sm ms-1" data-tag="${tagText}"></button>`;
+        tagElement.classList.add("tag");
+        tagElement.innerHTML = `${tagText} <button type="button" class="remove-tag" data-tag="${tagText}">&times;</button>`;
 
         tagContainer.appendChild(tagElement);
         updateHiddenInput();
     }
 
-    // Function to Remove a Tag
     function removeTag(tagText) {
         tags = tags.filter(tag => tag !== tagText);
         updateHiddenInput();
@@ -47,12 +50,10 @@ document.addEventListener("DOMContentLoaded", function () {
         });
     }
 
-    // Function to Update Hidden Input
     function updateHiddenInput() {
         hiddenTagList.value = tags.join(",");
     }
 
-    // Input: Add tag on Enter
     tagInput.addEventListener("keypress", function (event) {
         if (event.key === "Enter") {
             event.preventDefault();
@@ -61,14 +62,12 @@ document.addEventListener("DOMContentLoaded", function () {
         }
     });
 
-    // Input: Remove last tag on Backspace
     tagInput.addEventListener("keydown", function (event) {
         if (event.key === "Backspace" && tagInput.value === "" && tags.length > 0) {
             removeTag(tags[tags.length - 1]);
         }
     });
 
-    // Click: Remove tag
     tagContainer.addEventListener("click", function (event) {
         if (event.target.classList.contains("remove-tag")) {
             const tagText = event.target.getAttribute("data-tag");
@@ -76,36 +75,35 @@ document.addEventListener("DOMContentLoaded", function () {
         }
     });
 
-    // Toggle functions
     function toggleNegativeMarkingOptions() {
         const isYes = [...negativeMarkingRadios].find(r => r.checked)?.value === "Yes";
         negativeMarkingPercentageWrapper.style.display = isYes ? "block" : "none";
-        
-        // Clear the Negative Marking Percentage if switching to "No"
         if (!isYes) {
-            negativeMarkingPercentage.value = "";  // Clear input when switching to "No"
+            negativeMarkingPercentage.value = "";
         }
     }
 
     function toggleNumberOfQuestionsField() {
         const isDynamic = [...assessmentTypeRadios].find(r => r.checked)?.value === "Dynamic";
         numberOfQuestionsWrapper.style.display = isDynamic ? "block" : "none";
-        
-        // Clear the number of questions input if changing to/from Dynamic
         if (!isDynamic) {
-            numberOfQuestions.value = "";  // Clear input when switching to Fixed
+            numberOfQuestions.value = "";
         }
     }
 
     negativeMarkingRadios.forEach(r => r.addEventListener("change", toggleNegativeMarkingOptions));
     assessmentTypeRadios.forEach(r => r.addEventListener("change", toggleNumberOfQuestionsField));
 
-    // Reset modal and show
     addAssessmentBtn.addEventListener("click", function () {
         assessmentForm.reset();
         tags = [];
         tagContainer.innerHTML = "";
         updateHiddenInput();
+
+        selectedQuestionsBody.innerHTML = "";
+        selectedQuestionIdsInput.value = "";
+        selectedQuestionCountInput.value = "";
+        selectedQuestionsWrapper.style.display = "none";
 
         document.querySelector('input[name="assessment_negativeMarking"][value="No"]').checked = true;
         document.querySelector('input[name="assessment_assessmentType"][value="Fixed"]').checked = true;
@@ -117,36 +115,134 @@ document.addEventListener("DOMContentLoaded", function () {
         assessmentModal.show();
     });
 
-    // Cancel button click event
+    // Utility: Populate selected questions in the grid
+    function populateSelectedQuestions(questions) {
+        selectedQuestionsBody.innerHTML = "";
+
+        if (Array.isArray(questions) && questions.length > 0) {
+            questions.forEach(q => {
+                const row = document.createElement("tr");
+
+                const titleCell = document.createElement("td");
+                titleCell.textContent = q.title || "";
+                row.appendChild(titleCell);
+
+                const tagsCell = document.createElement("td");
+                tagsCell.textContent = q.tags || "";
+                row.appendChild(tagsCell);
+
+                const marksCell = document.createElement("td");
+                marksCell.textContent = q.marks || "";
+                row.appendChild(marksCell);
+
+                const typeCell = document.createElement("td");
+                typeCell.textContent = q.type || "";
+                row.appendChild(typeCell);
+
+                selectedQuestionsBody.appendChild(row);
+            });
+
+            selectedQuestionsWrapper.style.display = "block";
+            selectedQuestionIdsInput.value = questions.map(q => q.id).join(",");
+            selectedQuestionCountInput.value = questions.length;
+        } else {
+            selectedQuestionsWrapper.style.display = "none";
+            selectedQuestionIdsInput.value = "";
+            selectedQuestionCountInput.value = "";
+        }
+    }
+
+    // Edit Assessment Modal Logic
+    document.querySelectorAll(".edit-assessment").forEach(button => {
+        button.addEventListener("click", function () {
+            const assessmentData = JSON.parse(this.dataset.assessment);
+
+            assessmentTitle.value = assessmentData.title;
+            numAttempts.value = assessmentData.num_attempts;
+            passingPercentage.value = assessmentData.passing_percentage;
+            timeLimit.value = assessmentData.time_limit;
+
+            document.querySelectorAll('input[name="assessment_negativeMarking"]').forEach(radio => {
+                radio.checked = (radio.value === assessmentData.negative_marking);
+            });
+
+            if (assessmentData.negative_marking_percentage) {
+                negativeMarkingPercentage.value = assessmentData.negative_marking_percentage;
+                negativeMarkingPercentageWrapper.style.display = "block";
+            } else {
+                negativeMarkingPercentageWrapper.style.display = "none";
+            }
+
+            document.querySelectorAll('input[name="assessment_assessmentType"]').forEach(radio => {
+                radio.checked = (radio.value === assessmentData.assessment_type);
+            });
+
+            if (assessmentData.num_questions_to_display) {
+                numberOfQuestions.value = assessmentData.num_questions_to_display;
+                numberOfQuestionsWrapper.style.display = "block";
+            } else {
+                numberOfQuestionsWrapper.style.display = "none";
+            }
+
+            tagContainer.innerHTML = "";
+            tags = [];
+            if (assessmentData.tags) {
+                assessmentData.tags.split(",").forEach(tag => addTag(tag.trim()));
+            }
+
+            // Load selected questions
+            if (assessmentData.selected_questions) {
+                populateSelectedQuestions(assessmentData.selected_questions);
+            } else {
+                selectedQuestionsBody.innerHTML = "";
+                selectedQuestionsWrapper.style.display = "none";
+                selectedQuestionIdsInput.value = "";
+                selectedQuestionCountInput.value = "";
+            }
+
+            assessmentModalLabel.textContent = "Edit Assessment";
+            assessmentModal.show();
+        });
+    });
+
     document.querySelector('button[data-bs-dismiss="modal"]').addEventListener('click', function () {
-        // Reset the form fields
         assessmentForm.reset();
-        
-        // Reset tags (as they are not part of the form)
         tags = [];
         tagContainer.innerHTML = "";
         updateHiddenInput();
-        
-        // Reset the default selections for radio buttons
+
+        selectedQuestionsBody.innerHTML = "";
+        selectedQuestionIdsInput.value = "";
+        selectedQuestionCountInput.value = "";
+        selectedQuestionsWrapper.style.display = "none";
+
         document.querySelector('input[name="assessment_negativeMarking"][value="No"]').checked = true;
         document.querySelector('input[name="assessment_assessmentType"][value="Fixed"]').checked = true;
-        
-        // Reset other dynamic fields
+
         toggleNegativeMarkingOptions();
         toggleNumberOfQuestionsField();
     });
 
-    // Form Submit 
     assessmentForm.addEventListener("submit", function (e) {
         e.preventDefault();
-    
+
         const isValid = validateAssessmentForm();
         if (!isValid) {
             console.log("Form validation failed.");
             return;
         }
-    
+
         alert("Form submitted successfully!");
         assessmentModal.hide();
     });
+
+    function showSelectedQuestionsGrid() {
+        if (selectedQuestionsBody.children.length > 0) {
+            selectedQuestionsWrapper.style.display = "block";
+        } else {
+            selectedQuestionsWrapper.style.display = "none";
+        }
+    }
+
+    window.showSelectedQuestionsGrid = showSelectedQuestionsGrid;
 });
