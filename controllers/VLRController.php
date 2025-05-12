@@ -17,7 +17,31 @@ class VLRController
         $externalContent = $this->VLRModel->getExternalContent();
         $documents = $this->VLRModel->getAllDocuments();
         $assessmentPackages = $this->VLRModel->getAllAssessments();
+        $audioPackages = $this->VLRModel->getAudioPackages(); 
+        //echo '<pre>'; print_r($audioPackages); die;
         require 'views/vlr.php';
+    }
+
+    public function getAssessmentById()
+    {
+        if (!isset($_GET['id'])) {
+            // Handle error
+            return;
+        }
+
+        $id = intval($_GET['id']);
+        $model = new VLRModel();
+
+        $assessment = $model->getAssessmentByIdWithQuestions($id);
+
+        if (!$assessment) {
+            // Handle error
+            return;
+        }
+
+        // For example, output as JSON for JavaScript to load
+        header('Content-Type: application/json');
+        echo json_encode($assessment);
     }
 
     public function addOrEditScormPackage()
@@ -436,12 +460,12 @@ class VLRController
             echo "Method Not Allowed";
             return;
         }
-    
+
         if (!isset($_SESSION['id'])) {
             echo "<script>alert('Unauthorized access. Please log in.'); window.location.href='index.php?controller=VLRController';</script>";
             exit();
         }
-    
+
         // Server-side validation
         $title = trim($_POST['title'] ?? '');
         $tags = trim($_POST['tags'] ?? '');
@@ -455,9 +479,9 @@ class VLRController
         $selectedQuestions = $_POST['selected_question_ids'] ?? ''; // Comma-separated string
         $assessmentId = $_POST['assessmentId'] ?? null;
         $createdBy = $_SESSION['id'];
-    
+
         $errors = [];
-    
+
         if (empty($title))
             $errors[] = "Assessment title is required.";
         if (empty($tags))
@@ -476,12 +500,12 @@ class VLRController
         if (empty($selectedQuestions)) {
             $errors[] = "At least one question must be selected.";
         }
-    
+
         if (!empty($errors)) {
             echo json_encode(['status' => 'error', 'errors' => $errors]);
             return;
         }
-    
+
         // Prepare data
         $questionIds = explode(',', $selectedQuestions);
         $data = [
@@ -491,20 +515,20 @@ class VLRController
             'passing_percentage' => $passingPercentage,
             'time_limit' => $timeLimit,
             'negative_marking' => $negativeMarking === 'Yes' ? 1 : 0,
-            'negative_marking_percentage' => $negativeMarking === 'Yes' ? (int)$negativeMarkingPercentage : null,
+            'negative_marking_percentage' => $negativeMarking === 'Yes' ? (int) $negativeMarkingPercentage : null,
             'assessment_type' => $assessmentType,
-            'num_questions_to_display' => $assessmentType === 'Dynamic' ? (int)$numQuestionsToDisplay : null,
+            'num_questions_to_display' => $assessmentType === 'Dynamic' ? (int) $numQuestionsToDisplay : null,
             'created_by' => $createdBy,
             'question_ids' => $questionIds
         ];
-    
+
         // Insert or update logic
         if (!empty($assessmentId)) {
             $result = $this->VLRModel->updateAssessmentWithQuestions($data, $assessmentId);
         } else {
             $result = $this->VLRModel->saveAssessmentWithQuestions($data);
         }
-    
+
         if ($result) {
             $message = "Assessment saved successfully!";
             echo "<script>alert('$message'); window.location.href='index.php?controller=VLRController';</script>";
@@ -513,24 +537,145 @@ class VLRController
             echo "<script>alert('$message'); window.location.href='index.php?controller=VLRController';</script>";
         }
     }
-    
+
 
 
     public function deleteAssessment()
-{
-    if (isset($_GET['id'])) {
-        $id = $_GET['id'];
-        $result = $this->VLRModel->deleteAssessment($id);
+    {
+        if (isset($_GET['id'])) {
+            $id = $_GET['id'];
+            $result = $this->VLRModel->deleteAssessment($id);
 
-        if ($result) {
-            echo "<script>alert('Assessment deleted successfully.'); window.location.href='index.php?controller=VLRController';</script>";
+            if ($result) {
+                echo "<script>alert('Assessment deleted successfully.'); window.location.href='index.php?controller=VLRController';</script>";
+            } else {
+                echo "<script>alert('Failed to delete assessment.'); window.location.href='index.php?controller=VLRController';</script>";
+            }
         } else {
-            echo "<script>alert('Failed to delete assessment.'); window.location.href='index.php?controller=VLRController';</script>";
+            echo "<script>alert('Invalid request.'); window.location.href='index.php?controller=VLRController';</script>";
         }
-    } else {
-        echo "<script>alert('Invalid request.'); window.location.href='index.php?controller=VLRController';</script>";
     }
+
+// Add or Edit Audio Package
+public function addOrEditAudioPackage()
+{
+    if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+        $this->redirectWithAlert("Invalid request parameters.");
+        return;
+    }
+
+    // ✅ Ensure session is valid
+    if (!isset($_SESSION['id'])) {
+        $this->redirectWithAlert("Unauthorized access. Please log in.");
+        return;
+    }
+
+    // ✅ Extract POST and FILES data (with fallbacks for suffixed names)
+    $audioId    = $_POST['audio_id'] ?? $_POST['audio_idaudio'] ?? null;
+    $title      = trim($_POST['audio_title'] ?? $_POST['audio_titleaudio'] ?? '');
+    $version    = $_POST['version'] ?? $_POST['versionaudio'] ?? '';
+    $tags       = $_POST['tagList'] ?? $_POST['tagListaudio'] ?? '';
+    $timeLimit  = trim($_POST['timeLimit'] ?? $_POST['timeLimitaudio'] ?? '');
+    $audioFile  = $_FILES['audioFile'] ?? $_FILES['audioFileaudio'] ?? null;
+    $existingAudio = $_POST['existing_audio'] ?? $_POST['existing_audioaudio'] ?? null;
+
+    // ✅ Initialize error list
+    $errors = [];
+
+    // ✅ Validation
+    if (empty($title)) {
+        $errors[] = "Title is required.";
+    }
+
+    if (!$audioId && empty($audioFile['name'])) {
+        // Only required on "add"
+        $errors[] = "Audio file is required.";
+    } elseif (!empty($audioFile['name']) && $audioFile['size'] > 10 * 1024 * 1024) {
+        $errors[] = "Audio file size cannot exceed 10MB.";
+    }
+
+    if (empty($version) || !is_numeric($version)) {
+        $errors[] = "Version must be a valid number.";
+    }
+
+    if (empty($tags)) {
+        $errors[] = "Tags are required.";
+    }
+
+    if ($timeLimit !== '' && !is_numeric($timeLimit)) {
+        $errors[] = "Time limit must be numeric.";
+    }
+
+    // ✅ Handle validation failure
+    if (!empty($errors)) {
+        $this->redirectWithAlert(implode('\n', $errors));
+        return;
+    }
+
+    // ✅ Handle audio file upload (only if a new file is provided)
+    $audioFileName = $existingAudio;
+    if (!empty($audioFile['name'])) {
+        $uploadDir = "uploads/audio/";
+        $ext = pathinfo($audioFile['name'], PATHINFO_EXTENSION);
+        $uniqueName = uniqid("audio_") . "." . $ext;
+        $targetPath = $uploadDir . $uniqueName;
+
+        if (!move_uploaded_file($audioFile['tmp_name'], $targetPath)) {
+            $this->redirectWithAlert("Audio upload failed.");
+            return;
+        }
+
+        $audioFileName = $uniqueName;
+    }
+
+    // ✅ Prepare clean data for DB
+    $data = [
+        'title'          => $title,
+        'audio_file'     => $audioFileName,
+        'description'    => trim($_POST['description'] ?? $_POST['descriptionaudio'] ?? '') ?: null,
+        'tags'           => $tags,
+        'version'        => $version,
+        'language'       => trim($_POST['language'] ?? $_POST['languageaudio'] ?? '') ?: null,
+        'time_limit'     => $timeLimit !== '' ? $timeLimit : null,
+        'mobile_support' => $_POST['mobileSupport'] ?? $_POST['mobileSupportaudio'] ?? 0,
+        'created_by'     => $_SESSION['id']
+    ];
+
+    // ✅ Insert or update logic
+    if ($audioId) {
+        $success = $this->VLRModel->updateAudioPackage($audioId, $data);
+        $message = $success ? "Audio package updated successfully." : "Failed to update Audio package.";
+    } else {
+        $success = $this->VLRModel->insertAudioPackage($data);
+        $message = $success ? "Audio package added successfully." : "Failed to add Audio package.";
+    }
+
+    $this->redirectWithAlert($message);
 }
+
+
+// Delete Audio Package
+public function deleteAudioPackage()
+{
+    if (!isset($_GET['id'])) {
+        $this->redirectWithAlert("Invalid request.");
+        return;
+    }
+
+    $id = $_GET['id'];
+    $success = $this->VLRModel->deleteAudioPackage($id);
+
+    $message = $success ? "Audio package deleted successfully." : "Failed to delete Audio package.";
+    $this->redirectWithAlert($message);
+}
+
+// 🔁 Utility function for redirecting with alert
+private function redirectWithAlert($message)
+{
+    echo "<script>alert('$message'); window.location.href='index.php?controller=VLRController';</script>";
+    exit();
+}
+
 
 }
 ?>
