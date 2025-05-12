@@ -776,11 +776,172 @@ $languageList = $vlrController->getLanguages();
             <div class="tab-pane" id="audio">
                 <div class="d-flex justify-content-between align-items-center">
                     <h3><?= Localization::translate('audio'); ?></h3>
-                    <button class="btn btn-sm btn-primary" onclick="openAddModal('Audio')">+
-                        <?= Localization::translate('add'); ?></button>
+
+                    <!-- ✅ Audio "Add" Button -->
+                    <button class="btn btn-primary mb-3" data-bs-toggle="modal" id="addAudioBtn"
+                        data-bs-target="#audioModal">
+                        + <?= Localization::translate('add_audio'); ?>
+                    </button>
                 </div>
-                <div id="audio-items"></div>
+
+                <!-- ✅ Audio Modal -->
+                <div class="modal fade" id="audioModal" tabindex="-1" aria-labelledby="audioModalLabel"
+                    aria-hidden="true">
+                    <div class="modal-dialog modal-lg">
+                        <form id="audioForm" action="index.php?controller=VLRController&action=addOrEditAudioPackage"
+                            method="POST" enctype="multipart/form-data">
+                            <input type="hidden" id="audio_idaudio" name="audio_idaudio">
+
+                            <div class="modal-content">
+                                <div class="modal-header">
+                                    <h5 class="modal-title" id="audioModalLabel">
+                                        <?= Localization::translate('add_audio_package'); ?></h5>
+                                    <button type="button" class="btn-close" data-bs-dismiss="modal"
+                                        aria-label="Close"></button>
+                                </div>
+
+                                <div class="modal-body">
+                                    <div class="row g-3">
+                                        <!-- Title -->
+                                        <div class="col-md-6">
+                                            <label for="audio_titleaudio" class="form-label">Title <span
+                                                    class="text-danger">*</span></label>
+                                            <input type="text" class="form-control" id="audio_titleaudio"
+                                                name="audio_titleaudio">
+                                        </div>
+
+                                        <!-- Upload Audio -->
+                                        <div class="col-md-6">
+                                            <label for="audioFileaudio" class="form-label">Upload Audio <span
+                                                    class="text-danger">*</span></label>
+                                            <input type="file" class="form-control" id="audioFileaudio"
+                                                name="audioFileaudio" accept="audio/*">
+                                            <small class="text-muted">Max size: 10MB. Formats: All audio types.</small>
+                                            <input type="hidden" id="existing_audioaudio" name="existing_audio">
+                                            <div id="existingAudioDisplayaudio" class="mt-2"></div>
+                                        </div>
+
+                                        <!-- Tags -->
+                                        <div class="row">
+                                            <div class="col-md-12">
+                                                <div class="form-group">
+                                                    <label
+                                                        for="tagsaudio"><?= Localization::translate('tags_keywords'); ?>
+                                                        <span class="text-danger">*</span></label>
+                                                    <div class="tag-input-container form-control">
+                                                        <span id="tagDisplayaudio"></span>
+                                                        <input type="text" id="tagInputaudio"
+                                                            placeholder="<?= Localization::translate('add_tag_placeholder'); ?>">
+                                                    </div>
+                                                    <input type="hidden" name="tagListaudio" id="tagListaudio">
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <!-- Description -->
+                                        <div class="col-md-12">
+                                            <label for="descriptionaudio" class="form-label">Description</label>
+                                            <textarea class="form-control" id="descriptionaudio" name="descriptionaudio"
+                                                rows="3"></textarea>
+                                        </div>
+
+                                        <!-- Version -->
+                                        <div class="col-md-4">
+                                            <label for="versionaudio" class="form-label">Version <span
+                                                    class="text-danger">*</span></label>
+                                            <input type="number" class="form-control" id="versionaudio"
+                                                name="versionaudio" min="0" step="any" pattern="\d*">
+                                        </div>
+
+                                        <!-- Language Support -->
+                                        <div class="col-md-4">
+                                            <label for="languageaudio" class="form-label">Language Support</label>
+                                            <select class="form-select" id="languageaudio" name="languageaudio">
+                                                <option value="">Select</option>
+                                                <option value="en">English</option>
+                                                <option value="es">Spanish</option>
+                                                <option value="fr">French</option>
+                                                <option value="de">German</option>
+                                            </select>
+                                        </div>
+
+                                        <!-- Time Limit -->
+                                        <div class="col-md-4">
+                                            <label for="timeLimitaudio" class="form-label">Time Limit (in
+                                                minutes)</label>
+                                            <input type="number" class="form-control" id="timeLimitaudio"
+                                                name="timeLimitaudio" min="1" pattern="\d*">
+                                        </div>
+
+                                        <!-- Mobile & Tablet Support -->
+                                        <div class="col-md-12">
+                                            <label class="form-label">Mobile & Tablet Support</label>
+                                            <div>
+                                                <div class="form-check form-check-inline">
+                                                    <input class="form-check-input" type="radio"
+                                                        name="mobileSupportaudio" id="mobileYesaudio" value="Yes">
+                                                    <label class="form-check-label" for="mobileYesaudio">Yes</label>
+                                                </div>
+                                                <div class="form-check form-check-inline">
+                                                    <input class="form-check-input" type="radio"
+                                                        name="mobileSupportaudio" id="mobileNoaudio" value="No" checked>
+                                                    <label class="form-check-label" for="mobileNoaudio">No</label>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Modal Footer -->
+                                <div class="modal-footer">
+                                    <button type="submit"
+                                        class="btn btn-primary"><?= Localization::translate('submit'); ?></button>
+                                    <button type="button" class="btn btn-danger"
+                                        id="clearFormaudio"><?= Localization::translate('cancel'); ?></button>
+                                </div>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+
+                <!-- ✅ Audio Display -->
+                <div class="audio-wrapper mt-4">
+                    <div class="audio-wrapper-border">
+                        <div class="row">
+                            <?php if (!empty($audioPackages)): ?>
+                                <?php foreach ($audioPackages as $audio): ?>
+                                    <div class="col-md-4">
+                                        <div class="audio-card">
+                                            <div class="card-body">
+                                                <div class="audio-icon">
+                                                    <i class="fas fa-music"></i>
+                                                </div>
+                                                <h5 class="audio-title" title="<?= htmlspecialchars($audio['title']) ?>">
+                                                    <?= htmlspecialchars(strlen($audio['title']) > 20 ? substr($audio['title'], 0, 17) . '...' : $audio['title']) ?>
+                                                </h5>
+                                                <div class="audio-actions">
+                                                    <a href="#" class="edit-audio" data-audio='<?= json_encode($audio); ?>'>
+                                                        <i class="fas fa-edit edit-icon"
+                                                            title="<?= Localization::translate('edit'); ?>"></i>
+                                                    </a>
+                                                    <a href="index.php?controller=VLRController&action=deleteAudioPackage&id=<?= $audio['id'] ?>"
+                                                        onclick="return confirm('<?= Localization::translate('delete_confirmation'); ?>');">
+                                                        <i class="fas fa-trash-alt delete-icon"
+                                                            title="<?= Localization::translate('delete'); ?>"></i>
+                                                    </a>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                <?php endforeach; ?>
+                            <?php else: ?>
+                                <p><?= Localization::translate('no_audio_found'); ?></p>
+                            <?php endif; ?>
+                        </div>
+                    </div>
+                </div>
             </div>
+
 
             <!-- ✅ Video -->
             <div class="tab-pane" id="video">
@@ -1652,6 +1813,8 @@ $languageList = $vlrController->getLanguages();
 <script src="public/js/scorm_package.js"></script>
 <script src="public/js/assessment_validation.js"></script>
 <script src="public/js/assessment_package.js"></script>
+<script src="public/js/audio_validation.js"></script>
+<script src="public/js/audio_package.js"></script>
 <script src="public/js/add_question_on_assessment.js"></script>
 <script src="public/js/document_validation.js"></script>
 <script src="public/js/document_package.js"></script>

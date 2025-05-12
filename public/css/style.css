@@ -1043,3 +1043,81 @@ html, body {
     background: white;
     border: 1px solid #ddd;
 }
+
+/* ✅ Audio Card Styling (Similar to Assessment but customizable) */
+.audio-card {
+    background: #fff;
+    border: 2px solid #00796b; /* teal or customize */
+    border-radius: 10px;
+    padding: 15px;
+    margin: 10px 0;
+    text-align: center;
+    box-shadow: 2px 2px 10px rgba(0, 0, 0, 0.1);
+    position: relative;
+    transition: transform 0.2s ease-in-out;
+}
+
+.audio-card:hover {
+    transform: scale(1.05);
+}
+
+.audio-icon {
+    font-size: 40px;
+    color: #00796b; /* matches border */
+    margin-bottom: 10px;
+}
+
+.audio-title {
+    font-size: 16px;
+    font-weight: bold;
+    color: #333;
+    margin-bottom: 5px;
+}
+
+.audio-actions {
+    position: absolute;
+    top: 10px;
+    right: 15px;
+}
+
+.audio-actions .edit-icon {
+    color: #007bff;
+    margin-right: 10px;
+    cursor: pointer;
+}
+
+.audio-actions .delete-icon {
+    color: #dc3545;
+    cursor: pointer;
+}
+
+.audio-actions i {
+    font-size: 18px;
+    transition: color 0.2s;
+}
+
+.audio-actions i:hover {
+    opacity: 0.7;
+}
+
+.audio-actions a {
+    text-decoration: none;
+}
+
+.audio-actions a:hover {
+    text-decoration: none;
+}
+
+.audio-wrapper {
+    background: white;
+    padding: 20px;
+    border-radius: 5px;
+    box-shadow: 0px 4px 6px rgba(0, 0, 0, 0.1);
+    margin-top: 10px;
+}
+
+.audio-wrapper-border {
+    padding: 20px;
+    background: white;
+    border: 1px solid #ddd;
+}

@@ -551,6 +551,39 @@ class VLRModel
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
 
+    public function getAssessmentByIdWithQuestions($assessmentId)
+    {
+        $db = $this->conn;
+
+        // Fetch the assessment data
+        $stmt = $db->prepare("
+            SELECT *
+            FROM assessment_package
+            WHERE id = :id AND is_deleted = 0
+        ");
+        $stmt->execute([':id' => $assessmentId]);
+        $assessment = $stmt->fetch(PDO::FETCH_ASSOC);
+
+        if (!$assessment) {
+            return null;
+        }
+
+        // Fetch mapped questions
+        $stmt = $db->prepare("
+            SELECT q.id, q.question_text AS title, q.tags, q.marks, q.question_type AS type
+            FROM assessment_question_mapping m
+            JOIN assessment_questions q ON m.question_id = q.id
+            WHERE m.assessment_package_id = :id AND q.is_deleted = 0
+        ");
+        $stmt->execute([':id' => $assessmentId]);
+        $questions = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+        // Add questions to assessment array
+        $assessment['selected_questions'] = $questions;
+
+        return $assessment;
+    }
+
     public function deleteAssessment($id)
     {
         try {
@@ -572,6 +605,89 @@ class VLRModel
             return false;
         }
     }
+
+
+// ✅ Insert Audio Package
+public function insertAudioPackage($data)
+{
+    // Validate required fields
+    $requiredFields = ['title', 'audio_file', 'version', 'mobile_support', 'tags', 'created_by'];
+    foreach ($requiredFields as $field) {
+        if (empty($data[$field])) {
+            return false;
+        }
+    }
+
+    $stmt = $this->conn->prepare("
+        INSERT INTO audio_package 
+        (title, audio_file, version, language, time_limit, description, tags, mobile_support, created_by, is_deleted, created_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 0, NOW())
+    ");
+
+    return $stmt->execute([
+        $data['title'],
+        $data['audio_file'],
+        $data['version'],
+        $data['language'] ?? null,
+        $data['time_limit'] ?? null,
+        $data['description'] ?? null,
+        $data['tags'],
+        $data['mobile_support'],
+        $data['created_by']
+    ]);
+}
+
+// ✅ Update Audio Package
+public function updateAudioPackage($id, $data)
+{
+    if (empty($id)) {
+        return false;
+    }
+
+    $stmt = $this->conn->prepare("
+        UPDATE audio_package SET 
+            title = ?, 
+            audio_file = ?, 
+            version = ?, 
+            language = ?, 
+            time_limit = ?, 
+            description = ?, 
+            tags = ?, 
+            mobile_support = ?, 
+            updated_by = ?, 
+            updated_at = NOW()
+        WHERE id = ?
+    ");
+
+    return $stmt->execute([
+        $data['title'],
+        $data['audio_file'],
+        $data['version'],
+        $data['language'] ?? null,
+        $data['time_limit'] ?? null,
+        $data['description'] ?? null,
+        $data['tags'],
+        $data['mobile_support'],
+        $data['updated_by'] ?? $data['created_by'], // fallback to creator if editor not set
+        $id
+    ]);
+}
+
+// ✅ Get Audio Packages (non-deleted)
+public function getAudioPackages()
+{
+    $stmt = $this->conn->prepare("SELECT * FROM audio_package WHERE is_deleted = 0 ORDER BY created_at DESC");
+    $stmt->execute();
+    return $stmt->fetchAll(PDO::FETCH_ASSOC);
+}
+
+// ✅ Soft Delete Audio Package
+public function deleteAudioPackage($id)
+{
+    $stmt = $this->conn->prepare("UPDATE audio_package SET is_deleted = 1 WHERE id = ?");
+    return $stmt->execute([$id]);
+}
+
 
 
 }

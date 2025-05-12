@@ -157,7 +157,7 @@ document.addEventListener("DOMContentLoaded", function () {
         button.addEventListener("click", function () {
             const assessmentData = JSON.parse(this.dataset.assessment);
 
-            assessmentTitle.value = assessmentData.title;
+            /*assessmentTitle.value = assessmentData.title;
             numAttempts.value = assessmentData.num_attempts;
             passingPercentage.value = assessmentData.passing_percentage;
             timeLimit.value = assessmentData.time_limit;
@@ -190,15 +190,90 @@ document.addEventListener("DOMContentLoaded", function () {
                 assessmentData.tags.split(",").forEach(tag => addTag(tag.trim()));
             }
 
+            console.log(assessmentData.id);*/
+
+        const assessmentId = assessmentData.id;
+    
+        fetch(`index.php?controller=VLRController&action=getAssessmentById&id=${assessmentId}`)
+            .then(response => response.json())
+            .then(assessmentData => {
+                console.log(assessmentData);
+                assessmentTitle.value = assessmentData.title;
+                numAttempts.value = assessmentData.num_attempts;
+                passingPercentage.value = assessmentData.passing_percentage;
+                timeLimit.value = assessmentData.time_limit;
+    
+                document.querySelectorAll('input[name="assessment_negativeMarking"]').forEach(radio => {
+                    radio.checked = (radio.value === assessmentData.negative_marking);
+                });
+    
+                if (assessmentData.negative_marking_percentage) {
+                    negativeMarkingPercentage.value = assessmentData.negative_marking_percentage;
+                    negativeMarkingPercentageWrapper.style.display = "block";
+                } else {
+                    negativeMarkingPercentageWrapper.style.display = "none";
+                }
+    
+                document.querySelectorAll('input[name="assessment_assessmentType"]').forEach(radio => {
+                    radio.checked = (radio.value === assessmentData.assessment_type);
+                });
+    
+                if (assessmentData.num_questions_to_display) {
+                    numberOfQuestions.value = assessmentData.num_questions_to_display;
+                    numberOfQuestionsWrapper.style.display = "block";
+                } else {
+                    numberOfQuestionsWrapper.style.display = "none";
+                }
+    
+                tagContainer.innerHTML = "";
+                tags = [];
+                if (assessmentData.tags) {
+                    assessmentData.tags.split(",").forEach(tag => addTag(tag.trim()));
+                }
+    
+                // Load and display selected questions
+                selectedQuestionsBody.innerHTML = "";
+                selectedQuestionIdsInput.value = "";
+                if (assessmentData.selected_questions && assessmentData.selected_questions.length > 0) {
+                    assessmentData.selected_questions.forEach(question => {
+                        const row = document.createElement("tr");
+                        row.innerHTML = `
+                            <td>${question.title}</td>
+                            <td>${question.type}</td>
+                            <td>${question.tags}</td>
+                            <td>${question.marks}</td>
+                        `;
+                        selectedQuestionsBody.appendChild(row);
+                    });
+    
+                    const selectedIds = assessmentData.selected_questions.map(q => q.id);
+                    selectedQuestionIdsInput.value = selectedIds.join(",");
+                    selectedQuestionCountInput.value = selectedIds.length;
+                    selectedQuestionsWrapper.style.display = "block";
+                } else {
+                    selectedQuestionsWrapper.style.display = "none";
+                }
+    
+                assessmentModalLabel.textContent = "Edit Assessment";
+                assessmentModal.show();
+            })
+            .catch(error => {
+                console.error("Error fetching assessment:", error);
+                alert("Failed to load assessment data.");
+            });
+    
+
+
             // Load selected questions
-            if (assessmentData.selected_questions) {
+            /*if (assessmentData.selected_questions) {
+                //here
                 populateSelectedQuestions(assessmentData.selected_questions);
             } else {
                 selectedQuestionsBody.innerHTML = "";
                 selectedQuestionsWrapper.style.display = "none";
                 selectedQuestionIdsInput.value = "";
                 selectedQuestionCountInput.value = "";
-            }
+            }*/
 
             assessmentModalLabel.textContent = "Edit Assessment";
             assessmentModal.show();
