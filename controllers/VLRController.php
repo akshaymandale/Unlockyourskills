@@ -19,6 +19,7 @@ class VLRController
         $assessmentPackages = $this->VLRModel->getAllAssessments();
         $audioPackages = $this->VLRModel->getAudioPackages(); 
         $videoPackages = $this->VLRModel->getVideoPackages();
+        $imagePackages       = $this->VLRModel->getImagePackages(); 
         //echo '<pre>'; print_r($audioPackages); die;
         require 'views/vlr.php';
     }
@@ -783,6 +784,114 @@ public function deleteVideoPackage()
     $message = $success ? "Video package deleted successfully." : "Failed to delete Video package.";
     $this->redirectWithAlert($message);
 }
+
+
+// ✅ Add or Edit Image Package
+public function addOrEditImagePackage()
+{
+    if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+        $this->redirectWithAlert("Invalid request parameters.");
+        return;
+    }
+
+    // ✅ Ensure session is valid
+    if (!isset($_SESSION['id'])) {
+        $this->redirectWithAlert("Unauthorized access. Please log in.");
+        return;
+    }
+
+    // ✅ Extract POST and FILES data (with fallbacks for suffixed names)
+    $imageId     = $_POST['image_id'] ?? $_POST['image_idimage'] ?? null;
+    $title       = trim($_POST['image_title'] ?? $_POST['image_titleimage'] ?? '');
+    $version     = $_POST['version'] ?? $_POST['versionimage'] ?? '';
+    $tags        = $_POST['tagList'] ?? $_POST['tagListimage'] ?? '';
+    $imageFile   = $_FILES['imageFile'] ?? $_FILES['imageFileimage'] ?? null;
+    $existingImage = $_POST['existing_image'] ?? $_POST['existing_imageimage'] ?? null;
+
+    // ✅ Initialize error list
+    $errors = [];
+
+    // ✅ Validation
+    if (empty($title)) {
+        $errors[] = "Title is required.";
+    }
+
+    if (!$imageId && empty($imageFile['name'])) {
+        $errors[] = "Image file is required.";
+    } elseif (!empty($imageFile['name']) && $imageFile['size'] > 10 * 1024 * 1024) {
+        $errors[] = "Image file size cannot exceed 10MB.";
+    }
+
+    if (empty($version) || !is_numeric($version)) {
+        $errors[] = "Version must be a valid number.";
+    }
+
+    if (empty($tags)) {
+        $errors[] = "Tags are required.";
+    }
+
+    // ✅ Handle validation failure
+    if (!empty($errors)) {
+        $this->redirectWithAlert(implode('\n', $errors));
+        return;
+    }
+
+    // ✅ Handle image file upload (only if a new file is provided)
+    $imageFileName = $existingImage;
+    if (!empty($imageFile['name'])) {
+        $uploadDir = "uploads/image/";
+        $ext = pathinfo($imageFile['name'], PATHINFO_EXTENSION);
+        $uniqueName = uniqid("image_") . "." . $ext;
+        $targetPath = $uploadDir . $uniqueName;
+
+        if (!move_uploaded_file($imageFile['tmp_name'], $targetPath)) {
+            $this->redirectWithAlert("Image upload failed.");
+            return;
+        }
+
+        $imageFileName = $uniqueName;
+    }
+
+    // ✅ Prepare clean data for DB
+    $data = [
+        'title'          => $title,
+        'image_file'     => $imageFileName,
+        'description'    => trim($_POST['description'] ?? $_POST['descriptionimage'] ?? '') ?: null,
+        'tags'           => $tags,
+        'version'        => $version,
+        'language'       => trim($_POST['language'] ?? $_POST['languageimage'] ?? '') ?: null,
+        'mobile_support' => $_POST['mobileSupport'] ?? $_POST['mobileSupportimage'] ?? 0,
+        'created_by'     => $_SESSION['id']
+    ];
+
+    // ✅ Insert or update logic
+    if ($imageId) {
+        $success = $this->VLRModel->updateImagePackage($imageId, $data);
+        $message = $success ? "Image package updated successfully." : "Failed to update Image package.";
+    } else {
+        $success = $this->VLRModel->insertImagePackage($data);
+        $message = $success ? "Image package added successfully." : "Failed to add Image package.";
+    }
+
+    $this->redirectWithAlert($message);
+}
+
+// ✅ Delete Image Package
+public function deleteImagePackage()
+{
+    if (!isset($_GET['id'])) {
+        $this->redirectWithAlert("Invalid request.");
+        return;
+    }
+
+    $id = $_GET['id'];
+    $success = $this->VLRModel->deleteImagePackage($id);
+
+    $message = $success ? "Image package deleted successfully." : "Failed to delete Image package.";
+    $this->redirectWithAlert($message);
+}
+
+
 
 // 🔁 Utility function for redirecting with alert
 private function redirectWithAlert($message)

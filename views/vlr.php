@@ -1002,7 +1002,8 @@ $languageList = $vlrController->getLanguages();
                                                     <div class="tag-input-container form-control">
                                                         <span id="tagDisplayvideo"></span>
                                                         <input type="text" id="tagInputvideo"
-                                                            placeholder="<?= Localization::translate('add_tag_placeholder'); ?>" name="tagInputvideo">
+                                                            placeholder="<?= Localization::translate('add_tag_placeholder'); ?>"
+                                                            name="tagInputvideo">
                                                     </div>
                                                     <input type="hidden" name="tagListvideo" id="tagListvideo">
                                                 </div>
@@ -1075,42 +1076,42 @@ $languageList = $vlrController->getLanguages();
                     </div>
                 </div>
 
-<!-- ✅ Video Display -->
-<div class="video-wrapper mt-4">
-    <div class="video-wrapper-border">
-        <div class="row">
-            <?php if (!empty($videoPackages)): ?>
-                <?php foreach ($videoPackages as $video): ?>
-                    <div class="col-md-4">
-                        <div class="video-card">
-                            <div class="card-body">
-                                <div class="video-icon">
-                                    <i class="fas fa-video"></i>
-                                </div>
-                                <h5 class="video-title" title="<?= htmlspecialchars($video['title']) ?>">
-                                    <?= htmlspecialchars(strlen($video['title']) > 20 ? substr($video['title'], 0, 17) . '...' : $video['title']) ?>
-                                </h5>
-                                <div class="video-actions">
-                                    <a href="#" class="edit-video" data-video='<?= json_encode($video); ?>'>
-                                        <i class="fas fa-edit edit-icon"
-                                            title="<?= Localization::translate('edit'); ?>"></i>
-                                    </a>
-                                    <a href="index.php?controller=VLRController&action=deleteVideoPackage&id=<?= $video['id'] ?>"
-                                        onclick="return confirm('<?= Localization::translate('delete_confirmation'); ?>');">
-                                        <i class="fas fa-trash-alt delete-icon"
-                                            title="<?= Localization::translate('delete'); ?>"></i>
-                                    </a>
-                                </div>
-                            </div>
+                <!-- ✅ Video Display -->
+                <div class="video-wrapper mt-4">
+                    <div class="video-wrapper-border">
+                        <div class="row">
+                            <?php if (!empty($videoPackages)): ?>
+                                <?php foreach ($videoPackages as $video): ?>
+                                    <div class="col-md-4">
+                                        <div class="video-card">
+                                            <div class="card-body">
+                                                <div class="video-icon">
+                                                    <i class="fas fa-video"></i>
+                                                </div>
+                                                <h5 class="video-title" title="<?= htmlspecialchars($video['title']) ?>">
+                                                    <?= htmlspecialchars(strlen($video['title']) > 20 ? substr($video['title'], 0, 17) . '...' : $video['title']) ?>
+                                                </h5>
+                                                <div class="video-actions">
+                                                    <a href="#" class="edit-video" data-video='<?= json_encode($video); ?>'>
+                                                        <i class="fas fa-edit edit-icon"
+                                                            title="<?= Localization::translate('edit'); ?>"></i>
+                                                    </a>
+                                                    <a href="index.php?controller=VLRController&action=deleteVideoPackage&id=<?= $video['id'] ?>"
+                                                        onclick="return confirm('<?= Localization::translate('delete_confirmation'); ?>');">
+                                                        <i class="fas fa-trash-alt delete-icon"
+                                                            title="<?= Localization::translate('delete'); ?>"></i>
+                                                    </a>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                <?php endforeach; ?>
+                            <?php else: ?>
+                                <p><?= Localization::translate('no_video_found'); ?></p>
+                            <?php endif; ?>
                         </div>
                     </div>
-                <?php endforeach; ?>
-            <?php else: ?>
-                <p><?= Localization::translate('no_video_found'); ?></p>
-            <?php endif; ?>
-        </div>
-    </div>
-</div>
+                </div>
 
 
 
@@ -1446,11 +1447,165 @@ $languageList = $vlrController->getLanguages();
             <div class="tab-pane" id="image">
                 <div class="d-flex justify-content-between align-items-center">
                     <h3><?= Localization::translate('image'); ?></h3>
-                    <button class="btn btn-sm btn-primary" onclick="openAddModal('Image')">+
-                        <?= Localization::translate('add'); ?></button>
+                    <!-- ✅ Image "Add" Button -->
+                    <button class="btn btn-primary mb-3" data-bs-toggle="modal" id="addImageBtn"
+                        data-bs-target="#imageModal">
+                        + <?= Localization::translate('add_image'); ?>
+                    </button>
                 </div>
-                <div id="image-items"></div>
+                <!-- ✅ Image Modal -->
+                <div class="modal fade" id="imageModal" tabindex="-1" aria-labelledby="imageModalLabel"
+                    aria-hidden="true">
+                    <div class="modal-dialog modal-lg">
+                        <form id="imageForm" action="index.php?controller=VLRController&action=addOrEditImagePackage"
+                            method="POST" enctype="multipart/form-data">
+                            <input type="hidden" id="image_idimage" name="image_idimage">
+
+                            <div class="modal-content">
+                                <div class="modal-header">
+                                    <h5 class="modal-title" id="imageModalLabel">
+                                        <?= Localization::translate('add_image_package'); ?>
+                                    </h5>
+                                    <button type="button" class="btn-close" data-bs-dismiss="modal"
+                                        aria-label="Close"></button>
+                                </div>
+
+                                <div class="modal-body">
+                                    <div class="row g-3">
+                                        <!-- Title -->
+                                        <div class="col-md-6">
+                                            <label for="image_titleimage" class="form-label">Title <span
+                                                    class="text-danger">*</span></label>
+                                            <input type="text" class="form-control" id="image_titleimage"
+                                                name="image_titleimage">
+                                        </div>
+
+                                        <!-- Upload Image -->
+                                        <div class="col-md-6">
+                                            <label for="imageFileimage" class="form-label">Upload Image <span
+                                                    class="text-danger">*</span></label>
+                                            <input type="file" class="form-control" id="imageFileimage"
+                                                name="imageFileimage" accept="image/*">
+                                            <small class="text-muted">Max size: 10MB. Formats: JPG, PNG, GIF,
+                                                etc.</small>
+                                            <input type="hidden" id="existing_imageimage" name="existing_image">
+                                            <div id="existingImageDisplayimage" class="mt-2"></div>
+                                        </div>
+
+                                        <!-- Tags -->
+                                        <div class="row">
+                                            <div class="col-md-12">
+                                                <div class="form-group">
+                                                    <label
+                                                        for="tagsimage"><?= Localization::translate('tags_keywords'); ?>
+                                                        <span class="text-danger">*</span></label>
+                                                    <div class="tag-input-container form-control">
+                                                        <span id="tagDisplayimage"></span>
+                                                        <input type="text" id="tagInputimage"
+                                                            placeholder="<?= Localization::translate('add_tag_placeholder'); ?>"
+                                                            name="tagInputimage">
+                                                    </div>
+                                                    <input type="hidden" name="tagListimage" id="tagListimage">
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <!-- Description -->
+                                        <div class="col-md-12">
+                                            <label for="descriptionimage" class="form-label">Description</label>
+                                            <textarea class="form-control" id="descriptionimage" name="descriptionimage"
+                                                rows="3"></textarea>
+                                        </div>
+
+                                        <!-- Version -->
+                                        <div class="col-md-6">
+                                            <label for="versionimage" class="form-label">Version <span
+                                                    class="text-danger">*</span></label>
+                                            <input type="number" class="form-control" id="versionimage"
+                                                name="versionimage" min="0" step="any" pattern="\d*">
+                                        </div>
+
+                                        <!-- Language Support -->
+                                        <div class="col-md-6">
+                                            <label for="languageimage" class="form-label">Language Support</label>
+                                            <select class="form-select" id="languageimage" name="languageimage">
+                                                <option value="">Select</option>
+                                                <option value="en">English</option>
+                                                <option value="es">Spanish</option>
+                                                <option value="fr">French</option>
+                                                <option value="de">German</option>
+                                            </select>
+                                        </div>
+
+                                        <!-- Mobile & Tablet Support -->
+                                        <div class="col-md-12">
+                                            <label class="form-label">Mobile & Tablet Support</label>
+                                            <div>
+                                                <div class="form-check form-check-inline">
+                                                    <input class="form-check-input" type="radio"
+                                                        name="mobileSupportimage" id="mobileYesimage" value="Yes">
+                                                    <label class="form-check-label" for="mobileYesimage">Yes</label>
+                                                </div>
+                                                <div class="form-check form-check-inline">
+                                                    <input class="form-check-input" type="radio"
+                                                        name="mobileSupportimage" id="mobileNoimage" value="No" checked>
+                                                    <label class="form-check-label" for="mobileNoimage">No</label>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Modal Footer -->
+                                <div class="modal-footer">
+                                    <button type="submit"
+                                        class="btn btn-primary"><?= Localization::translate('submit'); ?></button>
+                                    <button type="button" class="btn btn-danger"
+                                        id="clearFormimage"><?= Localization::translate('cancel'); ?></button>
+                                </div>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+
+                <!-- ✅ Image Display -->
+                <div class="image-wrapper mt-4">
+                    <div class="image-wrapper-border">
+                        <div class="row">
+                            <?php if (!empty($imagePackages)): ?>
+                                <?php foreach ($imagePackages as $image): ?>
+                                    <div class="col-md-4">
+                                        <div class="image-card">
+                                            <div class="card-body">
+                                                <div class="image-icon">
+                                                    <i class="fas fa-image"></i>
+                                                </div>
+                                                <h5 class="image-title" title="<?= htmlspecialchars($image['title']) ?>">
+                                                    <?= htmlspecialchars(strlen($image['title']) > 20 ? substr($image['title'], 0, 17) . '...' : $image['title']) ?>
+                                                </h5>
+                                                <div class="image-actions">
+                                                    <a href="#" class="edit-image" data-image='<?= json_encode($image); ?>'>
+                                                        <i class="fas fa-edit edit-icon"
+                                                            title="<?= Localization::translate('edit'); ?>"></i>
+                                                    </a>
+                                                    <a href="index.php?controller=VLRController&action=deleteImagePackage&id=<?= $image['id'] ?>"
+                                                        onclick="return confirm('<?= Localization::translate('delete_confirmation'); ?>');">
+                                                        <i class="fas fa-trash-alt delete-icon"
+                                                            title="<?= Localization::translate('delete'); ?>"></i>
+                                                    </a>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                <?php endforeach; ?>
+                            <?php else: ?>
+                                <p><?= Localization::translate('no_image_found'); ?></p>
+                            <?php endif; ?>
+                        </div>
+                    </div>
+                </div>
             </div>
+
 
 
 
@@ -1983,6 +2138,8 @@ $languageList = $vlrController->getLanguages();
 <script src="public/js/add_question_on_assessment.js"></script>
 <script src="public/js/document_validation.js"></script>
 <script src="public/js/document_package.js"></script>
+<script src="public/js/image_validation.js"></script>
+<script src="public/js/image_package.js"></script>
 <script src="public/js/external_content_validation.js"></script>
 <script src="public/js/external_package.js"></script>
 <?php include 'includes/footer.php'; ?>
