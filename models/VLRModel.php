@@ -688,6 +688,86 @@ public function deleteAudioPackage($id)
     return $stmt->execute([$id]);
 }
 
+// ✅ Insert Video Package
+public function insertVideoPackage($data)
+{
+    // Validate required fields
+    $requiredFields = ['title', 'video_file', 'version', 'mobile_support', 'tags', 'created_by'];
+    foreach ($requiredFields as $field) {
+        if (empty($data[$field])) {
+            return false;
+        }
+    }
+
+    $stmt = $this->conn->prepare("
+        INSERT INTO video_package 
+        (title, video_file, version, language, time_limit, description, tags, mobile_support, created_by, is_deleted, created_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 0, NOW())
+    ");
+
+    return $stmt->execute([
+        $data['title'],
+        $data['video_file'],
+        $data['version'],
+        $data['language'] ?? null,
+        $data['time_limit'] ?? null,
+        $data['description'] ?? null,
+        $data['tags'],
+        $data['mobile_support'],
+        $data['created_by']
+    ]);
+}
+
+// ✅ Update Video Package
+public function updateVideoPackage($id, $data)
+{
+    if (empty($id)) {
+        return false;
+    }
+
+    $stmt = $this->conn->prepare("
+        UPDATE video_package SET 
+            title = ?, 
+            video_file = ?, 
+            version = ?, 
+            language = ?, 
+            time_limit = ?, 
+            description = ?, 
+            tags = ?, 
+            mobile_support = ?, 
+            updated_by = ?, 
+            updated_at = NOW()
+        WHERE id = ?
+    ");
+
+    return $stmt->execute([
+        $data['title'],
+        $data['video_file'],
+        $data['version'],
+        $data['language'] ?? null,
+        $data['time_limit'] ?? null,
+        $data['description'] ?? null,
+        $data['tags'],
+        $data['mobile_support'],
+        $data['updated_by'] ?? $data['created_by'],
+        $id
+    ]);
+}
+
+// ✅ Get Video Packages (non-deleted)
+public function getVideoPackages()
+{
+    $stmt = $this->conn->prepare("SELECT * FROM video_package WHERE is_deleted = 0 ORDER BY created_at DESC");
+    $stmt->execute();
+    return $stmt->fetchAll(PDO::FETCH_ASSOC);
+}
+
+// ✅ Soft Delete Video Package
+public function deleteVideoPackage($id)
+{
+    $stmt = $this->conn->prepare("UPDATE video_package SET is_deleted = 1 WHERE id = ?");
+    return $stmt->execute([$id]);
+}
 
 
 }

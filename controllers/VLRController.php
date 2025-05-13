@@ -18,6 +18,7 @@ class VLRController
         $documents = $this->VLRModel->getAllDocuments();
         $assessmentPackages = $this->VLRModel->getAllAssessments();
         $audioPackages = $this->VLRModel->getAudioPackages(); 
+        $videoPackages = $this->VLRModel->getVideoPackages();
         //echo '<pre>'; print_r($audioPackages); die;
         require 'views/vlr.php';
     }
@@ -666,6 +667,120 @@ public function deleteAudioPackage()
     $success = $this->VLRModel->deleteAudioPackage($id);
 
     $message = $success ? "Audio package deleted successfully." : "Failed to delete Audio package.";
+    $this->redirectWithAlert($message);
+}
+
+
+
+// ✅ Add or Edit Video Package
+public function addOrEditVideoPackage()
+{
+    if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+        $this->redirectWithAlert("Invalid request parameters.");
+        return;
+    }
+
+    // ✅ Ensure session is valid
+    if (!isset($_SESSION['id'])) {
+        $this->redirectWithAlert("Unauthorized access. Please log in.");
+        return;
+    }
+
+    // ✅ Extract POST and FILES data (with fallbacks for suffixed names)
+    $videoId     = $_POST['video_id'] ?? $_POST['video_idvideo'] ?? null;
+    $title       = trim($_POST['video_title'] ?? $_POST['video_titlevideo'] ?? '');
+    $version     = $_POST['version'] ?? $_POST['versionvideo'] ?? '';
+    $tags        = $_POST['tagList'] ?? $_POST['tagListvideo'] ?? '';
+    $timeLimit   = trim($_POST['timeLimit'] ?? $_POST['timeLimitvideo'] ?? '');
+    $videoFile   = $_FILES['videoFile'] ?? $_FILES['videoFilevideo'] ?? null;
+    $existingVideo = $_POST['existing_video'] ?? $_POST['existing_videovideo'] ?? null;
+
+    // ✅ Initialize error list
+    $errors = [];
+
+    // ✅ Validation
+    if (empty($title)) {
+        $errors[] = "Title is required.";
+    }
+
+    if (!$videoId && empty($videoFile['name'])) {
+        // Only required on "add"
+        $errors[] = "Video file is required.";
+    } elseif (!empty($videoFile['name']) && $videoFile['size'] > 50 * 1024 * 1024) {
+        $errors[] = "Video file size cannot exceed 50MB.";
+    }
+
+    if (empty($version) || !is_numeric($version)) {
+        $errors[] = "Version must be a valid number.";
+    }
+
+    if (empty($tags)) {
+        $errors[] = "Tags are required.";
+    }
+
+    if ($timeLimit !== '' && !is_numeric($timeLimit)) {
+        $errors[] = "Time limit must be numeric.";
+    }
+
+    // ✅ Handle validation failure
+    if (!empty($errors)) {
+        $this->redirectWithAlert(implode('\n', $errors));
+        return;
+    }
+
+    // ✅ Handle video file upload (only if a new file is provided)
+    $videoFileName = $existingVideo;
+    if (!empty($videoFile['name'])) {
+        $uploadDir = "uploads/video/";
+        $ext = pathinfo($videoFile['name'], PATHINFO_EXTENSION);
+        $uniqueName = uniqid("video_") . "." . $ext;
+        $targetPath = $uploadDir . $uniqueName;
+
+        if (!move_uploaded_file($videoFile['tmp_name'], $targetPath)) {
+            $this->redirectWithAlert("Video upload failed.");
+            return;
+        }
+
+        $videoFileName = $uniqueName;
+    }
+
+    // ✅ Prepare clean data for DB
+    $data = [
+        'title'          => $title,
+        'video_file'     => $videoFileName,
+        'description'    => trim($_POST['description'] ?? $_POST['descriptionvideo'] ?? '') ?: null,
+        'tags'           => $tags,
+        'version'        => $version,
+        'language'       => trim($_POST['language'] ?? $_POST['languagevideo'] ?? '') ?: null,
+        'time_limit'     => $timeLimit !== '' ? $timeLimit : null,
+        'mobile_support' => $_POST['mobileSupport'] ?? $_POST['mobileSupportvideo'] ?? 0,
+        'created_by'     => $_SESSION['id']
+    ];
+
+    // ✅ Insert or update logic
+    if ($videoId) {
+        $success = $this->VLRModel->updateVideoPackage($videoId, $data);
+        $message = $success ? "Video package updated successfully." : "Failed to update Video package.";
+    } else {
+        $success = $this->VLRModel->insertVideoPackage($data);
+        $message = $success ? "Video package added successfully." : "Failed to add Video package.";
+    }
+
+    $this->redirectWithAlert($message);
+}
+
+// ✅ Delete Video Package
+public function deleteVideoPackage()
+{
+    if (!isset($_GET['id'])) {
+        $this->redirectWithAlert("Invalid request.");
+        return;
+    }
+
+    $id = $_GET['id'];
+    $success = $this->VLRModel->deleteVideoPackage($id);
+
+    $message = $success ? "Video package deleted successfully." : "Failed to delete Video package.";
     $this->redirectWithAlert($message);
 }
 
