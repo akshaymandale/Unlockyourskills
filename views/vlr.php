@@ -361,7 +361,7 @@ $languageList = $vlrController->getLanguages();
                                                                 title="<?= Localization::translate('edit'); ?>"></i>
                                                         </a>
                                                         <a href="index.php?controller=VLRController&action=delete&id=<?= $scorm['id'] ?>"
-                                                            onclick="return confirm('<?= Localization::translate('delete_confirmation'); ?>');">
+                                                            onclick="return confirm('<?= Localization::translate('delete_confirmation_scrom'); ?>');">
                                                             <i class="fas fa-trash-alt delete-icon"
                                                                 title="<?= Localization::translate('delete'); ?>"></i></a>
                                                     </div>
@@ -795,7 +795,8 @@ $languageList = $vlrController->getLanguages();
                             <div class="modal-content">
                                 <div class="modal-header">
                                     <h5 class="modal-title" id="audioModalLabel">
-                                        <?= Localization::translate('add_audio_package'); ?></h5>
+                                        <?= Localization::translate('add_audio_package'); ?>
+                                    </h5>
                                     <button type="button" class="btn-close" data-bs-dismiss="modal"
                                         aria-label="Close"></button>
                                 </div>
@@ -947,10 +948,172 @@ $languageList = $vlrController->getLanguages();
             <div class="tab-pane" id="video">
                 <div class="d-flex justify-content-between align-items-center">
                     <h3><?= Localization::translate('video'); ?></h3>
-                    <button class="btn btn-sm btn-primary" onclick="openAddModal('Video')">+
-                        <?= Localization::translate('add'); ?></button>
+                    <!-- ✅ Video "Add" Button -->
+                    <button class="btn btn-primary mb-3" data-bs-toggle="modal" id="addVideoBtn"
+                        data-bs-target="#videoModal">
+                        + <?= Localization::translate('add_video'); ?>
+                    </button>
                 </div>
-                <div id="video-items"></div>
+                <!-- ✅ Video Modal -->
+                <div class="modal fade" id="videoModal" tabindex="-1" aria-labelledby="videoModalLabel"
+                    aria-hidden="true">
+                    <div class="modal-dialog modal-lg">
+                        <form id="videoForm" action="index.php?controller=VLRController&action=addOrEditVideoPackage"
+                            method="POST" enctype="multipart/form-data">
+                            <input type="hidden" id="video_idvideo" name="video_idvideo">
+
+                            <div class="modal-content">
+                                <div class="modal-header">
+                                    <h5 class="modal-title" id="videoModalLabel">
+                                        <?= Localization::translate('add_video_package'); ?>
+                                    </h5>
+                                    <button type="button" class="btn-close" data-bs-dismiss="modal"
+                                        aria-label="Close"></button>
+                                </div>
+
+                                <div class="modal-body">
+                                    <div class="row g-3">
+                                        <!-- Title -->
+                                        <div class="col-md-6">
+                                            <label for="video_titlevideo" class="form-label">Title <span
+                                                    class="text-danger">*</span></label>
+                                            <input type="text" class="form-control" id="video_titlevideo"
+                                                name="video_titlevideo">
+                                        </div>
+
+                                        <!-- Upload Video -->
+                                        <div class="col-md-6">
+                                            <label for="videoFilevideo" class="form-label">Upload Video <span
+                                                    class="text-danger">*</span></label>
+                                            <input type="file" class="form-control" id="videoFilevideo"
+                                                name="videoFilevideo" accept="video/*">
+                                            <small class="text-muted">Max size: 500MB. Formats: All video types.</small>
+                                            <input type="hidden" id="existing_videovideo" name="existing_video">
+                                            <div id="existingVideoDisplayvideo" class="mt-2"></div>
+                                        </div>
+
+                                        <!-- Tags -->
+                                        <div class="row">
+                                            <div class="col-md-12">
+                                                <div class="form-group">
+                                                    <label
+                                                        for="tagsvideo"><?= Localization::translate('tags_keywords'); ?>
+                                                        <span class="text-danger">*</span></label>
+                                                    <div class="tag-input-container form-control">
+                                                        <span id="tagDisplayvideo"></span>
+                                                        <input type="text" id="tagInputvideo"
+                                                            placeholder="<?= Localization::translate('add_tag_placeholder'); ?>" name="tagInputvideo">
+                                                    </div>
+                                                    <input type="hidden" name="tagListvideo" id="tagListvideo">
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <!-- Description -->
+                                        <div class="col-md-12">
+                                            <label for="descriptionvideo" class="form-label">Description</label>
+                                            <textarea class="form-control" id="descriptionvideo" name="descriptionvideo"
+                                                rows="3"></textarea>
+                                        </div>
+
+                                        <!-- Version -->
+                                        <div class="col-md-4">
+                                            <label for="versionvideo" class="form-label">Version <span
+                                                    class="text-danger">*</span></label>
+                                            <input type="number" class="form-control" id="versionvideo"
+                                                name="versionvideo" min="0" step="any" pattern="\d*">
+                                        </div>
+
+                                        <!-- Language Support -->
+                                        <div class="col-md-4">
+                                            <label for="languagevideo" class="form-label">Language Support</label>
+                                            <select class="form-select" id="languagevideo" name="languagevideo">
+                                                <option value="">Select</option>
+                                                <option value="en">English</option>
+                                                <option value="es">Spanish</option>
+                                                <option value="fr">French</option>
+                                                <option value="de">German</option>
+                                            </select>
+                                        </div>
+
+                                        <!-- Time Limit -->
+                                        <div class="col-md-4">
+                                            <label for="timeLimitvideo" class="form-label">Time Limit (in
+                                                minutes)</label>
+                                            <input type="number" class="form-control" id="timeLimitvideo"
+                                                name="timeLimitvideo" min="1" pattern="\d*">
+                                        </div>
+
+                                        <!-- Mobile & Tablet Support -->
+                                        <div class="col-md-12">
+                                            <label class="form-label">Mobile & Tablet Support</label>
+                                            <div>
+                                                <div class="form-check form-check-inline">
+                                                    <input class="form-check-input" type="radio"
+                                                        name="mobileSupportvideo" id="mobileYesvideo" value="Yes">
+                                                    <label class="form-check-label" for="mobileYesvideo">Yes</label>
+                                                </div>
+                                                <div class="form-check form-check-inline">
+                                                    <input class="form-check-input" type="radio"
+                                                        name="mobileSupportvideo" id="mobileNovideo" value="No" checked>
+                                                    <label class="form-check-label" for="mobileNovideo">No</label>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Modal Footer -->
+                                <div class="modal-footer">
+                                    <button type="submit"
+                                        class="btn btn-primary"><?= Localization::translate('submit'); ?></button>
+                                    <button type="button" class="btn btn-danger"
+                                        id="clearFormvideo"><?= Localization::translate('cancel'); ?></button>
+                                </div>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+
+<!-- ✅ Video Display -->
+<div class="video-wrapper mt-4">
+    <div class="video-wrapper-border">
+        <div class="row">
+            <?php if (!empty($videoPackages)): ?>
+                <?php foreach ($videoPackages as $video): ?>
+                    <div class="col-md-4">
+                        <div class="video-card">
+                            <div class="card-body">
+                                <div class="video-icon">
+                                    <i class="fas fa-video"></i>
+                                </div>
+                                <h5 class="video-title" title="<?= htmlspecialchars($video['title']) ?>">
+                                    <?= htmlspecialchars(strlen($video['title']) > 20 ? substr($video['title'], 0, 17) . '...' : $video['title']) ?>
+                                </h5>
+                                <div class="video-actions">
+                                    <a href="#" class="edit-video" data-video='<?= json_encode($video); ?>'>
+                                        <i class="fas fa-edit edit-icon"
+                                            title="<?= Localization::translate('edit'); ?>"></i>
+                                    </a>
+                                    <a href="index.php?controller=VLRController&action=deleteVideoPackage&id=<?= $video['id'] ?>"
+                                        onclick="return confirm('<?= Localization::translate('delete_confirmation'); ?>');">
+                                        <i class="fas fa-trash-alt delete-icon"
+                                            title="<?= Localization::translate('delete'); ?>"></i>
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                <?php endforeach; ?>
+            <?php else: ?>
+                <p><?= Localization::translate('no_video_found'); ?></p>
+            <?php endif; ?>
+        </div>
+    </div>
+</div>
+
+
+
             </div>
 
 
@@ -1259,7 +1422,7 @@ $languageList = $vlrController->getLanguages();
                                                                 title="<?= Localization::translate('edit'); ?>"></i>
                                                         </a>
                                                         <a href="index.php?controller=VLRController&action=deleteDocument&id=<?= $document['id'] ?>"
-                                                            onclick="return confirm('<?= Localization::translate('confirm_delete'); ?>');">
+                                                            onclick="return confirm('<?= Localization::translate('confirm_delete_document'); ?>');">
                                                             <i class="fas fa-trash-alt delete-icon"
                                                                 title="<?= Localization::translate('delete'); ?>"></i>
                                                         </a>
@@ -1815,6 +1978,8 @@ $languageList = $vlrController->getLanguages();
 <script src="public/js/assessment_package.js"></script>
 <script src="public/js/audio_validation.js"></script>
 <script src="public/js/audio_package.js"></script>
+<script src="public/js/video_validation.js"></script>
+<script src="public/js/video_package.js"></script>
 <script src="public/js/add_question_on_assessment.js"></script>
 <script src="public/js/document_validation.js"></script>
 <script src="public/js/document_package.js"></script>
