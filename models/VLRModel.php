@@ -769,6 +769,85 @@ public function deleteVideoPackage($id)
     return $stmt->execute([$id]);
 }
 
+// ✅ Insert Image Package
+public function insertImagePackage($data)
+{
+    // Validate required fields
+    $requiredFields = ['title', 'image_file', 'version', 'mobile_support', 'tags', 'created_by'];
+    foreach ($requiredFields as $field) {
+        if (empty($data[$field])) {
+            return false;
+        }
+    }
+
+    $stmt = $this->conn->prepare("
+        INSERT INTO image_package 
+        (title, image_file, version, language, description, tags, mobile_support, created_by, is_deleted, created_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, 0, NOW())
+    ");
+
+    return $stmt->execute([
+        $data['title'],
+        $data['image_file'],
+        $data['version'],
+        $data['language'] ?? null,
+        $data['description'] ?? null,
+        $data['tags'],
+        $data['mobile_support'],
+        $data['created_by']
+    ]);
+}
+
+// ✅ Update Image Package
+public function updateImagePackage($id, $data)
+{
+    if (empty($id)) {
+        return false;
+    }
+
+    $stmt = $this->conn->prepare("
+        UPDATE image_package SET 
+            title = ?, 
+            image_file = ?, 
+            version = ?, 
+            language = ?, 
+            description = ?, 
+            tags = ?, 
+            mobile_support = ?, 
+            updated_by = ?, 
+            updated_at = NOW()
+        WHERE id = ?
+    ");
+
+    return $stmt->execute([
+        $data['title'],
+        $data['image_file'],
+        $data['version'],
+        $data['language'] ?? null,
+        $data['description'] ?? null,
+        $data['tags'],
+        $data['mobile_support'],
+        $data['updated_by'] ?? $data['created_by'],
+        $id
+    ]);
+}
+
+// ✅ Get Image Packages (non-deleted)
+public function getImagePackages()
+{
+    $stmt = $this->conn->prepare("SELECT * FROM image_package WHERE is_deleted = 0 ORDER BY created_at DESC");
+    $stmt->execute();
+    return $stmt->fetchAll(PDO::FETCH_ASSOC);
+}
+
+// ✅ Soft Delete Image Package
+public function deleteImagePackage($id)
+{
+    $stmt = $this->conn->prepare("UPDATE image_package SET is_deleted = 1 WHERE id = ?");
+    return $stmt->execute([$id]);
+}
+
+
 
 }
 ?>
