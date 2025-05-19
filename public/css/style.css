@@ -1384,3 +1384,44 @@ html, body {
     border-radius: 3px; /* Square */
     cursor: pointer;
 }
+
+/* ✅ Spacing below pagination to prevent overlap with footer */
+.pagination-container {
+    margin-top: 30px;
+    margin-bottom: 40px; /* Space above footer */
+}
+
+/* ✅ Pagination Styles */
+.pagination .page-item .page-link {
+    color: #4b0082; /* Indigo */
+    background-color: #ffffff;
+    border: 1px solid #ddd;
+    font-weight: 500;
+    padding: 6px 12px;
+    margin: 0 3px;
+    border-radius: 4px;
+    transition: background-color 0.2s ease, color 0.2s ease;
+}
+
+/* Hover effect */
+.pagination .page-item .page-link:hover {
+    background-color: #e9d6fa; /* Light lavender */
+    color: #4b0082;
+    border-color: #6a0dad;
+}
+
+/* Active state */
+.pagination .page-item.active .page-link {
+    background-color: #6a0dad; /* Theme Purple */
+    color: white;
+    border-color: #6a0dad;
+    font-weight: 600;
+    position: static;
+}
+
+/* Disabled state */
+.pagination .page-item.disabled .page-link {
+    color: #ccc;
+    background-color: #f8f9fa;
+    border-color: #ddd;
+}

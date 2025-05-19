@@ -5,8 +5,15 @@ document.addEventListener('DOMContentLoaded', function () {
     const questionMediaInput = document.getElementById('surveyQuestionMedia');
     const questionPreview = document.getElementById('surveyQuestionPreview');
 
+    const tagInput = document.getElementById('tagInput');
+    const tagDisplay = document.getElementById('tagDisplay');
+    const tagListInput = document.getElementById('tagList');
+    let tags = [];
+
     typeSelect.addEventListener('change', updateOptionsUI);
-    questionMediaInput.addEventListener('change', () => showPreview(questionMediaInput, questionPreview, 'question-preview'));
+    questionMediaInput.addEventListener('change', () =>
+        showPreview(questionMediaInput, questionPreview, 'question-preview')
+    );
 
     function updateOptionsUI() {
         const type = typeSelect.value;
@@ -25,10 +32,9 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 
     function addOptionField(isRadio, isDropdown) {
-        // Create the individual option block
         const optionBlock = document.createElement('div');
         optionBlock.classList.add('mb-2', 'option-block');
-    
+
         optionBlock.innerHTML = `
         <div class="d-flex align-items-center gap-2 mb-2">
             <input type="${isRadio ? 'radio' : 'checkbox'}" disabled>
@@ -44,30 +50,24 @@ document.addEventListener('DOMContentLoaded', function () {
             </button>
         </div>
         <div class="preview-container option-preview mt-1"></div>
-    `;
-    
-        // Insert the new option before the "Add Another Option" button
+        `;
+
         const addBtn = document.getElementById('addMoreOptionsBtn');
         if (addBtn) {
             optionsWrapper.insertBefore(optionBlock, addBtn);
         } else {
             optionsWrapper.appendChild(optionBlock);
         }
-    
-        // Bind file input preview
+
         const fileInput = optionBlock.querySelector('.option-file');
         const preview = optionBlock.querySelector('.option-preview');
         if (fileInput) {
             fileInput.addEventListener('change', () => showPreview(fileInput, preview, 'option-preview'));
         }
-    
-        // Remove option logic
+
         const removeBtn = optionBlock.querySelector('.remove-option');
-        removeBtn.addEventListener('click', () => {
-            optionBlock.remove();
-        });
-    
-        // Create and append the "Add Another Option" button only once
+        removeBtn.addEventListener('click', () => optionBlock.remove());
+
         if (!document.getElementById('addMoreOptionsBtn')) {
             const btn = document.createElement('button');
             btn.type = 'button';
@@ -78,7 +78,6 @@ document.addEventListener('DOMContentLoaded', function () {
             optionsWrapper.appendChild(btn);
         }
     }
-    
 
     function showPreview(input, container, type) {
         container.innerHTML = '';
@@ -116,23 +115,62 @@ document.addEventListener('DOMContentLoaded', function () {
         container.appendChild(containerDiv);
     }
 
-    updateOptionsUI(); // Initial call
+    // 🔁 Tag input logic
+    function updateTagListInput() {
+        tagListInput.value = tags.join(',');
+    }
+
+    function addTag(tag) {
+        const trimmed = tag.trim();
+        if (trimmed && !tags.includes(trimmed)) {
+            tags.push(trimmed);
+            renderTags();
+            updateTagListInput();
+        }
+    }
+
+    function removeTag(index) {
+        tags.splice(index, 1);
+        renderTags();
+        updateTagListInput();
+    }
+
+    function renderTags() {
+        tagDisplay.innerHTML = '';
+        tags.forEach((tag, i) => {
+            const span = document.createElement('span');
+            span.className = 'tag';
+            span.innerHTML = `${tag} <button type="button" class="remove-tag" data-tag="${tag}">&times;</button>`;
+
+        
+            span.querySelector('button').addEventListener('click', () => removeTag(i));
+            tagDisplay.appendChild(span);
+        });
+    }
+
+    tagInput.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' || e.key === ',') {
+            e.preventDefault();
+            addTag(tagInput.value);
+            tagInput.value = '';
+        }
+    });
 
     // Reset modal fields and previews on open
-const surveyModal = document.getElementById('addSurveyQuestionModal');
-surveyModal.addEventListener('show.bs.modal', () => {
-    // Reset form
-    document.getElementById('surveyQuestionForm').reset();
+    const surveyModal = document.getElementById('addSurveyQuestionModal');
+    surveyModal.addEventListener('show.bs.modal', () => {
+        document.getElementById('surveyQuestionForm').reset();
+        questionPreview.innerHTML = '';
+        questionMediaInput.value = '';
+        typeSelect.value = 'multi_choice';
+        updateOptionsUI();
+        ratingWrapper.classList.add('d-none');
 
-    // Clear preview
-    questionPreview.innerHTML = '';
-    questionMediaInput.value = '';
+        // Reset tags
+        tags = [];
+        renderTags();
+        updateTagListInput();
+    });
 
-    // Reset type dropdown to default and trigger UI update
-    typeSelect.value = 'multi_choice';
-    updateOptionsUI();
-
-    // Reset rating fields
-    ratingWrapper.classList.add('d-none');
-});
+    updateOptionsUI(); // Initial UI setup
 });

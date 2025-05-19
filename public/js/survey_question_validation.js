@@ -3,12 +3,13 @@ document.addEventListener("DOMContentLoaded", function () {
     const titleInput = document.getElementById("surveyQuestionTitle");
     const typeSelect = document.getElementById("surveyQuestionType");
     const optionsWrapper = document.getElementById("surveyOptionsWrapper");
+    const tagInput = document.getElementById("tagInput");
+    const tagDisplay = document.getElementById("tagDisplay");
+    const tagListInput = document.getElementById("tagList");
 
-    // Helper to show error
+    // --- Error helpers ---
     function showError(input, message) {
         input.classList.add("is-invalid");
-
-        // Remove existing error if any
         let feedback = input.parentNode.querySelector(".invalid-feedback");
         if (!feedback) {
             feedback = document.createElement("div");
@@ -18,16 +19,13 @@ document.addEventListener("DOMContentLoaded", function () {
         feedback.textContent = message;
     }
 
-    // Helper to clear error
     function clearError(input) {
         input.classList.remove("is-invalid");
         const feedback = input.parentNode.querySelector(".invalid-feedback");
-        if (feedback) {
-            feedback.remove();
-        }
+        if (feedback) feedback.remove();
     }
 
-    // Validate Title
+    // --- Title validation ---
     function validateTitle() {
         const value = titleInput.value.trim();
         if (!value) {
@@ -38,12 +36,13 @@ document.addEventListener("DOMContentLoaded", function () {
         return true;
     }
 
-    // Validate Options
+    // --- Options validation ---
     function validateOptions() {
         const type = typeSelect.value;
         if (["multi_choice", "checkbox", "dropdown"].includes(type)) {
             const optionInputs = optionsWrapper.querySelectorAll("input[type='text']");
             let isValid = true;
+
             if (optionInputs.length < 1) isValid = false;
 
             optionInputs.forEach(input => {
@@ -57,36 +56,45 @@ document.addEventListener("DOMContentLoaded", function () {
 
             return isValid;
         }
-        return true; // No options required
+        return true; // No options needed for other types
     }
 
-    // Attach on blur
-    titleInput.addEventListener("blur", validateTitle);
-    // Delegated blur handler for all option inputs inside optionsWrapper
-optionsWrapper.addEventListener("blur", function (e) {
-    if (e.target && e.target.matches("input[type='text']")) {
-        if (e.target.value.trim() === "") {
-            showError(e.target, "Option cannot be empty.");
-        } else {
-            clearError(e.target);
+    // --- Tag validation ---
+    function validateTags() {
+        const tags = tagListInput.value.split(',').filter(tag => tag.trim() !== '');
+        if (tags.length === 0) {
+            showError(tagInput, "At least one tag is required.");
+            return false;
         }
+        clearError(tagInput);
+        return true;
     }
-}, true); // useCapture = true so it catches blur
 
-    // Form submit validation
+    // --- Blur event bindings ---
+    titleInput.addEventListener("blur", validateTitle);
+
+    tagInput.addEventListener("blur", validateTags); // Validate tags on blur
+
+    optionsWrapper.addEventListener("blur", function (e) {
+        if (e.target && e.target.matches("input[type='text']")) {
+            if (e.target.value.trim() === "") {
+                showError(e.target, "Option cannot be empty.");
+            } else {
+                clearError(e.target);
+            }
+        }
+    }, true);
+
+    // --- Form submit validation ---
     form.addEventListener("submit", function (e) {
         let isValid = true;
 
         if (!validateTitle()) isValid = false;
         if (!validateOptions()) isValid = false;
+        if (!validateTags()) isValid = false;
 
         if (!isValid) {
             e.preventDefault();
-            return;
         }
-
-        // Form is valid
-       // alert("Form submitted (connect your backend)");
-       // e.preventDefault(); // Remove this line once backend is connected
     });
 });
