@@ -2019,11 +2019,18 @@ $languageList = $vlrController->getLanguages();
             <div class="tab-pane" id="survey">
                 <div class="d-flex justify-content-between align-items-center">
                     <h3><?= Localization::translate('survey'); ?></h3>
-                    <button class="btn btn-sm btn-primary" onclick="openAddModal('Survey')">
-                        + <?= Localization::translate('add'); ?>
-                    </button>
+                    <div class="d-flex gap-2">
+                        <button class="btn btn-sm btn-primary" onclick="openAddModal('Survey')">
+                            + <?= Localization::translate('add'); ?>
+                        </button>
+
+                        <a href="index.php?controller=SurveyQuestionController&action=index"
+                            class="btn btn-sm btn-primary">
+                            + <?= Localization::translate('add_survey_questions'); ?>
+                        </a>
+                    </div>
                 </div>
-                <div id="survey-items"></div>
+
             </div>
 
             <!-- ✅ Feedback -->
