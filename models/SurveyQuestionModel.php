@@ -11,9 +11,9 @@ class SurveyQuestionModel {
 
     public function saveQuestion($data) {
         $sql = "INSERT INTO survey_questions 
-                (title, type, media_path, rating_scale, rating_symbol, created_by, created_at, updated_by, updated_at, is_deleted)
+                (title, type, media_path, rating_scale, rating_symbol, tags, created_by, created_at, updated_by, updated_at, is_deleted)
                 VALUES 
-                (:title, :type, :media_path, :rating_scale, :rating_symbol, :created_by, NOW(), :created_by, NOW(), 0)";
+                (:title, :type, :media_path, :rating_scale, :rating_symbol, :tags, :created_by, NOW(), :created_by, NOW(), 0)";
         
         $stmt = $this->conn->prepare($sql);
         $stmt->execute([
@@ -22,11 +22,13 @@ class SurveyQuestionModel {
             'media_path' => $data['media_path'],
             'rating_scale' => $data['rating_scale'],
             'rating_symbol' => $data['rating_symbol'],
+            'tags' => $data['tags'],  // <-- Bind tags here
             'created_by' => $data['created_by'],
         ]);
-
+    
         return $this->conn->lastInsertId();
     }
+    
 
     public function saveOptions($questionId, $options, $optionMedias, $createdBy) {
         $count = count($options);
@@ -73,4 +75,35 @@ class SurveyQuestionModel {
             ]);
         }
     }
+// Fetch paginated questions with limit and offset
+public function getQuestions($limit, $offset) {
+    $sql = "SELECT id, title, type, tags 
+            FROM survey_questions 
+            WHERE is_deleted = 0 
+            ORDER BY created_at DESC 
+            LIMIT :limit OFFSET :offset";
+    $stmt = $this->conn->prepare($sql);
+    $stmt->bindValue(':limit', (int)$limit, PDO::PARAM_INT);
+    $stmt->bindValue(':offset', (int)$offset, PDO::PARAM_INT);
+    $stmt->execute();
+    return $stmt->fetchAll(PDO::FETCH_ASSOC);
+}
+
+// Get total number of questions (for pagination)
+public function getTotalQuestionCount() {
+    $sql = "SELECT COUNT(*) FROM survey_questions WHERE is_deleted = 0";
+    $stmt = $this->conn->prepare($sql);
+    $stmt->execute();
+    return (int)$stmt->fetchColumn();
+}
+
+public function deleteQuestion($id)
+{
+    $sql = "UPDATE survey_questions SET is_deleted = 1 WHERE id = :id";
+    $stmt = $this->conn->prepare($sql);
+    $stmt->bindParam(':id', $id, PDO::PARAM_INT);
+    return $stmt->execute();
+}
+
+
 }
