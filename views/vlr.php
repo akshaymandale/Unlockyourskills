@@ -2020,9 +2020,186 @@ $languageList = $vlrController->getLanguages();
                 <div class="d-flex justify-content-between align-items-center">
                     <h3><?= Localization::translate('survey'); ?></h3>
                     <div class="d-flex gap-2">
-                        <button class="btn btn-sm btn-primary" onclick="openAddModal('Survey')">
-                            + <?= Localization::translate('add'); ?>
+                        <button class="btn btn-sm btn-primary" id="addSurveyBtn" data-bs-toggle="modal"
+                            data-bs-target="#survey_surveyModal">
+                            + <?= Localization::translate('add_survey'); ?>
                         </button>
+
+                        <!-- ✅ Survey Modal -->
+                        <div class="modal fade" id="survey_surveyModal" tabindex="-1"
+                            aria-labelledby="survey_surveyModalLabel" aria-hidden="true">
+                            <div class="modal-dialog modal-lg"> <!-- WIDER modal -->
+                                <div class="modal-content">
+                                    <div class="modal-header">
+                                        <h5 class="modal-title" id="survey_surveyModalLabel">
+                                            <?= Localization::translate('survey.modal.add_title'); ?>
+                                        </h5>
+                                        <button type="button" class="btn-close" data-bs-dismiss="modal"
+                                            aria-label="<?= Localization::translate('close'); ?>"></button>
+                                    </div>
+                                    <div class="modal-body">
+                                        <form id="survey_surveyForm"
+                                            action="index.php?controller=SurveyController&action=addOrEditSurvey"
+                                            method="POST" enctype="multipart/form-data">
+                                            <input type="hidden" name="selected_survey_question_ids"
+                                                id="survey_selectedSurveyQuestionIds">
+
+                                            <!-- Survey Title -->
+                                            <div class="form-group mb-3">
+                                                <label for="survey_surveyTitle" class="form-label">
+                                                    <?= Localization::translate('survey.field.title'); ?> <span
+                                                        class="text-danger">*</span>
+                                                </label>
+                                                <input type="text" class="form-control" id="survey_surveyTitle"
+                                                    name="title">
+                                            </div>
+
+                                            <!-- Tags/Keywords -->
+                                            <div class="form-group mb-3">
+                                                <label for="survey_tags">
+                                                    <?= Localization::translate('tags_keywords'); ?> <span
+                                                        class="text-danger">*</span>
+                                                </label>
+                                                <div class="tag-input-container form-control">
+                                                    <span id="survey_tagDisplay"></span>
+                                                    <input type="text" id="survey_survey_tagInput"
+                                                        placeholder="<?= Localization::translate('add_tag_placeholder'); ?>"
+                                                        class="form-control border-0">
+                                                </div>
+                                                <input type="hidden" id="survey_tagList" name="tags">
+                                            </div>
+
+                                            <!-- Add Survey Question Button -->
+                                            <div class="form-group mb-3">
+                                                <button type="button" class="btn btn-primary"
+                                                    id="survey_addSurveyQuestionBtn">
+                                                    <?= Localization::translate('survey.button.add_question'); ?>
+                                                </button>
+                                            </div>
+
+                                            <!-- Selected Questions Grid -->
+                                            <div class="table-responsive mt-3"
+                                                id="survey_selectedSurveyQuestionsWrapper" style="display: none;">
+                                                <table class="table table-bordered table-hover">
+                                                    <thead class="table-light">
+                                                        <tr>
+                                                            <th><?= Localization::translate('survey.table.question_title'); ?>
+                                                            </th>
+                                                            <th><?= Localization::translate('survey.table.tags'); ?>
+                                                            </th>
+                                                            <th><?= Localization::translate('survey.table.type'); ?>
+                                                            </th>
+                                                        </tr>
+                                                    </thead>
+                                                    <tbody id="survey_selectedQuestionsBody">
+                                                        <!-- JS will populate this -->
+                                                    </tbody>
+                                                </table>
+                                            </div>
+
+                                            <!-- Submit and Cancel Buttons -->
+                                            <div class="form-group mb-3">
+                                                <button type="submit" class="btn btn-success">
+                                                    <?= Localization::translate('submit'); ?>
+                                                </button>
+                                            </div>
+                                        </form>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+
+                        <!-- Survey Question Selection Modal -->
+                        <div class="modal fade" id="survey_questionModal" tabindex="-1"
+                            aria-labelledby="survey_questionModalLabel" aria-hidden="true">
+                            <div class="modal-dialog modal-xl modal-dialog-scrollable">
+                                <div class="modal-content">
+                                    <div class="modal-header">
+                                        <h5 class="modal-title" id="survey_questionModalLabel">
+                                            <?= Localization::translate('survey.select_questions'); ?>
+                                        </h5>
+                                        <button type="button" class="btn-close"
+                                            aria-label="<?= Localization::translate('close'); ?>"
+                                            data-bs-dismiss="modal"></button>
+                                    </div>
+
+                                    <div class="modal-body">
+                                        <!-- Filter Row -->
+                                        <div class="row mb-3">
+                                            <div class="col-md-3">
+                                                <input type="text" id="survey_questionSearch" class="form-control"
+                                                    placeholder="<?= Localization::translate('search_questions'); ?>">
+                                            </div>
+                                            <div class="col-md-3">
+                                                <select id="survey_filterType" class="form-select">
+                                                    <option value=""><?= Localization::translate('loading'); ?>...
+                                                    </option>
+                                                </select>
+                                            </div>
+                                            <div class="col-md-3">
+                                                <select id="survey_showEntries" class="form-select">
+                                                    <option value="10" selected>
+                                                        <?= Localization::translate('show_10'); ?>
+                                                    </option>
+                                                    <option value="25"><?= Localization::translate('show_25'); ?>
+                                                    </option>
+                                                    <option value="50"><?= Localization::translate('show_50'); ?>
+                                                    </option>
+                                                    <option value="75"><?= Localization::translate('show_75'); ?>
+                                                    </option>
+                                                    <option value="100"><?= Localization::translate('show_100'); ?>
+                                                    </option>
+                                                </select>
+                                            </div>
+                                            <div class="col-md-3 text-end">
+                                                <button class="btn btn-outline-secondary me-2"
+                                                    id="survey_clearFiltersBtn">
+                                                    <i class="bi bi-x-circle"></i>
+                                                    <?= Localization::translate('clear_filters'); ?>
+                                                </button>
+                                                <button class="btn btn-outline-secondary" id="survey_refreshBtn">
+                                                    <i class="bi bi-arrow-clockwise"></i>
+                                                    <?= Localization::translate('refresh'); ?>
+                                                </button>
+                                            </div>
+                                        </div>
+
+                                        <!-- Survey Question Table -->
+                                        <div class="table-responsive">
+                                            <table class="table table-bordered table-hover">
+                                                <thead class="table-light">
+                                                    <tr>
+                                                        <th><input type="checkbox" id="survey_selectAllQuestions"></th>
+                                                        <th><?= Localization::translate('survey.question_title'); ?>
+                                                        </th>
+                                                        <th><?= Localization::translate('tags_keywords'); ?></th>
+                                                        <th><?= Localization::translate('type'); ?></th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody id="survey_questionTableBody">
+                                                    <!-- JavaScript inserts rows here -->
+                                                </tbody>
+                                            </table>
+                                        </div>
+
+                                        <!-- Pagination -->
+                                        <nav>
+                                            <ul class="pagination justify-content-center" id="survey_pagination">
+                                                <!-- JS inserts pagination -->
+                                            </ul>
+                                        </nav>
+                                    </div>
+
+                                    <div class="modal-footer">
+                                        <button type="button" class="btn btn-success" id="survey_loopQuestionsBtn">
+                                            <?= Localization::translate('loop_selected_questions'); ?>
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
 
                         <a href="index.php?controller=SurveyQuestionController&action=index"
                             class="btn btn-sm btn-primary">
@@ -2149,4 +2326,7 @@ $languageList = $vlrController->getLanguages();
 <script src="public/js/image_package.js"></script>
 <script src="public/js/external_content_validation.js"></script>
 <script src="public/js/external_package.js"></script>
+<script src="public/js/survey_validation.js"></script>
+<script src="public/js/survey_package.js"></script>
+<script src="public/js/add_survey_question_on_survey.js"></script>
 <?php include 'includes/footer.php'; ?>
