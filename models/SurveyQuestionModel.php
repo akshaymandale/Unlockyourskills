@@ -9,6 +9,7 @@ class SurveyQuestionModel {
         $this->conn = $database->connect();
     }
 
+    // Save a new survey question
     public function saveQuestion($data) {
         $sql = "INSERT INTO survey_questions 
                 (title, type, media_path, rating_scale, rating_symbol, tags, created_by, created_at, updated_by, updated_at, is_deleted)
@@ -22,14 +23,14 @@ class SurveyQuestionModel {
             'media_path' => $data['media_path'],
             'rating_scale' => $data['rating_scale'],
             'rating_symbol' => $data['rating_symbol'],
-            'tags' => $data['tags'],  // <-- Bind tags here
+            'tags' => $data['tags'],
             'created_by' => $data['created_by'],
         ]);
     
         return $this->conn->lastInsertId();
     }
     
-
+    // Save options for a given question (with media uploads)
     public function saveOptions($questionId, $options, $optionMedias, $createdBy) {
         $count = count($options);
         for ($i = 0; $i < $count; $i++) {
@@ -56,7 +57,7 @@ class SurveyQuestionModel {
                     $targetPath = $uploadDir . $randomName;
 
                     if (move_uploaded_file($file['tmp_name'], $targetPath)) {
-                        $mediaName = $randomName; // ✅ Only store filename
+                        $mediaName = $randomName; // store only filename
                     }
                 }
             }
@@ -75,35 +76,96 @@ class SurveyQuestionModel {
             ]);
         }
     }
-// Fetch paginated questions with limit and offset
-public function getQuestions($limit, $offset) {
-    $sql = "SELECT id, title, type, tags 
-            FROM survey_questions 
-            WHERE is_deleted = 0 
-            ORDER BY created_at DESC 
-            LIMIT :limit OFFSET :offset";
-    $stmt = $this->conn->prepare($sql);
-    $stmt->bindValue(':limit', (int)$limit, PDO::PARAM_INT);
-    $stmt->bindValue(':offset', (int)$offset, PDO::PARAM_INT);
-    $stmt->execute();
-    return $stmt->fetchAll(PDO::FETCH_ASSOC);
-}
 
-// Get total number of questions (for pagination)
-public function getTotalQuestionCount() {
-    $sql = "SELECT COUNT(*) FROM survey_questions WHERE is_deleted = 0";
-    $stmt = $this->conn->prepare($sql);
-    $stmt->execute();
-    return (int)$stmt->fetchColumn();
-}
+    // Fetch paginated questions with optional search and type filter
+    // NOTE: adjusted parameters order to match controller: ($search, $type, $limit, $offset)
+    public function getQuestions($search = '', $type = '', $limit = 10, $offset = 0) {
+        $params = [];
+        $sql = "SELECT id, title, type, tags 
+                FROM survey_questions 
+                WHERE is_deleted = 0 ";
 
-public function deleteQuestion($id)
-{
-    $sql = "UPDATE survey_questions SET is_deleted = 1 WHERE id = :id";
-    $stmt = $this->conn->prepare($sql);
-    $stmt->bindParam(':id', $id, PDO::PARAM_INT);
-    return $stmt->execute();
-}
+        if ($search !== '') {
+            $sql .= " AND title LIKE ? ";
+            $params[] = '%' . $search . '%';
+        }
 
+        if ($type !== '') {
+            $sql .= " AND type = ? ";
+            $params[] = $type;
+        }
 
+        $sql .= " ORDER BY created_at DESC LIMIT ? OFFSET ?";
+        $params[] = (int)$limit;
+        $params[] = (int)$offset;
+
+        $stmt = $this->conn->prepare($sql);
+
+        foreach ($params as $index => $param) {
+            $typeParam = is_int($param) ? PDO::PARAM_INT : PDO::PARAM_STR;
+            $stmt->bindValue($index + 1, $param, $typeParam);
+        }
+
+        $stmt->execute();
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
+
+    // Get total number of questions (for pagination), with optional search and type filter
+    public function getTotalQuestionCount($search = '', $type = '') {
+        $params = [];
+        $sql = "SELECT COUNT(*) FROM survey_questions WHERE is_deleted = 0 ";
+
+        if ($search !== '') {
+            $sql .= " AND title LIKE ? ";
+            $params[] = '%' . $search . '%';
+        }
+
+        if ($type !== '') {
+            $sql .= " AND type = ? ";
+            $params[] = $type;
+        }
+
+        $stmt = $this->conn->prepare($sql);
+
+        foreach ($params as $index => $param) {
+            $typeParam = is_int($param) ? PDO::PARAM_INT : PDO::PARAM_STR;
+            $stmt->bindValue($index + 1, $param, $typeParam);
+        }
+
+        $stmt->execute();
+        return (int)$stmt->fetchColumn();
+    }
+
+    // Get distinct question types for filters
+    public function getDistinctTypes() {
+        $sql = "SELECT DISTINCT type FROM survey_questions WHERE is_deleted = 0 ORDER BY type ASC";
+        $stmt = $this->conn->prepare($sql);
+        $stmt->execute();
+        return $stmt->fetchAll(PDO::FETCH_COLUMN);
+    }
+
+    // Get question details by IDs (for loading selected questions back)
+    public function getSelectedQuestions(array $ids) {
+        if (empty($ids)) {
+            return [];
+        }
+
+        $placeholders = implode(',', array_fill(0, count($ids), '?'));
+        $sql = "SELECT id, title, type, tags FROM survey_questions WHERE id IN ($placeholders) AND is_deleted = 0";
+
+        $stmt = $this->conn->prepare($sql);
+        foreach ($ids as $index => $id) {
+            $stmt->bindValue($index + 1, $id, PDO::PARAM_INT);
+        }
+        $stmt->execute();
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
+
+    // Soft delete question by setting is_deleted = 1
+    public function deleteQuestion($id) {
+        $sql = "UPDATE survey_questions SET is_deleted = 1 WHERE id = :id";
+        $stmt = $this->conn->prepare($sql);
+        $stmt->bindParam(':id', $id, PDO::PARAM_INT);
+        return $stmt->execute();
+    }
 }

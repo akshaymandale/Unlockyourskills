@@ -1,3 +1,4 @@
+
 document.addEventListener('DOMContentLoaded', function () {
     const typeSelect = document.getElementById('surveyQuestionType');
     const optionsWrapper = document.getElementById('surveyOptionsWrapper');
