@@ -2211,15 +2211,198 @@ $languageList = $vlrController->getLanguages();
             </div>
 
             <!-- ✅ Feedback -->
+            <!-- ✅ Feedback -->
             <div class="tab-pane" id="feedback">
                 <div class="d-flex justify-content-between align-items-center">
                     <h3><?= Localization::translate('feedback'); ?></h3>
-                    <button class="btn btn-sm btn-primary" onclick="openAddModal('Feedback')">
-                        + <?= Localization::translate('add'); ?>
-                    </button>
+                    <div class="d-flex gap-2">
+                        <button class="btn btn-sm btn-primary" id="addFeedbackBtn" data-bs-toggle="modal"
+                            data-bs-target="#feedback_feedbackModal">
+                            + <?= Localization::translate('add_feedback'); ?>
+                        </button>
+
+                        <!-- ✅ Feedback Modal -->
+                        <div class="modal fade" id="feedback_feedbackModal" tabindex="-1"
+                            aria-labelledby="feedback_feedbackModalLabel" aria-hidden="true">
+                            <div class="modal-dialog modal-lg">
+                                <div class="modal-content">
+                                    <div class="modal-header">
+                                        <h5 class="modal-title" id="feedback_feedbackModalLabel">
+                                            <?= Localization::translate('feedback.modal.add_title'); ?>
+                                        </h5>
+                                        <button type="button" class="btn-close" data-bs-dismiss="modal"
+                                            aria-label="<?= Localization::translate('close'); ?>"></button>
+                                    </div>
+                                    <div class="modal-body">
+                                        <form id="feedback_feedbackForm"
+                                            action="index.php?controller=FeedbackController&action=addOrEditFeedback"
+                                            method="POST" enctype="multipart/form-data">
+                                            <input type="hidden" name="selected_feedback_question_ids"
+                                                id="feedback_selectedFeedbackQuestionIds">
+
+                                            <!-- Feedback Title -->
+                                            <div class="form-group mb-3">
+                                                <label for="feedback_feedbackTitle" class="form-label">
+                                                    <?= Localization::translate('feedback.field.title'); ?> <span
+                                                        class="text-danger">*</span>
+                                                </label>
+                                                <input type="text" class="form-control" id="feedback_feedbackTitle"
+                                                    name="title">
+                                            </div>
+
+                                            <!-- Tags/Keywords -->
+                                            <div class="form-group mb-3">
+                                                <label for="feedback_tags">
+                                                    <?= Localization::translate('tags_keywords'); ?> <span
+                                                        class="text-danger">*</span>
+                                                </label>
+                                                <div class="tag-input-container form-control">
+                                                    <span id="feedback_tagDisplay"></span>
+                                                    <input type="text" id="feedback_feedback_tagInput"
+                                                        placeholder="<?= Localization::translate('add_tag_placeholder'); ?>"
+                                                        class="form-control border-0">
+                                                </div>
+                                                <input type="hidden" id="feedback_tagList" name="feedbackTagList">
+                                            </div>
+
+                                            <!-- Add Feedback Question Button -->
+                                            <div class="form-group mb-3">
+                                                <button type="button" class="btn btn-primary"
+                                                    id="feedback_addFeedbackQuestionBtn">
+                                                    <?= Localization::translate('feedback.button.add_question'); ?>
+                                                </button>
+                                            </div>
+
+                                            <!-- Selected Questions Grid -->
+                                            <div class="table-responsive mt-3"
+                                                id="feedback_selectedFeedbackQuestionsWrapper" style="display: none;">
+                                                <table class="table table-bordered table-hover">
+                                                    <thead class="table-light">
+                                                        <tr>
+                                                            <th><?= Localization::translate('feedback.table.question_title'); ?>
+                                                            </th>
+                                                            <th><?= Localization::translate('feedback.table.tags'); ?>
+                                                            </th>
+                                                            <th><?= Localization::translate('feedback.table.type'); ?>
+                                                            </th>
+                                                        </tr>
+                                                    </thead>
+                                                    <tbody id="feedback_selectedQuestionsBody">
+                                                        <!-- JS will populate this -->
+                                                    </tbody>
+                                                </table>
+                                            </div>
+
+                                            <!-- Submit and Cancel Buttons -->
+                                            <div class="form-group mb-3">
+                                                <button type="submit" class="btn btn-success">
+                                                    <?= Localization::translate('submit'); ?>
+                                                </button>
+                                            </div>
+                                        </form>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Feedback Question Selection Modal -->
+                        <div class="modal fade" id="feedback_questionModal" tabindex="-1"
+                            aria-labelledby="feedback_questionModalLabel" aria-hidden="true">
+                            <div class="modal-dialog modal-xl modal-dialog-scrollable">
+                                <div class="modal-content">
+                                    <div class="modal-header">
+                                        <h5 class="modal-title" id="feedback_questionModalLabel">
+                                            <?= Localization::translate('feedback.select_questions'); ?>
+                                        </h5>
+                                        <button type="button" class="btn-close"
+                                            aria-label="<?= Localization::translate('close'); ?>"
+                                            data-bs-dismiss="modal"></button>
+                                    </div>
+
+                                    <div class="modal-body">
+                                        <!-- Filter Row -->
+                                        <div class="row mb-3">
+                                            <div class="col-md-3">
+                                                <input type="text" id="feedback_questionSearch" class="form-control"
+                                                    placeholder="<?= Localization::translate('search_questions'); ?>">
+                                            </div>
+                                            <div class="col-md-3">
+                                                <select id="feedback_filterType" class="form-select">
+                                                    <option value=""><?= Localization::translate('loading'); ?>...
+                                                    </option>
+                                                </select>
+                                            </div>
+                                            <div class="col-md-3">
+                                                <select id="feedback_showEntries" class="form-select">
+                                                    <option value="10" selected>
+                                                        <?= Localization::translate('show_10'); ?></option>
+                                                    <option value="25"><?= Localization::translate('show_25'); ?>
+                                                    </option>
+                                                    <option value="50"><?= Localization::translate('show_50'); ?>
+                                                    </option>
+                                                    <option value="75"><?= Localization::translate('show_75'); ?>
+                                                    </option>
+                                                    <option value="100"><?= Localization::translate('show_100'); ?>
+                                                    </option>
+                                                </select>
+                                            </div>
+                                            <div class="col-md-3 text-end">
+                                                <button class="btn btn-outline-secondary me-2"
+                                                    id="feedback_clearFiltersBtn">
+                                                    <i class="bi bi-x-circle"></i>
+                                                    <?= Localization::translate('clear_filters'); ?>
+                                                </button>
+                                                <button class="btn btn-outline-secondary" id="feedback_refreshBtn">
+                                                    <i class="bi bi-arrow-clockwise"></i>
+                                                    <?= Localization::translate('refresh'); ?>
+                                                </button>
+                                            </div>
+                                        </div>
+
+                                        <!-- Feedback Question Table -->
+                                        <div class="table-responsive">
+                                            <table class="table table-bordered table-hover">
+                                                <thead class="table-light">
+                                                    <tr>
+                                                        <th><input type="checkbox" id="feedback_selectAllQuestions">
+                                                        </th>
+                                                        <th><?= Localization::translate('feedback.question_title'); ?>
+                                                        </th>
+                                                        <th><?= Localization::translate('tags_keywords'); ?></th>
+                                                        <th><?= Localization::translate('type'); ?></th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody id="feedback_questionTableBody">
+                                                    <!-- JavaScript inserts rows here -->
+                                                </tbody>
+                                            </table>
+                                        </div>
+
+                                        <!-- Pagination -->
+                                        <nav>
+                                            <ul class="pagination justify-content-center" id="feedback_pagination">
+                                                <!-- JS inserts pagination -->
+                                            </ul>
+                                        </nav>
+                                    </div>
+
+                                    <div class="modal-footer">
+                                        <button type="button" class="btn btn-success" id="feedback_loopQuestionsBtn">
+                                            <?= Localization::translate('loop_selected_questions'); ?>
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <a href="index.php?controller=FeedbackQuestionController&action=index"
+                            class="btn btn-sm btn-primary">
+                            + <?= Localization::translate('add_feedback_questions'); ?>
+                        </a>
+                    </div>
                 </div>
-                <div id="feedback-items"></div>
             </div>
+
 
 
             <!-- ✅ INTERACTIVE & AI POWERED CONTENT Tab Content -->
@@ -2329,4 +2512,7 @@ $languageList = $vlrController->getLanguages();
 <script src="public/js/survey_validation.js"></script>
 <script src="public/js/survey_package.js"></script>
 <script src="public/js/add_survey_question_on_survey.js"></script>
+<script src="public/js/feedback_validation.js"></script>
+<script src="public/js/feedback_package.js"></script>
+<script src="public/js/add_feedback_question_on_feedback.js"></script>
 <?php include 'includes/footer.php'; ?>
