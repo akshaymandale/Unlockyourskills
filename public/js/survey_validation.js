@@ -5,6 +5,8 @@ document.addEventListener("DOMContentLoaded", function () {
     const surveyForm = document.getElementById("survey_surveyForm");
     const tagInput = document.getElementById("survey_survey_tagInput");
     const hiddenTagList = document.getElementById("survey_tagList");
+    const selectedQuestionIdsInput = document.getElementById("survey_selectedQuestionIds");
+    const addQuestionBtn = document.getElementById("survey_addSurveyQuestionBtn");
 
     $('#survey_surveyModal').on('shown.bs.modal', function () {
         attachSurveyValidation();
@@ -40,6 +42,14 @@ document.addEventListener("DOMContentLoaded", function () {
             tagInput.removeEventListener("blur", validateTagInput);
             tagInput.addEventListener("blur", validateTagInput);
         }
+
+        // ✅ Listen for change on hidden question ID field
+        if (selectedQuestionIdsInput) {
+            const observer = new MutationObserver(() => {
+                removeSelectedQuestionsError();
+            });
+            observer.observe(selectedQuestionIdsInput, { attributes: true, childList: false, characterData: true, subtree: false });
+        }
     }
 
     function surveyFormSubmitHandler(e) {
@@ -57,10 +67,9 @@ document.addEventListener("DOMContentLoaded", function () {
 
     function validateSurveyForm() {
         let isValid = true;
+
         const fields = [
-            "survey_surveyTitle",
-            "survey_surveyDescription",
-            "survey_surveyType"
+            "survey_surveyTitle"
         ];
 
         fields.forEach(id => {
@@ -71,6 +80,10 @@ document.addEventListener("DOMContentLoaded", function () {
         });
 
         if (!validateTagInput()) {
+            isValid = false;
+        }
+
+        if (!validateSelectedQuestions()) {
             isValid = false;
         }
 
@@ -88,24 +101,6 @@ document.addEventListener("DOMContentLoaded", function () {
             case "survey_surveyTitle":
                 if (value === "") {
                     showError(field, "Title is required.");
-                    isValid = false;
-                } else {
-                    hideError(field);
-                }
-                break;
-
-            case "survey_surveyDescription":
-                if (value === "") {
-                    showError(field, "Description is required.");
-                    isValid = false;
-                } else {
-                    hideError(field);
-                }
-                break;
-
-            case "survey_surveyType":
-                if (value === "") {
-                    showError(field, "Type selection is required.");
                     isValid = false;
                 } else {
                     hideError(field);
@@ -130,6 +125,36 @@ document.addEventListener("DOMContentLoaded", function () {
         }
     }
 
+    function validateSelectedQuestions() {
+        const value = selectedQuestionIdsInput?.value?.trim();
+        const errorId = "survey_selectedQuestionsError";
+
+        // Remove existing error if any
+        removeSelectedQuestionsError();
+
+        if (!value) {
+            const error = document.createElement("span");
+            error.id = errorId;
+            error.className = "error-message";
+            error.textContent = "Please add at least one survey question.";
+            error.style.color = "red";
+            error.style.fontSize = "12px";
+            error.style.marginLeft = "10px";
+
+            addQuestionBtn.parentNode.appendChild(error);
+            return false;
+        }
+
+        return true;
+    }
+
+    function removeSelectedQuestionsError() {
+        const errorElement = document.getElementById("survey_selectedQuestionsError");
+        if (errorElement) {
+            errorElement.remove();
+        }
+    }
+
     function showError(input, message) {
         let errorElement = input.parentNode.querySelector(".error-message");
         if (!errorElement) {
@@ -151,7 +176,7 @@ document.addEventListener("DOMContentLoaded", function () {
 
     function resetSurveyForm() {
         surveyForm.reset();
-        document.querySelectorAll("#survey_surveyForm .error-message").forEach(el => el.textContent = "");
+        document.querySelectorAll("#survey_surveyForm .error-message").forEach(el => el.remove());
         document.querySelectorAll("#survey_surveyForm .is-invalid").forEach(el => el.classList.remove("is-invalid"));
         document.getElementById("survey_tagList").value = "";
 

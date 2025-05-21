@@ -100,6 +100,7 @@ class SurveyQuestionModel {
         $params[] = (int)$offset;
 
         $stmt = $this->conn->prepare($sql);
+        //print_r($params); die;
 
         foreach ($params as $index => $param) {
             $typeParam = is_int($param) ? PDO::PARAM_INT : PDO::PARAM_STR;

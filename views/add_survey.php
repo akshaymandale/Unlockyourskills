@@ -59,6 +59,10 @@
                                 <div class="modal-content">
                                     <form id="surveyQuestionForm" enctype="multipart/form-data" method="POST"
                                         action="index.php?controller=SurveyQuestionController&action=save">
+
+                                        <!-- Hidden ID for editing -->
+                                        <input type="hidden" name="surveyQuestionId" id="surveyQuestionId">
+
                                         <div class="modal-header">
                                             <h5 class="modal-title" id="addSurveyQuestionModalLabel">Add Survey Question
                                             </h5>
@@ -110,14 +114,14 @@
                                                 <label class="form-label">Rating Scale</label>
                                                 <div class="row g-2">
                                                     <div class="col">
-                                                        <select id="ratingScale" class="form-select">
+                                                        <select name="ratingScale" id="ratingScale" class="form-select">
                                                             <?php for ($i = 1; $i <= 10; $i++): ?>
                                                                 <option value="<?= $i ?>"><?= $i ?></option>
                                                             <?php endfor; ?>
                                                         </select>
                                                     </div>
                                                     <div class="col">
-                                                        <select id="ratingSymbol" class="form-select">
+                                                        <select name="ratingSymbol" id="ratingSymbol" class="form-select">
                                                             <option value="star">⭐ Star</option>
                                                             <option value="thumb">👍 Thumb</option>
                                                             <option value="heart">❤️ Heart</option>
@@ -145,8 +149,11 @@
                                         </div>
 
                                         <div class="modal-footer">
-                                            <button type="submit" class="btn btn-success">Submit Survey
-                                                Question</button>
+
+                                            <!-- Submit Button (add id for JS text switch) -->
+                                            <button type="submit" class="btn btn-success" id="surveyQuestionSubmitBtn">
+                                                Submit Survey Question
+                                            </button>
                                             <button type="button" class="btn btn-secondary"
                                                 data-bs-dismiss="modal">Cancel</button>
                                         </div>
@@ -155,13 +162,9 @@
                             </div>
                         </div>
 
-
-
-
-
-
                     </div>
                 </div>
+                
 
                 <!-- Import Survey Button -->
                 <div class="col-md-auto">
@@ -192,11 +195,14 @@
                             <td><?= htmlspecialchars($question['type']); ?></td>
                             <td><?= htmlspecialchars($question['tags']); ?></td>
                             <td>
-                                <a href="index.php?controller=SurveyQuestionController&action=edit&id=<?= $question['id']; ?>"
-                                    class="btn btn-sm theme-btn-primary"
+                                <button type="button" class="btn btn-sm theme-btn-primary" data-bs-toggle="modal"
+                                    data-bs-target="#addSurveyQuestionModal" data-mode="edit"
+                                    data-question='<?= json_encode($question); ?>'
+                                    data-options='<?= json_encode($question['options'] ?? []); ?>'
                                     title="<?= Localization::translate('survey_grid_edit'); ?>">
                                     <i class="fas fa-edit"></i>
-                                </a>
+                                </button>
+
                                 <a href="index.php?controller=SurveyQuestionController&action=delete&id=<?= $question['id']; ?>"
                                     class="btn btn-sm theme-btn-danger"
                                     title="<?= Localization::translate('survey_grid_delete'); ?>"
