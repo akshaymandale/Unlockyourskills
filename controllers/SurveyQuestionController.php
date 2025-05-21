@@ -17,7 +17,7 @@ class SurveyQuestionController
         $offset = ($page - 1) * $limit;
 
         // Fetch paginated questions
-        $questions = $this->surveyQuestionModel->getQuestions($limit, $offset);
+        $questions = $this->surveyQuestionModel->getQuestions('','',$limit, $offset);
 
         // Get total count of questions
         $totalQuestions = $this->surveyQuestionModel->getTotalQuestionCount();

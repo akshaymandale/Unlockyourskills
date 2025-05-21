@@ -6,7 +6,7 @@ document.addEventListener("DOMContentLoaded", function () {
     const questionTableBody = document.getElementById("survey_questionTableBody");
     const loopSelectedBtn = document.getElementById("survey_loopQuestionsBtn");
     const paginationContainer = document.getElementById("survey_pagination");
-    const selectedWrapper = document.getElementById("survey_selectedQuestionsWrapper");
+    const selectedWrapper = document.getElementById("survey_selectedSurveyQuestionsWrapper");
     const gridBody = document.getElementById("survey_selectedQuestionsBody");
 
     const searchInput = document.getElementById("survey_questionSearch");

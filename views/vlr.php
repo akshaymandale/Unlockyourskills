@@ -2044,6 +2044,7 @@ $languageList = $vlrController->getLanguages();
                                             <input type="hidden" name="selected_survey_question_ids"
                                                 id="survey_selectedSurveyQuestionIds">
 
+
                                             <!-- Survey Title -->
                                             <div class="form-group mb-3">
                                                 <label for="survey_surveyTitle" class="form-label">
@@ -2080,6 +2081,14 @@ $languageList = $vlrController->getLanguages();
                                             <!-- Selected Questions Grid -->
                                             <div class="table-responsive mt-3"
                                                 id="survey_selectedSurveyQuestionsWrapper" style="display: none;">
+
+
+                                                <input type="hidden" name="survey_selectedQuestionCount"
+                                                id="survey_selectedQuestionCount">
+
+                                                <input type="hidden" name="survey_selectedQuestionIds"
+                                                id="survey_selectedQuestionIds">
+
                                                 <table class="table table-bordered table-hover">
                                                     <thead class="table-light">
                                                         <tr>
@@ -2276,6 +2285,12 @@ $languageList = $vlrController->getLanguages();
                                             <!-- Selected Questions Grid -->
                                             <div class="table-responsive mt-3"
                                                 id="feedback_selectedFeedbackQuestionsWrapper" style="display: none;">
+
+                                                <input type="hidden" name="feedback_selectedQuestionCount"
+                                                id="feedback_selectedQuestionCount">
+
+                                                <input type="hidden" name="feedback_selectedQuestionIds"
+                                                id="feedback_selectedQuestionIds">
                                                 <table class="table table-bordered table-hover">
                                                     <thead class="table-light">
                                                         <tr>

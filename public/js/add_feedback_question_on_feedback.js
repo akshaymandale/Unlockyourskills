@@ -6,7 +6,7 @@ document.addEventListener("DOMContentLoaded", function () {
     const questionTableBody = document.getElementById("feedback_questionTableBody");
     const loopSelectedBtn = document.getElementById("feedback_loopQuestionsBtn");
     const paginationContainer = document.getElementById("feedback_pagination");
-    const selectedWrapper = document.getElementById("feedback_selectedQuestionsWrapper");
+    const selectedWrapper = document.getElementById("feedback_selectedFeedbackQuestionsWrapper");
     const gridBody = document.getElementById("feedback_selectedQuestionsBody");
 
     const searchInput = document.getElementById("feedback_questionSearch");

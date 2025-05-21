@@ -5,6 +5,8 @@ document.addEventListener("DOMContentLoaded", function () {
     const feedbackForm = document.getElementById("feedback_feedbackForm");
     const tagInput = document.getElementById("feedback_feedback_tagInput");
     const hiddenTagList = document.getElementById("feedback_tagList");
+    const selectedQuestionIdsInput = document.getElementById("feedback_selectedQuestionIds");
+    const addQuestionBtn = document.getElementById("feedback_addFeedbackQuestionBtn");
 
     $('#feedback_feedbackModal').on('shown.bs.modal', function () {
         attachFeedbackValidation();
@@ -40,6 +42,14 @@ document.addEventListener("DOMContentLoaded", function () {
             tagInput.removeEventListener("blur", validateTagInput);
             tagInput.addEventListener("blur", validateTagInput);
         }
+
+        // ✅ Observer for question selection changes
+        if (selectedQuestionIdsInput) {
+            const observer = new MutationObserver(() => {
+                removeSelectedQuestionsError();
+            });
+            observer.observe(selectedQuestionIdsInput, { attributes: true, childList: false, characterData: true, subtree: false });
+        }
     }
 
     function feedbackFormSubmitHandler(e) {
@@ -57,10 +67,9 @@ document.addEventListener("DOMContentLoaded", function () {
 
     function validateFeedbackForm() {
         let isValid = true;
+
         const fields = [
-            "feedback_feedbackTitle",
-            "feedback_feedbackDescription",
-            "feedback_feedbackType"
+            "feedback_feedbackTitle"
         ];
 
         fields.forEach(id => {
@@ -71,6 +80,10 @@ document.addEventListener("DOMContentLoaded", function () {
         });
 
         if (!validateTagInput()) {
+            isValid = false;
+        }
+
+        if (!validateSelectedQuestions()) {
             isValid = false;
         }
 
@@ -88,24 +101,6 @@ document.addEventListener("DOMContentLoaded", function () {
             case "feedback_feedbackTitle":
                 if (value === "") {
                     showError(field, "Title is required.");
-                    isValid = false;
-                } else {
-                    hideError(field);
-                }
-                break;
-
-            case "feedback_feedbackDescription":
-                if (value === "") {
-                    showError(field, "Description is required.");
-                    isValid = false;
-                } else {
-                    hideError(field);
-                }
-                break;
-
-            case "feedback_feedbackType":
-                if (value === "") {
-                    showError(field, "Type selection is required.");
                     isValid = false;
                 } else {
                     hideError(field);
@@ -130,6 +125,35 @@ document.addEventListener("DOMContentLoaded", function () {
         }
     }
 
+    function validateSelectedQuestions() {
+        const value = selectedQuestionIdsInput?.value?.trim();
+        const errorId = "feedback_selectedQuestionsError";
+
+        removeSelectedQuestionsError();
+
+        if (!value) {
+            const error = document.createElement("span");
+            error.id = errorId;
+            error.className = "error-message";
+            error.textContent = "Please add at least one feedback question.";
+            error.style.color = "red";
+            error.style.fontSize = "12px";
+            error.style.marginLeft = "10px";
+
+            addQuestionBtn.parentNode.appendChild(error);
+            return false;
+        }
+
+        return true;
+    }
+
+    function removeSelectedQuestionsError() {
+        const errorElement = document.getElementById("feedback_selectedQuestionsError");
+        if (errorElement) {
+            errorElement.remove();
+        }
+    }
+
     function showError(input, message) {
         let errorElement = input.parentNode.querySelector(".error-message");
         if (!errorElement) {
@@ -151,7 +175,7 @@ document.addEventListener("DOMContentLoaded", function () {
 
     function resetFeedbackForm() {
         feedbackForm.reset();
-        document.querySelectorAll("#feedback_feedbackForm .error-message").forEach(el => el.textContent = "");
+        document.querySelectorAll("#feedback_feedbackForm .error-message").forEach(el => el.remove());
         document.querySelectorAll("#feedback_feedbackForm .is-invalid").forEach(el => el.classList.remove("is-invalid"));
         document.getElementById("feedback_tagList").value = "";
 
