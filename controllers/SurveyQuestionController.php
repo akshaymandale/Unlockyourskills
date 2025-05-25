@@ -15,83 +15,125 @@ class SurveyQuestionController
         $limit = 10;
         $page = isset($_GET['page']) ? (int) $_GET['page'] : 1;
         $offset = ($page - 1) * $limit;
-
+    
         // Fetch paginated questions
-        $questions = $this->surveyQuestionModel->getQuestions('','',$limit, $offset);
-
+        $questions = $this->surveyQuestionModel->getQuestions('', '', $limit, $offset);
+    
+        // 🟣 Add this loop to fetch options for each question
+        foreach ($questions as &$question) {
+            $question['options'] = $this->surveyQuestionModel->getOptionsByQuestionId($question['id']);
+        }
+        //echo '<pre>'; print_r($questions); die;
+    
         // Get total count of questions
         $totalQuestions = $this->surveyQuestionModel->getTotalQuestionCount();
-
+    
         // Calculate total pages
         $totalPages = ceil($totalQuestions / $limit);
-
+    
         require 'views/add_survey.php';  // Your view file that uses pagination
     }
-
+    
     public function save()
-    {
-        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+{
+    if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
-            if (!isset($_SESSION['id'])) {
-                echo "<script>alert('Unauthorized access. Please log in.'); window.location.href='index.php?controller=VLRController';</script>";
-                exit();
-            }
+        if (!isset($_SESSION['id'])) {
+            echo "<script>alert('Unauthorized access. Please log in.'); window.location.href='index.php?controller=VLRController';</script>";
+            exit();
+        }
 
-            $title = trim($_POST['surveyQuestionTitle'] ?? '');
-            $type = $_POST['surveyQuestionType'] ?? '';
-            $ratingScale = $_POST['ratingScale'] ?? null;
-            $ratingSymbol = $_POST['ratingSymbol'] ?? null;
-            $tags = trim($_POST['tagList'] ?? '');  // Tags as comma-separated string
-            $createdBy = $_SESSION['id'];
+        $questionId = isset($_POST['surveyQuestionId']) && is_numeric($_POST['surveyQuestionId']) ? (int)$_POST['surveyQuestionId'] : null;
 
-            $errors = [];
-            if ($title === '') $errors[] = 'Title is required.';
-            if ($type === '') $errors[] = 'Type is required.';
-            if (!in_array($type, ['multi_choice', 'checkbox', 'short_answer', 'long_answer', 'dropdown', 'upload', 'rating'])) {
-                $errors[] = 'Invalid question type.';
-            }
-            if ($tags === '') $errors[] = 'At least one tag is required.';
+        //echo '<pre>'; print_r($_POST); die;
 
-            $mediaFileName = null;
-            if (!empty($_FILES['surveyQuestionMedia']['name'])) {
-                $mediaFileName = $this->handleUpload($_FILES['surveyQuestionMedia'], 'survey');
-                if (!$mediaFileName) $errors[] = 'Invalid media file type.';
-            }
+        $title = trim($_POST['surveyQuestionTitle'] ?? '');
+        $type = $_POST['surveyQuestionType'] ?? '';
+        $ratingScale = $_POST['ratingScale'] ?? null;
+        $ratingSymbol = $_POST['ratingSymbol'] ?? null;
+        $tags = trim($_POST['tagList'] ?? '');
+        $createdBy = $_SESSION['id'];
+        $existingOptionMedias = $_POST['existingOptionMedia'] ?? []; // array of media names
 
-            if (!empty($errors)) {
-                $message = implode('\n', $errors);
-                echo "<script>alert('$message'); window.location.href='index.php?controller=VLRController';</script>";
-                return;
-            }
+        if ($type != 'rating') {
+            $ratingScale = null;
+            $ratingSymbol = null;
+        }
 
-            // Only save filename, not full path
-            $mediaNameOnly = $mediaFileName ? basename($mediaFileName) : null;
+        $errors = [];
+        if ($title === '') $errors[] = 'Title is required.';
+        if ($type === '') $errors[] = 'Type is required.';
+        if (!in_array($type, ['multi_choice', 'checkbox', 'short_answer', 'long_answer', 'dropdown', 'upload', 'rating'])) {
+            $errors[] = 'Invalid question type.';
+        }
+        if ($tags === '') $errors[] = 'At least one tag is required.';
 
-            // Save question with tags
-            $questionId = $this->surveyQuestionModel->saveQuestion([
-                'title' => $title,
-                'type' => $type,
-                'media_path' => $mediaNameOnly,
-                'rating_scale' => $ratingScale,
-                'rating_symbol' => $ratingSymbol,
-                'tags' => $tags,
-                'created_by' => $createdBy
-            ]);
+        $mediaFileName = null;
+        if (!empty($_FILES['surveyQuestionMedia']['name'])) {
+            $mediaFileName = $this->handleUpload($_FILES['surveyQuestionMedia'], 'survey');
+            if (!$mediaFileName) $errors[] = 'Invalid media file type.';
+        }
 
-            // Save options for applicable question types
+        if (!empty($errors)) {
+            $message = implode('\n', $errors);
+            echo "<script>alert('$message'); window.location.href='index.php?controller=SurveyQuestionController';</script>";
+            return;
+        }
+
+        $existingSurveyQuestionMedia = $_POST['existingSurveyQuestionMedia'] ?? null;
+
+        // Final step: determine actual media to save (handle removal on update)
+        $mediaNameOnly = null;
+        if ($mediaFileName) {
+            $mediaNameOnly = basename($mediaFileName); // newly uploaded media
+        } elseif (!empty($existingSurveyQuestionMedia)) {
+            $mediaNameOnly = $existingSurveyQuestionMedia; // retain old media if not removed
+        } else {
+            $mediaNameOnly = null; // media was removed by user
+        }
+
+        $data = [
+            'title' => $title,
+            'type' => $type,
+            'media_path' => $mediaNameOnly,
+            'rating_scale' => $ratingScale,
+            'rating_symbol' => $ratingSymbol,
+            'tags' => $tags,
+            'created_by' => $createdBy
+        ];
+
+        if ($questionId) {
+            // UPDATE
+            $this->surveyQuestionModel->updateQuestion($questionId, $data);
+
             if (in_array($type, ['multi_choice', 'checkbox', 'dropdown'])) {
                 $options = $_POST['optionText'] ?? [];
                 $optionMedias = $_FILES['optionMedia'] ?? null;
+                $this->surveyQuestionModel->updateOptions($questionId, $options, $optionMedias, $createdBy, $existingOptionMedias);
+            }
 
+            $message = 'Survey question updated successfully.';
+        } else {
+            // INSERT
+            $questionId = $this->surveyQuestionModel->saveQuestion($data);
+
+            if (in_array($type, ['multi_choice', 'checkbox', 'dropdown'])) {
+                $options = $_POST['optionText'] ?? [];
+                $optionMedias = $_FILES['optionMedia'] ?? null;
                 $this->surveyQuestionModel->saveOptions($questionId, $options, $optionMedias, $createdBy);
             }
 
             $message = 'Survey question saved successfully.';
-            echo "<script>alert('$message'); window.location.href='index.php?controller=SurveyQuestionController';</script>";
-        } else {
-            echo "<script>alert('Invalid request parameters.'); window.location.href='index.php?controller=SurveyQuestionController';</script>";
         }
+
+        echo "<script>alert('$message'); window.location.href='index.php?controller=SurveyQuestionController';</script>";
+    } else {
+        echo "<script>alert('Invalid request parameters.'); window.location.href='index.php?controller=SurveyQuestionController';</script>";
     }
+}
+
+
+    
 
     private function handleUpload($file, $folder = 'survey')
     {
@@ -139,6 +181,7 @@ class SurveyQuestionController
     $offset = ($page - 1) * $limit;
 
     $questions = $this->surveyQuestionModel->getQuestions($search, $type, $limit, $offset);
+    
     $total = $this->surveyQuestionModel->getTotalQuestionCount($search, $type);
     $totalPages = ceil($total / $limit);
 
