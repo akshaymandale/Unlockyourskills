@@ -2039,7 +2039,7 @@ $languageList = $vlrController->getLanguages();
                                     </div>
                                     <div class="modal-body">
                                         <form id="survey_surveyForm"
-                                            action="index.php?controller=SurveyController&action=addOrEditSurvey"
+                                            action="index.php?controller=VLRController&action=addOrEditSurvey"
                                             method="POST" enctype="multipart/form-data">
                                             <input type="hidden" name="selected_survey_question_ids"
                                                 id="survey_selectedSurveyQuestionIds">

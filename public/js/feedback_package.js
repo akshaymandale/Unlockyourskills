@@ -119,37 +119,23 @@ document.addEventListener("DOMContentLoaded", function () {
 
             fetch(`index.php?controller=FeedbackController&action=getFeedbackById&id=${feedbackId}`)
                 .then(response => response.json())
-                .then(feedbackData => {
-                    feedbackTitle.value = feedbackData.title;
-
+                .then(data => {
+                    // Set form values
+                    document.getElementById("feedback_feedbackTitle").value = data.title || "";
+                    
+                    // Clear and repopulate tags
+                    const tagContainer = document.getElementById("feedback_tagDisplay");
                     tagContainer.innerHTML = "";
                     tags = [];
-                    if (feedbackData.tags) {
-                        feedbackData.tags.split(",").forEach(tag => addTag(tag.trim()));
+                    if (data.tags) {
+                        data.tags.split(",").forEach(tag => addTag(tag.trim()));
                     }
-
-                    selectedQuestionsBody.innerHTML = "";
-                    selectedQuestionIdsInput.value = "";
-                    if (feedbackData.selected_questions && feedbackData.selected_questions.length > 0) {
-                        feedbackData.selected_questions.forEach(question => {
-                            const row = document.createElement("tr");
-                            row.innerHTML = `
-                                <td>${question.title}</td>
-                                <td>${question.type}</td>
-                                <td>${question.tags}</td>
-                            `;
-                            selectedQuestionsBody.appendChild(row);
-                        });
-
-                        const selectedIds = feedbackData.selected_questions.map(q => q.id);
-                        selectedQuestionIdsInput.value = selectedIds.join(",");
-                        selectedQuestionCountInput.value = selectedIds.length;
-                        selectedQuestionsWrapper.style.display = "block";
-                    } else {
-                        selectedQuestionsWrapper.style.display = "none";
-                    }
-
-                    feedbackModalLabel.textContent = "Edit Feedback";
+                    
+                    // Handle selected questions
+                    populateSelectedQuestions(data.selected_questions || []);
+                    
+                    // Update modal title
+                    document.getElementById("feedback_feedbackModalLabel").textContent = "Edit Feedback";
                     feedbackModal.show();
                 })
                 .catch(error => {

@@ -847,6 +847,104 @@ public function deleteImagePackage($id)
     return $stmt->execute([$id]);
 }
 
+// Save Survey with Questions
+public function saveSurveyWithQuestions($data)
+{
+    try {
+        $this->conn->beginTransaction();
+
+        // Insert into surveys (only title, tags)
+        $stmt = $this->conn->prepare("INSERT INTO survey_package (title, tags, created_at, is_deleted) VALUES (?, ?, NOW(), 0)");
+        $stmt->execute([
+            $data['title'],
+            $data['tags']
+        ]);
+
+        $surveyId = $this->conn->lastInsertId();
+
+        // Insert survey-question mappings
+        if (!empty($data['questions'])) {
+            $stmt = $this->conn->prepare("INSERT INTO survey_question_mapping (survey_package_id, survey_question_id) VALUES (?, ?)");
+            foreach ($data['questions'] as $questionId) {
+                $stmt->execute([$surveyId, $questionId]);
+            }
+        }
+
+        $this->conn->commit();
+        return $surveyId;
+    } catch (Exception $e) {
+        $this->conn->rollBack();
+        return false;
+    }
+}
+
+
+//Update Survey with Questions
+
+public function updateSurveyWithQuestions($data, $surveyId)
+{
+    try {
+        $this->conn->beginTransaction();
+
+        // Update surveys table with title and tags only
+        $stmt = $this->conn->prepare("UPDATE survey_package SET title = ?, tags = ? WHERE id = ?");
+        $stmt->execute([
+            $data['title'],
+            $data['tags'],
+            $surveyId
+        ]);
+
+        // Remove old question mappings
+        $this->conn->prepare("DELETE FROM survey_question_mapping WHERE survey_package_id = ?")->execute([$surveyId]);
+
+        // Insert new question mappings
+        if (!empty($data['questions'])) {
+            $stmt = $this->conn->prepare("INSERT INTO survey_question_mapping (survey_package_id, survey_question_id) VALUES (?, ?)");
+            foreach ($data['questions'] as $questionId) {
+                $stmt->execute([$surveyId, $questionId]);
+            }
+        }
+
+        $this->conn->commit();
+        return true;
+    } catch (Exception $e) {
+        $this->conn->rollBack();
+        return false;
+    }
+}
+
+
+//Get All Surveys (excluding deleted)
+public function getAllSurvey()
+{
+    $stmt = $this->conn->prepare("SELECT * FROM survey_package WHERE is_deleted = 0 ORDER BY created_at DESC");
+    $stmt->execute();
+    return $stmt->fetchAll(PDO::FETCH_ASSOC);
+}
+
+
+//Get Survey by ID with Questions
+public function getSurveyByIdWithQuestions($surveyId)
+{
+    // Get survey basic info
+    $stmt = $this->conn->prepare("SELECT * FROM survey_package WHERE id = ? AND is_deleted = 0");
+    $stmt->execute([$surveyId]);
+    $survey = $stmt->fetch(PDO::FETCH_ASSOC);
+
+    if (!$survey) {
+        return false;
+    }
+
+    // Get mapped question IDs
+    $stmt = $this->conn->prepare("SELECT question_id FROM survey_question_mapping WHERE survey_id = ?");
+    $stmt->execute([$surveyId]);
+    $questions = $stmt->fetchAll(PDO::FETCH_COLUMN);
+
+    $survey['questions'] = $questions ?: [];
+
+    return $survey;
+}
+
 
 
 }

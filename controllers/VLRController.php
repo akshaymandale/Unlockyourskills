@@ -900,6 +900,91 @@ private function redirectWithAlert($message)
     exit();
 }
 
+// Survey Add and Edit 
+public function addOrEditSurvey()
+{
+    if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+        http_response_code(405);
+        echo "Method Not Allowed";
+        return;
+    }
+
+    if (!isset($_SESSION['id'])) {
+        echo "<script>alert('Unauthorized access. Please log in.'); window.location.href='index.php?controller=LoginController';</script>";
+        exit();
+    }
+
+    $title = trim($_POST['title'] ?? '');
+    $tags = trim($_POST['tags'] ?? '');
+    $questionIdsRaw = $_POST['survey_selectedQuestionIds'] ?? '';
+    $surveyId = $_POST['surveyId'] ?? null;
+
+    //echo($surveyId);die;
+    $errors = [];
+
+    if (empty($title)) {
+        $errors[] = Localization::translate('survey.validation.title_required');
+    }
+
+    if (empty($tags)) {
+        $errors[] = Localization::translate('survey.validation.tags_required');
+    }
+
+    $questionIds = array_filter(array_map('trim', explode(',', $questionIdsRaw)));
+    if (empty($questionIds)) {
+        $errors[] = Localization::translate('survey.validation.questions_required');
+    }
+
+    if (!empty($errors)) {
+        $errorMsg = implode("\\n", $errors);
+        echo "<script>alert('$errorMsg'); window.history.back();</script>";
+        exit();
+    }
+
+    // Prepare data for saving
+    $data = [
+        'title' => $title,
+        'tags' => $tags,
+        'created_by' => $_SESSION['id'], // if needed
+    ];
+
+
+
+    // Insert or update logic
+    if (!empty($surveyId)) {
+        $result = $this->VLRModel->updateSurveyWithQuestions($data, $surveyId, $questionIds);
+    } else {
+        $result = $this->VLRModel->saveSurveyWithQuestions($data, $questionIds);
+    }
+
+    if ($result) {
+        $message = Localization::translate('survey.success.saved');
+        echo "<script>alert('$message'); window.location.href='index.php?controller=VLRController&action=index';</script>";
+    } else {
+        $message = Localization::translate('survey.error.save_failed');
+        echo "<script>alert('$message'); window.location.href='index.php?controller=VLRController&action=index';</script>";
+    }
+}
+
+
+
+
+// Survey Delete 
+public function deleteSurvey()
+{
+    if (isset($_GET['id'])) {
+        $id = $_GET['id'];
+        $result = $this->VLRModel->deleteSurvey($id);
+
+        if ($result) {
+            echo "<script>alert('Survey deleted successfully.'); window.location.href='index.php?controller=VLRController';</script>";
+        } else {
+            echo "<script>alert('Failed to delete survey.'); window.location.href='index.php?controller=VLRController';</script>";
+        }
+    } else {
+        echo "<script>alert('Invalid request.'); window.location.href='index.php?controller=VLRController';</script>";
+    }
+}
 
 }
 ?>
