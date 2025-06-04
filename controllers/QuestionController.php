@@ -9,16 +9,20 @@ class QuestionController {
     }
 
     public function index() {
-       // require 'views/add_assessment.php'; // ✅ Load the question form
-
         $limit = 10;
-        $page = isset($_GET['page']) ? (int) $_GET['page'] : 1;
-        $offset = ($page - 1) * $limit;
-    
+        $page = 1;
+        $offset = 0;
+
+        // Load initial data (no search/filters applied)
         $questions = $this->questionModel->getQuestions($limit, $offset);
         $totalQuestions = $this->questionModel->getTotalQuestionCount();
         $totalPages = ceil($totalQuestions / $limit);
-    
+
+        // Get unique values for filter dropdowns
+        $uniqueQuestionTypes = $this->questionModel->getUniqueQuestionTypes();
+        $uniqueDifficultyLevels = $this->questionModel->getUniqueDifficultyLevels();
+        $uniqueTags = $this->questionModel->getUniqueTags();
+
         require 'views/add_assessment.php';
     }
 
@@ -236,6 +240,57 @@ class QuestionController {
         } else {
             echo "<script>alert('Invalid request.'); window.location.href='index.php?controller=QuestionController';</script>";
         }
+    }
+
+    public function ajaxSearch() {
+        header('Content-Type: application/json');
+
+        try {
+            $limit = 10;
+            $page = isset($_POST['page']) ? (int) $_POST['page'] : 1;
+            $offset = ($page - 1) * $limit;
+
+            // Get search and filter parameters
+            $search = trim($_POST['search'] ?? '');
+            $filters = [];
+
+            if (!empty($_POST['question_type'])) {
+                $filters['question_type'] = $_POST['question_type'];
+            }
+
+            if (!empty($_POST['difficulty'])) {
+                $filters['difficulty'] = $_POST['difficulty'];
+            }
+
+            if (!empty($_POST['tags'])) {
+                $filters['tags'] = $_POST['tags'];
+            }
+
+            // Get questions from database
+            $questions = $this->questionModel->getQuestions($limit, $offset, $search, $filters);
+            $totalQuestions = $this->questionModel->getTotalQuestionCount($search, $filters);
+            $totalPages = ceil($totalQuestions / $limit);
+
+            $response = [
+                'success' => true,
+                'questions' => $questions,
+                'totalQuestions' => $totalQuestions,
+                'pagination' => [
+                    'currentPage' => $page,
+                    'totalPages' => $totalPages,
+                    'totalQuestions' => $totalQuestions
+                ]
+            ];
+
+            echo json_encode($response);
+
+        } catch (Exception $e) {
+            echo json_encode([
+                'success' => false,
+                'message' => 'Error loading questions: ' . $e->getMessage()
+            ]);
+        }
+        exit();
     }
 
 
