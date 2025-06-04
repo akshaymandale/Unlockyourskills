@@ -153,8 +153,23 @@ $languageList = $vlrController->getLanguages();
                                                 <div class="form-group">
                                                     <label
                                                         for="language"><?= Localization::translate('language_support'); ?></label>
-                                                    <input type="text" id="language" name="language"
-                                                        class="form-control">
+                                                    <select class="form-control" id="language" name="language">
+                                                        <option value=""><?= Localization::translate('select_language'); ?>
+                                                        </option>
+                                                        <?php
+                                                        if (!empty($languageList) && is_array($languageList)) {
+                                                            foreach ($languageList as $lang) {
+                                                                if (isset($lang['id']) && isset($lang['language_name'])) {
+                                                                    $langId = htmlspecialchars($lang['id'], ENT_QUOTES, 'UTF-8');
+                                                                    $langName = htmlspecialchars($lang['language_name'], ENT_QUOTES, 'UTF-8');
+                                                                    echo "<option value=\"$langId\">$langName</option>";
+                                                                }
+                                                            }
+                                                        } else {
+                                                            echo '<option value="">' . Localization::translate('no_languages_available') . '</option>';
+                                                        }
+                                                        ?>
+                                                    </select>
                                                 </div>
                                             </div>
                                             <div class="col-md-4">
@@ -858,11 +873,20 @@ $languageList = $vlrController->getLanguages();
                                         <div class="col-md-4">
                                             <label for="languageaudio" class="form-label">Language Support</label>
                                             <select class="form-select" id="languageaudio" name="languageaudio">
-                                                <option value="">Select</option>
-                                                <option value="en">English</option>
-                                                <option value="es">Spanish</option>
-                                                <option value="fr">French</option>
-                                                <option value="de">German</option>
+                                                <option value=""><?= Localization::translate('select_language'); ?></option>
+                                                <?php
+                                                if (!empty($languageList) && is_array($languageList)) {
+                                                    foreach ($languageList as $lang) {
+                                                        if (isset($lang['id']) && isset($lang['language_name'])) {
+                                                            $langId = htmlspecialchars($lang['id'], ENT_QUOTES, 'UTF-8');
+                                                            $langName = htmlspecialchars($lang['language_name'], ENT_QUOTES, 'UTF-8');
+                                                            echo "<option value=\"$langId\">$langName</option>";
+                                                        }
+                                                    }
+                                                } else {
+                                                    echo '<option value="">' . Localization::translate('no_languages_available') . '</option>';
+                                                }
+                                                ?>
                                             </select>
                                         </div>
 
@@ -1029,11 +1053,20 @@ $languageList = $vlrController->getLanguages();
                                         <div class="col-md-4">
                                             <label for="languagevideo" class="form-label">Language Support</label>
                                             <select class="form-select" id="languagevideo" name="languagevideo">
-                                                <option value="">Select</option>
-                                                <option value="en">English</option>
-                                                <option value="es">Spanish</option>
-                                                <option value="fr">French</option>
-                                                <option value="de">German</option>
+                                                <option value=""><?= Localization::translate('select_language'); ?></option>
+                                                <?php
+                                                if (!empty($languageList) && is_array($languageList)) {
+                                                    foreach ($languageList as $lang) {
+                                                        if (isset($lang['id']) && isset($lang['language_name'])) {
+                                                            $langId = htmlspecialchars($lang['id'], ENT_QUOTES, 'UTF-8');
+                                                            $langName = htmlspecialchars($lang['language_name'], ENT_QUOTES, 'UTF-8');
+                                                            echo "<option value=\"$langId\">$langName</option>";
+                                                        }
+                                                    }
+                                                } else {
+                                                    echo '<option value="">' . Localization::translate('no_languages_available') . '</option>';
+                                                }
+                                                ?>
                                             </select>
                                         </div>
 
@@ -1529,11 +1562,20 @@ $languageList = $vlrController->getLanguages();
                                         <div class="col-md-6">
                                             <label for="languageimage" class="form-label">Language Support</label>
                                             <select class="form-select" id="languageimage" name="languageimage">
-                                                <option value="">Select</option>
-                                                <option value="en">English</option>
-                                                <option value="es">Spanish</option>
-                                                <option value="fr">French</option>
-                                                <option value="de">German</option>
+                                                <option value=""><?= Localization::translate('select_language'); ?></option>
+                                                <?php
+                                                if (!empty($languageList) && is_array($languageList)) {
+                                                    foreach ($languageList as $lang) {
+                                                        if (isset($lang['id']) && isset($lang['language_name'])) {
+                                                            $langId = htmlspecialchars($lang['id'], ENT_QUOTES, 'UTF-8');
+                                                            $langName = htmlspecialchars($lang['language_name'], ENT_QUOTES, 'UTF-8');
+                                                            echo "<option value=\"$langId\">$langName</option>";
+                                                        }
+                                                    }
+                                                } else {
+                                                    echo '<option value="">' . Localization::translate('no_languages_available') . '</option>';
+                                                }
+                                                ?>
                                             </select>
                                         </div>
 
@@ -1688,24 +1730,21 @@ $languageList = $vlrController->getLanguages();
                                                         for="languageSupport"><?= Localization::translate('language_support'); ?></label>
                                                     <select class="form-control" id="languageSupport"
                                                         name="language_support">
-                                                        <option value="English">
-                                                            <?= Localization::translate('english'); ?>
+                                                        <option value=""><?= Localization::translate('select_language'); ?>
                                                         </option>
-                                                        <option value="Hindi"><?= Localization::translate('hindi'); ?>
-                                                        </option>
-                                                        <option value="Marathi">
-                                                            <?= Localization::translate('marathi'); ?>
-                                                        </option>
-                                                        <option value="Spanish">
-                                                            <?= Localization::translate('spanish'); ?>
-                                                        </option>
-                                                        <option value="French"><?= Localization::translate('french'); ?>
-                                                        </option>
-                                                        <option value="German"><?= Localization::translate('german'); ?>
-                                                        </option>
-                                                        <option value="Chinese">
-                                                            <?= Localization::translate('chinese'); ?>
-                                                        </option>
+                                                        <?php
+                                                        if (!empty($languageList) && is_array($languageList)) {
+                                                            foreach ($languageList as $lang) {
+                                                                if (isset($lang['id']) && isset($lang['language_name'])) {
+                                                                    $langId = htmlspecialchars($lang['id'], ENT_QUOTES, 'UTF-8');
+                                                                    $langName = htmlspecialchars($lang['language_name'], ENT_QUOTES, 'UTF-8');
+                                                                    echo "<option value=\"$langId\">$langName</option>";
+                                                                }
+                                                            }
+                                                        } else {
+                                                            echo '<option value="">' . Localization::translate('no_languages_available') . '</option>';
+                                                        }
+                                                        ?>
                                                     </select>
                                                 </div>
                                             </div>

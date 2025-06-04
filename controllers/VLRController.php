@@ -22,6 +22,7 @@ class VLRController
         $audioPackages = $this->VLRModel->getAudioPackages();
         $videoPackages = $this->VLRModel->getVideoPackages();
         $imagePackages = $this->VLRModel->getImagePackages();
+        $languageList = $this->VLRModel->getLanguages();
         //echo '<pre>'; print_r($audioPackages); die;
         require 'views/vlr.php';
     }
