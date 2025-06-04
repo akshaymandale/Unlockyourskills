@@ -114,23 +114,91 @@ class QuestionModel {
         return $this->insertOption($data); // Reuse insert logic
     }
 
-    // Retrieve questions with pagination
-    public function getQuestions($limit, $offset) {
-        $sql = "SELECT id, question_text AS title, question_type AS type, level AS difficulty, tags, created_by
-                FROM assessment_questions 
-                WHERE is_deleted = 0 
-                ORDER BY created_at DESC 
+    // Retrieve questions with pagination, search and filters
+    public function getQuestions($limit, $offset, $search = '', $filters = []) {
+        $whereConditions = ["is_deleted = 0"];
+        $params = [];
+
+        // Add search condition
+        if (!empty($search)) {
+            $whereConditions[] = "(question_text LIKE :search OR tags LIKE :search OR competency_skills LIKE :search)";
+            $params[':search'] = '%' . $search . '%';
+        }
+
+        // Add filter conditions
+        if (!empty($filters['question_type'])) {
+            $whereConditions[] = "question_type = :question_type";
+            $params[':question_type'] = $filters['question_type'];
+        }
+
+        if (!empty($filters['difficulty'])) {
+            $whereConditions[] = "level = :difficulty";
+            $params[':difficulty'] = $filters['difficulty'];
+        }
+
+        if (!empty($filters['tags'])) {
+            $whereConditions[] = "tags LIKE :tags";
+            $params[':tags'] = '%' . $filters['tags'] . '%';
+        }
+
+        $whereClause = implode(' AND ', $whereConditions);
+
+        $sql = "SELECT id, question_text AS title, question_type AS type, level AS difficulty, tags
+                FROM assessment_questions
+                WHERE $whereClause
+                ORDER BY created_at DESC
                 LIMIT :limit OFFSET :offset";
+
         $stmt = $this->conn->prepare($sql);
+
+        // Bind search and filter parameters
+        foreach ($params as $key => $value) {
+            $stmt->bindValue($key, $value);
+        }
+
         $stmt->bindValue(':limit', (int) $limit, PDO::PARAM_INT);
         $stmt->bindValue(':offset', (int) $offset, PDO::PARAM_INT);
         $stmt->execute();
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
 
-    // Get the total count of questions (for pagination)
-    public function getTotalQuestionCount() {
-        $stmt = $this->conn->prepare("SELECT COUNT(*) as total FROM assessment_questions WHERE is_deleted = 0");
+    // Get the total count of questions with search and filters (for pagination)
+    public function getTotalQuestionCount($search = '', $filters = []) {
+        $whereConditions = ["is_deleted = 0"];
+        $params = [];
+
+        // Add search condition
+        if (!empty($search)) {
+            $whereConditions[] = "(question_text LIKE :search OR tags LIKE :search OR competency_skills LIKE :search)";
+            $params[':search'] = '%' . $search . '%';
+        }
+
+        // Add filter conditions
+        if (!empty($filters['question_type'])) {
+            $whereConditions[] = "question_type = :question_type";
+            $params[':question_type'] = $filters['question_type'];
+        }
+
+        if (!empty($filters['difficulty'])) {
+            $whereConditions[] = "level = :difficulty";
+            $params[':difficulty'] = $filters['difficulty'];
+        }
+
+        if (!empty($filters['tags'])) {
+            $whereConditions[] = "tags LIKE :tags";
+            $params[':tags'] = '%' . $filters['tags'] . '%';
+        }
+
+        $whereClause = implode(' AND ', $whereConditions);
+
+        $sql = "SELECT COUNT(*) as total FROM assessment_questions WHERE $whereClause";
+        $stmt = $this->conn->prepare($sql);
+
+        // Bind search and filter parameters
+        foreach ($params as $key => $value) {
+            $stmt->bindValue($key, $value);
+        }
+
         $stmt->execute();
         $result = $stmt->fetch(PDO::FETCH_ASSOC);
         return $result['total'] ?? 0;
@@ -152,12 +220,67 @@ class QuestionModel {
     // Get options for a specific question
     public function getOptionsByQuestionId($questionId) {
         $stmt = $this->conn->prepare("
-            SELECT option_index, option_text, is_correct 
-            FROM assessment_options 
-            WHERE question_id = :question_id 
+            SELECT option_index, option_text, is_correct
+            FROM assessment_options
+            WHERE question_id = :question_id
             ORDER BY option_index ASC
         ");
         $stmt->execute([':question_id' => $questionId]);
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
+
+    // Get unique question types for filter dropdown
+    public function getUniqueQuestionTypes() {
+        $stmt = $this->conn->prepare("
+            SELECT DISTINCT question_type
+            FROM assessment_questions
+            WHERE is_deleted = 0 AND question_type IS NOT NULL
+            ORDER BY question_type ASC
+        ");
+        $stmt->execute();
+        return $stmt->fetchAll(PDO::FETCH_COLUMN);
+    }
+
+    // Get unique difficulty levels for filter dropdown
+    public function getUniqueDifficultyLevels() {
+        $stmt = $this->conn->prepare("
+            SELECT DISTINCT level
+            FROM assessment_questions
+            WHERE is_deleted = 0 AND level IS NOT NULL
+            ORDER BY
+                CASE level
+                    WHEN 'Low' THEN 1
+                    WHEN 'Medium' THEN 2
+                    WHEN 'Hard' THEN 3
+                    ELSE 4
+                END
+        ");
+        $stmt->execute();
+        return $stmt->fetchAll(PDO::FETCH_COLUMN);
+    }
+
+    // Get unique tags for filter suggestions
+    public function getUniqueTags() {
+        $stmt = $this->conn->prepare("
+            SELECT DISTINCT tags
+            FROM assessment_questions
+            WHERE is_deleted = 0 AND tags IS NOT NULL AND tags != ''
+            ORDER BY tags ASC
+        ");
+        $stmt->execute();
+        $allTags = $stmt->fetchAll(PDO::FETCH_COLUMN);
+
+        // Split comma-separated tags and get unique values
+        $uniqueTags = [];
+        foreach ($allTags as $tagString) {
+            $tags = array_map('trim', explode(',', $tagString));
+            foreach ($tags as $tag) {
+                if (!empty($tag) && !in_array($tag, $uniqueTags)) {
+                    $uniqueTags[] = $tag;
+                }
+            }
+        }
+        sort($uniqueTags);
+        return $uniqueTags;
     }
 }

@@ -37,9 +37,9 @@ error_log("Language file loaded for: " . $lang);
 Localization::loadLanguage($lang);
 
 
-// Get the controller and action from the request
-$controller = isset($_GET['controller']) ? $_GET['controller'] : 'LoginController';
-$action = isset($_GET['action']) ? $_GET['action'] : 'index';
+// Get the controller and action from the request (check both GET and POST)
+$controller = $_POST['controller'] ?? $_GET['controller'] ?? 'LoginController';
+$action = $_POST['action'] ?? $_GET['action'] ?? 'index';
 $controllerFile = "controllers/$controller.php";
 
 // Load the controller file if it exists
