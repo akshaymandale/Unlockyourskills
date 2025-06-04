@@ -19,8 +19,8 @@ class VLRModel
             return false;
         }
 
-        $stmt = $this->conn->prepare("INSERT INTO scorm_packages 
-        (title, zip_file, description, tags, version, language, scorm_category, time_limit, mobile_support, assessment, created_by, is_deleted, created_at) 
+        $stmt = $this->conn->prepare("INSERT INTO scorm_packages
+        (title, zip_file, description, tags, version, language, scorm_category, time_limit, mobile_support, assessment, created_by, is_deleted, created_at)
         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, NOW())");
 
         return $stmt->execute([
@@ -46,7 +46,7 @@ class VLRModel
             return false;
         }
 
-        $stmt = $this->conn->prepare("UPDATE scorm_packages 
+        $stmt = $this->conn->prepare("UPDATE scorm_packages
         SET title = ?, zip_file = ?, description = ?, tags = ?, version = ?, language = ?, scorm_category = ?, time_limit = ?, mobile_support = ?, assessment = ?, updated_at = NOW()
         WHERE id = ?");
 
@@ -65,7 +65,7 @@ class VLRModel
         ]);
     }
 
-    // Get data for display on VLR 
+    // Get data for display on VLR
     public function getScormPackages()
     {
         $stmt = $this->conn->prepare("SELECT * FROM scorm_packages WHERE is_deleted = 0");
@@ -78,14 +78,14 @@ class VLRModel
         return $data;
     }
 
-    // Delete respective SCROM 
+    // Delete respective SCROM
     public function deleteScormPackage($id)
     {
         $stmt = $this->conn->prepare("UPDATE scorm_packages SET is_deleted = 1 WHERE id = ?");
         return $stmt->execute([$id]);
     }
 
-    // Add external content package 
+    // Add external content package
 
     public function insertExternalContent($data)
     {
@@ -100,12 +100,12 @@ class VLRModel
             $audioFile = isset($data['audio_file']) ? $data['audio_file'] : null;
 
             $sql = "INSERT INTO external_content (
-                title, content_type, version_number, mobile_support, language_support, time_limit, 
-                description, tags, video_url, thumbnail, course_url, platform_name, article_url, 
+                title, content_type, version_number, mobile_support, language_support, time_limit,
+                description, tags, video_url, thumbnail, course_url, platform_name, article_url,
                 author, audio_source, audio_url, audio_file, speaker, created_by
             ) VALUES (
-                :title, :content_type, :version_number, :mobile_support, :language_support, :time_limit, 
-                :description, :tags, :video_url, :thumbnail, :course_url, :platform_name, :article_url, 
+                :title, :content_type, :version_number, :mobile_support, :language_support, :time_limit,
+                :description, :tags, :video_url, :thumbnail, :course_url, :platform_name, :article_url,
                 :author, :audio_source, :audio_url, :audio_file, :speaker, :created_by
             )";
 
@@ -142,7 +142,7 @@ class VLRModel
     }
 
 
-    // Update for External Content 
+    // Update for External Content
 
     public function updateExternalContent($id, $data)
     {
@@ -217,7 +217,7 @@ class VLRModel
         return $data;
     }
 
-    // Delete respective External Content 
+    // Delete respective External Content
     public function deleteExternalContent($id)
     {
         $stmt = $this->conn->prepare("UPDATE external_content SET is_deleted = 1 WHERE id = ?");
@@ -228,11 +228,11 @@ class VLRModel
     // Documents package
     // Fetch all documents with language names
 
-    // Get data for display on VLR 
+    // Get data for display on VLR
     public function getAllDocuments()
     {
-        $stmt = $this->conn->prepare("SELECT d.*, l.language_name FROM documents d 
-                  LEFT JOIN languages l ON d.language_id = l.id 
+        $stmt = $this->conn->prepare("SELECT d.*, l.language_name FROM documents d
+                  LEFT JOIN languages l ON d.language_id = l.id
                   WHERE d.is_deleted = 0");
         $stmt->execute();
         $data = $stmt->fetchAll(PDO::FETCH_ASSOC);
@@ -298,9 +298,9 @@ class VLRModel
             return ['success' => false, 'errors' => $errors];
         }
 
-        $query = "INSERT INTO documents (title, category, description, tags, language_id, mobile_support, version_number, time_limit, 
+        $query = "INSERT INTO documents (title, category, description, tags, language_id, mobile_support, version_number, time_limit,
               authors, publication_date, reference_links, created_by, created_at, is_deleted, word_excel_ppt_file, ebook_manual_file, research_file)
-              VALUES (:title, :category, :description, :tags, :language_id, :mobile_support, :version_number, :time_limit, 
+              VALUES (:title, :category, :description, :tags, :language_id, :mobile_support, :version_number, :time_limit,
               :authors, :publication_date, :reference_links, :created_by, NOW(), 0, :word_excel_ppt_file, :ebook_manual_file, :research_file)";
 
         $stmt = $this->conn->prepare($query);
@@ -313,7 +313,7 @@ class VLRModel
             ':language_id' => !empty($data['language']) ? (int) $data['language'] : null,
             ':mobile_support' => $data['mobile_support'],
             ':version_number' => $data['doc_version'],
-            ':time_limit' => $data['doc_time_limit'],
+            ':time_limit' => !empty($data['doc_time_limit']) ? (int) $data['doc_time_limit'] : null,
             ':authors' => $data['research_authors'] ?? null,
             ':publication_date' => $data['research_publication_date'] ?? null,
             ':reference_links' => $data['research_references'] ?? null,
@@ -326,7 +326,7 @@ class VLRModel
         return ['success' => true, 'message' => "Document added successfully."];
     }
 
-    // Update document 
+    // Update document
     public function updateDocument($data, $id)
     {
         $errors = $this->validateDocument($data, true);
@@ -334,11 +334,11 @@ class VLRModel
             return ['success' => false, 'errors' => $errors];
         }
 
-        $query = "UPDATE documents SET title = :title, category = :category, description = :description, tags = :tags, 
-              language_id = :language_id, mobile_support = :mobile_support, version_number = :version_number, time_limit = :time_limit, 
-              authors = :authors, publication_date = :publication_date, reference_links = :reference_links, updated_at = NOW(), 
-              word_excel_ppt_file = COALESCE(:word_excel_ppt_file, word_excel_ppt_file), 
-              ebook_manual_file = COALESCE(:ebook_manual_file, ebook_manual_file), 
+        $query = "UPDATE documents SET title = :title, category = :category, description = :description, tags = :tags,
+              language_id = :language_id, mobile_support = :mobile_support, version_number = :version_number, time_limit = :time_limit,
+              authors = :authors, publication_date = :publication_date, reference_links = :reference_links, updated_at = NOW(),
+              word_excel_ppt_file = COALESCE(:word_excel_ppt_file, word_excel_ppt_file),
+              ebook_manual_file = COALESCE(:ebook_manual_file, ebook_manual_file),
               research_file = COALESCE(:research_file, research_file)
               WHERE id = :id";
 
@@ -351,7 +351,7 @@ class VLRModel
             ':language_id' => !empty($data['language']) ? (int) $data['language'] : null,
             ':mobile_support' => $data['mobile_support'],
             ':version_number' => $data['doc_version'],
-            ':time_limit' => $data['doc_time_limit'],
+            ':time_limit' => !empty($data['doc_time_limit']) ? (int) $data['doc_time_limit'] : null,
             ':authors' => $data['research_authors'] ?? null,
             ':publication_date' => $data['research_publication_date'] ?? null,
             ':reference_links' => $data['research_references'] ?? null,
@@ -382,7 +382,7 @@ class VLRModel
         // print_r($stmt);die;
     }
 
-    // Assessment add and update 
+    // Assessment add and update
 
     public function saveAssessmentWithQuestions($data)
     {
@@ -542,7 +542,7 @@ class VLRModel
     }
 
 
-    // Assessment get data for display 
+    // Assessment get data for display
 
     public function getAllAssessments()
     {
@@ -619,7 +619,7 @@ public function insertAudioPackage($data)
     }
 
     $stmt = $this->conn->prepare("
-        INSERT INTO audio_package 
+        INSERT INTO audio_package
         (title, audio_file, version, language, time_limit, description, tags, mobile_support, created_by, is_deleted, created_at)
         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 0, NOW())
     ");
@@ -645,16 +645,16 @@ public function updateAudioPackage($id, $data)
     }
 
     $stmt = $this->conn->prepare("
-        UPDATE audio_package SET 
-            title = ?, 
-            audio_file = ?, 
-            version = ?, 
-            language = ?, 
-            time_limit = ?, 
-            description = ?, 
-            tags = ?, 
-            mobile_support = ?, 
-            updated_by = ?, 
+        UPDATE audio_package SET
+            title = ?,
+            audio_file = ?,
+            version = ?,
+            language = ?,
+            time_limit = ?,
+            description = ?,
+            tags = ?,
+            mobile_support = ?,
+            updated_by = ?,
             updated_at = NOW()
         WHERE id = ?
     ");
@@ -700,7 +700,7 @@ public function insertVideoPackage($data)
     }
 
     $stmt = $this->conn->prepare("
-        INSERT INTO video_package 
+        INSERT INTO video_package
         (title, video_file, version, language, time_limit, description, tags, mobile_support, created_by, is_deleted, created_at)
         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 0, NOW())
     ");
@@ -726,16 +726,16 @@ public function updateVideoPackage($id, $data)
     }
 
     $stmt = $this->conn->prepare("
-        UPDATE video_package SET 
-            title = ?, 
-            video_file = ?, 
-            version = ?, 
-            language = ?, 
-            time_limit = ?, 
-            description = ?, 
-            tags = ?, 
-            mobile_support = ?, 
-            updated_by = ?, 
+        UPDATE video_package SET
+            title = ?,
+            video_file = ?,
+            version = ?,
+            language = ?,
+            time_limit = ?,
+            description = ?,
+            tags = ?,
+            mobile_support = ?,
+            updated_by = ?,
             updated_at = NOW()
         WHERE id = ?
     ");
@@ -781,7 +781,7 @@ public function insertImagePackage($data)
     }
 
     $stmt = $this->conn->prepare("
-        INSERT INTO image_package 
+        INSERT INTO image_package
         (title, image_file, version, language, description, tags, mobile_support, created_by, is_deleted, created_at)
         VALUES (?, ?, ?, ?, ?, ?, ?, ?, 0, NOW())
     ");
@@ -806,15 +806,15 @@ public function updateImagePackage($id, $data)
     }
 
     $stmt = $this->conn->prepare("
-        UPDATE image_package SET 
-            title = ?, 
-            image_file = ?, 
-            version = ?, 
-            language = ?, 
-            description = ?, 
-            tags = ?, 
-            mobile_support = ?, 
-            updated_by = ?, 
+        UPDATE image_package SET
+            title = ?,
+            image_file = ?,
+            version = ?,
+            language = ?,
+            description = ?,
+            tags = ?,
+            mobile_support = ?,
+            updated_by = ?,
             updated_at = NOW()
         WHERE id = ?
     ");
@@ -847,7 +847,227 @@ public function deleteImagePackage($id)
     return $stmt->execute([$id]);
 }
 
+    // Save Survey with Questions
+    public function saveSurveyWithQuestions($data)
+    {
+        try {
+            $this->conn->beginTransaction();
 
+            // Insert into survey_package
+            $stmt = $this->conn->prepare("INSERT INTO survey_package (title, tags, created_by, created_at, is_deleted) VALUES (?, ?, ?, NOW(), 0)");
+            $stmt->execute([
+                $data['title'],
+                $data['tags'],
+                $data['created_by']
+            ]);
+
+            $surveyId = $this->conn->lastInsertId();
+
+            // Insert survey-question mappings
+            if (!empty($data['question_ids'])) {
+                $stmt = $this->conn->prepare("INSERT INTO survey_question_mapping (survey_package_id, survey_question_id, created_by, created_at) VALUES (?, ?, ?, NOW())");
+                foreach ($data['question_ids'] as $questionId) {
+                    $stmt->execute([$surveyId, $questionId, $data['created_by']]);
+                }
+            }
+
+            $this->conn->commit();
+            return $surveyId;
+        } catch (Exception $e) {
+            $this->conn->rollBack();
+            return false;
+        }
+    }
+
+
+    //Update Survey with Questions
+    public function updateSurveyWithQuestions($data, $surveyId)
+    {
+        try {
+            $this->conn->beginTransaction();
+
+            // Update survey_package table
+            $stmt = $this->conn->prepare("UPDATE survey_package SET title = ?, tags = ?, updated_by = ?, updated_at = NOW() WHERE id = ?");
+            $stmt->execute([
+                $data['title'],
+                $data['tags'],
+                $data['created_by'],
+                $surveyId
+            ]);
+
+            // Remove old question mappings
+            $this->conn->prepare("DELETE FROM survey_question_mapping WHERE survey_package_id = ?")->execute([$surveyId]);
+
+            // Insert new question mappings
+            if (!empty($data['question_ids'])) {
+                $stmt = $this->conn->prepare("INSERT INTO survey_question_mapping (survey_package_id, survey_question_id, created_by, created_at) VALUES (?, ?, ?, NOW())");
+                foreach ($data['question_ids'] as $questionId) {
+                    $stmt->execute([$surveyId, $questionId, $data['created_by']]);
+                }
+            }
+
+            $this->conn->commit();
+            return true;
+        } catch (Exception $e) {
+            $this->conn->rollBack();
+            return false;
+        }
+    }
+
+
+    //Get All Surveys (excluding deleted)
+    public function getAllSurvey()
+    {
+        $stmt = $this->conn->prepare("SELECT * FROM survey_package WHERE is_deleted = 0 ORDER BY created_at DESC");
+        $stmt->execute();
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
+
+    //Get Survey by ID with Questions
+    public function getSurveyByIdWithQuestions($surveyId)
+    {
+        // Get survey basic info
+        $stmt = $this->conn->prepare("SELECT * FROM survey_package WHERE id = ? AND is_deleted = 0");
+        $stmt->execute([$surveyId]);
+        $survey = $stmt->fetch(PDO::FETCH_ASSOC);
+
+        if (!$survey) {
+            return false;
+        }
+
+        // Get mapped questions with full details (similar to assessment)
+        $stmt = $this->conn->prepare("
+            SELECT q.id, q.title, q.tags, q.type
+            FROM survey_question_mapping m
+            JOIN survey_questions q ON m.survey_question_id = q.id
+            WHERE m.survey_package_id = ? AND q.is_deleted = 0
+        ");
+        $stmt->execute([$surveyId]);
+        $questions = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+        // Add questions to survey array (like assessment does)
+        $survey['selected_questions'] = $questions;
+
+        return $survey;
+    }
+
+    //Delete Survey (soft delete)
+    public function deleteSurvey($id)
+    {
+        $stmt = $this->conn->prepare("UPDATE survey_package SET is_deleted = 1 WHERE id = ?");
+        return $stmt->execute([$id]);
+    }
+
+    // Feedback Package Methods (following survey pattern)
+
+    //Get All Feedback Packages (excluding deleted)
+    public function getAllFeedback()
+    {
+        $stmt = $this->conn->prepare("SELECT * FROM feedback_package WHERE is_deleted = 0 ORDER BY created_at DESC");
+        $stmt->execute();
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
+
+    //Get Feedback by ID with Questions
+    public function getFeedbackByIdWithQuestions($feedbackId)
+    {
+        // Get feedback basic info
+        $stmt = $this->conn->prepare("SELECT * FROM feedback_package WHERE id = ? AND is_deleted = 0");
+        $stmt->execute([$feedbackId]);
+        $feedback = $stmt->fetch(PDO::FETCH_ASSOC);
+
+        if (!$feedback) {
+            return false;
+        }
+
+        // Get mapped questions with full details (similar to survey)
+        $stmt = $this->conn->prepare("
+            SELECT q.id, q.title, q.tags, q.type
+            FROM feedback_question_mapping m
+            JOIN feedback_questions q ON m.feedback_question_id = q.id
+            WHERE m.feedback_package_id = ? AND q.is_deleted = 0
+        ");
+        $stmt->execute([$feedbackId]);
+        $questions = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+        // Add questions to feedback array (like survey does)
+        $feedback['selected_questions'] = $questions;
+
+        return $feedback;
+    }
+
+    // Save Feedback with Questions
+    public function saveFeedbackWithQuestions($data)
+    {
+        try {
+            $this->conn->beginTransaction();
+
+            // Insert into feedback_package
+            $stmt = $this->conn->prepare("INSERT INTO feedback_package (title, tags, created_by, created_at, is_deleted) VALUES (?, ?, ?, NOW(), 0)");
+            $stmt->execute([
+                $data['title'],
+                $data['tags'],
+                $data['created_by']
+            ]);
+
+            $feedbackId = $this->conn->lastInsertId();
+
+            // Insert feedback-question mappings
+            if (!empty($data['question_ids'])) {
+                $stmt = $this->conn->prepare("INSERT INTO feedback_question_mapping (feedback_package_id, feedback_question_id, created_by, created_at) VALUES (?, ?, ?, NOW())");
+                foreach ($data['question_ids'] as $questionId) {
+                    $stmt->execute([$feedbackId, $questionId, $data['created_by']]);
+                }
+            }
+
+            $this->conn->commit();
+            return $feedbackId;
+        } catch (Exception $e) {
+            $this->conn->rollBack();
+            return false;
+        }
+    }
+
+    //Update Feedback with Questions
+    public function updateFeedbackWithQuestions($data, $feedbackId)
+    {
+        try {
+            $this->conn->beginTransaction();
+
+            // Update feedback_package table
+            $stmt = $this->conn->prepare("UPDATE feedback_package SET title = ?, tags = ?, updated_by = ?, updated_at = NOW() WHERE id = ?");
+            $stmt->execute([
+                $data['title'],
+                $data['tags'],
+                $data['created_by'],
+                $feedbackId
+            ]);
+
+            // Remove old question mappings
+            $this->conn->prepare("DELETE FROM feedback_question_mapping WHERE feedback_package_id = ?")->execute([$feedbackId]);
+
+            // Insert new question mappings
+            if (!empty($data['question_ids'])) {
+                $stmt = $this->conn->prepare("INSERT INTO feedback_question_mapping (feedback_package_id, feedback_question_id, created_by, created_at) VALUES (?, ?, ?, NOW())");
+                foreach ($data['question_ids'] as $questionId) {
+                    $stmt->execute([$feedbackId, $questionId, $data['created_by']]);
+                }
+            }
+
+            $this->conn->commit();
+            return true;
+        } catch (Exception $e) {
+            $this->conn->rollBack();
+            return false;
+        }
+    }
+
+    //Delete Feedback (soft delete)
+    public function deleteFeedback($id)
+    {
+        $stmt = $this->conn->prepare("UPDATE feedback_package SET is_deleted = 1 WHERE id = ?");
+        return $stmt->execute([$id]);
+    }
 
 }
 ?>

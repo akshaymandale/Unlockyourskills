@@ -28,7 +28,7 @@ document.addEventListener("DOMContentLoaded", function () {
     function validateTitle() {
         const value = titleInput.value.trim();
         if (!value) {
-            showError(titleInput, "Feedback Question Title is required.");
+            showError(titleInput, translate('js.validation.feedback_question_title_required'));
             return false;
         }
         clearError(titleInput);
@@ -46,7 +46,7 @@ document.addEventListener("DOMContentLoaded", function () {
 
             optionInputs.forEach(input => {
                 if (input.value.trim() === "") {
-                    showError(input, "Option cannot be empty.");
+                    showError(input, translate('js.validation.option_empty'));
                     isValid = false;
                 } else {
                     clearError(input);
@@ -62,7 +62,7 @@ document.addEventListener("DOMContentLoaded", function () {
     function validateTags() {
         const tags = tagListInput.value.split(',').filter(tag => tag.trim() !== '');
         if (tags.length === 0) {
-            showError(tagInput, "At least one tag is required.");
+            showError(tagInput, translate('js.validation.tags_required'));
             return false;
         }
         clearError(tagInput);
@@ -76,7 +76,7 @@ document.addEventListener("DOMContentLoaded", function () {
     optionsWrapper.addEventListener("blur", function (e) {
         if (e.target && e.target.matches("input[type='text']")) {
             if (e.target.value.trim() === "") {
-                showError(e.target, "Option cannot be empty.");
+                showError(e.target, translate('js.validation.option_empty'));
             } else {
                 clearError(e.target);
             }

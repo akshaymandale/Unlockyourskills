@@ -20,14 +20,40 @@ class FeedbackQuestionModel {
         $stmt->execute([
             'title' => $data['title'],
             'type' => $data['type'],
-            'media_path' => $data['media_path'],
-            'rating_scale' => $data['rating_scale'],
-            'rating_symbol' => $data['rating_symbol'],
-            'tags' => $data['tags'],
+            'media_path' => $data['media_path'] ?? null,
+            'rating_scale' => $data['rating_scale'] ?? null,
+            'rating_symbol' => $data['rating_symbol'] ?? null,
+            'tags' => $data['tags'] ?? null,
             'created_by' => $data['created_by'],
         ]);
 
         return $this->conn->lastInsertId();
+    }
+
+    // Update existing question by ID
+    public function updateQuestion($id, $data) {
+        $sql = "UPDATE feedback_questions SET 
+                    title = :title,
+                    type = :type,
+                    media_path = :media_path,
+                    rating_scale = :rating_scale,
+                    rating_symbol = :rating_symbol,
+                    tags = :tags,
+                    updated_by = :updated_by,
+                    updated_at = NOW()
+                WHERE id = :id AND is_deleted = 0";
+
+        $stmt = $this->conn->prepare($sql);
+        return $stmt->execute([
+            'title' => $data['title'],
+            'type' => $data['type'],
+            'media_path' => $data['media_path'] ?? null,
+            'rating_scale' => $data['rating_scale'] ?? null,
+            'rating_symbol' => $data['rating_symbol'] ?? null,
+            'tags' => $data['tags'] ?? null,
+            'updated_by' => $data['updated_by'],
+            'id' => $id,
+        ]);
     }
 
     // Save options for a given question (with media uploads)
@@ -48,18 +74,7 @@ class FeedbackQuestionModel {
                     'size' => $optionMedias['size'][$i],
                 ];
 
-                $allowedTypes = ['image/jpeg', 'image/png', 'image/webp', 'image/gif', 'video/mp4', 'application/pdf'];
-                if (in_array($file['type'], $allowedTypes)) {
-                    $ext = pathinfo($file['name'], PATHINFO_EXTENSION);
-                    $randomName = bin2hex(random_bytes(10)) . '.' . $ext;
-                    $uploadDir = "uploads/feedback/";
-                    if (!is_dir($uploadDir)) mkdir($uploadDir, 0777, true);
-                    $targetPath = $uploadDir . $randomName;
-
-                    if (move_uploaded_file($file['tmp_name'], $targetPath)) {
-                        $mediaName = $randomName;
-                    }
-                }
+                $mediaName = $this->handleMediaUpload($file, 'feedback');
             }
 
             $sql = "INSERT INTO feedback_question_options 
@@ -75,6 +90,100 @@ class FeedbackQuestionModel {
                 'created_by' => $createdBy,
             ]);
         }
+    }
+
+    // Update options for a question (pass option id to update, else insert new)
+    public function updateOptions($questionId, $optionsData, $updatedBy) {
+        /*
+        $optionsData = [
+            ['id' => 1, 'text' => 'Option 1', 'media_path' => 'media1.jpg', 'media_file' => $_FILES file array or null],
+            ['id' => null, 'text' => 'New Option', 'media_path' => null, 'media_file' => ...],
+            ...
+        ]
+        */
+        foreach ($optionsData as $opt) {
+            $text = trim($opt['text']);
+            if ($text === '') continue;
+
+            $mediaName = $opt['media_path'] ?? null;
+
+            // Handle new media upload if exists
+            if (!empty($opt['media_file']['name'])) {
+                $mediaName = $this->handleMediaUpload($opt['media_file'], 'feedback');
+            }
+
+            if (!empty($opt['id'])) {
+                // Update existing option
+                $sql = "UPDATE feedback_question_options SET
+                            option_text = :option_text,
+                            media_path = :media_path,
+                            updated_by = :updated_by,
+                            updated_at = NOW()
+                        WHERE id = :id AND question_id = :question_id AND is_deleted = 0";
+
+                $stmt = $this->conn->prepare($sql);
+                $stmt->execute([
+                    'option_text' => $text,
+                    'media_path' => $mediaName,
+                    'updated_by' => $updatedBy,
+                    'id' => $opt['id'],
+                    'question_id' => $questionId,
+                ]);
+            } else {
+                // Insert new option
+                $sql = "INSERT INTO feedback_question_options
+                        (question_id, option_text, media_path, created_by, created_at, updated_by, updated_at, is_deleted)
+                        VALUES 
+                        (:question_id, :option_text, :media_path, :created_by, NOW(), :created_by, NOW(), 0)";
+                $stmt = $this->conn->prepare($sql);
+                $stmt->execute([
+                    'question_id' => $questionId,
+                    'option_text' => $text,
+                    'media_path' => $mediaName,
+                    'created_by' => $updatedBy,
+                ]);
+            }
+        }
+    }
+
+    // Soft delete options by ids for a question
+    public function deleteOptions($optionIds) {
+        if (empty($optionIds)) return;
+
+        $placeholders = implode(',', array_fill(0, count($optionIds), '?'));
+        $sql = "UPDATE feedback_question_options SET is_deleted = 1 WHERE id IN ($placeholders)";
+        $stmt = $this->conn->prepare($sql);
+        foreach ($optionIds as $index => $id) {
+            $stmt->bindValue($index + 1, $id, PDO::PARAM_INT);
+        }
+        $stmt->execute();
+    }
+
+    // Get all options for a question
+    public function getOptionsByQuestionId($questionId) {
+        $sql = "SELECT id, option_text, media_path 
+                FROM feedback_question_options 
+                WHERE question_id = :question_id AND is_deleted = 0 
+                ORDER BY created_at ASC";
+
+        $stmt = $this->conn->prepare($sql);
+        $stmt->execute(['question_id' => $questionId]);
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
+
+    // Get question details including options
+    public function getQuestionById($id) {
+        $sql = "SELECT * FROM feedback_questions WHERE id = :id AND is_deleted = 0";
+        $stmt = $this->conn->prepare($sql);
+        $stmt->execute(['id' => $id]);
+        $question = $stmt->fetch(PDO::FETCH_ASSOC);
+
+        if (!$question) return null;
+
+        $question['options'] = $this->getOptionsByQuestionId($id);
+
+        
+        return $question;
     }
 
     // Fetch paginated questions with optional search and type filter
@@ -139,7 +248,7 @@ class FeedbackQuestionModel {
         return $stmt->fetchAll(PDO::FETCH_COLUMN);
     }
 
-    // Get question details by IDs
+    // Get question details by IDs (minimal fields)
     public function getSelectedQuestions(array $ids) {
         if (empty($ids)) {
             return [];
@@ -162,6 +271,32 @@ class FeedbackQuestionModel {
         $sql = "UPDATE feedback_questions SET is_deleted = 1 WHERE id = :id";
         $stmt = $this->conn->prepare($sql);
         $stmt->bindParam(':id', $id, PDO::PARAM_INT);
-        return $stmt->execute();
+        $stmt->execute();
+
+        // Also soft delete options
+        $sqlOpt = "UPDATE feedback_question_options SET is_deleted = 1 WHERE question_id = :question_id";
+        $stmtOpt = $this->conn->prepare($sqlOpt);
+        $stmtOpt->execute(['question_id' => $id]);
+
+        return true;
+    }
+
+    // Helper: handle media upload, returns stored filename or null
+    private function handleMediaUpload($file, $folder) {
+        $allowedTypes = ['image/jpeg', 'image/png', 'image/webp', 'image/gif', 'video/mp4', 'application/pdf'];
+
+        if (in_array($file['type'], $allowedTypes) && $file['error'] === 0) {
+            $ext = pathinfo($file['name'], PATHINFO_EXTENSION);
+            $randomName = bin2hex(random_bytes(10)) . '.' . $ext;
+            $uploadDir = "uploads/$folder/";
+            if (!is_dir($uploadDir)) mkdir($uploadDir, 0777, true);
+            $targetPath = $uploadDir . $randomName;
+
+            if (move_uploaded_file($file['tmp_name'], $targetPath)) {
+                return $randomName;
+            }
+        }
+
+        return null;
     }
 }

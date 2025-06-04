@@ -12,14 +12,15 @@
                 <i class="fas fa-arrow-left"></i>
             </a>
             <span class="divider-line"></span>
-            <h1 class="page-title text-purple"><?= Localization::translate('feedback_question_management_title'); ?></h1>
+            <h1 class="page-title text-purple"><?= Localization::translate('feedback_question_management_title'); ?>
+            </h1>
         </div>
 
-        <!-- ✅ Filters & Search Section -->
+        <!-- Filters & Search Section -->
         <div class="container-fluid mb-3">
             <div class="row justify-content-between align-items-center g-3">
 
-                <!-- Filter Multiselect on the left -->
+                <!-- Filter Multiselect -->
                 <div class="col-md-auto">
                     <select class="form-select form-select-sm" multiple name="feedbackFiltersSelect"
                         id="feedbackFiltersSelect" title="<?= Localization::translate('filters_select_options'); ?>">
@@ -28,7 +29,7 @@
                     </select>
                 </div>
 
-                <!-- Search Bar in the middle -->
+                <!-- Search Bar -->
                 <div class="col-md-auto">
                     <div class="input-group input-group-sm">
                         <input type="text" id="searchFeedbackQuestionInput" name="searchFeedbackQuestionInput"
@@ -46,105 +47,8 @@
                 <div class="col-md-auto">
                     <button class="btn btn-sm btn-primary" data-bs-toggle="modal"
                         data-bs-target="#addFeedbackQuestionModal">
-                        Add Feedback Question
+                        <?= Localization::translate('buttons_add_feedback_question'); ?>
                     </button>
-
-                    <!-- 📍 Feedback Question Modal -->
-                    <div class="modal fade" id="addFeedbackQuestionModal" tabindex="-1"
-                        aria-labelledby="addFeedbackQuestionModalLabel" aria-hidden="true">
-                        <div class="modal-dialog modal-lg modal-dialog-scrollable">
-                            <div class="modal-content">
-                                <form id="feedbackQuestionForm" enctype="multipart/form-data" method="POST"
-                                    action="index.php?controller=FeedbackQuestionController&action=save">
-                                    <div class="modal-header">
-                                        <h5 class="modal-title" id="addFeedbackQuestionModalLabel">Add Feedback Question</h5>
-                                        <button type="button" class="btn-close" data-bs-dismiss="modal"
-                                            aria-label="Close"></button>
-                                    </div>
-                                    <div class="modal-body">
-                                        <!-- Question Title + Upload -->
-                                        <div class="mb-3">
-                                            <label for="feedbackQuestionTitle" class="form-label">Feedback Question Title
-                                                <span class="text-danger">*</span></label>
-                                            <div class="d-flex align-items-center gap-3">
-                                                <input type="text" id="feedbackQuestionTitle"
-                                                    name="feedbackQuestionTitle" class="form-control">
-                                                <label for="feedbackQuestionMedia" class="btn btn-outline-secondary mb-0"
-                                                    title="Upload image, video, or PDF">
-                                                    <i class="fas fa-upload"></i>
-                                                </label>
-                                                <input type="file" id="feedbackQuestionMedia" name="feedbackQuestionMedia"
-                                                    accept="image/*,video/*,.pdf" class="d-none">
-                                            </div>
-                                            <div id="feedbackQuestionPreview"
-                                                class="preview-container question-preview mt-2"></div>
-                                        </div>
-
-                                        <!-- Question Type -->
-                                        <div class="mb-3">
-                                            <label for="feedbackQuestionType" class="form-label">Type</label>
-                                            <select id="feedbackQuestionType" name="feedbackQuestionType"
-                                                class="form-select">
-                                                <option value="multi_choice">Multi Choice</option>
-                                                <option value="checkbox">Checkbox</option>
-                                                <option value="short_answer">Short Answer</option>
-                                                <option value="long_answer">Long Answer</option>
-                                                <option value="dropdown">Dropdown</option>
-                                                <option value="upload">Upload</option>
-                                                <option value="rating">Rating</option>
-                                            </select>
-                                        </div>
-
-                                        <!-- Options (Dynamic) -->
-                                        <div id="feedbackOptionsWrapper" class="mb-3"></div>
-
-                                        <!-- Rating -->
-                                        <div id="feedbackRatingWrapper" class="mb-3 d-none">
-                                            <label class="form-label">Rating Scale</label>
-                                            <div class="row g-2">
-                                                <div class="col">
-                                                    <select id="feedbackRatingScale" name="feedbackRatingScale" class="form-select">
-                                                        <?php for ($i = 1; $i <= 10; $i++): ?>
-                                                            <option value="<?= $i ?>"><?= $i ?></option>
-                                                        <?php endfor; ?>
-                                                    </select>
-                                                </div>
-                                                <div class="col">
-                                                    <select id="feedbackRatingSymbol" name="feedbackRatingSymbol"class="form-select">
-                                                        <option value="star">⭐ Star</option>
-                                                        <option value="thumb">👍 Thumb</option>
-                                                        <option value="heart">❤️ Heart</option>
-                                                    </select>
-                                                </div>
-                                            </div>
-                                        </div>
-
-                                        <!-- Tags -->
-                                        <div class="row">
-                                            <div class="col-md-12">
-                                                <div class="form-group">
-                                                    <label for="feedbackTags"><?= Localization::translate('tags_keywords'); ?>
-                                                        <span class="text-danger">*</span></label>
-                                                    <div class="tag-input-container form-control">
-                                                        <span id="feedbackTagDisplay"></span>
-                                                        <input type="text" id="feedbackTagInput"
-                                                            placeholder="<?= Localization::translate('add_tag_placeholder'); ?>">
-                                                    </div>
-                                                    <input type="hidden" name="feedbackTagList" id="feedbackTagList">
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
-
-                                    <div class="modal-footer">
-                                        <button type="submit" class="btn btn-success">Submit Feedback Question</button>
-                                        <button type="button" class="btn btn-secondary"
-                                            data-bs-dismiss="modal">Cancel</button>
-                                    </div>
-                                </form>
-                            </div>
-                        </div>
-                    </div>
                 </div>
 
                 <!-- Import Feedback Button -->
@@ -158,7 +62,131 @@
             </div>
         </div>
 
-        <!-- ✅ Feedback Questions Grid View -->
+        <!-- Feedback Question Modal -->
+        <div class="modal fade" id="addFeedbackQuestionModal" tabindex="-1"
+            aria-labelledby="addFeedbackQuestionModalLabel" aria-hidden="true">
+            <div class="modal-dialog modal-lg modal-dialog-scrollable">
+                <div class="modal-content">
+                    <form id="feedbackQuestionForm" enctype="multipart/form-data" method="POST"
+                        action="index.php?controller=FeedbackQuestionController&action=save" novalidate>
+
+                        <input type="hidden" name="feedbackQuestionId" id="feedbackQuestionId">
+                        <input type="hidden" name="existingFeedbackQuestionMedia" id="existingFeedbackQuestionMedia">
+
+
+                        <div class="modal-header">
+                            <h5 class="modal-title" id="addFeedbackQuestionModalLabel">
+                                <?= Localization::translate('buttons_add_feedback_question'); ?></h5>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal"
+                                aria-label="<?= Localization::translate('buttons_close'); ?>"></button>
+                        </div>
+                        <div class="modal-body">
+
+                            <!-- Question Title + Upload -->
+                            <div class="mb-3">
+                                <label for="feedbackQuestionTitle"
+                                    class="form-label"><?= Localization::translate('feedback_question_title'); ?> <span
+                                        class="text-danger">*</span></label>
+                                <div class="d-flex align-items-center gap-2">
+                                    <input type="text" id="feedbackQuestionTitle" name="feedbackQuestionTitle"
+                                        class="form-control" required aria-describedby="feedbackQuestionTitleHelp">
+                                    <label for="feedbackQuestionMedia" class="btn btn-outline-secondary mb-0"
+                                        title="<?= Localization::translate('upload_image_video_pdf'); ?>">
+                                        <i class="fas fa-upload"></i>
+                                    </label>
+                                    <input type="file" id="feedbackQuestionMedia" name="feedbackQuestionMedia"
+                                        accept="image/*,video/*,.pdf" class="d-none" />
+                                </div>
+                                <div id="feedbackQuestionPreview" class="preview-container question-preview mt-2"></div>
+                                <div id="feedbackQuestionTitleHelp" class="form-text text-danger d-none">
+                                    <?= Localization::translate('validation_required'); ?></div>
+                            </div>
+
+                            <!-- Question Type -->
+                            <div class="mb-3">
+                                <label for="feedbackQuestionType"
+                                    class="form-label"><?= Localization::translate('feedback_question_type'); ?></label>
+                                <select id="feedbackQuestionType" name="feedbackQuestionType" class="form-select"
+                                    required>
+                                    <option value="multi_choice">
+                                        <?= Localization::translate('question_type_multi_choice'); ?></option>
+                                    <option value="checkbox"><?= Localization::translate('question_type_checkbox'); ?>
+                                    </option>
+                                    <option value="short_answer">
+                                        <?= Localization::translate('question_type_short_answer'); ?></option>
+                                    <option value="long_answer">
+                                        <?= Localization::translate('question_type_long_answer'); ?></option>
+                                    <option value="dropdown"><?= Localization::translate('question_type_dropdown'); ?>
+                                    </option>
+                                    <option value="upload"><?= Localization::translate('question_type_upload'); ?>
+                                    </option>
+                                    <option value="rating"><?= Localization::translate('question_type_rating'); ?>
+                                    </option>
+                                </select>
+                                <div class="form-text text-danger d-none" id="feedbackQuestionTypeError">
+                                    <?= Localization::translate('validation_required'); ?></div>
+                            </div>
+
+                            <!-- Options Wrapper -->
+                            <div id="feedbackOptionsWrapper" class="mb-3"></div>
+
+
+
+                            <!-- Rating Wrapper -->
+                            <div id="feedbackRatingWrapper" class="mb-3 d-none">
+                                <label
+                                    class="form-label"><?= Localization::translate('feedback_rating_scale'); ?></label>
+                                <div class="row g-2">
+                                    <div class="col-6 col-md-3">
+                                        <select id="feedbackRatingScale" name="feedbackRatingScale" class="form-select">
+                                            <?php for ($i = 1; $i <= 10; $i++): ?>
+                                                <option value="<?= $i ?>"><?= $i ?></option>
+                                            <?php endfor; ?>
+                                        </select>
+                                    </div>
+                                    <div class="col-6 col-md-3">
+                                        <select id="feedbackRatingSymbol" name="feedbackRatingSymbol"
+                                            class="form-select">
+                                            <option value="star">⭐ <?= Localization::translate('symbol_star'); ?>
+                                            </option>
+                                            <option value="thumb">👍 <?= Localization::translate('symbol_thumb'); ?>
+                                            </option>
+                                            <option value="heart">❤️ <?= Localization::translate('symbol_heart'); ?>
+                                            </option>
+                                        </select>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Tags -->
+                            <div class="mb-3">
+                                <label for="feedbackTags"><?= Localization::translate('tags_keywords'); ?> <span
+                                        class="text-danger">*</span></label>
+                                <div class="tag-input-container form-control" aria-describedby="feedbackTagsHelp"
+                                    role="list">
+                                    <span id="feedbackTagDisplay" role="listitem"></span>
+                                    <input type="text" id="feedbackTagInput"
+                                        placeholder="<?= Localization::translate('add_tag_placeholder'); ?>"
+                                        aria-label="<?= Localization::translate('add_tag'); ?>" />
+                                </div>
+                                <input type="hidden" name="feedbackTagList" id="feedbackTagList" />
+                                <div id="feedbackTagsHelp" class="form-text text-danger d-none">
+                                    <?= Localization::translate('validation_required'); ?></div>
+                            </div>
+
+                        </div>
+                        <div class="modal-footer">
+                            <button type="submit"
+                                class="btn btn-success"><?= Localization::translate('buttons_submit_feedback_question'); ?></button>
+                            <button type="button" class="btn btn-secondary"
+                                data-bs-dismiss="modal"><?= Localization::translate('buttons_cancel'); ?></button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- Feedback Questions Grid View -->
         <table class="table table-bordered" id="feedbackQuestionGrid">
             <thead class="question-grid">
                 <tr>
@@ -169,18 +197,19 @@
                 </tr>
             </thead>
             <tbody>
-                <?php if (!empty($questions)): ?>
+                <?php if (!empty($questions)):
+                    ?>
                     <?php foreach ($questions as $question): ?>
                         <tr>
                             <td><?= htmlspecialchars($question['title']); ?></td>
                             <td><?= htmlspecialchars($question['type']); ?></td>
                             <td><?= htmlspecialchars($question['tags']); ?></td>
                             <td>
-                                <a href="index.php?controller=FeedbackQuestionController&action=edit&id=<?= $question['id']; ?>"
-                                    class="btn btn-sm theme-btn-primary"
+                                <button type="button" class="btn btn-sm theme-btn-primary edit-question-btn"
+                                    data-question-id="<?= $question['id']; ?>"
                                     title="<?= Localization::translate('feedback_grid_edit'); ?>">
                                     <i class="fas fa-edit"></i>
-                                </a>
+                                </button>
                                 <a href="index.php?controller=FeedbackQuestionController&action=delete&id=<?= $question['id']; ?>"
                                     class="btn btn-sm theme-btn-danger"
                                     title="<?= Localization::translate('feedback_grid_delete'); ?>"
@@ -193,21 +222,21 @@
                 <?php else: ?>
                     <tr>
                         <td colspan="4" class="text-center">
-                            <?= Localization::translate('feedback_grid_no_questions_found'); ?>
-                        </td>
+                            <?= Localization::translate('feedback_grid_no_questions_found'); ?></td>
                     </tr>
                 <?php endif; ?>
             </tbody>
         </table>
 
-        <!-- ✅ Pagination -->
+        <!-- Pagination -->
         <div class="pagination-container">
             <?php if ($totalPages > 1): ?>
                 <nav>
                     <ul class="pagination justify-content-center">
                         <?php if ($page > 1): ?>
                             <li class="page-item">
-                                <a class="page-link" href="index.php?controller=FeedbackQuestionController&page=<?= $page - 1; ?>">«
+                                <a class="page-link"
+                                    href="index.php?controller=FeedbackQuestionController&page=<?= $page - 1; ?>">«
                                     <?= Localization::translate('pagination_prev'); ?></a>
                             </li>
                         <?php endif; ?>
@@ -230,9 +259,11 @@
                 </nav>
             <?php endif; ?>
         </div>
+
     </div>
 </div>
 
 <script src="public/js/feedback_question_validation.js"></script>
 <script src="public/js/feedback_question.js"></script>
+
 <?php include 'includes/footer.php'; ?>

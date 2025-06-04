@@ -68,7 +68,7 @@ document.addEventListener("DOMContentLoaded", function () {
         switch (fieldName) {
             case "scorm_title":
                 if (value === "") {
-                    showError(field, "validation.scorm_title_required");
+                    showError(field, translate('validation.scorm_title_required'));
                     isValid = false;
                 } else {
                     hideError(field);
@@ -76,8 +76,9 @@ document.addEventListener("DOMContentLoaded", function () {
                 break;
 
             case "zipFile":
-                if (field.files.length === 0) {
-                    showError(field, "validation.scorm_zip_required");
+                const existingZip = document.getElementById("existing_zip").value;
+                if (field.files.length === 0 && existingZip === "") {
+                    showError(field, translate('validation.scorm_zip_required'));
                     isValid = false;
                 } else {
                     hideError(field);
@@ -86,7 +87,7 @@ document.addEventListener("DOMContentLoaded", function () {
 
             case "version":
                 if (value === "") {
-                    showError(field, "validation.version_required");
+                    showError(field, translate('validation.version_required'));
                     isValid = false;
                 } else {
                     hideError(field);
@@ -95,7 +96,7 @@ document.addEventListener("DOMContentLoaded", function () {
 
             case "scormCategory":
                 if (value === "") {
-                    showError(field, "validation.scorm_category_required");
+                    showError(field, translate('validation.scorm_category_required'));
                     isValid = false;
                 } else {
                     hideError(field);
@@ -107,8 +108,7 @@ document.addEventListener("DOMContentLoaded", function () {
     }
 
     // ✅ Show Error Messages with Translations
-    function showError(input, key) {
-        let message = translations[key] || key; // Use translated message or fallback to key
+    function showError(input, message) {
 
         let errorElement = input.parentNode.querySelector(".error-message");
         if (!errorElement) {

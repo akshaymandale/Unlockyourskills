@@ -17,9 +17,12 @@ class VLRController
         $externalContent = $this->VLRModel->getExternalContent();
         $documents = $this->VLRModel->getAllDocuments();
         $assessmentPackages = $this->VLRModel->getAllAssessments();
-        $audioPackages = $this->VLRModel->getAudioPackages(); 
+        $surveyPackages = $this->VLRModel->getAllSurvey();
+        $feedbackPackages = $this->VLRModel->getAllFeedback();
+        $audioPackages = $this->VLRModel->getAudioPackages();
         $videoPackages = $this->VLRModel->getVideoPackages();
-        $imagePackages       = $this->VLRModel->getImagePackages(); 
+        $imagePackages = $this->VLRModel->getImagePackages();
+        $languageList = $this->VLRModel->getLanguages();
         //echo '<pre>'; print_r($audioPackages); die;
         require 'views/vlr.php';
     }
@@ -27,23 +30,43 @@ class VLRController
     public function getAssessmentById()
     {
         if (!isset($_GET['id'])) {
-            // Handle error
+            http_response_code(400);
+            echo json_encode(['error' => 'Assessment ID is required']);
             return;
         }
 
         $id = intval($_GET['id']);
-        $model = new VLRModel();
-
-        $assessment = $model->getAssessmentByIdWithQuestions($id);
+        $assessment = $this->VLRModel->getAssessmentByIdWithQuestions($id);
 
         if (!$assessment) {
-            // Handle error
+            http_response_code(404);
+            echo json_encode(['error' => 'Assessment not found']);
             return;
         }
 
-        // For example, output as JSON for JavaScript to load
         header('Content-Type: application/json');
         echo json_encode($assessment);
+    }
+
+    public function getSurveyById()
+    {
+        if (!isset($_GET['id'])) {
+            http_response_code(400);
+            echo json_encode(['error' => 'Survey ID is required']);
+            return;
+        }
+
+        $id = intval($_GET['id']);
+        $survey = $this->VLRModel->getSurveyByIdWithQuestions($id);
+
+        if (!$survey) {
+            http_response_code(404);
+            echo json_encode(['error' => 'Survey not found']);
+            return;
+        }
+
+        header('Content-Type: application/json');
+        echo json_encode($survey);
     }
 
     public function addOrEditScormPackage()
@@ -416,12 +439,13 @@ class VLRController
             // Insert or update document
             if (!empty($_POST['documentId'])) {
                 $result = $this->VLRModel->updateDocument($data, $_POST['documentId']);
+                $message = $result['success'] ? "Document updated successfully." : "Failed to update document.";
             } else {
                 $result = $this->VLRModel->insertDocument($data);
+                $message = $result['success'] ? "Document added successfully." : "Failed to add document.";
             }
 
-            echo json_encode($result);
-            exit;
+            $this->redirectWithAlert($message);
         }
     }
 
@@ -453,7 +477,7 @@ class VLRController
     }
 
 
-    // Assessment Package Add and Edit 
+    // Assessment Package Add and Edit
 
     public function addOrEditAssessment()
     {
@@ -900,6 +924,189 @@ private function redirectWithAlert($message)
     exit();
 }
 
+    // Survey Add and Edit
+    public function addOrEditSurvey()
+    {
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+            http_response_code(405);
+            echo "Method Not Allowed";
+            return;
+        }
+
+        if (!isset($_SESSION['id'])) {
+            echo "<script>alert('Unauthorized access. Please log in.'); window.location.href='index.php?controller=VLRController';</script>";
+            exit();
+        }
+
+        // Server-side validation
+        $title = trim($_POST['title'] ?? '');
+        $tags = trim($_POST['tags'] ?? '');
+        $questionIdsRaw = $_POST['survey_selectedQuestionIds'] ?? '';
+        $surveyId = $_POST['surveyId'] ?? null;
+        $createdBy = $_SESSION['id'];
+
+        $errors = [];
+
+        if (empty($title)) {
+            $errors[] = "Survey title is required.";
+        }
+
+        if (empty($tags)) {
+            $errors[] = "Tags/keywords are required.";
+        }
+
+        $questionIds = array_filter(array_map('trim', explode(',', $questionIdsRaw)));
+        if (empty($questionIds)) {
+            $errors[] = "At least one question must be selected.";
+        }
+
+        if (!empty($errors)) {
+            $errorMsg = implode("\\n", $errors);
+            echo "<script>alert('$errorMsg'); window.history.back();</script>";
+            exit();
+        }
+
+        // Prepare data for saving
+        $data = [
+            'title' => $title,
+            'tags' => $tags,
+            'created_by' => $createdBy,
+            'question_ids' => $questionIds
+        ];
+
+        // Insert or update logic
+        if (!empty($surveyId)) {
+            $result = $this->VLRModel->updateSurveyWithQuestions($data, $surveyId);
+            $message = $result ? "Survey updated successfully!" : "Failed to update survey.";
+        } else {
+            $result = $this->VLRModel->saveSurveyWithQuestions($data);
+            $message = $result ? "Survey saved successfully!" : "Failed to save survey.";
+        }
+
+        echo "<script>alert('$message'); window.location.href='index.php?controller=VLRController';</script>";
+    }
+
+
+
+
+    // Survey Delete
+    public function deleteSurvey()
+    {
+        if (isset($_GET['id'])) {
+            $id = $_GET['id'];
+            $result = $this->VLRModel->deleteSurvey($id);
+
+            if ($result) {
+                echo "<script>alert('Survey deleted successfully.'); window.location.href='index.php?controller=VLRController';</script>";
+            } else {
+                echo "<script>alert('Failed to delete survey.'); window.location.href='index.php?controller=VLRController';</script>";
+            }
+        } else {
+            echo "<script>alert('Invalid request.'); window.location.href='index.php?controller=VLRController';</script>";
+        }
+    }
+
+    // Feedback Package Methods (following survey pattern)
+
+    public function getFeedbackById()
+    {
+        if (!isset($_GET['id'])) {
+            http_response_code(400);
+            echo json_encode(['error' => 'Feedback ID is required']);
+            return;
+        }
+
+        $id = intval($_GET['id']);
+        $feedback = $this->VLRModel->getFeedbackByIdWithQuestions($id);
+
+        if (!$feedback) {
+            http_response_code(404);
+            echo json_encode(['error' => 'Feedback not found']);
+            return;
+        }
+
+        header('Content-Type: application/json');
+        echo json_encode($feedback);
+    }
+
+    // Feedback Add and Edit
+    public function addOrEditFeedback()
+    {
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+            http_response_code(405);
+            echo "Method Not Allowed";
+            return;
+        }
+
+        if (!isset($_SESSION['id'])) {
+            echo "<script>alert('Unauthorized access. Please log in.'); window.location.href='index.php?controller=VLRController';</script>";
+            exit();
+        }
+
+        // Server-side validation
+        $title = trim($_POST['title'] ?? '');
+        $tags = trim($_POST['feedbackTagList'] ?? '');
+        $questionIdsRaw = $_POST['feedback_selectedQuestionIds'] ?? '';
+        $feedbackId = $_POST['feedbackId'] ?? null;
+        $createdBy = $_SESSION['id'];
+
+        $errors = [];
+
+        if (empty($title)) {
+            $errors[] = "Feedback title is required.";
+        }
+
+        if (empty($tags)) {
+            $errors[] = "Tags/keywords are required.";
+        }
+
+        $questionIds = array_filter(array_map('trim', explode(',', $questionIdsRaw)));
+        if (empty($questionIds)) {
+            $errors[] = "At least one question must be selected.";
+        }
+
+        if (!empty($errors)) {
+            $errorMsg = implode("\\n", $errors);
+            echo "<script>alert('$errorMsg'); window.history.back();</script>";
+            exit();
+        }
+
+        // Prepare data for saving
+        $data = [
+            'title' => $title,
+            'tags' => $tags,
+            'created_by' => $createdBy,
+            'question_ids' => $questionIds
+        ];
+
+        // Insert or update logic
+        if (!empty($feedbackId)) {
+            $result = $this->VLRModel->updateFeedbackWithQuestions($data, $feedbackId);
+            $message = $result ? "Feedback updated successfully!" : "Failed to update feedback.";
+        } else {
+            $result = $this->VLRModel->saveFeedbackWithQuestions($data);
+            $message = $result ? "Feedback saved successfully!" : "Failed to save feedback.";
+        }
+
+        echo "<script>alert('$message'); window.location.href='index.php?controller=VLRController';</script>";
+    }
+
+    // Feedback Delete
+    public function deleteFeedback()
+    {
+        if (isset($_GET['id'])) {
+            $id = $_GET['id'];
+            $result = $this->VLRModel->deleteFeedback($id);
+
+            if ($result) {
+                echo "<script>alert('Feedback deleted successfully.'); window.location.href='index.php?controller=VLRController';</script>";
+            } else {
+                echo "<script>alert('Failed to delete feedback.'); window.location.href='index.php?controller=VLRController';</script>";
+            }
+        } else {
+            echo "<script>alert('Invalid request.'); window.location.href='index.php?controller=VLRController';</script>";
+        }
+    }
 
 }
 ?>

@@ -100,7 +100,7 @@ document.addEventListener("DOMContentLoaded", function () {
         switch (name) {
             case "survey_surveyTitle":
                 if (value === "") {
-                    showError(field, "Title is required.");
+                    showError(field, translate('js.validation.survey_title_required'));
                     isValid = false;
                 } else {
                     hideError(field);
@@ -117,7 +117,7 @@ document.addEventListener("DOMContentLoaded", function () {
     function validateTagInput() {
         const tags = hiddenTagList.value.split(",").filter(Boolean);
         if (tags.length === 0) {
-            showError(tagInput, "At least one tag is required.");
+            showError(tagInput, translate('js.validation.tags_required'));
             return false;
         } else {
             hideError(tagInput);
@@ -136,7 +136,7 @@ document.addEventListener("DOMContentLoaded", function () {
             const error = document.createElement("span");
             error.id = errorId;
             error.className = "error-message";
-            error.textContent = "Please add at least one survey question.";
+            error.textContent = translate('js.validation.survey_questions_required');
             error.style.color = "red";
             error.style.fontSize = "12px";
             error.style.marginLeft = "10px";

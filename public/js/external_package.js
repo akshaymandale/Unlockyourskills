@@ -169,13 +169,7 @@ document.addEventListener("DOMContentLoaded", function () {
         input.classList.add("is-invalid");
     }
 
-    // ✅ Prevent form submission if validation fails
-    externalForm.addEventListener("submit", function (event) {
-        if (!validateForm()) {
-            console.error("❌ Form validation failed. Please fix errors before submitting.");
-            event.preventDefault();
-        }
-    });
+    // ✅ Form validation is handled by external_content_validation.js
 
     function hideError(input) {
         let formGroup = input.closest(".form-group");
