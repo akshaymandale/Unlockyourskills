@@ -46,7 +46,7 @@
           <!-- Add Survey Question Button -->
           <div class="col-md-auto">
             <button class="btn btn-sm btn-primary" data-bs-toggle="modal" data-bs-target="#addSurveyQuestionModal">
-              Add Survey Question
+              <?= Localization::translate('buttons_add_survey_question'); ?>
             </button>
 
             <!-- 📍 Survey Question Modal -->
@@ -62,19 +62,19 @@
                     <input type="hidden" name="surveyQuestionId" id="surveyQuestionId" value="">
 
                     <div class="modal-header">
-                      <h5 class="modal-title" id="addSurveyQuestionModalLabel">Add Survey Question</h5>
-                      <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                      <h5 class="modal-title" id="addSurveyQuestionModalLabel"><?= Localization::translate('buttons_add_survey_question'); ?></h5>
+                      <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="<?= Localization::translate('buttons_close'); ?>"></button>
                     </div>
 
                     <div class="modal-body">
                       <!-- Question Title + Upload -->
                       <div class="mb-3">
-                        <label for="surveyQuestionTitle" class="form-label">Survey Question Title
+                        <label for="surveyQuestionTitle" class="form-label"><?= Localization::translate('survey_question_title'); ?>
                           <span class="text-danger">*</span></label>
                         <div class="d-flex align-items-center gap-3">
                           <input type="text" id="surveyQuestionTitle" name="surveyQuestionTitle" class="form-control">
                           <label for="surveyQuestionMedia" class="btn btn-outline-secondary mb-0"
-                            title="Upload image, video, or PDF">
+                            title="<?= Localization::translate('upload_image_video_pdf'); ?>">
                             <i class="fas fa-upload"></i>
                           </label>
                           <input type="file" id="surveyQuestionMedia" name="surveyQuestionMedia"
@@ -87,15 +87,15 @@
 
                       <!-- Question Type -->
                       <div class="mb-3">
-                        <label for="surveyQuestionType" class="form-label">Type</label>
+                        <label for="surveyQuestionType" class="form-label"><?= Localization::translate('survey_question_type'); ?></label>
                         <select id="surveyQuestionType" name="surveyQuestionType" class="form-select">
-                          <option value="multi_choice">Multi Choice</option>
-                          <option value="checkbox">Checkbox</option>
-                          <option value="short_answer">Short Answer</option>
-                          <option value="long_answer">Long Answer</option>
-                          <option value="dropdown">Dropdown</option>
-                          <option value="upload">Upload</option>
-                          <option value="rating">Rating</option>
+                          <option value="multi_choice"><?= Localization::translate('question_type_multi_choice'); ?></option>
+                          <option value="checkbox"><?= Localization::translate('question_type_checkbox'); ?></option>
+                          <option value="short_answer"><?= Localization::translate('question_type_short_answer'); ?></option>
+                          <option value="long_answer"><?= Localization::translate('question_type_long_answer'); ?></option>
+                          <option value="dropdown"><?= Localization::translate('question_type_dropdown'); ?></option>
+                          <option value="upload"><?= Localization::translate('question_type_upload'); ?></option>
+                          <option value="rating"><?= Localization::translate('question_type_rating'); ?></option>
                         </select>
                       </div>
 
@@ -117,7 +117,7 @@
 
                       <!-- Rating -->
                       <div id="ratingWrapper" class="mb-3 d-none">
-                        <label class="form-label">Rating Scale</label>
+                        <label class="form-label"><?= Localization::translate('survey_rating_scale'); ?></label>
                         <div class="row g-2">
                           <div class="col">
                             <select name="ratingScale" id="ratingScale" class="form-select">
@@ -128,9 +128,9 @@
                           </div>
                           <div class="col">
                             <select name="ratingSymbol" id="ratingSymbol" class="form-select">
-                              <option value="star">⭐ Star</option>
-                              <option value="thumb">👍 Thumb</option>
-                              <option value="heart">❤️ Heart</option>
+                              <option value="star">⭐ <?= Localization::translate('symbol_star'); ?></option>
+                              <option value="thumb">👍 <?= Localization::translate('symbol_thumb'); ?></option>
+                              <option value="heart">❤️ <?= Localization::translate('symbol_heart'); ?></option>
                             </select>
                           </div>
                         </div>
@@ -155,9 +155,8 @@
 
                     <div class="modal-footer">
                       <!-- Submit Button -->
-                      <button type="submit" class="btn btn-success" id="surveyQuestionSubmitBtn">Submit Survey
-                        Question</button>
-                      <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                      <button type="submit" class="btn btn-success" id="surveyQuestionSubmitBtn"><?= Localization::translate('buttons_submit_survey_question'); ?></button>
+                      <button type="button" class="btn btn-secondary" data-bs-dismiss="modal"><?= Localization::translate('buttons_cancel'); ?></button>
                     </div>
 
                   </form>

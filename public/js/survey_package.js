@@ -80,73 +80,66 @@ document.addEventListener("DOMContentLoaded", function () {
         surveyModal.show();
     });
 
-    function populateSelectedQuestions(questions) {
-        selectedQuestionsBody.innerHTML = "";
 
-        if (Array.isArray(questions) && questions.length > 0) {
-            questions.forEach(q => {
-                const row = document.createElement("tr");
 
-                const titleCell = document.createElement("td");
-                titleCell.textContent = q.title || "";
-                row.appendChild(titleCell);
+    // Edit Survey Modal Logic (exactly like assessment)
+    const editSurveyButtons = document.querySelectorAll(".edit-survey");
+    console.log("Found", editSurveyButtons.length, "survey edit buttons");
 
-                const tagsCell = document.createElement("td");
-                tagsCell.textContent = q.tags || "";
-                row.appendChild(tagsCell);
-
-                const typeCell = document.createElement("td");
-                typeCell.textContent = q.type || "";
-                row.appendChild(typeCell);
-
-                selectedQuestionsBody.appendChild(row);
-            });
-
-            selectedQuestionsWrapper.style.display = "block";
-            selectedQuestionIdsInput.value = questions.map(q => q.id).join(",");
-            selectedQuestionCountInput.value = questions.length;
-        } else {
-            selectedQuestionsWrapper.style.display = "none";
-            selectedQuestionIdsInput.value = "";
-            selectedQuestionCountInput.value = "";
-        }
-    }
-
-    document.querySelectorAll(".edit-survey").forEach(button => {
+    const survey_selectedSurveyQuestionsWrapper = document.getElementById("survey_selectedSurveyQuestionsWrapper");
+    
+    editSurveyButtons.forEach(button => {
+        console.log("Attaching event listener to survey edit button");
         button.addEventListener("click", function () {
+            console.log("Survey edit button clicked");
             const surveyData = JSON.parse(this.dataset.survey);
+            console.log("Survey data:", surveyData);
             const surveyId = surveyData.id;
+            console.log("Survey ID:", surveyId);
 
-            fetch(`index.php?controller=SurveyController&action=getSurveyById&id=${surveyId}`)
+            // Add hidden input for survey ID
+            let surveyIdInput = document.getElementById('surveyId');
+            if (!surveyIdInput) {
+                surveyIdInput = document.createElement('input');
+                surveyIdInput.type = 'hidden';
+                surveyIdInput.name = 'surveyId';
+                surveyIdInput.id = 'surveyId';
+                surveyForm.appendChild(surveyIdInput);
+            }
+            surveyIdInput.value = surveyId;
+
+            fetch(`index.php?controller=VLRController&action=getSurveyById&id=${surveyId}`)
                 .then(response => response.json())
-                .then(surveyData => {
-                    surveyTitle.value = surveyData.title;
+                .then(data => {
+                    console.log(data);
+                    surveyTitle.value = data.title;
 
                     tagContainer.innerHTML = "";
                     tags = [];
-                    if (surveyData.tags) {
-                        surveyData.tags.split(",").forEach(tag => addTag(tag.trim()));
+                    if (data.tags) {
+                        data.tags.split(",").forEach(tag => addTag(tag.trim()));
                     }
 
+                    // Load and display selected questions
                     selectedQuestionsBody.innerHTML = "";
                     selectedQuestionIdsInput.value = "";
-                    if (surveyData.selected_questions && surveyData.selected_questions.length > 0) {
-                        surveyData.selected_questions.forEach(question => {
+                    if (data.selected_questions && data.selected_questions.length > 0) {
+                        data.selected_questions.forEach(question => {
                             const row = document.createElement("tr");
                             row.innerHTML = `
                                 <td>${question.title}</td>
-                                <td>${question.type}</td>
                                 <td>${question.tags}</td>
+                                <td>${question.type}</td>
                             `;
                             selectedQuestionsBody.appendChild(row);
                         });
 
-                        const selectedIds = surveyData.selected_questions.map(q => q.id);
+                        const selectedIds = data.selected_questions.map(q => q.id);
                         selectedQuestionIdsInput.value = selectedIds.join(",");
                         selectedQuestionCountInput.value = selectedIds.length;
-                        selectedQuestionsWrapper.style.display = "block";
+                        survey_selectedSurveyQuestionsWrapper.style.display = "block";
                     } else {
-                        selectedQuestionsWrapper.style.display = "none";
+                        survey_selectedSurveyQuestionsWrapper.style.display = "none";
                     }
 
                     surveyModalLabel.textContent = "Edit Survey";
@@ -172,16 +165,15 @@ document.addEventListener("DOMContentLoaded", function () {
     });
 
     surveyForm.addEventListener("submit", function (e) {
-        e.preventDefault();
-
         const isValid = validateSurveyForm();
         if (!isValid) {
+            e.preventDefault();
             console.log("Form validation failed.");
             return;
         }
 
-        alert("Survey form submitted successfully!");
-        surveyModal.hide();
+        // Form is valid, let it submit normally
+        // The form will submit to the action URL specified in the form
     });
 
     function showSelectedQuestionsGrid() {

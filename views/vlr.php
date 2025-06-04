@@ -1643,7 +1643,7 @@ $languageList = $vlrController->getLanguages();
                                         <div class="form-group">
                                             <label for="title"><?= Localization::translate('title'); ?> <span
                                                     class="text-danger">*</span></label>
-                                            <input type="text" class="form-control" id="title" name="title" required>
+                                            <input type="text" class="form-control" id="title" name="title">
                                             <span class="text-danger error-message"></span>
                                         </div>
 
@@ -1655,7 +1655,7 @@ $languageList = $vlrController->getLanguages();
                                                         for="versionNumber"><?= Localization::translate('version_number'); ?>
                                                         <span class="text-danger">*</span></label>
                                                     <input type="text" class="form-control" id="versionNumber"
-                                                        name="version_number" required>
+                                                        name="version_number">
                                                     <span class="text-danger error-message"></span>
                                                 </div>
                                             </div>
@@ -1747,7 +1747,7 @@ $languageList = $vlrController->getLanguages();
                                             <label for="contentType"><?= Localization::translate('content_type'); ?>
                                                 <span class="text-danger">*</span></label>
                                             <select class="form-control" id="contentType" name="content_type"
-                                                onchange="showSelectedSection()" required>
+                                                onchange="showSelectedSection()">
                                                 <option value=""><?= Localization::translate('select'); ?></option>
                                                 <option value="youtube-vimeo">
                                                     <?= Localization::translate('youtube_vimeo'); ?>
@@ -2217,6 +2217,45 @@ $languageList = $vlrController->getLanguages();
                     </div>
                 </div>
 
+                <!-- ✅ Survey Display -->
+                <div class="survey-wrapper">
+                    <div class="survey-wrapper-border">
+                        <div class="row">
+                            <?php if (!empty($surveyPackages)): ?>
+                                <?php foreach ($surveyPackages as $survey): ?>
+                                    <div class="col-md-4">
+                                        <div class="survey-card">
+                                            <div class="card-body">
+                                                <div class="survey-icon">
+                                                    <i class="fas fa-poll"></i>
+                                                </div>
+                                                <h5 class="survey-title"
+                                                    title="<?= htmlspecialchars($survey['title']) ?>">
+                                                    <?= htmlspecialchars(strlen($survey['title']) > 20 ? substr($survey['title'], 0, 17) . '...' : $survey['title']) ?>
+                                                </h5>
+                                                <div class="survey-actions">
+                                                    <a href="#" class="edit-survey"
+                                                        data-survey='<?= json_encode($survey); ?>'>
+                                                        <i class="fas fa-edit edit-icon"
+                                                            title="<?= Localization::translate('edit'); ?>"></i>
+                                                    </a>
+                                                    <a href="index.php?controller=VLRController&action=deleteSurvey&id=<?= $survey['id'] ?>"
+                                                        onclick="return confirm('<?= Localization::translate('confirm_delete'); ?>');">
+                                                        <i class="fas fa-trash-alt delete-icon"
+                                                            title="<?= Localization::translate('delete'); ?>"></i>
+                                                    </a>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                <?php endforeach; ?>
+                            <?php else: ?>
+                                <p><?= Localization::translate('no_surveys_found'); ?></p>
+                            <?php endif; ?>
+                        </div>
+                    </div>
+                </div>
+
             </div>
 
             <!-- ✅ Feedback -->
@@ -2244,7 +2283,7 @@ $languageList = $vlrController->getLanguages();
                                     </div>
                                     <div class="modal-body">
                                         <form id="feedback_feedbackForm"
-                                            action="index.php?controller=FeedbackController&action=addOrEditFeedback"
+                                            action="index.php?controller=VLRController&action=addOrEditFeedback"
                                             method="POST" enctype="multipart/form-data">
                                             <input type="hidden" name="selected_feedback_question_ids"
                                                 id="feedback_selectedFeedbackQuestionIds">
@@ -2416,6 +2455,46 @@ $languageList = $vlrController->getLanguages();
                         </a>
                     </div>
                 </div>
+
+                <!-- ✅ Feedback Display -->
+                <div class="feedback-wrapper">
+                    <div class="feedback-wrapper-border">
+                        <div class="row">
+                            <?php if (!empty($feedbackPackages)): ?>
+                                <?php foreach ($feedbackPackages as $feedback): ?>
+                                    <div class="col-md-4">
+                                        <div class="feedback-card">
+                                            <div class="card-body">
+                                                <div class="feedback-icon">
+                                                    <i class="fas fa-comments"></i>
+                                                </div>
+                                                <h5 class="feedback-title"
+                                                    title="<?= htmlspecialchars($feedback['title']) ?>">
+                                                    <?= htmlspecialchars(strlen($feedback['title']) > 20 ? substr($feedback['title'], 0, 17) . '...' : $feedback['title']) ?>
+                                                </h5>
+                                                <div class="feedback-actions">
+                                                    <a href="#" class="edit-feedback"
+                                                        data-feedback='<?= json_encode($feedback); ?>'>
+                                                        <i class="fas fa-edit edit-icon"
+                                                            title="<?= Localization::translate('edit'); ?>"></i>
+                                                    </a>
+                                                    <a href="index.php?controller=VLRController&action=deleteFeedback&id=<?= $feedback['id'] ?>"
+                                                        onclick="return confirm('<?= Localization::translate('confirm_delete'); ?>');">
+                                                        <i class="fas fa-trash-alt delete-icon"
+                                                            title="<?= Localization::translate('delete'); ?>"></i>
+                                                    </a>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                <?php endforeach; ?>
+                            <?php else: ?>
+                                <p><?= Localization::translate('no_feedback_found'); ?></p>
+                            <?php endif; ?>
+                        </div>
+                    </div>
+                </div>
+
             </div>
 
 
@@ -2471,43 +2550,7 @@ $languageList = $vlrController->getLanguages();
     </div>
 </div>
 
-<!-- ✅ SCORM Validation Translations -->
-<script>
-    const translations = <?= json_encode([
-        "validation.scorm_title_required" => Localization::translate('validation.scorm_title_required'),
-        "validation.scorm_zip_required" => Localization::translate('validation.scorm_zip_required'),
-        "validation.version_required" => Localization::translate('validation.version_required'),
-        "validation.scorm_category_required" => Localization::translate('validation.scorm_category_required'),
-        "scorm.modal.edit" => Localization::translate('scorm.modal.edit'),
-        "scorm.modal.add" => Localization::translate('scorm.modal.add'),
-        "validation.required.title" => Localization::translate('validation.required.title'),
-        "validation.required.content_type" => Localization::translate('validation.required.content_type'),
-        "validation.required.version" => Localization::translate('validation.required.version'),
-        "validation.required.tags" => Localization::translate('validation.required.tags'),
-        "validation.required.url" => Localization::translate('validation.required.url'),
-        "validation.invalid.url" => Localization::translate('validation.invalid.url'),
-        "error.form_not_found" => Localization::translate('error.form_not_found'),
-        "error.submit_button_missing" => Localization::translate('error.submit_button_missing'),
-        "validation.required.audio_file" => Localization::translate('validation.required.audio_file'),
-        "validation.invalid.audio_file" => Localization::translate('validation.invalid.audio_file'),
-        "validation.required.thumbnail" => Localization::translate('validation.required.thumbnail'),
-        "validation.invalid.thumbnail" => Localization::translate('validation.invalid.thumbnail'),
-        "validation.file_size_exceeded" => Localization::translate('validation.file_size_exceeded'),
-        "error.document_form_not_found" => Localization::translate("error.document_form_not_found"),
-        "document.modal.add" => Localization::translate("document.modal.add"),
-        "validation.document_title_required" => Localization::translate("validation.document_title_required"),
-        "validation.document_category_required" => Localization::translate("validation.document_category_required"),
-        "validation.document_file_required" => Localization::translate("validation.document_file_required"),
-        "validation.invalid_file_format" => Localization::translate("validation.invalid_file_format"),
-        "validation.file_size_exceeded" => Localization::translate("validation.file_size_exceeded"),
-        "validation.version_required" => Localization::translate("validation.version_required"),
-        "validation.tags_required" => Localization::translate("validation.tags_required"),
-        "document.category.word_excel_ppt" => Localization::translate("document.category.word_excel_ppt"),
-        "document.category.ebook_manual" => Localization::translate("document.category.ebook_manual"),
-        "document.category.research_paper" => Localization::translate("document.category.research_paper"),
-        "document.modal.edit" => Localization::translate('document.modal.edit')
-    ]); ?>;
-</script>
+
 
 <script src="public/js/scorm_validation.js"></script>
 <script src="public/js/scorm_package.js"></script>

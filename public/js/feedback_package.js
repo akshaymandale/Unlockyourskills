@@ -80,62 +80,61 @@ document.addEventListener("DOMContentLoaded", function () {
         feedbackModal.show();
     });
 
-    function populateSelectedQuestions(questions) {
-        selectedQuestionsBody.innerHTML = "";
 
-        if (Array.isArray(questions) && questions.length > 0) {
-            questions.forEach(q => {
-                const row = document.createElement("tr");
 
-                const titleCell = document.createElement("td");
-                titleCell.textContent = q.title || "";
-                row.appendChild(titleCell);
-
-                const tagsCell = document.createElement("td");
-                tagsCell.textContent = q.tags || "";
-                row.appendChild(tagsCell);
-
-                const typeCell = document.createElement("td");
-                typeCell.textContent = q.type || "";
-                row.appendChild(typeCell);
-
-                selectedQuestionsBody.appendChild(row);
-            });
-
-            selectedQuestionsWrapper.style.display = "block";
-            selectedQuestionIdsInput.value = questions.map(q => q.id).join(",");
-            selectedQuestionCountInput.value = questions.length;
-        } else {
-            selectedQuestionsWrapper.style.display = "none";
-            selectedQuestionIdsInput.value = "";
-            selectedQuestionCountInput.value = "";
-        }
-    }
-
+    // Edit Feedback Modal Logic (exactly like survey)
     document.querySelectorAll(".edit-feedback").forEach(button => {
         button.addEventListener("click", function () {
             const feedbackData = JSON.parse(this.dataset.feedback);
             const feedbackId = feedbackData.id;
+            const feedback_selectedFeedbackQuestionsWrapper = document.getElementById("feedback_selectedFeedbackQuestionsWrapper");
 
-            fetch(`index.php?controller=FeedbackController&action=getFeedbackById&id=${feedbackId}`)
+            // Add hidden input for feedback ID
+            let feedbackIdInput = document.getElementById('feedbackId');
+            if (!feedbackIdInput) {
+                feedbackIdInput = document.createElement('input');
+                feedbackIdInput.type = 'hidden';
+                feedbackIdInput.name = 'feedbackId';
+                feedbackIdInput.id = 'feedbackId';
+                feedbackForm.appendChild(feedbackIdInput);
+            }
+            feedbackIdInput.value = feedbackId;
+
+            fetch(`index.php?controller=VLRController&action=getFeedbackById&id=${feedbackId}`)
                 .then(response => response.json())
                 .then(data => {
-                    // Set form values
-                    document.getElementById("feedback_feedbackTitle").value = data.title || "";
-                    
-                    // Clear and repopulate tags
-                    const tagContainer = document.getElementById("feedback_tagDisplay");
+                    console.log(data);
+                    feedbackTitle.value = data.title;
+
                     tagContainer.innerHTML = "";
                     tags = [];
                     if (data.tags) {
                         data.tags.split(",").forEach(tag => addTag(tag.trim()));
                     }
-                    
-                    // Handle selected questions
-                    populateSelectedQuestions(data.selected_questions || []);
-                    
-                    // Update modal title
-                    document.getElementById("feedback_feedbackModalLabel").textContent = "Edit Feedback";
+
+                    // Load and display selected questions
+                    selectedQuestionsBody.innerHTML = "";
+                    selectedQuestionIdsInput.value = "";
+                    if (data.selected_questions && data.selected_questions.length > 0) {
+                        data.selected_questions.forEach(question => {
+                            const row = document.createElement("tr");
+                            row.innerHTML = `
+                                <td>${question.title}</td>
+                                <td>${question.tags}</td>
+                                <td>${question.type}</td>
+                            `;
+                            selectedQuestionsBody.appendChild(row);
+                        });
+
+                        const selectedIds = data.selected_questions.map(q => q.id);
+                        selectedQuestionIdsInput.value = selectedIds.join(",");
+                        selectedQuestionCountInput.value = selectedIds.length;
+                        feedback_selectedFeedbackQuestionsWrapper.style.display = "block";
+                    } else {
+                        feedback_selectedFeedbackQuestionsWrapper.style.display = "none";
+                    }
+
+                    feedbackModalLabel.textContent = "Edit Feedback";
                     feedbackModal.show();
                 })
                 .catch(error => {
@@ -166,8 +165,8 @@ document.addEventListener("DOMContentLoaded", function () {
             return;
         }
 
-        alert("Feedback form submitted successfully!");
-        feedbackModal.hide();
+        // Submit the form
+        feedbackForm.submit();
     });
 
     function showSelectedQuestionsGrid() {

@@ -1284,7 +1284,153 @@ html, body {
     border-radius: 5px;
 }
 
-/* Survey code */
+/* ✅ Survey Card Styling (Mirrors Assessment Design with Distinct Theme) */
+.survey-card {
+    background: #fff;
+    border: 2px solid #6a0dad; ; /* Purple theme for surveys */
+    border-radius: 10px;
+    padding: 15px;
+    margin: 10px 0;
+    text-align: center;
+    box-shadow: 2px 2px 10px rgba(0, 0, 0, 0.1);
+    position: relative;
+    transition: transform 0.2s ease-in-out;
+}
+
+.survey-card:hover {
+    transform: scale(1.05);
+}
+
+.survey-icon {
+    font-size: 40px;
+    color: #6a0dad;  /* matches border */
+    margin-bottom: 10px;
+}
+
+.survey-title {
+    font-size: 16px;
+    font-weight: bold;
+    color: #333;
+    margin-bottom: 5px;
+}
+
+.survey-actions {
+    position: absolute;
+    top: 10px;
+    right: 15px;
+}
+
+.survey-actions .edit-icon {
+    color: #007bff;
+    margin-right: 10px;
+    cursor: pointer;
+}
+
+.survey-actions .delete-icon {
+    color: #dc3545;
+    cursor: pointer;
+}
+
+.survey-actions i {
+    font-size: 18px;
+    transition: color 0.2s;
+}
+
+.survey-actions i:hover {
+    opacity: 0.7;
+}
+
+.survey-actions a {
+    text-decoration: none;
+}
+
+.survey-actions a:hover {
+    text-decoration: none;
+}
+
+.survey-wrapper {
+    margin-top: 20px;
+}
+
+.survey-wrapper-border {
+    padding: 20px;
+    background: white;
+    border: 1px solid #ddd;
+}
+
+/* ✅ Feedback Card Styling (Follows Consistent Theme Color) */
+.feedback-card {
+    background: #fff;
+    border: 2px solid #6a0dad; /* Purple theme - consistent with other cards */
+    border-radius: 10px;
+    padding: 15px;
+    margin: 10px 0;
+    text-align: center;
+    box-shadow: 2px 2px 10px rgba(0, 0, 0, 0.1);
+    position: relative;
+    transition: transform 0.2s ease-in-out;
+}
+
+.feedback-card:hover {
+    transform: scale(1.05);
+}
+
+.feedback-icon {
+    font-size: 40px;
+    color: #6a0dad; /* matches border and theme */
+    margin-bottom: 10px;
+}
+
+.feedback-title {
+    font-size: 16px;
+    font-weight: bold;
+    color: #333;
+    margin-bottom: 5px;
+}
+
+.feedback-actions {
+    position: absolute;
+    top: 10px;
+    right: 15px;
+}
+
+.feedback-actions .edit-icon {
+    color: #007bff;
+    margin-right: 10px;
+    cursor: pointer;
+}
+
+.feedback-actions .delete-icon {
+    color: #dc3545;
+    cursor: pointer;
+}
+
+.feedback-actions i {
+    font-size: 18px;
+    transition: color 0.2s;
+}
+
+.feedback-actions i:hover {
+    opacity: 0.7;
+}
+
+.feedback-actions a {
+    text-decoration: none;
+}
+
+.feedback-actions a:hover {
+    text-decoration: none;
+}
+
+.feedback-wrapper {
+    margin-top: 20px;
+}
+
+.feedback-wrapper-border {
+    padding: 20px;
+    background: white;
+    border: 1px solid #ddd;
+}
 
 /* Upload preview for question - large */
 /* ✅ Modal Scroll Support */

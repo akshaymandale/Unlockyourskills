@@ -1,285 +1,257 @@
 document.addEventListener("DOMContentLoaded", function () {
     console.log("Validation JS Loaded Successfully!");
 
+    // ✅ When External Content Modal Opens, Attach Validation
     $('#externalContentModal').on('shown.bs.modal', function () {
-        console.log("External Content Modal Opened!");
-        attachValidation();
+        attachExternalContentValidation();
     });
 
+    // ✅ When Modal Closes, Reset the Form
     $('#externalContentModal').on('hidden.bs.modal', function () {
-        console.log("External Content Modal Closed. Resetting form...");
-        resetForm();
+        resetExternalContentForm();
     });
-    
 
-    function attachValidation() {
+    function attachExternalContentValidation() {
         console.log("Attaching validation events to form inputs...");
         const form = document.getElementById("externalContentForm");
         const submitButton = document.getElementById("submit_button");
-    
+
         if (!form) {
-            console.error("❌ " + (translations["error.form_not_found"] || "External Content Form NOT found!"));
+            console.error("❌ " + (translate("error.form_not_found") || "External Content Form NOT found!"));
             return;
         }
 
         if (!submitButton) {
-            console.error("❌ " + (translations["error.submit_button_missing"] || "Submit button NOT found! Check your HTML."));
+            console.error("❌ " + (translate("error.submit_button_missing") || "Submit button NOT found! Check your HTML."));
             return;
         }
-    
-        // ✅ Attach event listener for form submission
-        submitButton.removeEventListener("click", formSubmitHandler);
-        submitButton.addEventListener("click", formSubmitHandler);
-    
-        // ✅ Attach real-time validation when users type or leave a field
-        document.querySelectorAll("#externalContentForm input, #externalContentForm select").forEach(field => {
-            field.removeEventListener("blur", fieldBlurHandler);
-            field.addEventListener("blur", fieldBlurHandler);
-    
-            field.removeEventListener("input", fieldBlurHandler);
-            field.addEventListener("input", fieldBlurHandler);
+
+        // ✅ Prevent duplicate event listeners
+        form.removeEventListener("submit", externalContentFormSubmitHandler);
+        form.addEventListener("submit", externalContentFormSubmitHandler);
+
+        // ✅ Attach Blur Validation on Input Fields
+        document.querySelectorAll("#externalContentForm input, #externalContentForm select, #externalContentForm textarea").forEach(field => {
+            field.removeEventListener("blur", externalContentFieldBlurHandler);
+            field.addEventListener("blur", externalContentFieldBlurHandler);
         });
-    
-        let clearFormBtn = document.getElementById("clearForm");
-        if (clearFormBtn) {
-            clearFormBtn.removeEventListener("click", resetForm);
-            clearFormBtn.addEventListener("click", resetForm);
+
+        // ✅ Attach Blur Event for Tag Input
+        const externalTagInput = document.getElementById("externalTagInput");
+        if (externalTagInput) {
+            externalTagInput.addEventListener("blur", function () {
+                validateExternalContentTags();
+            });
+        }
+
+        // ✅ Reset Form on "Clear" Button Click
+        const clearButton = document.getElementById("clearForm");
+        if (clearButton) {
+            clearButton.addEventListener("click", resetExternalContentForm);
         }
     }
-    
-    
-    // ✅ Ensure the function is available globally
-    window.attachValidation = attachValidation;
-    
-    // Call attachValidation when the DOM is loaded
-    document.addEventListener("DOMContentLoaded", function () {
-        console.log("Validation JS Loaded Successfully!");
-    });
-    
-    function formSubmitHandler(event) {
-        event.preventDefault();  // Prevent form submission by default
-    
-        let isValid = validateForm();
-    
+
+
+    function externalContentFormSubmitHandler(event) {
+        event.preventDefault();
+        let isValid = validateExternalContentForm();
         if (isValid) {
-            console.log("✅ " + (translations["form.valid"] || "Form is valid! Submitting..."));
-            document.getElementById("externalContentForm").submit();
-        } else {
-            console.log("❌ " + (translations["form.invalid"] || "Form validation failed. Fix the errors before submitting."));
+            this.submit();
         }
     }
 
-    function fieldBlurHandler(event) {
-        validateField(event.target);
+    function externalContentFieldBlurHandler(event) {
+        validateExternalContentField(event.target);
     }
 
-    function validateForm() {
+    // ✅ Validate Entire Form
+    function validateExternalContentForm() {
         let isValid = true;
-        const selectedType = document.getElementById("contentType")?.value;
-        const audioSource = document.getElementById("audioSource")?.value;
-        const audioFile = document.getElementById("audioFile");
-        const audioUrl = document.getElementById("audioUrl");
-    
-        // ✅ Define required fields based on content type
-        const validationRules = {
-            "youtube-vimeo": ["videoUrl"],
-            "linkedin-udemy": ["courseUrl", "platformName"],
-            "web-links-blogs": ["articleUrl", "author"],
-            "podcasts-audio": ["audioSource"], // Only include audioSource initially
-        };
-    
-        let requiredFields = validationRules[selectedType] || [];
-    
-        // ✅ Ensure audio validation applies only to the selected option
-        if (selectedType === "podcasts-audio") {
-            if (audioSource === "upload") {
-                requiredFields.push("audioFile"); // Validate only file upload
-            } else if (audioSource === "url") {
-                requiredFields.push("audioUrl"); // Validate only URL
-            }
-        }
-    
-        // ✅ Always validate standard required fields
-        const standardFields = ["title", "contentType", "versionNumber", "description", "externalTagList"];
-        requiredFields = [...new Set([...requiredFields, ...standardFields])]; // Merge required fields
-    
-        document.querySelectorAll("#externalContentForm input, #externalContentForm select").forEach(field => {
-            if (requiredFields.includes(field.id)) {
-                if (!validateField(field)) {
-                    isValid = false;
-                }
+        document.querySelectorAll("#externalContentForm input, #externalContentForm select, #externalContentForm textarea").forEach(field => {
+            if (!validateExternalContentField(field)) {
+                isValid = false;
             }
         });
-    
+        // ✅ Validate Tags Field
+        if (!validateExternalContentTags()) {
+            isValid = false;
+        }
         return isValid;
     }
-    
-    
 
-    function validateField(field) {
+
+
+    // ✅ Validate Single Field
+    function validateExternalContentField(field) {
         let isValid = true;
         let value = field.value.trim();
-        let fieldName = field.getAttribute("id");
+        let fieldName = field.getAttribute("name") || field.getAttribute("id");
 
         switch (fieldName) {
             case "title":
-                isValid = validateRequired(field, value, translations["validation.required.title"] || "Title is required");
+                if (value === "") {
+                    showError(field, translate("validation.required.title"));
+                    isValid = false;
+                } else {
+                    hideError(field);
+                }
                 break;
 
+            case "content_type":
             case "contentType":
-                isValid = validateRequired(field, value, translations["validation.required.content_type"] || "Please select a content type");
+                if (value === "") {
+                    showError(field, translate("validation.required.content_type"));
+                    isValid = false;
+                } else {
+                    hideError(field);
+                }
                 break;
 
+            case "version_number":
             case "versionNumber":
-                isValid = validateRequired(field, value, translations["validation.required.version"] || "Version is required");
+                if (value === "") {
+                    showError(field, translate("validation.required.version"));
+                    isValid = false;
+                } else {
+                    hideError(field);
+                }
                 break;
 
-            case "externalTagList":
-                isValid = validateTags();
-                break;
-
+            case "video_url":
             case "videoUrl":
+            case "course_url":
             case "courseUrl":
+            case "article_url":
             case "articleUrl":
+            case "audio_url":
             case "audioUrl":
-                isValid = validateURL(field, value);
+                if (value === "") {
+                    showError(field, translate("validation.required.url"));
+                    isValid = false;
+                } else if (!isValidURL(value)) {
+                    showError(field, translate("validation.invalid.url"));
+                    isValid = false;
+                } else {
+                    hideError(field);
+                }
                 break;
 
+            case "platform_name":
             case "platformName":
+            case "audio_source":
             case "audioSource":
-                isValid = validateRequired(field, value, translations["validation.required.field"] || "This field is required");
+                if (value === "") {
+                    showError(field, translate("validation.required.field"));
+                    isValid = false;
+                } else {
+                    hideError(field);
+                }
                 break;
 
+            case "audio_file":
             case "audioFile":
-                isValid = validateAudioFile(field);
+                if (field.files.length === 0) {
+                    showError(field, translate("validation.required.audio_file"));
+                    isValid = false;
+                } else if (!isValidAudioFile(field.files[0])) {
+                    showError(field, translate("validation.invalid.audio_file"));
+                    isValid = false;
+                } else {
+                    hideError(field);
+                }
                 break;
 
             case "thumbnail":
-            isValid = validateThumbnail(field);
-            break;
+                if (field.files.length === 0) {
+                    showError(field, translate("validation.required.thumbnail"));
+                    isValid = false;
+                } else if (!isValidThumbnail(field.files[0])) {
+                    showError(field, translate("validation.invalid.thumbnail"));
+                    isValid = false;
+                } else {
+                    hideError(field);
+                }
+                break;
+
+            case "externalTagInput":
+                if (!validateExternalContentTags()) {
+                    isValid = false;
+                }
+                break;
         }
 
         return isValid;
     }
 
-    function validateRequired(field, value, message) {
-        if (value === "") {
-            showError(field, message);
-            return false;
-        } else {
-            hideError(field);
-            return true;
+    // ✅ Validate Tags
+    function validateExternalContentTags() {
+        const externalTagInput = document.getElementById("externalTagInput");
+        const hiddenExternalTagList = document.getElementById("externalTagList");
+
+        if (externalTagInput && hiddenExternalTagList) {
+            if (externalTagInput.value.trim() === "" && hiddenExternalTagList.value.trim() === "") {
+                const tagField = externalTagInput;
+                showError(tagField, translate('validation.required.tags'));
+                return false;
+            } else {
+                hideError(externalTagInput);
+                return true;
+            }
         }
+        return true;
     }
 
-    function validateTags() {
-        let tagField = document.getElementById("externalTagList"); // Hidden input storing tags
-        let tagContainer = document.getElementById("externalTagDisplay"); // Where tags are shown
-        let tags = tagField.value.trim();
-    
-        if (tags === "") {
-            showError(tagContainer, translations["validation.required.tags"] || "Tags/Keywords are required");
-            return false;
-        } else {
-            hideError(tagContainer);
-            return true;
-        }
-    }
-
-    function validateURL(field, value) {
+    // ✅ Helper function to validate URL format
+    function isValidURL(value) {
         let urlPattern = /^(https?:\/\/)?(www\.)?([\w-]+\.)+[\w]{2,}(:\d+)?(\/[\w/_-]*(\?\S+)?)?$/i;
-
-        if (value.trim() === "") {
-            showError(field, translations["validation.required.url"] || "URL is required");
-            return false;
-        } else if (!urlPattern.test(value)) {
-            showError(field, translations["validation.invalid.url"] || "Enter a valid URL (e.g., https://example.com)");
-            return false;
-        } else {
-            hideError(field);
-            return true;
-        }
+        return urlPattern.test(value);
     }
 
-    function validateAudioFile(field) {
-        let file = field.files[0];
-        if (!file) {
-            showError(field, translations["validation.required.audio_file"] || "Please upload an audio file (MP3/WAV)");
-            return false;
-        }
-    
+    // ✅ Helper function to validate audio file
+    function isValidAudioFile(file) {
         let allowedTypes = ["audio/mpeg", "audio/wav"];
-        if (!allowedTypes.includes(file.type)) {
-            showError(field, translations["validation.invalid.audio_file"] || "Invalid file type. Only MP3 and WAV are allowed.");
-            return false;
-        }
-    
-        hideError(field);
-        return true;
+        return allowedTypes.includes(file.type);
     }
-    
-    function validateThumbnail(field) {
-        let file = field.files[0];
-        if (!file) {
-            showError(field, translations["validation.required.thumbnail"] || "Please upload an image file (JPG, PNG, GIF, WebP).");
-            return false;
-        }
-    
+
+    // ✅ Helper function to validate thumbnail
+    function isValidThumbnail(file) {
         let allowedTypes = ["image/jpeg", "image/png", "image/gif", "image/webp"];
-        if (!allowedTypes.includes(file.type)) {
-            showError(field, translations["validation.invalid.thumbnail"] || "Invalid file type. Only JPG, PNG, GIF, and WebP are allowed.");
-            return false;
-        }
-    
-        if (file.size > 5 * 1024 * 1024) { // 5MB limit
-            showError(field, translations["validation.file_size_exceeded"] || "File size should not exceed 5MB.");
-            return false;
-        }
-    
-        hideError(field);
-        return true;
+        return allowedTypes.includes(file.type) && file.size <= 5 * 1024 * 1024; // 5MB limit
     }
 
+
+
+    // ✅ Show Error Messages
     function showError(input, message) {
-        let formGroup = input.closest(".form-group");
-        if (!formGroup) {
-            console.error(`❌ ${translations["error.form_group_missing"] || ".form-group NOT found for"} ${input.name}`);
-            return;
-        }
-
-        let errorElement = formGroup.querySelector(".error-message");
+        let errorElement = input.parentNode.querySelector(".error-message");
         if (!errorElement) {
-            errorElement = document.createElement("small");
-            errorElement.className = "error-message text-danger";
-            formGroup.appendChild(errorElement);
+            errorElement = document.createElement("span");
+            errorElement.classList.add("error-message");
+            input.parentNode.appendChild(errorElement);
         }
-
         errorElement.textContent = message;
+        errorElement.style.color = "red";
+        errorElement.style.marginLeft = "10px";
+        errorElement.style.fontSize = "12px";
+
         input.classList.add("is-invalid");
-
-        console.log(`🚨 ${translations["error.validation"] || "Error on"} ${input.name}: ${message}`);
     }
-    
-    function hideError(input) {
-        let formGroup = input.closest(".form-group");
-        if (!formGroup) return;
 
-        let errorElement = formGroup.querySelector(".error-message");
+    // ✅ Hide Error Messages
+    function hideError(input) {
+        let errorElement = input.parentNode.querySelector(".error-message");
         if (errorElement) {
             errorElement.textContent = "";
         }
         input.classList.remove("is-invalid");
-
-        console.log(`✅ ${translations["success.validation_clear"] || "Cleared error for"} ${input.name}`);
     }
 
-
-     // ✅ Function to Reset Form and Remove Errors
-     function resetForm() {
+    // ✅ Reset Form
+    function resetExternalContentForm() {
         document.getElementById("externalContentForm").reset();
         document.querySelectorAll(".error-message").forEach(el => el.textContent = "");
         document.querySelectorAll(".is-invalid").forEach(el => el.classList.remove("is-invalid"));
     }
-    
-    
+
+
 });

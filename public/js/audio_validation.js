@@ -36,7 +36,10 @@ document.addEventListener("DOMContentLoaded", function () {
         }
 
         // ✅ Reset Form on "Clear" Button Click
-        document.getElementById("clearForm").addEventListener("click", resetAudioForm);
+        const clearButton = document.getElementById("clearFormaudio");
+        if (clearButton) {
+            clearButton.addEventListener("click", resetAudioForm);
+        }
     }
 
     function audioFormSubmitHandler(event) {
@@ -73,39 +76,40 @@ document.addEventListener("DOMContentLoaded", function () {
         let fieldName = field.getAttribute("name");
 
         switch (fieldName) {
-            case "audio_title":
+            case "audio_titleaudio":
                 if (value === "") {
-                    showError(field, "validation.audio_title_required");
+                    showError(field, translate('js.validation.audio_title_required'));
                     isValid = false;
                 } else {
                     hideError(field);
                 }
                 break;
 
-            case "audioFile":
-                if (field.files.length === 0) {
-                    showError(field, "validation.audio_file_required");
+            case "audioFileaudio":
+                const existingAudio = document.getElementById("existing_audioaudio").value;
+                if (field.files.length === 0 && existingAudio === "") {
+                    showError(field, translate('js.validation.audio_file_required'));
                     isValid = false;
-                } else if (field.files[0].size > 10 * 1024 * 1024) {
-                    showError(field, "validation.audio_file_size_exceeded");
+                } else if (field.files.length > 0 && field.files[0].size > 10 * 1024 * 1024) {
+                    showError(field, translate('js.validation.audio_file_size_exceeded'));
                     isValid = false;
                 } else {
                     hideError(field);
                 }
                 break;
 
-            case "version":
+            case "versionaudio":
                 if (value === "" || isNaN(value)) {
-                    showError(field, "validation.version_required_numeric");
+                    showError(field, translate('js.validation.version_required_numeric'));
                     isValid = false;
                 } else {
                     hideError(field);
                 }
                 break;
 
-            case "timeLimit":
+            case "timeLimitaudio":
                 if (value !== "" && isNaN(value)) {
-                    showError(field, "validation.time_limit_numeric");
+                    showError(field, translate('js.validation.time_limit_numeric'));
                     isValid = false;
                 } else {
                     hideError(field);
@@ -114,7 +118,7 @@ document.addEventListener("DOMContentLoaded", function () {
 
             case "tagInputaudio":
                 if (value === "" && document.getElementById("tagListaudio").value.trim() === "") {
-                    showError(field, "validation.tags_required");
+                    showError(field, translate('js.validation.tags_required'));
                     isValid = false;
                 } else {
                     hideError(field);
@@ -132,7 +136,7 @@ document.addEventListener("DOMContentLoaded", function () {
 
         if (tagInputaudio.value.trim() === "" && hiddenTagListaudio.value.trim() === "") {
             const tagField = tagInputaudio;
-            showError(tagField, "validation.tags_required");
+            showError(tagField, translate('js.validation.tags_required'));
             return false;
         } else {
             hideError(tagInputaudio);
@@ -141,8 +145,7 @@ document.addEventListener("DOMContentLoaded", function () {
     }
 
     // ✅ Show Error Messages
-    function showError(input, key) {
-        let message = translations[key] || key;
+    function showError(input, message) {
 
         let errorElement = input.parentNode.querySelector(".error-message");
         if (!errorElement) {

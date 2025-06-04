@@ -68,7 +68,7 @@ document.addEventListener("DOMContentLoaded", function () {
         switch (fieldName) {
             case "video_titlevideo":
                 if (value === "") {
-                    showError(field, "validation.video_title_required");
+                    showError(field, translate('js.validation.video_title_required'));
                     isValid = false;
                 } else {
                     hideError(field);
@@ -78,10 +78,10 @@ document.addEventListener("DOMContentLoaded", function () {
                 case "videoFilevideo":
                     const existingVideo = document.getElementById("existing_videovideo").value;
                     if (field.files.length === 0 && existingVideo === "") {
-                        showError(field, "validation.video_file_required");
+                        showError(field, translate('js.validation.video_file_required'));
                         isValid = false;
                     } else if (field.files.length > 0 && field.files[0].size > 500 * 1024 * 1024) {
-                        showError(field, "validation.video_file_size_exceeded");
+                        showError(field, translate('js.validation.video_file_size_exceeded'));
                         isValid = false;
                     } else {
                         hideError(field);
@@ -90,7 +90,7 @@ document.addEventListener("DOMContentLoaded", function () {
 
             case "versionvideo":
                 if (value === "" || isNaN(value)) {
-                    showError(field, "validation.version_required_numeric");
+                    showError(field, translate('js.validation.version_required_numeric'));
                     isValid = false;
                 } else {
                     hideError(field);
@@ -99,7 +99,7 @@ document.addEventListener("DOMContentLoaded", function () {
 
             case "timeLimitvideo":
                 if (value !== "" && isNaN(value)) {
-                    showError(field, "validation.time_limit_numeric");
+                    showError(field, translate('js.validation.time_limit_numeric'));
                     isValid = false;
                 } else {
                     hideError(field);
@@ -108,7 +108,7 @@ document.addEventListener("DOMContentLoaded", function () {
 
             case "tagInputvideo":
                 if (value === "" && document.getElementById("tagListvideo").value.trim() === "") {
-                    showError(field, "validation.tags_required");
+                    showError(field, translate('js.validation.tags_required'));
                     isValid = false;
                 } else {
                     hideError(field);
@@ -125,7 +125,7 @@ document.addEventListener("DOMContentLoaded", function () {
 
         if (tagInputvideo.value.trim() === "" && hiddenTagListvideo.value.trim() === "") {
             const tagField = tagInputvideo;
-            showError(tagField, "validation.tags_required");
+            showError(tagField, translate('js.validation.tags_required'));
             return false;
         } else {
             hideError(tagInputvideo);
@@ -133,8 +133,7 @@ document.addEventListener("DOMContentLoaded", function () {
         }
     }
 
-    function showError(input, key) {
-        let message = translations[key] || key;
+    function showError(input, message) {
 
         let errorElement = input.parentNode.querySelector(".error-message");
         if (!errorElement) {
