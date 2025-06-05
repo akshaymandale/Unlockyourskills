@@ -24,7 +24,6 @@ class FeedbackQuestionController
 
         // Get unique values for filter dropdowns
         $uniqueQuestionTypes = $this->feedbackQuestionModel->getDistinctTypes();
-        $uniqueTags = $this->feedbackQuestionModel->getUniqueTags();
 
         require 'views/add_feedback_question.php';
     }

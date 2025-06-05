@@ -30,7 +30,6 @@ class SurveyQuestionController
 
         // Get unique values for filter dropdowns
         $uniqueQuestionTypes = $this->surveyQuestionModel->getDistinctTypes();
-        $uniqueTags = $this->surveyQuestionModel->getUniqueTags();
 
         require 'views/add_survey.php';
     }

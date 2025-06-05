@@ -19,7 +19,8 @@
         <!-- ✅ Filters & Search Section -->
         <div class="filter-section">
             <div class="container-fluid mb-3">
-                <div class="row justify-content-between align-items-center g-3">
+                <!-- First Row: Main Controls -->
+                <div class="row justify-content-between align-items-center g-3 mb-2">
 
                     <!-- Filter Dropdowns on the left -->
                     <div class="col-md-auto">
@@ -37,16 +38,9 @@
                                 </select>
                             </div>
                             <div class="col-auto">
-                                <select class="form-select form-select-sm" id="tagsFilter">
-                                    <option value=""><?= Localization::translate('filters_tags'); ?></option>
-                                    <?php if (!empty($uniqueTags)): ?>
-                                        <?php foreach ($uniqueTags as $tag): ?>
-                                            <option value="<?= htmlspecialchars($tag); ?>">
-                                                <?= htmlspecialchars($tag); ?>
-                                            </option>
-                                        <?php endforeach; ?>
-                                    <?php endif; ?>
-                                </select>
+                                <input type="text" class="form-control form-control-sm" id="tagsFilter"
+                                    placeholder="<?= Localization::translate('filters_tags'); ?>"
+                                    title="Type to filter by tags">
                             </div>
                         </div>
                     </div>
@@ -64,7 +58,7 @@
                         </div>
                     </div>
 
-                    <!-- Add Feedback Question Button in the middle -->
+                    <!-- Add Feedback Question Button on the right -->
                     <div class="col-md-auto">
                         <button type="button" class="btn btn-sm btn-primary" data-bs-toggle="modal"
                             data-bs-target="#addFeedbackQuestionModal"
@@ -73,7 +67,12 @@
                         </button>
                     </div>
 
-                    <!-- Clear Filters Button -->
+                </div>
+
+                <!-- Second Row: Secondary Controls -->
+                <div class="row justify-content-between align-items-center g-3">
+
+                    <!-- Clear Filters Button under filters -->
                     <div class="col-md-auto">
                         <button type="button" class="btn btn-sm btn-clear-filters" id="clearFiltersBtn"
                             title="Clear all filters">
@@ -81,7 +80,11 @@
                         </button>
                     </div>
 
-                    <!-- Import Feedback Button on the right with icon -->
+                    <!-- Empty middle space -->
+                    <div class="col-md-auto">
+                    </div>
+
+                    <!-- Import Feedback Button under Add button -->
                     <div class="col-md-auto">
                         <button type="button" class="btn btn-sm btn-primary" id="importFeedbackButton"
                             onclick="window.location.href='index.php?controller=UserManagementController&action=import'"
@@ -438,7 +441,16 @@
 
     // Filter functionality
     document.getElementById('questionTypeFilter').addEventListener('change', applyFilters);
-    document.getElementById('tagsFilter').addEventListener('change', applyFilters);
+
+    // Tags filter with debounced input
+    const tagsFilter = document.getElementById('tagsFilter');
+    const debouncedTagsFilter = debounce(applyFilters, 500);
+    tagsFilter.addEventListener('input', debouncedTagsFilter);
+    tagsFilter.addEventListener('keypress', function(e) {
+      if (e.key === 'Enter') {
+        applyFilters();
+      }
+    });
 
     // Clear filters functionality
     document.getElementById('clearFiltersBtn').addEventListener('click', clearAllFilters);
