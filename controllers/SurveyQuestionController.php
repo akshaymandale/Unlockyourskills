@@ -13,25 +13,26 @@ class SurveyQuestionController
     public function index()
     {
         $limit = 10;
-        $page = isset($_GET['page']) ? (int) $_GET['page'] : 1;
-        $offset = ($page - 1) * $limit;
-    
-        // Fetch paginated questions
+        $page = 1;
+        $offset = 0;
+
+        // Load initial data (no search/filters applied)
         $questions = $this->surveyQuestionModel->getQuestions('', '', $limit, $offset);
-    
-        // 🟣 Add this loop to fetch options for each question
+
+        // Add options for each question
         foreach ($questions as &$question) {
             $question['options'] = $this->surveyQuestionModel->getOptionsByQuestionId($question['id']);
         }
-        //echo '<pre>'; print_r($questions); die;
-    
+
         // Get total count of questions
         $totalQuestions = $this->surveyQuestionModel->getTotalQuestionCount();
-    
-        // Calculate total pages
         $totalPages = ceil($totalQuestions / $limit);
-    
-        require 'views/add_survey.php';  // Your view file that uses pagination
+
+        // Get unique values for filter dropdowns
+        $uniqueQuestionTypes = $this->surveyQuestionModel->getDistinctTypes();
+        $uniqueTags = $this->surveyQuestionModel->getUniqueTags();
+
+        require 'views/add_survey.php';
     }
     
     public function save()
@@ -200,6 +201,52 @@ public function getFilterOptions()
     echo json_encode([
         'types' => $types
     ]);
+}
+
+public function ajaxSearch() {
+    header('Content-Type: application/json');
+
+    try {
+        $limit = 10;
+        $page = isset($_POST['page']) ? (int) $_POST['page'] : 1;
+        $offset = ($page - 1) * $limit;
+
+        // Get search and filter parameters
+        $search = trim($_POST['search'] ?? '');
+        $type = trim($_POST['type'] ?? '');
+        $tags = trim($_POST['tags'] ?? '');
+
+        // Get questions from database
+        $questions = $this->surveyQuestionModel->getQuestions($search, $type, $limit, $offset, $tags);
+
+        // Add options for each question
+        foreach ($questions as &$question) {
+            $question['options'] = $this->surveyQuestionModel->getOptionsByQuestionId($question['id']);
+        }
+
+        $totalQuestions = $this->surveyQuestionModel->getTotalQuestionCount($search, $type, $tags);
+        $totalPages = ceil($totalQuestions / $limit);
+
+        $response = [
+            'success' => true,
+            'questions' => $questions,
+            'totalQuestions' => $totalQuestions,
+            'pagination' => [
+                'currentPage' => $page,
+                'totalPages' => $totalPages,
+                'totalQuestions' => $totalQuestions
+            ]
+        ];
+
+        echo json_encode($response);
+
+    } catch (Exception $e) {
+        echo json_encode([
+            'success' => false,
+            'message' => 'Error loading questions: ' . $e->getMessage()
+        ]);
+    }
+    exit();
 }
 
 public function getSelectedQuestions()

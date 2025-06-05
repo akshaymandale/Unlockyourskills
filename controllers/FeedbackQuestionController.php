@@ -14,15 +14,17 @@ class FeedbackQuestionController
     public function index()
     {
         $limit = 10;
-        $page = isset($_GET['page']) ? (int) $_GET['page'] : 1;
-        $offset = ($page - 1) * $limit;
+        $page = 1;
+        $offset = 0;
 
-        $search = $_GET['search'] ?? '';
-        $type = $_GET['type'] ?? '';
-
-        $questions = $this->feedbackQuestionModel->getQuestions($search, $type, $limit, $offset);
-        $totalQuestions = $this->feedbackQuestionModel->getTotalQuestionCount($search, $type);
+        // Load initial data (no search/filters applied)
+        $questions = $this->feedbackQuestionModel->getQuestions('', '', $limit, $offset);
+        $totalQuestions = $this->feedbackQuestionModel->getTotalQuestionCount();
         $totalPages = ceil($totalQuestions / $limit);
+
+        // Get unique values for filter dropdowns
+        $uniqueQuestionTypes = $this->feedbackQuestionModel->getDistinctTypes();
+        $uniqueTags = $this->feedbackQuestionModel->getUniqueTags();
 
         require 'views/add_feedback_question.php';
     }
@@ -231,6 +233,46 @@ class FeedbackQuestionController
 
         header('Content-Type: application/json');
         echo json_encode(['types' => $types]);
+    }
+
+    public function ajaxSearch() {
+        header('Content-Type: application/json');
+
+        try {
+            $limit = 10;
+            $page = isset($_POST['page']) ? (int) $_POST['page'] : 1;
+            $offset = ($page - 1) * $limit;
+
+            // Get search and filter parameters
+            $search = trim($_POST['search'] ?? '');
+            $type = trim($_POST['type'] ?? '');
+            $tags = trim($_POST['tags'] ?? '');
+
+            // Get questions from database
+            $questions = $this->feedbackQuestionModel->getQuestions($search, $type, $limit, $offset, $tags);
+            $totalQuestions = $this->feedbackQuestionModel->getTotalQuestionCount($search, $type, $tags);
+            $totalPages = ceil($totalQuestions / $limit);
+
+            $response = [
+                'success' => true,
+                'questions' => $questions,
+                'totalQuestions' => $totalQuestions,
+                'pagination' => [
+                    'currentPage' => $page,
+                    'totalPages' => $totalPages,
+                    'totalQuestions' => $totalQuestions
+                ]
+            ];
+
+            echo json_encode($response);
+
+        } catch (Exception $e) {
+            echo json_encode([
+                'success' => false,
+                'message' => 'Error loading questions: ' . $e->getMessage()
+            ]);
+        }
+        exit();
     }
 
     // AJAX: get questions by array of IDs
