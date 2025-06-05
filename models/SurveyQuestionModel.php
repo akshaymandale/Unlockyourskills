@@ -196,20 +196,26 @@ protected function handleUpload(array $file, string $folder)
     
 
 
-    public function getQuestions($search = '', $type = '', $limit = 10, $offset = 0) {
+    public function getQuestions($search = '', $type = '', $limit = 10, $offset = 0, $tags = '') {
         $params = [];
-        $sql = "SELECT id, title, type, tags, media_path 
-                FROM survey_questions 
+        $sql = "SELECT id, title, type, tags, media_path
+                FROM survey_questions
                 WHERE is_deleted = 0 ";
 
         if ($search !== '') {
-            $sql .= " AND title LIKE ? ";
+            $sql .= " AND (title LIKE ? OR tags LIKE ?) ";
+            $params[] = '%' . $search . '%';
             $params[] = '%' . $search . '%';
         }
 
         if ($type !== '') {
             $sql .= " AND type = ? ";
             $params[] = $type;
+        }
+
+        if ($tags !== '') {
+            $sql .= " AND tags LIKE ? ";
+            $params[] = '%' . $tags . '%';
         }
 
         $sql .= " ORDER BY created_at DESC LIMIT ? OFFSET ?";
@@ -226,18 +232,24 @@ protected function handleUpload(array $file, string $folder)
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
 
-    public function getTotalQuestionCount($search = '', $type = '') {
+    public function getTotalQuestionCount($search = '', $type = '', $tags = '') {
         $params = [];
         $sql = "SELECT COUNT(*) FROM survey_questions WHERE is_deleted = 0 ";
 
         if ($search !== '') {
-            $sql .= " AND title LIKE ? ";
+            $sql .= " AND (title LIKE ? OR tags LIKE ?) ";
+            $params[] = '%' . $search . '%';
             $params[] = '%' . $search . '%';
         }
 
         if ($type !== '') {
             $sql .= " AND type = ? ";
             $params[] = $type;
+        }
+
+        if ($tags !== '') {
+            $sql .= " AND tags LIKE ? ";
+            $params[] = '%' . $tags . '%';
         }
 
         $stmt = $this->conn->prepare($sql);
@@ -256,6 +268,31 @@ protected function handleUpload(array $file, string $folder)
         $stmt = $this->conn->prepare($sql);
         $stmt->execute();
         return $stmt->fetchAll(PDO::FETCH_COLUMN);
+    }
+
+    // Get unique tags for filter suggestions
+    public function getUniqueTags() {
+        $stmt = $this->conn->prepare("
+            SELECT DISTINCT tags
+            FROM survey_questions
+            WHERE is_deleted = 0 AND tags IS NOT NULL AND tags != ''
+            ORDER BY tags ASC
+        ");
+        $stmt->execute();
+        $allTags = $stmt->fetchAll(PDO::FETCH_COLUMN);
+
+        // Split comma-separated tags and get unique values
+        $uniqueTags = [];
+        foreach ($allTags as $tagString) {
+            $tags = array_map('trim', explode(',', $tagString));
+            foreach ($tags as $tag) {
+                if (!empty($tag) && !in_array($tag, $uniqueTags)) {
+                    $uniqueTags[] = $tag;
+                }
+            }
+        }
+        sort($uniqueTags);
+        return $uniqueTags;
     }
 
     public function getSelectedQuestions(array $ids) {

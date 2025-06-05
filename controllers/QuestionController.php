@@ -21,7 +21,6 @@ class QuestionController {
         // Get unique values for filter dropdowns
         $uniqueQuestionTypes = $this->questionModel->getUniqueQuestionTypes();
         $uniqueDifficultyLevels = $this->questionModel->getUniqueDifficultyLevels();
-        $uniqueTags = $this->questionModel->getUniqueTags();
 
         require 'views/add_assessment.php';
     }

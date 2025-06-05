@@ -187,20 +187,26 @@ class FeedbackQuestionModel {
     }
 
     // Fetch paginated questions with optional search and type filter
-    public function getQuestions($search = '', $type = '', $limit = 10, $offset = 0) {
+    public function getQuestions($search = '', $type = '', $limit = 10, $offset = 0, $tags = '') {
         $params = [];
-        $sql = "SELECT id, title, type, tags 
-                FROM feedback_questions 
+        $sql = "SELECT id, title, type, tags
+                FROM feedback_questions
                 WHERE is_deleted = 0 ";
 
         if ($search !== '') {
-            $sql .= " AND title LIKE ? ";
+            $sql .= " AND (title LIKE ? OR tags LIKE ?) ";
+            $params[] = '%' . $search . '%';
             $params[] = '%' . $search . '%';
         }
 
         if ($type !== '') {
             $sql .= " AND type = ? ";
             $params[] = $type;
+        }
+
+        if ($tags !== '') {
+            $sql .= " AND tags LIKE ? ";
+            $params[] = '%' . $tags . '%';
         }
 
         $sql .= " ORDER BY created_at DESC LIMIT ? OFFSET ?";
@@ -217,18 +223,24 @@ class FeedbackQuestionModel {
     }
 
     // Get total number of questions for pagination
-    public function getTotalQuestionCount($search = '', $type = '') {
+    public function getTotalQuestionCount($search = '', $type = '', $tags = '') {
         $params = [];
         $sql = "SELECT COUNT(*) FROM feedback_questions WHERE is_deleted = 0 ";
 
         if ($search !== '') {
-            $sql .= " AND title LIKE ? ";
+            $sql .= " AND (title LIKE ? OR tags LIKE ?) ";
+            $params[] = '%' . $search . '%';
             $params[] = '%' . $search . '%';
         }
 
         if ($type !== '') {
             $sql .= " AND type = ? ";
             $params[] = $type;
+        }
+
+        if ($tags !== '') {
+            $sql .= " AND tags LIKE ? ";
+            $params[] = '%' . $tags . '%';
         }
 
         $stmt = $this->conn->prepare($sql);
@@ -246,6 +258,31 @@ class FeedbackQuestionModel {
         $stmt = $this->conn->prepare($sql);
         $stmt->execute();
         return $stmt->fetchAll(PDO::FETCH_COLUMN);
+    }
+
+    // Get unique tags for filter suggestions
+    public function getUniqueTags() {
+        $stmt = $this->conn->prepare("
+            SELECT DISTINCT tags
+            FROM feedback_questions
+            WHERE is_deleted = 0 AND tags IS NOT NULL AND tags != ''
+            ORDER BY tags ASC
+        ");
+        $stmt->execute();
+        $allTags = $stmt->fetchAll(PDO::FETCH_COLUMN);
+
+        // Split comma-separated tags and get unique values
+        $uniqueTags = [];
+        foreach ($allTags as $tagString) {
+            $tags = array_map('trim', explode(',', $tagString));
+            foreach ($tags as $tag) {
+                if (!empty($tag) && !in_array($tag, $uniqueTags)) {
+                    $uniqueTags[] = $tag;
+                }
+            }
+        }
+        sort($uniqueTags);
+        return $uniqueTags;
     }
 
     // Get question details by IDs (minimal fields)
