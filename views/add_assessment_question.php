@@ -53,7 +53,7 @@ $isEdit = isset($question);
                         <input type="text" id="skillsInput" class="form-control"
                             placeholder="<?= Localization::translate('type_and_press_enter'); ?>">
                         <input type="hidden" name="skills" id="skillsHidden"
-                            value="<?= $isEdit ? htmlspecialchars($question['skills'] ?? '') : '' ?>">
+                            value="<?= $isEdit ? htmlspecialchars($question['competency_skills'] ?? '') : '' ?>">
                     </div>
 
                     <div class="col-md-4">

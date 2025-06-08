@@ -12,21 +12,12 @@ class SurveyQuestionController
 
     public function index()
     {
-        $limit = 10;
+        // ✅ Don't load initial data - let JavaScript handle it via AJAX
+        // This prevents duplicate data rendering issues
+        $questions = []; // Empty array for initial page load
+        $totalQuestions = 0;
+        $totalPages = 0;
         $page = 1;
-        $offset = 0;
-
-        // Load initial data (no search/filters applied)
-        $questions = $this->surveyQuestionModel->getQuestions('', '', $limit, $offset);
-
-        // Add options for each question
-        foreach ($questions as &$question) {
-            $question['options'] = $this->surveyQuestionModel->getOptionsByQuestionId($question['id']);
-        }
-
-        // Get total count of questions
-        $totalQuestions = $this->surveyQuestionModel->getTotalQuestionCount();
-        $totalPages = ceil($totalQuestions / $limit);
 
         // Get unique values for filter dropdowns
         $uniqueQuestionTypes = $this->surveyQuestionModel->getDistinctTypes();

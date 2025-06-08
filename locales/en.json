@@ -302,7 +302,7 @@
     "confirm_delete_document": "Are you sure you want to delete this Document content?",
     "_comment14": "assessment_package.js",
     "_comment15": "add_assessment.php",
-    "question_management_title": "Question Management",
+    "question_management_title": "Assessment Question Management",
     "filters_select_options": "Select filter options",
     "filters_question_type": "Question Type",
     "filters_difficulty": "Difficulty",

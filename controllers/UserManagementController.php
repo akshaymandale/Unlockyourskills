@@ -11,17 +11,18 @@ class UserManagementController {
     }
 
     public function index() {
-
         $limit = 10; // Number of records per page
-        $page = isset($_GET['page']) ? (int)$_GET['page'] : 1;
-        $offset = ($page - 1) * $limit;
+        $page = 1;
+        $offset = 0;
 
-        $totalUsers = $this->userModel->getTotalUserCount();
+        // Load initial data (no search/filters applied)
         $users = $this->userModel->getAllUsersPaginated($limit, $offset);
+        $totalUsers = $this->userModel->getTotalUserCount();
         $totalPages = ceil($totalUsers / $limit);
 
-          // ✅ Fetch paginated user records
-   // $users = $this->userModel->getPaginatedUsers($limit, $offset);
+        // Get unique values for filter dropdowns
+        $uniqueUserRoles = $this->userModel->getDistinctUserRoles();
+        $uniqueGenders = $this->userModel->getDistinctGenders();
 
         require 'views/user_management.php';
     }
@@ -150,6 +151,61 @@ class UserManagementController {
         } else {
             echo "<script>alert('Invalid request parameters.'); window.location.href='index.php?controller=UserManagementController';</script>";
         }
+    }
+
+    public function ajaxSearch() {
+        header('Content-Type: application/json');
+
+        try {
+            $limit = 10;
+            $page = isset($_POST['page']) ? (int) $_POST['page'] : 1;
+            $offset = ($page - 1) * $limit;
+
+            // Get search and filter parameters
+            $search = trim($_POST['search'] ?? '');
+            $filters = [];
+
+            if (!empty($_POST['user_status'])) {
+                $filters['user_status'] = $_POST['user_status'];
+            }
+
+            if (!empty($_POST['locked_status'])) {
+                $filters['locked_status'] = $_POST['locked_status'];
+            }
+
+            if (!empty($_POST['user_role'])) {
+                $filters['user_role'] = $_POST['user_role'];
+            }
+
+            if (!empty($_POST['gender'])) {
+                $filters['gender'] = $_POST['gender'];
+            }
+
+            // Get users from database
+            $users = $this->userModel->getAllUsersPaginated($limit, $offset, $search, $filters);
+            $totalUsers = $this->userModel->getTotalUserCount($search, $filters);
+            $totalPages = ceil($totalUsers / $limit);
+
+            $response = [
+                'success' => true,
+                'users' => $users,
+                'totalUsers' => $totalUsers,
+                'pagination' => [
+                    'currentPage' => $page,
+                    'totalPages' => $totalPages,
+                    'totalUsers' => $totalUsers
+                ]
+            ];
+
+            echo json_encode($response);
+
+        } catch (Exception $e) {
+            echo json_encode([
+                'success' => false,
+                'message' => 'Error loading users: ' . $e->getMessage()
+            ]);
+        }
+        exit();
     }
 }
 ?>

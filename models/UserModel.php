@@ -133,20 +133,110 @@ class UserModel {
         return $stmt->execute();
     }
 
-     // Fetch paginated users
-     public function getAllUsersPaginated($limit, $offset) {
-        $stmt = $this->conn->prepare("SELECT * FROM user_profiles WHERE is_deleted = 0 ORDER BY full_name ASC LIMIT :limit OFFSET :offset");
-        $stmt->bindParam(':limit', $limit, PDO::PARAM_INT);
-        $stmt->bindParam(':offset', $offset, PDO::PARAM_INT);
+     // Fetch paginated users with search and filters
+     public function getAllUsersPaginated($limit, $offset, $search = '', $filters = []) {
+        $params = [];
+        $sql = "SELECT * FROM user_profiles WHERE is_deleted = 0 ";
+
+        // Add search functionality
+        if ($search !== '') {
+            $sql .= " AND (profile_id LIKE ? OR full_name LIKE ? OR email LIKE ? OR contact_number LIKE ?) ";
+            $params[] = '%' . $search . '%';
+            $params[] = '%' . $search . '%';
+            $params[] = '%' . $search . '%';
+            $params[] = '%' . $search . '%';
+        }
+
+        // Add filter functionality
+        if (!empty($filters['user_status'])) {
+            $sql .= " AND user_status = ? ";
+            $params[] = $filters['user_status'];
+        }
+
+        if (!empty($filters['locked_status'])) {
+            $sql .= " AND locked_status = ? ";
+            $params[] = $filters['locked_status'];
+        }
+
+        if (!empty($filters['user_role'])) {
+            $sql .= " AND user_role LIKE ? ";
+            $params[] = '%' . $filters['user_role'] . '%';
+        }
+
+        if (!empty($filters['gender'])) {
+            $sql .= " AND gender = ? ";
+            $params[] = $filters['gender'];
+        }
+
+        $sql .= " ORDER BY full_name ASC LIMIT ? OFFSET ?";
+        $params[] = (int)$limit;
+        $params[] = (int)$offset;
+
+        $stmt = $this->conn->prepare($sql);
+        foreach ($params as $index => $param) {
+            $stmt->bindValue($index + 1, $param, is_int($param) ? PDO::PARAM_INT : PDO::PARAM_STR);
+        }
+
         $stmt->execute();
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
 
-    // Get total user count
-    public function getTotalUserCount() {
-        $stmt = $this->conn->query("SELECT COUNT(*) as total FROM user_profiles WHERE is_deleted = 0");
+    // Get total user count with search and filters
+    public function getTotalUserCount($search = '', $filters = []) {
+        $params = [];
+        $sql = "SELECT COUNT(*) as total FROM user_profiles WHERE is_deleted = 0 ";
+
+        // Add search functionality
+        if ($search !== '') {
+            $sql .= " AND (profile_id LIKE ? OR full_name LIKE ? OR email LIKE ? OR contact_number LIKE ?) ";
+            $params[] = '%' . $search . '%';
+            $params[] = '%' . $search . '%';
+            $params[] = '%' . $search . '%';
+            $params[] = '%' . $search . '%';
+        }
+
+        // Add filter functionality
+        if (!empty($filters['user_status'])) {
+            $sql .= " AND user_status = ? ";
+            $params[] = $filters['user_status'];
+        }
+
+        if (!empty($filters['locked_status'])) {
+            $sql .= " AND locked_status = ? ";
+            $params[] = $filters['locked_status'];
+        }
+
+        if (!empty($filters['user_role'])) {
+            $sql .= " AND user_role LIKE ? ";
+            $params[] = '%' . $filters['user_role'] . '%';
+        }
+
+        if (!empty($filters['gender'])) {
+            $sql .= " AND gender = ? ";
+            $params[] = $filters['gender'];
+        }
+
+        $stmt = $this->conn->prepare($sql);
+        foreach ($params as $index => $param) {
+            $stmt->bindValue($index + 1, $param, is_int($param) ? PDO::PARAM_INT : PDO::PARAM_STR);
+        }
+
+        $stmt->execute();
         $result = $stmt->fetch(PDO::FETCH_ASSOC);
         return $result['total'];
+    }
+
+    // Get unique values for filter dropdowns
+    public function getDistinctUserRoles() {
+        $stmt = $this->conn->prepare("SELECT DISTINCT user_role FROM user_profiles WHERE is_deleted = 0 AND user_role IS NOT NULL AND user_role != '' ORDER BY user_role ASC");
+        $stmt->execute();
+        return $stmt->fetchAll(PDO::FETCH_COLUMN);
+    }
+
+    public function getDistinctGenders() {
+        $stmt = $this->conn->prepare("SELECT DISTINCT gender FROM user_profiles WHERE is_deleted = 0 AND gender IS NOT NULL AND gender != '' ORDER BY gender ASC");
+        $stmt->execute();
+        return $stmt->fetchAll(PDO::FETCH_COLUMN);
     }
 }
 ?>
