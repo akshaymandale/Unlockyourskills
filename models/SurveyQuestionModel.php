@@ -218,9 +218,11 @@ protected function handleUpload(array $file, string $folder)
             $params[] = '%' . $tags . '%';
         }
 
-        $sql .= " ORDER BY created_at DESC LIMIT ? OFFSET ?";
+        $sql .= " GROUP BY id ORDER BY created_at DESC LIMIT ? OFFSET ?";
         $params[] = (int)$limit;
         $params[] = (int)$offset;
+
+
 
         $stmt = $this->conn->prepare($sql);
         foreach ($params as $index => $param) {
@@ -229,7 +231,20 @@ protected function handleUpload(array $file, string $folder)
         }
 
         $stmt->execute();
-        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+        $results = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+        // ✅ Remove duplicates based on ID in PHP as a safety measure
+        $uniqueResults = [];
+        $seenIds = [];
+
+        foreach ($results as $result) {
+            if (!in_array($result['id'], $seenIds)) {
+                $uniqueResults[] = $result;
+                $seenIds[] = $result['id'];
+            }
+        }
+
+        return $uniqueResults;
     }
 
     public function getTotalQuestionCount($search = '', $type = '', $tags = '') {

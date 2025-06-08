@@ -13,14 +13,12 @@ class FeedbackQuestionController
     // List with pagination & filters
     public function index()
     {
-        $limit = 10;
+        // ✅ Don't load initial data - let JavaScript handle it via AJAX
+        // This prevents duplicate data rendering issues
+        $questions = []; // Empty array for initial page load
+        $totalQuestions = 0;
+        $totalPages = 0;
         $page = 1;
-        $offset = 0;
-
-        // Load initial data (no search/filters applied)
-        $questions = $this->feedbackQuestionModel->getQuestions('', '', $limit, $offset);
-        $totalQuestions = $this->feedbackQuestionModel->getTotalQuestionCount();
-        $totalPages = ceil($totalQuestions / $limit);
 
         // Get unique values for filter dropdowns
         $uniqueQuestionTypes = $this->feedbackQuestionModel->getDistinctTypes();
