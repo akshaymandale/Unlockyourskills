@@ -855,6 +855,18 @@ html, body {
     color: #6c757d;
 }
 
+/* ✅ Tag Container Styles for Modal Forms */
+.tag-container {
+    min-height: 40px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    padding: 5px;
+    margin-bottom: 10px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 5px;
+    background-color: #fff;
+}
 
 .tag-input-container {
     display: flex;
@@ -1030,13 +1042,45 @@ html, body {
     text-decoration: none;
 }
 
-/* assessment validation errror message */
+/* ✅ Assessment & Survey validation error styling */
 .is-invalid {
-    border-color: red !important;
+    border-color: #dc3545 !important;
+    box-shadow: 0 0 0 0.2rem rgba(220, 53, 69, 0.25) !important;
 }
+
 .invalid-feedback {
-    color: red;
+    color: #dc3545;
     font-size: 0.875em;
+    margin-top: 0.25rem;
+    display: block;
+}
+
+.invalid-feedback i {
+    margin-right: 0.25rem;
+}
+
+/* Focus state for invalid fields */
+.is-invalid:focus {
+    border-color: #dc3545 !important;
+    box-shadow: 0 0 0 0.2rem rgba(220, 53, 69, 0.25) !important;
+}
+
+/* ✅ File validation alerts in media preview */
+#mediaPreview .alert {
+    margin-top: 10px;
+    padding: 8px 12px;
+    font-size: 0.875em;
+    border-radius: 4px;
+}
+
+#mediaPreview .alert-danger {
+    background-color: #f8d7da;
+    border-color: #f5c6cb;
+    color: #721c24;
+}
+
+#mediaPreview .alert i {
+    margin-right: 0.5rem;
 }
 /* Back arrow button code */
 /* Container for back arrow and page title */
@@ -1669,4 +1713,272 @@ html, body {
     background-color: #f8f9fa;
     border-color: #ddd;
 }
+
+/* ✅ Interactive & AI Powered Content Package Cards */
+.interactive-card {
+    border: 2px solid #6a0dad;
+    border-radius: 10px;
+    padding: 15px;
+    margin-bottom: 20px;
+    text-align: center;
+    background-color: #f9f9f9;
+    transition: transform 0.2s ease-in-out;
+    position: relative; /* Required for absolute positioning of actions */
+}
+
+.interactive-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+.interactive-icon {
+    font-size: 40px;
+    color: #6a0dad;
+    margin-bottom: 10px;
+}
+
+.interactive-title {
+    font-size: 16px;
+    font-weight: bold;
+    margin-bottom: 10px;
+    color: #333;
+}
+
+
+
+/* Interactive Content Type Specific Fields */
+.ai-tutoring-fields,
+.ar-vr-fields,
+.adaptive-learning-fields {
+    display: none;
+}
+
+.ai-tutoring-fields.show,
+.ar-vr-fields.show,
+.adaptive-learning-fields.show {
+    display: block;
+}
+
+/* Interactive Content Form Styling */
+#interactiveModal .modal-dialog {
+    max-width: 90%;
+}
+
+#interactiveModal .form-group {
+    margin-bottom: 1rem;
+}
+
+#interactiveModal .form-control {
+    border-radius: 5px;
+    border: 1px solid #ddd;
+}
+
+#interactiveModal .form-control:focus {
+    border-color: #6a0dad;
+    box-shadow: 0 0 0 0.2rem rgba(106, 13, 173, 0.25);
+}
+
+/* Interactive Content Tag Styling */
+#interactiveTagDisplay .tag {
+    background-color: #6a0dad;
+    color: white;
+    padding: 5px 10px;
+    margin: 2px;
+    border-radius: 15px;
+    display: inline-block;
+    font-size: 12px;
+}
+
+#interactiveTagDisplay .remove-tag {
+    margin-left: 5px;
+    cursor: pointer;
+    font-weight: bold;
+}
+
+#interactiveTagDisplay .remove-tag:hover {
+    color: #ff6b6b;
+}
+
+/* Interactive Content File Upload Styling */
+.interactive-file-upload {
+    border: 2px dashed #6a0dad;
+    border-radius: 10px;
+    padding: 20px;
+    text-align: center;
+    margin: 10px 0;
+    background-color: #f8f9fa;
+}
+
+.interactive-file-upload:hover {
+    background-color: #e9ecef;
+}
+
+/* Interactive Content Conditional Fields Animation */
+.ai-tutoring-fields,
+.ar-vr-fields,
+.adaptive-learning-fields {
+    transition: all 0.3s ease-in-out;
+    overflow: hidden;
+}
+
+/* Interactive Content Icons for Different Types */
+.interactive-card[data-type="adaptive_learning"] .interactive-icon {
+    color: #28a745; /* Green for adaptive learning */
+}
+
+.interactive-card[data-type="ai_tutoring"] .interactive-icon {
+    color: #007bff; /* Blue for AI tutoring */
+}
+
+.interactive-card[data-type="ar_vr"] .interactive-icon {
+    color: #dc3545; /* Red for AR/VR */
+}
+
+/* Interactive Content Actions - Top Right Corner */
+.interactive-actions {
+    position: absolute;
+    top: 10px;
+    right: 15px;
+}
+
+.interactive-actions .edit-icon {
+    color: #007bff;
+    margin-right: 10px;
+    cursor: pointer;
+}
+
+.interactive-actions .delete-icon {
+    color: #dc3545;
+    cursor: pointer;
+}
+
+.interactive-actions i {
+    font-size: 18px;
+    transition: color 0.2s;
+}
+
+.interactive-actions i:hover {
+    opacity: 0.7;
+}
+
+.interactive-actions a {
+    text-decoration: none;
+}
+
+.interactive-actions a:hover {
+    text-decoration: none;
+}
+
+/* Interactive Content File Preview Styling */
+#interactiveModal .preview-wrapper {
+    position: relative;
+    display: inline-block;
+    margin-top: 10px;
+}
+
+#interactiveModal .preview-wrapper img {
+    border: 1px solid #ddd;
+    border-radius: 5px;
+}
+
+#interactiveModal .remove-preview {
+    position: absolute;
+    top: 0;
+    right: 0;
+    background: #dc3545;
+    color: white;
+    border: none;
+    width: 22px;
+    height: 22px;
+    font-size: 16px;
+    font-weight: bold;
+    line-height: 18px;
+    text-align: center;
+    border-radius: 3px; /* Square like other modules */
+    cursor: pointer;
+    z-index: 10;
+}
+
+#interactiveModal .remove-preview:hover {
+    background: #c82333;
+}
+
+/* Interactive Content Error Styling - Match Other Modules */
+#interactiveModal .invalid-feedback {
+    color: #dc3545;
+    font-size: 0.875em;
+    margin-top: 0.25rem;
+    display: block;
+}
+
+#interactiveModal .invalid-feedback i {
+    margin-right: 0.25rem;
+}
+
+#interactiveModal .is-invalid {
+    border-color: #dc3545 !important;
+    box-shadow: 0 0 0 0.2rem rgba(220, 53, 69, 0.25) !important;
+}
+
+#interactiveModal .is-invalid:focus {
+    border-color: #dc3545 !important;
+    box-shadow: 0 0 0 0.2rem rgba(220, 53, 69, 0.25) !important;
+}
+
+/* ✅ Universal File Upload Styling - Consistent Across All Modules */
+.form-control[type="file"] {
+    padding: 0.375rem 0.75rem;
+    border: 1px solid #ced4da;
+    border-radius: 0.375rem;
+    background-color: #fff;
+    transition: border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
+}
+
+.form-control[type="file"]:focus {
+    border-color: #6a0dad;
+    outline: 0;
+    box-shadow: 0 0 0 0.2rem rgba(106, 13, 173, 0.25);
+}
+
+.form-control[type="file"]:hover {
+    border-color: #6a0dad;
+}
+
+/* File Upload Format Hints */
+.text-muted {
+    font-size: 0.875rem;
+    color: #6c757d !important;
+    margin-top: 0.25rem;
+    display: block;
+}
+
+/* File Preview Containers - Universal */
+.mt-2 {
+    margin-top: 0.5rem !important;
+}
+
+/* File Upload Labels */
+.form-label {
+    margin-bottom: 0.5rem;
+    font-weight: 500;
+    color: #212529;
+}
+
+/* Required Field Asterisk */
+.text-danger {
+    color: #dc3545 !important;
+}
+
+/* File Upload Error States */
+.form-control[type="file"].is-invalid {
+    border-color: #dc3545;
+    box-shadow: 0 0 0 0.2rem rgba(220, 53, 69, 0.25);
+}
+
+.form-control[type="file"].is-invalid:focus {
+    border-color: #dc3545;
+    box-shadow: 0 0 0 0.2rem rgba(220, 53, 69, 0.25);
+}
+
+
 

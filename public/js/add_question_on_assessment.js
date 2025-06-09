@@ -133,6 +133,11 @@ document.addEventListener("DOMContentLoaded", function () {
             // ✅ Set the hidden input with selected question IDs
             document.getElementById("assessment_selectedQuestionIds").value = Array.from(temporarySelections).join(',');
 
+            // Clear any validation error for selected questions
+            if (typeof window.hideSelectedQuestionsError === 'function') {
+                window.hideSelectedQuestionsError();
+            }
+
             questionModal.hide();
 
         } catch (error) {

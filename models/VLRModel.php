@@ -1069,5 +1069,149 @@ public function deleteImagePackage($id)
         return $stmt->execute([$id]);
     }
 
+    // ✅ Interactive & AI Powered Content Methods
+
+    // Insert Interactive & AI Powered Content Package
+    public function insertInteractiveContent($data)
+    {
+        // Validate required fields
+        $requiredFields = ['title', 'content_type', 'version', 'mobile_support', 'tags', 'created_by'];
+        foreach ($requiredFields as $field) {
+            if (empty($data[$field])) {
+                return false;
+            }
+        }
+
+        $stmt = $this->conn->prepare("
+            INSERT INTO interactive_ai_content_package
+            (title, content_type, description, tags, version, language, time_limit, mobile_support,
+             content_url, embed_code, ai_model, interaction_type, difficulty_level, learning_objectives,
+             prerequisites, content_file, thumbnail_image, metadata_file, vr_platform, ar_platform,
+             device_requirements, tutor_personality, response_style, knowledge_domain, adaptation_algorithm,
+             assessment_integration, progress_tracking, created_by, is_deleted, created_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, NOW())
+        ");
+
+        return $stmt->execute([
+            $data['title'],
+            $data['content_type'],
+            $data['description'] ?? null,
+            $data['tags'],
+            $data['version'],
+            $data['language'] ?? null,
+            $data['time_limit'] ?? null,
+            $data['mobile_support'],
+            $data['content_url'] ?? null,
+            $data['embed_code'] ?? null,
+            $data['ai_model'] ?? null,
+            $data['interaction_type'] ?? null,
+            $data['difficulty_level'] ?? null,
+            $data['learning_objectives'] ?? null,
+            $data['prerequisites'] ?? null,
+            $data['content_file'] ?? null,
+            $data['thumbnail_image'] ?? null,
+            $data['metadata_file'] ?? null,
+            $data['vr_platform'] ?? null,
+            $data['ar_platform'] ?? null,
+            $data['device_requirements'] ?? null,
+            $data['tutor_personality'] ?? null,
+            $data['response_style'] ?? null,
+            $data['knowledge_domain'] ?? null,
+            $data['adaptation_algorithm'] ?? null,
+            $data['assessment_integration'] ?? null,
+            $data['progress_tracking'] ?? null,
+            $data['created_by']
+        ]);
+    }
+
+    // Update Interactive & AI Powered Content Package
+    public function updateInteractiveContent($id, $data)
+    {
+        if (empty($id)) {
+            return false;
+        }
+
+        $stmt = $this->conn->prepare("
+            UPDATE interactive_ai_content_package SET
+                title = ?,
+                content_type = ?,
+                description = ?,
+                tags = ?,
+                version = ?,
+                language = ?,
+                time_limit = ?,
+                mobile_support = ?,
+                content_url = ?,
+                embed_code = ?,
+                ai_model = ?,
+                interaction_type = ?,
+                difficulty_level = ?,
+                learning_objectives = ?,
+                prerequisites = ?,
+                content_file = ?,
+                thumbnail_image = ?,
+                metadata_file = ?,
+                vr_platform = ?,
+                ar_platform = ?,
+                device_requirements = ?,
+                tutor_personality = ?,
+                response_style = ?,
+                knowledge_domain = ?,
+                adaptation_algorithm = ?,
+                assessment_integration = ?,
+                progress_tracking = ?,
+                updated_by = ?,
+                updated_at = NOW()
+            WHERE id = ?
+        ");
+
+        return $stmt->execute([
+            $data['title'],
+            $data['content_type'],
+            $data['description'] ?? null,
+            $data['tags'],
+            $data['version'],
+            $data['language'] ?? null,
+            $data['time_limit'] ?? null,
+            $data['mobile_support'],
+            $data['content_url'] ?? null,
+            $data['embed_code'] ?? null,
+            $data['ai_model'] ?? null,
+            $data['interaction_type'] ?? null,
+            $data['difficulty_level'] ?? null,
+            $data['learning_objectives'] ?? null,
+            $data['prerequisites'] ?? null,
+            $data['content_file'] ?? null,
+            $data['thumbnail_image'] ?? null,
+            $data['metadata_file'] ?? null,
+            $data['vr_platform'] ?? null,
+            $data['ar_platform'] ?? null,
+            $data['device_requirements'] ?? null,
+            $data['tutor_personality'] ?? null,
+            $data['response_style'] ?? null,
+            $data['knowledge_domain'] ?? null,
+            $data['adaptation_algorithm'] ?? null,
+            $data['assessment_integration'] ?? null,
+            $data['progress_tracking'] ?? null,
+            $data['created_by'],
+            $id
+        ]);
+    }
+
+    // Get Interactive & AI Powered Content Packages (non-deleted)
+    public function getInteractiveContent()
+    {
+        $stmt = $this->conn->prepare("SELECT * FROM interactive_ai_content_package WHERE is_deleted = 0 ORDER BY created_at DESC");
+        $stmt->execute();
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
+
+    // Soft Delete Interactive & AI Powered Content Package
+    public function deleteInteractiveContent($id)
+    {
+        $stmt = $this->conn->prepare("UPDATE interactive_ai_content_package SET is_deleted = 1 WHERE id = ?");
+        return $stmt->execute([$id]);
+    }
+
 }
 ?>

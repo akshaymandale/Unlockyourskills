@@ -130,12 +130,11 @@ $languageList = $vlrController->getLanguages();
                                             </div>
                                             <div class="col-md-6">
                                                 <div class="form-group">
-                                                    <label
-                                                        for="zipFile"><?= Localization::translate('upload_scorm_zip'); ?>
-                                                        <span class="text-danger">*</span></label>
-                                                    <input type="file" id="zipFile" name="zipFile"
-                                                        class="form-control-file" accept=".zip">
-                                                    <p id="existingZipDisplay"></p>
+                                                    <label for="zipFile" class="form-label"><?= Localization::translate('upload_scorm_zip'); ?> <span class="text-danger">*</span></label>
+                                                    <input type="file" class="form-control" id="zipFile" name="zipFile" accept=".zip">
+                                                    <small class="text-muted">Max size: 100MB. Formats: ZIP files only.</small>
+                                                    <input type="hidden" id="existing_zip" name="existing_zip">
+                                                    <div id="existingZipDisplay" class="mt-2"></div>
                                                 </div>
                                             </div>
                                         </div>
@@ -441,6 +440,7 @@ $languageList = $vlrController->getLanguages();
                                             <div class="form-group mb-3">
                                                 <label for="assessment_assessmentTitle" class="form-label">
                                                     <?= Localization::translate('assessment.field.title'); ?>
+                                                    <span class="text-danger">*</span>
                                                 </label>
                                                 <input type="text" class="form-control" id="assessment_assessmentTitle"
                                                     name="title">
@@ -486,6 +486,7 @@ $languageList = $vlrController->getLanguages();
                                                     <div class="form-group mb-3">
                                                         <label for="assessment_passingPercentage" class="form-label">
                                                             <?= Localization::translate('assessment.field.passing_percentage'); ?>
+                                                            <span class="text-danger">*</span>
                                                         </label>
                                                         <input type="text" class="form-control"
                                                             id="assessment_passingPercentage" name="passing_percentage">
@@ -820,7 +821,7 @@ $languageList = $vlrController->getLanguages();
                                     <div class="row g-3">
                                         <!-- Title -->
                                         <div class="col-md-6">
-                                            <label for="audio_titleaudio" class="form-label">Title <span
+                                            <label for="audio_titleaudio" class="form-label"><?= Localization::translate('audio.field.title'); ?> <span
                                                     class="text-danger">*</span></label>
                                             <input type="text" class="form-control" id="audio_titleaudio"
                                                 name="audio_titleaudio">
@@ -828,7 +829,7 @@ $languageList = $vlrController->getLanguages();
 
                                         <!-- Upload Audio -->
                                         <div class="col-md-6">
-                                            <label for="audioFileaudio" class="form-label">Upload Audio <span
+                                            <label for="audioFileaudio" class="form-label"><?= Localization::translate('audio.upload_audio_file'); ?> <span
                                                     class="text-danger">*</span></label>
                                             <input type="file" class="form-control" id="audioFileaudio"
                                                 name="audioFileaudio" accept="audio/*">
@@ -856,14 +857,14 @@ $languageList = $vlrController->getLanguages();
 
                                         <!-- Description -->
                                         <div class="col-md-12">
-                                            <label for="descriptionaudio" class="form-label">Description</label>
+                                            <label for="descriptionaudio" class="form-label"><?= Localization::translate('description'); ?></label>
                                             <textarea class="form-control" id="descriptionaudio" name="descriptionaudio"
                                                 rows="3"></textarea>
                                         </div>
 
                                         <!-- Version -->
                                         <div class="col-md-4">
-                                            <label for="versionaudio" class="form-label">Version <span
+                                            <label for="versionaudio" class="form-label"><?= Localization::translate('version_number'); ?> <span
                                                     class="text-danger">*</span></label>
                                             <input type="number" class="form-control" id="versionaudio"
                                                 name="versionaudio" min="0" step="any" pattern="\d*">
@@ -871,7 +872,7 @@ $languageList = $vlrController->getLanguages();
 
                                         <!-- Language Support -->
                                         <div class="col-md-4">
-                                            <label for="languageaudio" class="form-label">Language Support</label>
+                                            <label for="languageaudio" class="form-label"><?= Localization::translate('language'); ?></label>
                                             <select class="form-select" id="languageaudio" name="languageaudio">
                                                 <option value=""><?= Localization::translate('select_language'); ?></option>
                                                 <?php
@@ -892,25 +893,24 @@ $languageList = $vlrController->getLanguages();
 
                                         <!-- Time Limit -->
                                         <div class="col-md-4">
-                                            <label for="timeLimitaudio" class="form-label">Time Limit (in
-                                                minutes)</label>
+                                            <label for="timeLimitaudio" class="form-label"><?= Localization::translate('time_limit'); ?></label>
                                             <input type="number" class="form-control" id="timeLimitaudio"
                                                 name="timeLimitaudio" min="1" pattern="\d*">
                                         </div>
 
                                         <!-- Mobile & Tablet Support -->
                                         <div class="col-md-12">
-                                            <label class="form-label">Mobile & Tablet Support</label>
+                                            <label class="form-label"><?= Localization::translate('mobile_tablet_support'); ?></label>
                                             <div>
                                                 <div class="form-check form-check-inline">
                                                     <input class="form-check-input" type="radio"
                                                         name="mobileSupportaudio" id="mobileYesaudio" value="Yes">
-                                                    <label class="form-check-label" for="mobileYesaudio">Yes</label>
+                                                    <label class="form-check-label" for="mobileYesaudio"><?= Localization::translate('yes'); ?></label>
                                                 </div>
                                                 <div class="form-check form-check-inline">
                                                     <input class="form-check-input" type="radio"
                                                         name="mobileSupportaudio" id="mobileNoaudio" value="No" checked>
-                                                    <label class="form-check-label" for="mobileNoaudio">No</label>
+                                                    <label class="form-check-label" for="mobileNoaudio"><?= Localization::translate('no'); ?></label>
                                                 </div>
                                             </div>
                                         </div>
@@ -999,7 +999,7 @@ $languageList = $vlrController->getLanguages();
                                     <div class="row g-3">
                                         <!-- Title -->
                                         <div class="col-md-6">
-                                            <label for="video_titlevideo" class="form-label">Title <span
+                                            <label for="video_titlevideo" class="form-label"><?= Localization::translate('video.field.title'); ?> <span
                                                     class="text-danger">*</span></label>
                                             <input type="text" class="form-control" id="video_titlevideo"
                                                 name="video_titlevideo">
@@ -1007,7 +1007,7 @@ $languageList = $vlrController->getLanguages();
 
                                         <!-- Upload Video -->
                                         <div class="col-md-6">
-                                            <label for="videoFilevideo" class="form-label">Upload Video <span
+                                            <label for="videoFilevideo" class="form-label"><?= Localization::translate('video.upload_video_file'); ?> <span
                                                     class="text-danger">*</span></label>
                                             <input type="file" class="form-control" id="videoFilevideo"
                                                 name="videoFilevideo" accept="video/*">
@@ -1036,14 +1036,14 @@ $languageList = $vlrController->getLanguages();
 
                                         <!-- Description -->
                                         <div class="col-md-12">
-                                            <label for="descriptionvideo" class="form-label">Description</label>
+                                            <label for="descriptionvideo" class="form-label"><?= Localization::translate('description'); ?></label>
                                             <textarea class="form-control" id="descriptionvideo" name="descriptionvideo"
                                                 rows="3"></textarea>
                                         </div>
 
                                         <!-- Version -->
                                         <div class="col-md-4">
-                                            <label for="versionvideo" class="form-label">Version <span
+                                            <label for="versionvideo" class="form-label"><?= Localization::translate('version_number'); ?> <span
                                                     class="text-danger">*</span></label>
                                             <input type="number" class="form-control" id="versionvideo"
                                                 name="versionvideo" min="0" step="any" pattern="\d*">
@@ -1051,7 +1051,7 @@ $languageList = $vlrController->getLanguages();
 
                                         <!-- Language Support -->
                                         <div class="col-md-4">
-                                            <label for="languagevideo" class="form-label">Language Support</label>
+                                            <label for="languagevideo" class="form-label"><?= Localization::translate('language'); ?></label>
                                             <select class="form-select" id="languagevideo" name="languagevideo">
                                                 <option value=""><?= Localization::translate('select_language'); ?></option>
                                                 <?php
@@ -1072,25 +1072,24 @@ $languageList = $vlrController->getLanguages();
 
                                         <!-- Time Limit -->
                                         <div class="col-md-4">
-                                            <label for="timeLimitvideo" class="form-label">Time Limit (in
-                                                minutes)</label>
+                                            <label for="timeLimitvideo" class="form-label"><?= Localization::translate('time_limit'); ?></label>
                                             <input type="number" class="form-control" id="timeLimitvideo"
                                                 name="timeLimitvideo" min="1" pattern="\d*">
                                         </div>
 
                                         <!-- Mobile & Tablet Support -->
                                         <div class="col-md-12">
-                                            <label class="form-label">Mobile & Tablet Support</label>
+                                            <label class="form-label"><?= Localization::translate('mobile_tablet_support'); ?></label>
                                             <div>
                                                 <div class="form-check form-check-inline">
                                                     <input class="form-check-input" type="radio"
                                                         name="mobileSupportvideo" id="mobileYesvideo" value="Yes">
-                                                    <label class="form-check-label" for="mobileYesvideo">Yes</label>
+                                                    <label class="form-check-label" for="mobileYesvideo"><?= Localization::translate('yes'); ?></label>
                                                 </div>
                                                 <div class="form-check form-check-inline">
                                                     <input class="form-check-input" type="radio"
                                                         name="mobileSupportvideo" id="mobileNovideo" value="No" checked>
-                                                    <label class="form-check-label" for="mobileNovideo">No</label>
+                                                    <label class="form-check-label" for="mobileNovideo"><?= Localization::translate('no'); ?></label>
                                                 </div>
                                             </div>
                                         </div>
@@ -1220,32 +1219,35 @@ $languageList = $vlrController->getLanguages();
                                         <div class="row">
                                             <div id="wordExcelPptFields" class="col-md-12 form-group mb-3"
                                                 style="display: none;">
-                                                <label for="documentFileWordExcelPpt">
+                                                <label for="documentFileWordExcelPpt" class="form-label">
                                                     <?= Localization::translate('upload_file.word_excel_ppt'); ?>
                                                 </label>
                                                 <input type="file" class="form-control" id="documentFileWordExcelPpt"
                                                     name="documentFileWordExcelPpt" accept=".docx, .xlsx, .pptx, .pdf">
-                                                <p id="existingDocumentWordExcelPptDisplay"></p>
+                                                <small class="text-muted">Max size: 50MB. Formats: DOCX, XLSX, PPTX, PDF.</small>
+                                                <div id="existingDocumentWordExcelPptDisplay" class="mt-2"></div>
                                             </div>
 
                                             <div id="ebookManualFields" class="col-md-12 form-group mb-3"
                                                 style="display: none;">
-                                                <label for="documentFileEbookManual">
+                                                <label for="documentFileEbookManual" class="form-label">
                                                     <?= Localization::translate('upload_file.ebook_manual'); ?>
                                                 </label>
                                                 <input type="file" class="form-control" id="documentFileEbookManual"
                                                     name="documentFileEbookManual" accept=".pdf, .epub, .mobi">
-                                                <p id="existingDocumentEbookManualDisplay"></p>
+                                                <small class="text-muted">Max size: 50MB. Formats: PDF, EPUB, MOBI.</small>
+                                                <div id="existingDocumentEbookManualDisplay" class="mt-2"></div>
                                             </div>
 
                                             <div id="researchFields" class="col-md-12 form-group mb-3"
                                                 style="display: none;">
-                                                <label for="documentFileResearch">
+                                                <label for="documentFileResearch" class="form-label">
                                                     <?= Localization::translate('upload_file.research'); ?>
                                                 </label>
                                                 <input type="file" class="form-control" id="documentFileResearch"
                                                     name="documentFileResearch" accept=".pdf, .docx">
-                                                <p id="existingDocumentResearchDisplay"></p>
+                                                <small class="text-muted">Max size: 50MB. Formats: PDF, DOCX.</small>
+                                                <div id="existingDocumentResearchDisplay" class="mt-2"></div>
                                             </div>
                                         </div>
 
@@ -1507,7 +1509,7 @@ $languageList = $vlrController->getLanguages();
                                     <div class="row g-3">
                                         <!-- Title -->
                                         <div class="col-md-6">
-                                            <label for="image_titleimage" class="form-label">Title <span
+                                            <label for="image_titleimage" class="form-label"><?= Localization::translate('image.field.title'); ?> <span
                                                     class="text-danger">*</span></label>
                                             <input type="text" class="form-control" id="image_titleimage"
                                                 name="image_titleimage">
@@ -1515,7 +1517,7 @@ $languageList = $vlrController->getLanguages();
 
                                         <!-- Upload Image -->
                                         <div class="col-md-6">
-                                            <label for="imageFileimage" class="form-label">Upload Image <span
+                                            <label for="imageFileimage" class="form-label"><?= Localization::translate('image.upload_image_file'); ?> <span
                                                     class="text-danger">*</span></label>
                                             <input type="file" class="form-control" id="imageFileimage"
                                                 name="imageFileimage" accept="image/*">
@@ -1545,14 +1547,14 @@ $languageList = $vlrController->getLanguages();
 
                                         <!-- Description -->
                                         <div class="col-md-12">
-                                            <label for="descriptionimage" class="form-label">Description</label>
+                                            <label for="descriptionimage" class="form-label"><?= Localization::translate('description'); ?></label>
                                             <textarea class="form-control" id="descriptionimage" name="descriptionimage"
                                                 rows="3"></textarea>
                                         </div>
 
                                         <!-- Version -->
                                         <div class="col-md-6">
-                                            <label for="versionimage" class="form-label">Version <span
+                                            <label for="versionimage" class="form-label"><?= Localization::translate('version_number'); ?> <span
                                                     class="text-danger">*</span></label>
                                             <input type="number" class="form-control" id="versionimage"
                                                 name="versionimage" min="0" step="any" pattern="\d*">
@@ -1560,7 +1562,7 @@ $languageList = $vlrController->getLanguages();
 
                                         <!-- Language Support -->
                                         <div class="col-md-6">
-                                            <label for="languageimage" class="form-label">Language Support</label>
+                                            <label for="languageimage" class="form-label"><?= Localization::translate('language'); ?></label>
                                             <select class="form-select" id="languageimage" name="languageimage">
                                                 <option value=""><?= Localization::translate('select_language'); ?></option>
                                                 <?php
@@ -1581,17 +1583,17 @@ $languageList = $vlrController->getLanguages();
 
                                         <!-- Mobile & Tablet Support -->
                                         <div class="col-md-12">
-                                            <label class="form-label">Mobile & Tablet Support</label>
+                                            <label class="form-label"><?= Localization::translate('mobile_tablet_support'); ?></label>
                                             <div>
                                                 <div class="form-check form-check-inline">
                                                     <input class="form-check-input" type="radio"
                                                         name="mobileSupportimage" id="mobileYesimage" value="Yes">
-                                                    <label class="form-check-label" for="mobileYesimage">Yes</label>
+                                                    <label class="form-check-label" for="mobileYesimage"><?= Localization::translate('yes'); ?></label>
                                                 </div>
                                                 <div class="form-check form-check-inline">
                                                     <input class="form-check-input" type="radio"
                                                         name="mobileSupportimage" id="mobileNoimage" value="No" checked>
-                                                    <label class="form-check-label" for="mobileNoimage">No</label>
+                                                    <label class="form-check-label" for="mobileNoimage"><?= Localization::translate('no'); ?></label>
                                                 </div>
                                             </div>
                                         </div>
@@ -2543,9 +2545,350 @@ $languageList = $vlrController->getLanguages();
                 <!-- Interactive & AI Powered Content Header Section -->
                 <div class="d-flex justify-content-between align-items-center mb-3">
                     <h3><?= Localization::translate('interactive_ai_content'); ?></h3>
-                    <button class="btn btn-sm btn-primary" onclick="openAddModal('Interactive')">
-                        + <?= Localization::translate('add'); ?>
+
+                    <!-- ✅ Interactive "Add" Button - Opens Modal -->
+                    <button class="btn btn-primary mb-3" data-bs-toggle="modal" id="addInteractiveBtn"
+                        data-bs-target="#interactiveModal">
+                        + <?= Localization::translate('add_interactive_package'); ?>
                     </button>
+
+                    <!-- ✅ INTERACTIVE ADD MODAL -->
+                    <div class="modal fade" id="interactiveModal" tabindex="-1" role="dialog"
+                        aria-labelledby="interactiveModalLabel" aria-hidden="true">
+                        <div class="modal-dialog modal-xl" role="document">
+                            <div class="modal-content">
+                                <div class="modal-header">
+                                    <h5 class="modal-title" id="interactiveModalLabel">
+                                        <?= Localization::translate('add_interactive_package'); ?>
+                                    </h5>
+                                    <button type="button" class="btn-close" data-bs-dismiss="modal"
+                                        aria-label="<?= Localization::translate('close'); ?>"></button>
+                                </div>
+                                <div class="modal-body">
+                                    <form id="interactiveForm"
+                                        action="index.php?controller=VLRController&action=addOrEditInteractiveContent"
+                                        method="POST" enctype="multipart/form-data">
+                                        <input type="hidden" id="interactive_id" name="interactive_id">
+                                        <input type="hidden" id="existing_content_file" name="existing_content_file">
+                                        <input type="hidden" id="existing_thumbnail_image" name="existing_thumbnail_image">
+                                        <input type="hidden" id="existing_metadata_file" name="existing_metadata_file">
+
+                                        <!-- ✅ Title & Content Type -->
+                                        <div class="row">
+                                            <div class="col-md-6">
+                                                <div class="form-group">
+                                                    <label for="interactive_title"><?= Localization::translate('interactive.field.title'); ?> <span class="text-danger">*</span></label>
+                                                    <input type="text" id="interactive_title" name="interactive_title"
+                                                        class="form-control">
+                                                </div>
+                                            </div>
+                                            <div class="col-md-6">
+                                                <div class="form-group">
+                                                    <label for="content_type"><?= Localization::translate('interactive.field.content_type'); ?> <span class="text-danger">*</span></label>
+                                                    <select id="content_type" name="content_type" class="form-control">
+                                                        <option value=""><?= Localization::translate('interactive.placeholder.select_content_type'); ?></option>
+                                                        <option value="adaptive_learning"><?= Localization::translate('adaptive_learning'); ?></option>
+                                                        <option value="ai_tutoring"><?= Localization::translate('interactive_ai_tutoring'); ?></option>
+                                                        <option value="ar_vr"><?= Localization::translate('ar_vr'); ?></option>
+                                                    </select>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <!-- ✅ Version, Language, Difficulty Level -->
+                                        <div class="row">
+                                            <div class="col-md-4">
+                                                <div class="form-group">
+                                                    <label for="interactive_version"><?= Localization::translate('interactive.field.version'); ?> <span class="text-danger">*</span></label>
+                                                    <input type="text" id="interactive_version" name="version" class="form-control">
+                                                </div>
+                                            </div>
+                                            <div class="col-md-4">
+                                                <div class="form-group">
+                                                    <label for="interactive_language"><?= Localization::translate('interactive.field.language'); ?></label>
+                                                    <select class="form-control" id="interactive_language" name="language">
+                                                        <option value=""><?= Localization::translate('select_language'); ?></option>
+                                                        <?php
+                                                        if (!empty($languageList) && is_array($languageList)) {
+                                                            foreach ($languageList as $lang) {
+                                                                if (isset($lang['id']) && isset($lang['language_name'])) {
+                                                                    $langId = htmlspecialchars($lang['id'], ENT_QUOTES, 'UTF-8');
+                                                                    $langName = htmlspecialchars($lang['language_name'], ENT_QUOTES, 'UTF-8');
+                                                                    echo "<option value=\"$langId\">$langName</option>";
+                                                                }
+                                                            }
+                                                        } else {
+                                                            echo '<option value="">' . Localization::translate('no_languages_available') . '</option>';
+                                                        }
+                                                        ?>
+                                                    </select>
+                                                </div>
+                                            </div>
+                                            <div class="col-md-4">
+                                                <div class="form-group">
+                                                    <label for="difficulty_level"><?= Localization::translate('interactive.field.difficulty_level'); ?></label>
+                                                    <select id="difficulty_level" name="difficulty_level" class="form-control">
+                                                        <option value=""><?= Localization::translate('interactive.placeholder.select_difficulty'); ?></option>
+                                                        <option value="Beginner"><?= Localization::translate('interactive.difficulty.beginner'); ?></option>
+                                                        <option value="Intermediate"><?= Localization::translate('interactive.difficulty.intermediate'); ?></option>
+                                                        <option value="Advanced"><?= Localization::translate('interactive.difficulty.advanced'); ?></option>
+                                                    </select>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <!-- ✅ Description -->
+                                        <div class="row">
+                                            <div class="col-md-12">
+                                                <div class="form-group">
+                                                    <label for="interactive_description"><?= Localization::translate('interactive.field.description'); ?></label>
+                                                    <textarea id="interactive_description" name="description" class="form-control"></textarea>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <!-- ✅ Tags -->
+                                        <div class="row">
+                                            <div class="col-md-12">
+                                                <div class="form-group">
+                                                    <label for="tags"><?= Localization::translate('tags_keywords'); ?> <span class="text-danger">*</span></label>
+                                                    <div class="tag-input-container form-control">
+                                                        <span id="interactiveTagDisplay"></span>
+                                                        <input type="text" id="interactiveTagInput"
+                                                            placeholder="<?= Localization::translate('add_tag_placeholder'); ?>">
+                                                    </div>
+                                                    <input type="hidden" name="tagList" id="interactiveTagList">
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <!-- ✅ Content URL & Embed Code -->
+                                        <div class="row">
+                                            <div class="col-md-6">
+                                                <div class="form-group">
+                                                    <label for="content_url" class="form-label"><?= Localization::translate('interactive.field.content_url'); ?> (https://example.com)</label>
+                                                    <input type="text" id="content_url" name="content_url" class="form-control">
+                                                    <small class="text-muted">Format: https://example.com or http://example.com</small>
+                                                </div>
+                                            </div>
+                                            <div class="col-md-6">
+                                                <div class="form-group">
+                                                    <label for="embed_code"><?= Localization::translate('interactive.field.embed_code'); ?></label>
+                                                    <textarea id="embed_code" name="embed_code" class="form-control" rows="3"></textarea>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <!-- ✅ File Uploads -->
+                                        <div class="row">
+                                            <div class="col-md-4">
+                                                <div class="form-group">
+                                                    <label for="content_file" class="form-label"><?= Localization::translate('interactive.field.content_file'); ?></label>
+                                                    <input type="file" class="form-control" id="content_file" name="content_file">
+                                                    <small class="text-muted">Max size: 50MB. Formats: HTML5, Unity, ZIP, etc.</small>
+                                                    <div id="contentFilePreview" class="mt-2"></div>
+                                                </div>
+                                            </div>
+                                            <div class="col-md-4">
+                                                <div class="form-group">
+                                                    <label for="thumbnail_image" class="form-label"><?= Localization::translate('interactive.field.thumbnail_image'); ?></label>
+                                                    <input type="file" class="form-control" id="thumbnail_image" name="thumbnail_image" accept="image/*">
+                                                    <small class="text-muted">Max size: 10MB. Formats: JPG, PNG, GIF.</small>
+                                                    <div id="thumbnailImagePreview" class="mt-2"></div>
+                                                </div>
+                                            </div>
+                                            <div class="col-md-4">
+                                                <div class="form-group">
+                                                    <label for="metadata_file" class="form-label">Metadata File</label>
+                                                    <input type="file" class="form-control" id="metadata_file" name="metadata_file">
+                                                    <small class="text-muted">Max size: 5MB. Formats: JSON, XML, TXT.</small>
+                                                    <div id="metadataFilePreview" class="mt-2"></div>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <!-- ✅ AI Model & Interaction Type (for AI Tutoring) -->
+                                        <div class="row ai-tutoring-fields" style="display: none;">
+                                            <div class="col-md-6">
+                                                <div class="form-group">
+                                                    <label for="ai_model"><?= Localization::translate('interactive.field.ai_model'); ?></label>
+                                                    <select id="ai_model" name="ai_model" class="form-control">
+                                                        <option value=""><?= Localization::translate('interactive.placeholder.select_ai_model'); ?></option>
+                                                        <option value="gpt4"><?= Localization::translate('interactive.ai_model.gpt4'); ?></option>
+                                                        <option value="claude"><?= Localization::translate('interactive.ai_model.claude'); ?></option>
+                                                        <option value="gemini"><?= Localization::translate('interactive.ai_model.gemini'); ?></option>
+                                                        <option value="custom"><?= Localization::translate('interactive.ai_model.custom'); ?></option>
+                                                    </select>
+                                                </div>
+                                            </div>
+                                            <div class="col-md-6">
+                                                <div class="form-group">
+                                                    <label for="interaction_type"><?= Localization::translate('interactive.field.interaction_type'); ?></label>
+                                                    <select id="interaction_type" name="interaction_type" class="form-control">
+                                                        <option value=""><?= Localization::translate('select'); ?></option>
+                                                        <option value="chat"><?= Localization::translate('interactive.interaction_type.chat'); ?></option>
+                                                        <option value="simulation"><?= Localization::translate('interactive.interaction_type.simulation'); ?></option>
+                                                        <option value="game"><?= Localization::translate('interactive.interaction_type.game'); ?></option>
+                                                        <option value="quiz"><?= Localization::translate('interactive.interaction_type.quiz'); ?></option>
+                                                    </select>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <!-- ✅ AR/VR Platform Fields (for AR/VR) -->
+                                        <div class="row ar-vr-fields" style="display: none;">
+                                            <div class="col-md-6">
+                                                <div class="form-group">
+                                                    <label for="vr_platform"><?= Localization::translate('interactive.field.vr_platform'); ?></label>
+                                                    <select id="vr_platform" name="vr_platform" class="form-control">
+                                                        <option value=""><?= Localization::translate('interactive.placeholder.select_vr_platform'); ?></option>
+                                                        <option value="oculus"><?= Localization::translate('interactive.vr_platform.oculus'); ?></option>
+                                                        <option value="htc_vive"><?= Localization::translate('interactive.vr_platform.htc_vive'); ?></option>
+                                                        <option value="playstation_vr"><?= Localization::translate('interactive.vr_platform.playstation_vr'); ?></option>
+                                                        <option value="web_vr"><?= Localization::translate('interactive.vr_platform.web_vr'); ?></option>
+                                                    </select>
+                                                </div>
+                                            </div>
+                                            <div class="col-md-6">
+                                                <div class="form-group">
+                                                    <label for="ar_platform"><?= Localization::translate('interactive.field.ar_platform'); ?></label>
+                                                    <select id="ar_platform" name="ar_platform" class="form-control">
+                                                        <option value=""><?= Localization::translate('interactive.placeholder.select_ar_platform'); ?></option>
+                                                        <option value="arcore"><?= Localization::translate('interactive.ar_platform.arcore'); ?></option>
+                                                        <option value="arkit"><?= Localization::translate('interactive.ar_platform.arkit'); ?></option>
+                                                        <option value="web_ar"><?= Localization::translate('interactive.ar_platform.web_ar'); ?></option>
+                                                    </select>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <!-- ✅ AI Tutoring Specific Fields -->
+                                        <div class="row ai-tutoring-fields" style="display: none;">
+                                            <div class="col-md-6">
+                                                <div class="form-group">
+                                                    <label for="tutor_personality"><?= Localization::translate('interactive.field.tutor_personality'); ?></label>
+                                                    <select id="tutor_personality" name="tutor_personality" class="form-control">
+                                                        <option value=""><?= Localization::translate('interactive.placeholder.select_tutor_personality'); ?></option>
+                                                        <option value="friendly"><?= Localization::translate('interactive.tutor_personality.friendly'); ?></option>
+                                                        <option value="professional"><?= Localization::translate('interactive.tutor_personality.professional'); ?></option>
+                                                        <option value="encouraging"><?= Localization::translate('interactive.tutor_personality.encouraging'); ?></option>
+                                                        <option value="strict"><?= Localization::translate('interactive.tutor_personality.strict'); ?></option>
+                                                    </select>
+                                                </div>
+                                            </div>
+                                            <div class="col-md-6">
+                                                <div class="form-group">
+                                                    <label for="response_style"><?= Localization::translate('interactive.field.response_style'); ?></label>
+                                                    <select id="response_style" name="response_style" class="form-control">
+                                                        <option value=""><?= Localization::translate('interactive.placeholder.select_response_style'); ?></option>
+                                                        <option value="formal"><?= Localization::translate('interactive.response_style.formal'); ?></option>
+                                                        <option value="casual"><?= Localization::translate('interactive.response_style.casual'); ?></option>
+                                                        <option value="conversational"><?= Localization::translate('interactive.response_style.conversational'); ?></option>
+                                                    </select>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <!-- ✅ Adaptive Learning Specific Fields -->
+                                        <div class="row adaptive-learning-fields" style="display: none;">
+                                            <div class="col-md-6">
+                                                <div class="form-group">
+                                                    <label for="adaptation_algorithm"><?= Localization::translate('interactive.field.adaptation_algorithm'); ?></label>
+                                                    <select id="adaptation_algorithm" name="adaptation_algorithm" class="form-control">
+                                                        <option value=""><?= Localization::translate('interactive.placeholder.select_adaptation_algorithm'); ?></option>
+                                                        <option value="bayesian"><?= Localization::translate('interactive.adaptation_algorithm.bayesian'); ?></option>
+                                                        <option value="irt"><?= Localization::translate('interactive.adaptation_algorithm.irt'); ?></option>
+                                                        <option value="ml"><?= Localization::translate('interactive.adaptation_algorithm.ml'); ?></option>
+                                                    </select>
+                                                </div>
+                                            </div>
+                                            <div class="col-md-6">
+                                                <div class="form-group">
+                                                    <label><?= Localization::translate('interactive.field.assessment_integration'); ?></label><br>
+                                                    <label><input type="radio" name="interactive_assessment_integration" value="Yes">
+                                                        <?= Localization::translate('yes'); ?></label>
+                                                    <label class="ml-3"><input type="radio" name="interactive_assessment_integration" value="No" checked>
+                                                        <?= Localization::translate('no'); ?></label>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <!-- ✅ Learning Objectives & Prerequisites -->
+                                        <div class="row">
+                                            <div class="col-md-6">
+                                                <div class="form-group">
+                                                    <label for="learning_objectives"><?= Localization::translate('interactive.field.learning_objectives'); ?></label>
+                                                    <textarea id="learning_objectives" name="learning_objectives" class="form-control" rows="3"></textarea>
+                                                </div>
+                                            </div>
+                                            <div class="col-md-6">
+                                                <div class="form-group">
+                                                    <label for="prerequisites"><?= Localization::translate('interactive.field.prerequisites'); ?></label>
+                                                    <textarea id="prerequisites" name="prerequisites" class="form-control" rows="3"></textarea>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <!-- ✅ Knowledge Domain & Device Requirements -->
+                                        <div class="row">
+                                            <div class="col-md-6">
+                                                <div class="form-group">
+                                                    <label for="knowledge_domain"><?= Localization::translate('interactive.field.knowledge_domain'); ?></label>
+                                                    <input type="text" id="knowledge_domain" name="knowledge_domain" class="form-control">
+                                                </div>
+                                            </div>
+                                            <div class="col-md-6">
+                                                <div class="form-group">
+                                                    <label for="device_requirements"><?= Localization::translate('interactive.field.device_requirements'); ?></label>
+                                                    <textarea id="device_requirements" name="device_requirements" class="form-control" rows="2"></textarea>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <!-- ✅ Time Limit & Mobile Support -->
+                                        <div class="row">
+                                            <div class="col-md-6">
+                                                <div class="form-group">
+                                                    <label for="interactive_timeLimit" class="form-label"><?= Localization::translate('interactive.field.time_limit'); ?></label>
+                                                    <input type="number" id="interactive_timeLimit" name="timeLimit" class="form-control" min="0" step="1">
+                                                    <small class="text-muted">Time limit in minutes (optional)</small>
+                                                </div>
+                                            </div>
+                                            <div class="col-md-6">
+                                                <div class="form-group">
+                                                    <label><?= Localization::translate('interactive.field.mobile_support'); ?></label><br>
+                                                    <label><input type="radio" name="interactive_mobileSupport" value="Yes">
+                                                        <?= Localization::translate('yes'); ?></label>
+                                                    <label class="ml-3"><input type="radio" name="interactive_mobileSupport" value="No" checked>
+                                                        <?= Localization::translate('no'); ?></label>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <!-- ✅ Progress Tracking -->
+                                        <div class="row">
+                                            <div class="col-md-12">
+                                                <div class="form-group">
+                                                    <label><?= Localization::translate('interactive.field.progress_tracking'); ?></label><br>
+                                                    <label><input type="radio" name="interactive_progress_tracking" value="Yes" checked>
+                                                        <?= Localization::translate('yes'); ?></label>
+                                                    <label class="ml-3"><input type="radio" name="interactive_progress_tracking" value="No">
+                                                        <?= Localization::translate('no'); ?></label>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <!-- ✅ Submit & Cancel Buttons -->
+                                        <div class="modal-footer">
+                                            <button type="submit" class="btn btn-primary"><?= Localization::translate('submit'); ?></button>
+                                            <button type="button" class="btn btn-danger" id="clearInteractiveForm"><?= Localization::translate('cancel'); ?></button>
+                                        </div>
+
+                                    </form>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
                 </div>
 
                 <!-- ✅ Interactive & AI Powered Content Sub-Tabs -->
@@ -2556,8 +2899,8 @@ $languageList = $vlrController->getLanguages();
                         </a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link" data-toggle="tab" href="#chatbots-virtual-assistants">
-                            <?= Localization::translate('chatbots_virtual_assistants'); ?>
+                        <a class="nav-link" data-toggle="tab" href="#ai-tutoring">
+                            <?= Localization::translate('interactive_ai_tutoring'); ?>
                         </a>
                     </li>
                     <li class="nav-item">
@@ -2569,18 +2912,83 @@ $languageList = $vlrController->getLanguages();
 
                 <!-- ✅ Interactive & AI Powered Content Sub-Tab Content -->
                 <div class="tab-content mt-3">
-                    <div class="tab-pane show active" id="adaptive-learning">
-                        <h4><?= Localization::translate('adaptive_learning'); ?></h4>
-                        <p><?= Localization::translate('adaptive_learning_desc'); ?></p>
-                    </div>
-                    <div class="tab-pane" id="chatbots-virtual-assistants">
-                        <h4><?= Localization::translate('chatbots_virtual_assistants'); ?></h4>
-                        <p><?= Localization::translate('chatbots_virtual_assistants_desc'); ?></p>
-                    </div>
-                    <div class="tab-pane" id="ar-vr">
-                        <h4><?= Localization::translate('ar_vr'); ?></h4>
-                        <p><?= Localization::translate('ar_vr_desc'); ?></p>
-                    </div>
+                    <?php
+                    // Validate if $interactiveContent is set
+                    if (!isset($interactiveContent)) {
+                        $interactiveContent = [];
+                    }
+
+                    // Categorize Interactive content
+                    $interactiveCategories = [
+                        'adaptive-learning' => [],
+                        'ai-tutoring' => [],
+                        'ar-vr' => []
+                    ];
+
+                    // Distribute content into categories
+                    foreach ($interactiveContent as $content) {
+                        $category = str_replace('_', '-', $content['content_type']);
+                        if (isset($interactiveCategories[$category])) {
+                            $interactiveCategories[$category][] = $content;
+                        }
+                    }
+                    ?>
+
+                    <?php foreach ($interactiveCategories as $categoryKey => $categoryContent): ?>
+                        <div class="tab-pane <?= $categoryKey === 'adaptive-learning' ? 'show active' : ''; ?>" id="<?= $categoryKey ?>">
+                            <?php
+                            // Get proper translation key for tab header
+                            $tabTranslationKey = '';
+                            switch ($categoryKey) {
+                                case 'ai-tutoring':
+                                    $tabTranslationKey = 'interactive_ai_tutoring';
+                                    break;
+                                case 'adaptive-learning':
+                                    $tabTranslationKey = 'adaptive_learning';
+                                    break;
+                                case 'ar-vr':
+                                    $tabTranslationKey = 'ar_vr';
+                                    break;
+                                default:
+                                    $tabTranslationKey = str_replace('-', '_', $categoryKey);
+                                    break;
+                            }
+                            ?>
+                            <h4><?= Localization::translate($tabTranslationKey); ?></h4>
+                            <div class="row">
+                                <?php if (!empty($categoryContent)): ?>
+                                    <?php foreach ($categoryContent as $interactive): ?>
+                                        <div class="col-md-4">
+                                            <div class="interactive-card">
+                                                <div class="card-body">
+                                                    <div class="interactive-icon">
+                                                        <i class="fas fa-brain"></i>
+                                                    </div>
+                                                    <?php
+                                                    $displayTitle = strlen($interactive['title']) > 20 ? substr($interactive['title'], 0, 17) . '...' : $interactive['title'];
+                                                    ?>
+                                                    <h5 class="interactive-title" title="<?= htmlspecialchars($interactive['title']) ?>">
+                                                        <?= htmlspecialchars($displayTitle) ?>
+                                                    </h5>
+                                                    <div class="interactive-actions">
+                                                        <a href="#" class="edit-interactive" data-interactive='<?= json_encode($interactive); ?>'>
+                                                            <i class="fas fa-edit edit-icon" title="<?= Localization::translate('edit'); ?>"></i>
+                                                        </a>
+                                                        <a href="index.php?controller=VLRController&action=deleteInteractiveContent&id=<?= $interactive['id'] ?>"
+                                                            onclick="return confirm('<?= Localization::translate('delete_confirmation'); ?>');">
+                                                            <i class="fas fa-trash-alt delete-icon" title="<?= Localization::translate('delete'); ?>"></i>
+                                                        </a>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    <?php endforeach; ?>
+                                <?php else: ?>
+                                    <p><?= Localization::translate('no_interactive_content_found'); ?></p>
+                                <?php endif; ?>
+                            </div>
+                        </div>
+                    <?php endforeach; ?>
                 </div>
             </div>
 
@@ -2612,4 +3020,6 @@ $languageList = $vlrController->getLanguages();
 <script src="public/js/feedback_validation.js"></script>
 <script src="public/js/feedback_package.js"></script>
 <script src="public/js/add_feedback_question_on_feedback.js"></script>
+<script src="public/js/interactive_validation.js"></script>
+<script src="public/js/interactive_package.js"></script>
 <?php include 'includes/footer.php'; ?>

@@ -28,14 +28,16 @@ if (session_status() === PHP_SESSION_NONE) {
         <!-- ✅ JavaScript Translations -->
         <script>
         <?php
-        // Load translations for JavaScript
-        $translationsFile = 'locales/en.json';
+        // Load translations for JavaScript - use current language
+        $currentLang = Localization::getCurrentLanguage();
+        $translationsFile = "locales/{$currentLang}.json";
         if (file_exists($translationsFile)) {
             $translations = json_decode(file_get_contents($translationsFile), true);
             // Filter only JavaScript validation translations to reduce size
             $jsTranslations = array_filter($translations, function($key) {
                 return strpos($key, 'js.') === 0 ||
                        strpos($key, 'validation.') === 0 ||
+                       strpos($key, 'assessment.validation.') === 0 ||
                        strpos($key, 'scorm.modal.') === 0 ||
                        strpos($key, 'document.modal.') === 0 ||
                        strpos($key, 'document.category.') === 0 ||

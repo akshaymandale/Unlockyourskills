@@ -1,4 +1,12 @@
 document.addEventListener("DOMContentLoaded", function () {
+    // ✅ Fallback translate function if not available
+    if (typeof translate === 'undefined') {
+        window.translate = function(key) {
+            console.warn('Translation function not available, using key:', key);
+            return key;
+        };
+    }
+
     // ✅ When Audio Modal Opens, Attach Validation
     $('#audioModal').on('shown.bs.modal', function () {
         attachAudioValidation();

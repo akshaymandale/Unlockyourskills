@@ -290,5 +290,177 @@ class QuestionController {
         exit();
     }
 
+    public function save() {
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+            echo "<script>alert('Invalid request method.'); window.location.href='index.php?controller=QuestionController';</script>";
+            return;
+        }
+
+        if (!isset($_SESSION['id'])) {
+            echo "<script>alert('Unauthorized access. Please log in.'); window.location.href='index.php?controller=VLRController';</script>";
+            return;
+        }
+
+        $errors = [];
+        $questionId = $_POST['questionId'] ?? null;
+
+        // Collect and sanitize input
+        $questionText = trim($_POST['questionText'] ?? '');
+        $tags = trim($_POST['tags'] ?? '');
+        $skills = trim($_POST['skills'] ?? '');
+        $level = $_POST['level'] ?? 'Low';
+        $marks = intval($_POST['marks'] ?? 1);
+        $status = $_POST['status'] ?? 'Active';
+        $questionType = $_POST['questionFormType'] ?? 'Objective';
+        $answerCount = intval($_POST['answerCount'] ?? 0);
+        $mediaType = $_POST['questionMediaType'] ?? 'text';
+        $createdBy = $_SESSION['id'] ?? 'Unknown';
+
+        // Validations
+        if (empty($questionText)) $errors[] = "Question text is required.";
+        if (empty($tags)) $errors[] = "Tags are required.";
+        if (!in_array($level, ['Low', 'Medium', 'Hard'])) $errors[] = "Invalid level.";
+        if (!in_array($status, ['Active', 'Inactive'])) $errors[] = "Invalid status.";
+        if (!in_array($questionType, ['Objective', 'Subjective'])) $errors[] = "Invalid question type.";
+        if (!in_array($mediaType, ['text', 'image', 'audio', 'video'])) $errors[] = "Invalid media type.";
+
+        $mediaFilePath = null;
+
+        // Handle file upload with validation
+        if ($mediaType !== 'text' && isset($_FILES['mediaFile']) && $_FILES['mediaFile']['error'] === 0) {
+            $file = $_FILES['mediaFile'];
+
+            // File size validation (10MB = 10 * 1024 * 1024 bytes)
+            $maxSize = 10 * 1024 * 1024;
+            if ($file['size'] > $maxSize) {
+                $errors[] = "File size must be less than 10MB.";
+            }
+
+            // File type validation based on media type
+            $allowedTypes = [
+                'image' => ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'],
+                'audio' => ['audio/mp3', 'audio/wav', 'audio/ogg', 'audio/mpeg'],
+                'video' => ['video/mp4', 'video/webm', 'video/ogg', 'video/avi']
+            ];
+
+            if (isset($allowedTypes[$mediaType])) {
+                $fileMimeType = mime_content_type($file['tmp_name']);
+                if (!in_array($fileMimeType, $allowedTypes[$mediaType])) {
+                    $expectedFormats = [
+                        'image' => 'JPEG, PNG, GIF, WebP',
+                        'audio' => 'MP3, WAV, OGG',
+                        'video' => 'MP4, WebM, OGG, AVI'
+                    ];
+                    $errors[] = "Invalid file type for {$mediaType}. Expected: {$expectedFormats[$mediaType]}";
+                }
+            }
+
+            if (empty($errors)) {
+                $targetDir = "uploads/media/";
+                if (!is_dir($targetDir)) mkdir($targetDir, 0777, true);
+                $fileName = basename($file["name"]);
+                $mediaFilePath = $targetDir . time() . "_" . $fileName;
+
+                if (!move_uploaded_file($file["tmp_name"], $mediaFilePath)) {
+                    $errors[] = "Media file upload failed.";
+                }
+            }
+        }
+
+        if ($questionType === 'Objective') {
+            $options = $_POST['options'] ?? [];
+            if (count($options) < 1) {
+                $errors[] = "At least one option is required.";
+            }
+        }
+
+        if (empty($errors)) {
+            $data = [
+                'question_text' => $questionText,
+                'tags' => $tags,
+                'competency_skills' => $skills,
+                'level' => $level,
+                'marks' => $marks,
+                'status' => $status,
+                'question_type' => $questionType,
+                'answer_count' => $answerCount,
+                'media_type' => $mediaType,
+                'media_file' => $mediaFilePath,
+                'created_by' => $createdBy
+            ];
+
+            if ($questionId) {
+                // Update existing question
+                $result = $this->questionModel->updateQuestion($questionId, $data);
+                $finalQuestionId = $questionId;
+            } else {
+                // Insert new question
+                $finalQuestionId = $this->questionModel->insertQuestion($data);
+                $result = $finalQuestionId !== false;
+            }
+
+            if ($questionType === 'Objective' && $finalQuestionId && isset($options)) {
+                if ($questionId) {
+                    // Delete existing options for update
+                    $this->questionModel->deleteOptionsByQuestionId($finalQuestionId);
+                }
+
+                foreach ($options as $index => $option) {
+                    $optionText = trim($option['text']);
+                    $isCorrect = isset($option['correct']) ? 1 : 0;
+
+                    if (!empty($optionText)) {
+                        $this->questionModel->insertOption([
+                            'question_id' => $finalQuestionId,
+                            'option_index' => $index,
+                            'option_text' => $optionText,
+                            'is_correct' => $isCorrect
+                        ]);
+                    }
+                }
+            }
+
+            $message = $result ? ($questionId ? "Question updated successfully." : "Question added successfully.") : "Failed to save question.";
+            echo "<script>alert('$message'); window.location.href='index.php?controller=QuestionController';</script>";
+            exit();
+        } else {
+            $errorMsg = implode("\\n", $errors);
+            echo "<script>alert('Error(s):\\n$errorMsg'); window.location.href='index.php?controller=QuestionController';</script>";
+            exit();
+        }
+    }
+
+    public function getQuestionById() {
+        // Simple test first - just return a basic response
+        header('Content-Type: application/json');
+
+        if (!isset($_GET['id']) || !is_numeric($_GET['id'])) {
+            echo json_encode(['error' => 'Invalid question ID']);
+            exit;
+        }
+
+        $id = (int)$_GET['id'];
+
+        try {
+            $question = $this->questionModel->getQuestionById($id);
+            $options = $this->questionModel->getOptionsByQuestionId($id);
+
+            if (!$question) {
+                echo json_encode(['error' => 'Question not found']);
+                exit;
+            }
+
+            echo json_encode([
+                'success' => true,
+                'question' => $question,
+                'options' => $options
+            ]);
+            exit;
+        } catch (Exception $e) {
+            echo json_encode(['error' => 'Database error: ' . $e->getMessage()]);
+            exit;
+        }
+    }
+
 
 }
