@@ -22,6 +22,7 @@ class VLRController
         $audioPackages = $this->VLRModel->getAudioPackages();
         $videoPackages = $this->VLRModel->getVideoPackages();
         $imagePackages = $this->VLRModel->getImagePackages();
+        $interactiveContent = $this->VLRModel->getInteractiveContent();
         $languageList = $this->VLRModel->getLanguages();
         //echo '<pre>'; print_r($audioPackages); die;
         require 'views/vlr.php';
@@ -540,8 +541,8 @@ class VLRController
             'num_attempts' => $numAttempts,
             'passing_percentage' => $passingPercentage,
             'time_limit' => $timeLimit,
-            'negative_marking' => $negativeMarking === 'Yes' ? 1 : 0,
-            'negative_marking_percentage' => $negativeMarking === 'Yes' ? (int) $negativeMarkingPercentage : null,
+            'negative_marking' => $negativeMarking, // Send 'Yes' or 'No' directly to match enum
+            'negative_marking_percentage' => $negativeMarking === 'Yes' ? (int) $negativeMarkingPercentage : 0,
             'assessment_type' => $assessmentType,
             'num_questions_to_display' => $assessmentType === 'Dynamic' ? (int) $numQuestionsToDisplay : null,
             'created_by' => $createdBy,
@@ -1106,6 +1107,137 @@ private function redirectWithAlert($message)
         } else {
             echo "<script>alert('Invalid request.'); window.location.href='index.php?controller=VLRController';</script>";
         }
+    }
+
+    // ✅ Interactive & AI Powered Content Methods
+
+    public function addOrEditInteractiveContent()
+    {
+        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            $interactiveId = $_POST['interactive_id'] ?? '';
+
+            // Handle file uploads
+            $contentFile = null;
+            $thumbnailImage = null;
+            $metadataFile = null;
+
+            // Handle content file upload
+            if (isset($_FILES['content_file']) && $_FILES['content_file']['error'] === UPLOAD_ERR_OK) {
+                $contentFile = $this->handleInteractiveFileUpload($_FILES['content_file'], 'content');
+                if (!$contentFile) {
+                    $this->redirectWithAlert("Content file upload failed.");
+                    return;
+                }
+            } else if (!empty($_POST['existing_content_file'])) {
+                $contentFile = $_POST['existing_content_file'];
+            }
+
+            // Handle thumbnail image upload
+            if (isset($_FILES['thumbnail_image']) && $_FILES['thumbnail_image']['error'] === UPLOAD_ERR_OK) {
+                $thumbnailImage = $this->handleInteractiveFileUpload($_FILES['thumbnail_image'], 'thumbnail');
+                if (!$thumbnailImage) {
+                    $this->redirectWithAlert("Thumbnail image upload failed.");
+                    return;
+                }
+            } else if (!empty($_POST['existing_thumbnail_image'])) {
+                $thumbnailImage = $_POST['existing_thumbnail_image'];
+            }
+
+            // Handle metadata file upload
+            if (isset($_FILES['metadata_file']) && $_FILES['metadata_file']['error'] === UPLOAD_ERR_OK) {
+                $metadataFile = $this->handleInteractiveFileUpload($_FILES['metadata_file'], 'metadata');
+                if (!$metadataFile) {
+                    $this->redirectWithAlert("Metadata file upload failed.");
+                    return;
+                }
+            } else if (!empty($_POST['existing_metadata_file'])) {
+                $metadataFile = $_POST['existing_metadata_file'];
+            }
+
+            // Prepare data
+            $data = [
+                'title' => $_POST['interactive_title'],
+                'content_type' => $_POST['content_type'],
+                'description' => $_POST['description'] ?? '',
+                'tags' => $_POST['tagList'] ?? '',
+                'version' => $_POST['version'],
+                'language' => $_POST['language'] ?? '',
+                'time_limit' => !empty($_POST['timeLimit']) ? (int)$_POST['timeLimit'] : null,
+                'mobile_support' => $_POST['interactive_mobileSupport'],
+                'content_url' => $_POST['content_url'] ?? '',
+                'embed_code' => $_POST['embed_code'] ?? '',
+                'ai_model' => $_POST['ai_model'] ?? '',
+                'interaction_type' => $_POST['interaction_type'] ?? '',
+                'difficulty_level' => $_POST['difficulty_level'] ?? '',
+                'learning_objectives' => $_POST['learning_objectives'] ?? '',
+                'prerequisites' => $_POST['prerequisites'] ?? '',
+                'content_file' => $contentFile,
+                'thumbnail_image' => $thumbnailImage,
+                'metadata_file' => $metadataFile,
+                'vr_platform' => $_POST['vr_platform'] ?? '',
+                'ar_platform' => $_POST['ar_platform'] ?? '',
+                'device_requirements' => $_POST['device_requirements'] ?? '',
+                'tutor_personality' => $_POST['tutor_personality'] ?? '',
+                'response_style' => $_POST['response_style'] ?? '',
+                'knowledge_domain' => $_POST['knowledge_domain'] ?? '',
+                'adaptation_algorithm' => $_POST['adaptation_algorithm'] ?? '',
+                'assessment_integration' => $_POST['interactive_assessment_integration'] ?? 'No',
+                'progress_tracking' => $_POST['interactive_progress_tracking'] ?? 'Yes',
+                'created_by' => $_SESSION['id']
+            ];
+
+            if ($interactiveId) {
+                // Update existing interactive content
+                $result = $this->VLRModel->updateInteractiveContent($interactiveId, $data);
+                $message = $result ? "Interactive content updated successfully." : "Failed to update interactive content.";
+            } else {
+                // Insert new interactive content
+                $result = $this->VLRModel->insertInteractiveContent($data);
+                $message = $result ? "Interactive content added successfully." : "Failed to insert interactive content.";
+            }
+
+            echo "<script>alert('$message'); window.location.href='index.php?controller=VLRController';</script>";
+        } else {
+            echo "<script>alert('Invalid request parameters.'); window.location.href='index.php?controller=VLRController';</script>";
+        }
+    }
+
+    private function handleInteractiveFileUpload($file, $type)
+    {
+        $uploadDir = "uploads/interactive/";
+
+        // Create directory if it doesn't exist
+        if (!is_dir($uploadDir)) {
+            mkdir($uploadDir, 0755, true);
+        }
+
+        $ext = pathinfo($file['name'], PATHINFO_EXTENSION);
+        $uniqueName = uniqid("interactive_{$type}_") . "." . $ext;
+        $targetPath = $uploadDir . $uniqueName;
+
+        // Validate file size (50MB limit)
+        if ($file['size'] > 50 * 1024 * 1024) {
+            return false;
+        }
+
+        if (!move_uploaded_file($file['tmp_name'], $targetPath)) {
+            return false;
+        }
+
+        return $uniqueName;
+    }
+
+    public function deleteInteractiveContent()
+    {
+        if (isset($_GET['id'])) {
+            $id = $_GET['id'];
+            $result = $this->VLRModel->deleteInteractiveContent($id);
+            $message = $result ? "Interactive content deleted successfully." : "Failed to delete interactive content.";
+        } else {
+            $message = "Invalid request.";
+        }
+
+        echo "<script>alert('$message'); window.location.href='index.php?controller=VLRController';</script>";
     }
 
 }

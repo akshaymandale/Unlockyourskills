@@ -1,4 +1,12 @@
 document.addEventListener("DOMContentLoaded", function () {
+    // ✅ Fallback translate function if not available
+    if (typeof translate === 'undefined') {
+        window.translate = function(key) {
+            console.warn('Translation function not available, using key:', key);
+            return key;
+        };
+    }
+
     // ✅ When Video Modal Opens, Attach Validation
     $('#videoModal').on('shown.bs.modal', function () {
         attachVideoValidation();

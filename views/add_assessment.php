@@ -72,8 +72,7 @@
 
                         <!-- Add Question Button on the right -->
                         <div class="col-md-auto">
-                            <button type="button" class="btn btn-sm btn-primary"
-                                onclick="window.location.href='index.php?controller=QuestionController&action=add'"
+                            <button type="button" class="btn btn-sm btn-primary" data-bs-toggle="modal" data-bs-target="#addAssessmentQuestionModal"
                                 title="<?= Localization::translate('buttons_add_question_tooltip'); ?>">
                                 <?= Localization::translate('buttons_add_question'); ?>
                             </button>
@@ -144,11 +143,11 @@
                                     <td><?= htmlspecialchars($question['difficulty']); ?></td>
                                     <td><?= htmlspecialchars($question['tags']); ?></td>
                                     <td>
-                                        <a href="index.php?controller=QuestionController&action=edit&id=<?= $question['id']; ?>"
-                                            class="btn theme-btn-primary"
+                                        <button type="button" class="btn theme-btn-primary edit-question-btn"
+                                            data-question-id="<?= $question['id']; ?>"
                                             title="<?= Localization::translate('question_grid_edit'); ?>">
                                             <i class="fas fa-edit"></i>
-                                        </a>
+                                        </button>
 
                                         <a href="index.php?controller=QuestionController&action=delete&id=<?= $question['id']; ?>"
                                             class="btn theme-btn-danger"
@@ -206,6 +205,157 @@
         </div>
     </div>
 
+    <!-- ✅ Add Assessment Question Modal -->
+    <div class="modal fade" id="addAssessmentQuestionModal" tabindex="-1"
+        aria-labelledby="addAssessmentQuestionModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-xl modal-dialog-scrollable">
+            <div class="modal-content">
+                <form id="assessmentQuestionForm" enctype="multipart/form-data" method="POST"
+                    action="index.php?controller=QuestionController&action=save">
+
+                    <!-- Hidden ID for editing -->
+                    <input type="hidden" name="questionId" id="questionId" value="">
+
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="addAssessmentQuestionModalLabel"><?= Localization::translate('buttons_add_question'); ?></h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="<?= Localization::translate('buttons_close'); ?>"></button>
+                    </div>
+
+                    <div class="modal-body">
+                        <!-- Question Text -->
+                        <div class="row mb-3">
+                            <div class="col-md-8">
+                                <label for="questionText" class="form-label"><?= Localization::translate('question_label'); ?>
+                                    <span class="text-danger">*</span></label>
+                                <textarea id="questionText" name="questionText" class="form-control" rows="3"></textarea>
+                            </div>
+
+                            <div class="col-md-4">
+                                <label for="tagsInput" class="form-label"><?= Localization::translate('tags_keywords'); ?> <span
+                                        class="text-danger">*</span></label>
+                                <div id="tagsContainer" class="tag-container"></div>
+                                <input type="text" id="tagsInput" class="form-control"
+                                    placeholder="<?= Localization::translate('type_and_press_enter'); ?>">
+                                <input type="hidden" name="tags" id="tagsHidden" value="">
+                            </div>
+                        </div>
+
+                        <!-- Skills, Level, Marks -->
+                        <div class="row mb-3">
+                            <div class="col-md-4">
+                                <label for="skillsInput" class="form-label"><?= Localization::translate('competency_skills'); ?></label>
+                                <div id="skillsContainer" class="tag-container"></div>
+                                <input type="text" id="skillsInput" class="form-control"
+                                    placeholder="<?= Localization::translate('type_and_press_enter'); ?>">
+                                <input type="hidden" name="skills" id="skillsHidden" value="">
+                            </div>
+
+                            <div class="col-md-4">
+                                <label for="level" class="form-label"><?= Localization::translate('question_level'); ?></label>
+                                <select id="level" name="level" class="form-select">
+                                    <?php foreach (['Low', 'Medium', 'Hard'] as $level): ?>
+                                        <option value="<?= $level ?>">
+                                            <?= Localization::translate(strtolower($level)) ?>
+                                        </option>
+                                    <?php endforeach; ?>
+                                </select>
+                            </div>
+
+                            <div class="col-md-4">
+                                <label for="marks" class="form-label"><?= Localization::translate('marks_per_question'); ?></label>
+                                <select id="marks" name="marks" class="form-select">
+                                    <?php for ($i = 1; $i <= 10; $i++): ?>
+                                        <option value="<?= $i ?>" <?= $i == 1 ? 'selected' : '' ?>><?= $i ?></option>
+                                    <?php endfor; ?>
+                                </select>
+                            </div>
+                        </div>
+
+                        <!-- Status, Question Type, Answer Count -->
+                        <div class="row mb-3">
+                            <div class="col-md-4">
+                                <label class="form-label d-block"><?= Localization::translate('status'); ?></label>
+                                <div class="form-check form-check-inline">
+                                    <input class="form-check-input" type="radio" name="status" id="active" value="Active" checked>
+                                    <label class="form-check-label" for="active"><?= Localization::translate('active'); ?></label>
+                                </div>
+                                <div class="form-check form-check-inline">
+                                    <input class="form-check-input" type="radio" name="status" id="inactive" value="Inactive">
+                                    <label class="form-check-label" for="inactive"><?= Localization::translate('inactive'); ?></label>
+                                </div>
+                            </div>
+
+                            <div class="col-md-4">
+                                <label class="form-label d-block"><?= Localization::translate('question_type'); ?></label>
+                                <div class="form-check form-check-inline">
+                                    <input class="form-check-input" type="radio" name="questionFormType" id="objective" value="Objective" checked>
+                                    <label class="form-check-label" for="objective"><?= Localization::translate('objective'); ?></label>
+                                </div>
+                                <div class="form-check form-check-inline">
+                                    <input class="form-check-input" type="radio" name="questionFormType" id="subjective" value="Subjective">
+                                    <label class="form-check-label" for="subjective"><?= Localization::translate('subjective'); ?></label>
+                                </div>
+                            </div>
+
+                            <div class="col-md-4 objective-only">
+                                <label for="answerCount" class="form-label"><?= Localization::translate('how_many_answer_options'); ?></label>
+                                <select id="answerCount" name="answerCount" class="form-select">
+                                    <?php for ($i = 1; $i <= 10; $i++): ?>
+                                        <option value="<?= $i ?>" <?= $i == 1 ? 'selected' : '' ?>><?= $i ?></option>
+                                    <?php endfor; ?>
+                                </select>
+                            </div>
+                        </div>
+
+                        <!-- Media Type and Upload -->
+                        <div class="row mb-3 objective-only">
+                            <div class="col-md-6">
+                                <label for="questionMediaType" class="form-label"><?= Localization::translate('question_media_type'); ?></label>
+                                <select id="questionMediaType" name="questionMediaType" class="form-select">
+                                    <?php foreach (['text', 'image', 'audio', 'video'] as $type): ?>
+                                        <option value="<?= $type ?>">
+                                            <?= Localization::translate($type); ?>
+                                        </option>
+                                    <?php endforeach; ?>
+                                </select>
+                            </div>
+
+                            <div class="col-md-6 d-none" id="mediaUploadContainer">
+                                <label for="mediaFile" class="form-label"><?= Localization::translate('upload_media'); ?> <span class="text-danger">*</span></label>
+                                <input type="file" id="mediaFile" name="mediaFile" class="form-control" accept="">
+                                <div id="mediaPreview" class="mt-2"></div>
+                            </div>
+                        </div>
+
+                        <!-- Answer Options -->
+                        <div id="answerOptionsContainer" class="objective-only">
+                            <h6><?= Localization::translate('answer_options'); ?></h6>
+                            <?php for ($i = 1; $i <= 10; $i++): ?>
+                                <div class="mb-3 option-block <?= $i > 1 ? 'd-none' : '' ?>" data-index="<?= $i ?>">
+                                    <label for="option_<?= $i ?>" class="form-label"><?= Localization::translate('option'); ?> <?= $i ?> <span class="text-danger">*</span></label>
+                                    <textarea id="option_<?= $i ?>" name="options[<?= $i ?>][text]" rows="2" maxlength="500" class="form-control option-textarea"></textarea>
+                                    <small class="text-muted"><span id="charCount_<?= $i ?>">0</span>/500</small>
+
+                                    <div class="form-check mt-2">
+                                        <input class="form-check-input" type="checkbox" name="options[<?= $i ?>][correct]" id="correct_<?= $i ?>">
+                                        <label class="form-check-label" for="correct_<?= $i ?>"><?= Localization::translate('correct_answer'); ?></label>
+                                    </div>
+                                </div>
+                            <?php endfor; ?>
+                        </div>
+                    </div>
+
+                    <div class="modal-footer">
+                        <button type="submit" class="btn btn-success" id="assessmentQuestionSubmitBtn"><?= Localization::translate('submit'); ?></button>
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal"><?= Localization::translate('cancel'); ?></button>
+                    </div>
+
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <script src="public/js/assessment_question_validation.js"></script>
     <script src="public/js/assessment_question.js"></script>
 
     <?php include 'includes/footer.php'; ?>

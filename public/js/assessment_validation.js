@@ -95,6 +95,11 @@ document.addEventListener("DOMContentLoaded", function () {
             if (!validateAssessmentField(questionsField)) isValid = false;
         }
 
+        // Validate selected questions
+        if (!validateSelectedQuestions()) {
+            isValid = false;
+        }
+
         return isValid;
     }
 
@@ -108,7 +113,7 @@ document.addEventListener("DOMContentLoaded", function () {
         switch (name) {
             case "assessment_assessmentTitle":
                 if (value === "") {
-                    showError(field, "Title is required.");
+                    showError(field, translate("assessment.validation.title_required"));
                     isValid = false;
                 } else {
                     hideError(field);
@@ -123,13 +128,17 @@ document.addEventListener("DOMContentLoaded", function () {
                 break;
             case "assessment_numberOfQuestions":
                     if (value === "" || isNaN(value)) {
-                        showError(field, "This field requires a numeric value.");
+                        showError(field, translate("assessment.validation.num_questions_required"));
                         isValid = false;
                     } else {
                         const selectedCount = parseInt(document.getElementById("assessment_selectedQuestionCount").value, 10) || 0;
                         const requestedCount = parseInt(value, 10);
                         if (requestedCount > selectedCount) {
-                            showError(field, `Cannot exceed ${selectedCount} selected question${selectedCount !== 1 ? 's' : ''}.`);
+                            const plural = selectedCount !== 1 ? 's' : '';
+                            showError(field, translate("assessment.validation.num_questions_exceeds", {
+                                count: selectedCount,
+                                plural: plural
+                            }));
                             isValid = false;
                         } else {
                             hideError(field);
@@ -140,7 +149,7 @@ document.addEventListener("DOMContentLoaded", function () {
             case "assessment_passingPercentage":
                 const num = parseFloat(value);
                 if (value === "" || isNaN(num) || num < 0 || num > 100) {
-                    showError(field, "Passing percentage must be between 0 and 100.");
+                    showError(field, translate("assessment.validation.passing_percentage_invalid"));
                     isValid = false;
                 } else {
                     hideError(field);
@@ -149,7 +158,7 @@ document.addEventListener("DOMContentLoaded", function () {
 
             case "assessment_negativeMarkingPercentage":
                 if (value === "") {
-                    showError(field, "Percentage is required.");
+                    showError(field, translate("assessment.validation.negative_percentage_required"));
                     isValid = false;
                 } else {
                     hideError(field);
@@ -163,11 +172,60 @@ document.addEventListener("DOMContentLoaded", function () {
     function validateTagInput() {
         const tags = hiddenTagList.value.split(",").filter(Boolean);
         if (tags.length === 0) {
-            showError(tagInput, "Tags/keywords are required.");
+            showError(tagInput, translate("assessment.validation.tags_required"));
             return false;
         } else {
             hideError(tagInput);
             return true;
+        }
+    }
+
+    function validateSelectedQuestions() {
+        const selectedQuestionIds = document.getElementById("assessment_selectedQuestionIds");
+        const selectedQuestionCount = document.getElementById("assessment_selectedQuestionCount");
+        const addQuestionBtn = document.getElementById("assessment_addQuestionBtn");
+
+        // Clear any existing error
+        hideSelectedQuestionsError();
+
+        if (!selectedQuestionIds || !selectedQuestionIds.value.trim()) {
+            showSelectedQuestionsError("assessment.validation.questions_required");
+            return false;
+        }
+
+        const questionCount = parseInt(selectedQuestionCount.value) || 0;
+        if (questionCount === 0) {
+            showSelectedQuestionsError("assessment.validation.questions_required");
+            return false;
+        }
+
+        return true;
+    }
+
+    function showSelectedQuestionsError(translationKey) {
+        const addQuestionBtn = document.getElementById("assessment_addQuestionBtn");
+        if (!addQuestionBtn) return;
+
+        // Remove any existing error message
+        hideSelectedQuestionsError();
+
+        // Get translated message
+        const message = translate(translationKey);
+
+        // Create error element
+        const errorElement = document.createElement("div");
+        errorElement.classList.add("selected-questions-error", "text-danger", "mt-1");
+        errorElement.style.fontSize = "12px";
+        errorElement.textContent = message;
+
+        // Insert error message after the Add Question button
+        addQuestionBtn.parentNode.insertBefore(errorElement, addQuestionBtn.nextSibling);
+    }
+
+    function hideSelectedQuestionsError() {
+        const existingError = document.querySelector(".selected-questions-error");
+        if (existingError) {
+            existingError.remove();
         }
     }
 
@@ -197,10 +255,17 @@ document.addEventListener("DOMContentLoaded", function () {
         document.querySelectorAll("#assessment_assessmentForm .is-invalid").forEach(el => el.classList.remove("is-invalid"));
         document.getElementById("assessment_tagList").value = "";
 
+        // Clear selected questions error
+        hideSelectedQuestionsError();
+
         // Ensure the backdrop is removed correctly
         let backdrop = document.querySelector('.modal-backdrop');
         if (backdrop) {
             backdrop.remove();
         }
     }
+
+    // Make functions globally accessible
+    window.validateAssessmentForm = validateAssessmentForm;
+    window.hideSelectedQuestionsError = hideSelectedQuestionsError;
 });

@@ -14,8 +14,29 @@ if (!class_exists('Database')) {
         public function connect() {
             if ($this->conn === null) {
                 try {
-                    $this->conn = new PDO("mysql:host=" . $this->host . ";dbname=" . $this->db_name, $this->username, $this->password);
-                    $this->conn->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+                    // Try different connection methods for XAMPP
+                    $dsn_options = [
+                        "mysql:host=" . $this->host . ";dbname=" . $this->db_name,
+                        "mysql:host=" . $this->host . ";port=3306;dbname=" . $this->db_name,
+                        "mysql:unix_socket=/Applications/XAMPP/xamppfiles/var/mysql/mysql.sock;dbname=" . $this->db_name
+                    ];
+
+                    $connected = false;
+                    foreach ($dsn_options as $dsn) {
+                        try {
+                            $this->conn = new PDO($dsn, $this->username, $this->password);
+                            $this->conn->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+                            $connected = true;
+                            break;
+                        } catch (PDOException $e) {
+                            // Try next option
+                            continue;
+                        }
+                    }
+
+                    if (!$connected) {
+                        throw new PDOException("Could not connect to database with any method");
+                    }
                 } catch (PDOException $exception) {
                     die("Database Connection Error: " . $exception->getMessage());
                 }

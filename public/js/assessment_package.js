@@ -307,8 +307,9 @@ document.addEventListener("DOMContentLoaded", function () {
             return;
         }
 
-        alert("Form submitted successfully!");
-        assessmentModal.hide();
+        // If validation passes, submit the form
+        console.log("Form validation passed. Submitting...");
+        assessmentForm.submit();
     });
 
     function showSelectedQuestionsGrid() {
