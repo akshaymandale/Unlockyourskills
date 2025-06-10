@@ -250,9 +250,9 @@ document.addEventListener("DOMContentLoaded", function () {
     }
 
     // ✅ Open Modal for Editing Non-SCORM Content
-    document.querySelectorAll(".edit-nonscorm").forEach(button => {
+    document.querySelectorAll(".edit-non-scorm").forEach(button => {
         button.addEventListener("click", function () {
-            const nonScormData = JSON.parse(this.dataset.nonscorm);
+            const nonScormData = JSON.parse(this.dataset.package);
 
             // Check if elements exist before setting values
             if (nonScormId) nonScormId.value = nonScormData.id || "";

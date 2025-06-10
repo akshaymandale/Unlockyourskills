@@ -758,5 +758,17 @@
     "nonscorm.mobile.android": "Android",
     "js.validation.invalid_flash_version": "Please enter a valid Flash version (e.g., 11.2.0).",
     "js.validation.invalid_unity_version": "Please enter a valid Unity version (e.g., 2022.3.0f1).",
-    "js.validation.invalid_os_version": "Please enter a valid OS version (e.g., iOS 14.0, Android 8.0)."
+    "js.validation.invalid_os_version": "Please enter a valid OS version (e.g., iOS 14.0, Android 8.0).",
+    "js.validation.version_required": "Version is required.",
+    "js.validation.content_type_required": "Content type is required.",
+    "js.validation.nonscorm_title_required": "Non-SCORM title is required.",
+    "js.validation.nonscorm_tags_required": "Tags are required.",
+    "js.validation.nonscorm_file_required": "File is required.",
+    "js.validation.nonscorm_url_required": "URL is required.",
+    "js.validation.nonscorm_url_invalid": "Please enter a valid URL (e.g., https://example.com).",
+    "js.validation.flash_version_required": "Flash version is required.",
+    "js.validation.unity_version_required": "Unity version is required.",
+    "js.validation.mobile_platform_required": "Mobile platform is required.",
+    "js.validation.app_store_url_invalid": "Please enter a valid App Store URL.",
+    "js.validation.minimum_os_version_required": "Minimum OS version is required."
 }

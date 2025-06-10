@@ -697,5 +697,20 @@
     "no_flash_content_found": "कोई Flash सामग्री नहीं मिली।",
     "no_unity_content_found": "कोई Unity सामग्री नहीं मिली।",
     "no_custom_web_found": "कोई कस्टम वेब ऐप नहीं मिला।",
-    "no_mobile_app_found": "कोई मोबाइल ऐप नहीं मिला।"
+    "no_mobile_app_found": "कोई मोबाइल ऐप नहीं मिला।",
+    "js.validation.invalid_flash_version": "कृपया एक वैध फ्लैश संस्करण दर्ज करें (जैसे, 11.2.0)।",
+    "js.validation.invalid_unity_version": "कृपया एक वैध यूनिटी संस्करण दर्ज करें (जैसे, 2022.3.0f1)।",
+    "js.validation.invalid_os_version": "कृपया एक वैध OS संस्करण दर्ज करें (जैसे, iOS 14.0, Android 8.0)।",
+    "js.validation.version_required": "संस्करण आवश्यक है।",
+    "js.validation.content_type_required": "सामग्री प्रकार आवश्यक है।",
+    "js.validation.nonscorm_title_required": "नॉन-स्कॉर्म शीर्षक आवश्यक है।",
+    "js.validation.nonscorm_tags_required": "टैग आवश्यक हैं।",
+    "js.validation.nonscorm_file_required": "फ़ाइल आवश्यक है।",
+    "js.validation.nonscorm_url_required": "URL आवश्यक है।",
+    "js.validation.nonscorm_url_invalid": "कृपया एक वैध URL दर्ज करें (जैसे, https://example.com)।",
+    "js.validation.flash_version_required": "फ्लैश संस्करण आवश्यक है।",
+    "js.validation.unity_version_required": "यूनिटी संस्करण आवश्यक है।",
+    "js.validation.mobile_platform_required": "मोबाइल प्लेटफॉर्म आवश्यक है।",
+    "js.validation.app_store_url_invalid": "कृपया एक वैध ऐप स्टोर URL दर्ज करें।",
+    "js.validation.minimum_os_version_required": "न्यूनतम OS संस्करण आवश्यक है।"
 }

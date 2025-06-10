@@ -265,10 +265,32 @@ document.addEventListener("DOMContentLoaded", function () {
 
     // Translation function (fallback if not available)
     function translate(key) {
-        // This should integrate with your existing translation system
+        // Use global translation function if available
         if (typeof window.translate === 'function') {
             return window.translate(key);
         }
-        return null;
+
+        // Use global translations object if available
+        if (typeof window.translations === 'object' && window.translations[key]) {
+            return window.translations[key];
+        }
+
+        // Fallback messages for non-SCORM validation
+        const fallbacks = {
+            'js.validation.version_required': 'Version is required.',
+            'js.validation.content_type_required': 'Content type is required.',
+            'js.validation.nonscorm_title_required': 'Non-SCORM title is required.',
+            'js.validation.nonscorm_tags_required': 'Tags are required.',
+            'js.validation.nonscorm_file_required': 'File is required.',
+            'js.validation.nonscorm_url_required': 'URL is required.',
+            'js.validation.nonscorm_url_invalid': 'Please enter a valid URL (e.g., https://example.com).',
+            'js.validation.flash_version_required': 'Flash version is required.',
+            'js.validation.unity_version_required': 'Unity version is required.',
+            'js.validation.mobile_platform_required': 'Mobile platform is required.',
+            'js.validation.app_store_url_invalid': 'Please enter a valid App Store URL.',
+            'js.validation.minimum_os_version_required': 'Minimum OS version is required.'
+        };
+
+        return fallbacks[key] || key;
     }
 });
