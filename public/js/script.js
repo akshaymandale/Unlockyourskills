@@ -239,6 +239,7 @@ document.addEventListener("DOMContentLoaded", function () {
 
     let mainTabs = document.querySelectorAll("#vlrTabs a"); // Main tabs
     let scormTabs = document.querySelectorAll("#scormSubTabs a"); // SCORM sub-tabs
+    let nonScormTabs = document.querySelectorAll("#nonScormSubTabs a"); // Non-SCORM sub-tabs
     let documentTabs = document.querySelectorAll("#documentSubTabs a"); // Document sub-tabs
     let externalTabs = document.querySelectorAll("#externalSubTabs a"); // External Content sub-tabs
     let interactiveTabs = document.querySelectorAll("#interactiveSubTabs a"); // Interactive & AI sub-tabs
@@ -279,6 +280,19 @@ document.addEventListener("DOMContentLoaded", function () {
                     if (activeSubPane) {
                         activeSubPane.classList.add("show", "active");
                         activeSubPane.style.display = "block";
+                    }
+                }
+            }
+
+            // ✅ IF RETURNING TO NON-SCORM, ENSURE SUB-TAB CONTENT IS SHOWN ✅
+            if (targetId === "non-scorm") {
+                let activeNonScormSubTab = document.querySelector("#nonScormSubTabs a.active");
+                if (activeNonScormSubTab) {
+                    let activeNonScormSubTabId = activeNonScormSubTab.getAttribute("href").substring(1);
+                    let activeNonScormSubPane = document.getElementById(activeNonScormSubTabId);
+                    if (activeNonScormSubPane) {
+                        activeNonScormSubPane.classList.add("show", "active");
+                        activeNonScormSubPane.style.display = "block";
                     }
                 }
             }
@@ -350,6 +364,35 @@ document.addEventListener("DOMContentLoaded", function () {
             }
 
             // Add active class to clicked SCORM sub-tab
+            this.classList.add("active");
+        });
+    });
+
+    // ✅ NON-SCORM SUB-TABS FUNCTIONALITY ✅
+    nonScormTabs.forEach(tab => {
+        tab.addEventListener("click", function (event) {
+            event.preventDefault();
+            const targetId = this.getAttribute("href").substring(1);
+
+            // Hide all Non-SCORM sub-tab panes
+            document.querySelectorAll("#non-scorm .tab-pane").forEach(pane => {
+                pane.classList.remove("show", "active");
+                pane.style.display = "none";
+            });
+
+            // Remove active class from all Non-SCORM sub-tabs
+            nonScormTabs.forEach(tab => {
+                tab.classList.remove("active");
+            });
+
+            // Show the selected Non-SCORM sub-tab pane
+            let targetPane = document.getElementById(targetId);
+            if (targetPane) {
+                targetPane.classList.add("show", "active");
+                targetPane.style.display = "block";
+            }
+
+            // Add active class to clicked Non-SCORM sub-tab
             this.classList.add("active");
         });
     });
@@ -449,6 +492,17 @@ document.addEventListener("DOMContentLoaded", function () {
         if (firstPane) {
             firstPane.classList.add("show", "active");
             firstPane.style.display = "block";
+        }
+    }
+
+    // ✅ ENSURE FIRST NON-SCORM SUB-TAB IS VISIBLE ON PAGE LOAD ✅
+    if (nonScormTabs.length > 0) {
+        nonScormTabs[0].classList.add("active");
+        let firstNonScormTarget = nonScormTabs[0].getAttribute("href").substring(1);
+        let firstNonScormPane = document.getElementById(firstNonScormTarget);
+        if (firstNonScormPane) {
+            firstNonScormPane.classList.add("show", "active");
+            firstNonScormPane.style.display = "block";
         }
     }
 

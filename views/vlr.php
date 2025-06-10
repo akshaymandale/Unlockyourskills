@@ -278,22 +278,22 @@ $languageList = $vlrController->getLanguages();
                 <!-- ✅ SCORM Sub-Tabs -->
                 <ul class="nav nav-tabs" id="scormSubTabs">
                     <li class="nav-item">
-                        <a class="nav-link active" data-toggle="tab" href="#scorm-1.2">
+                        <a class="nav-link active" data-bs-toggle="tab" href="#scorm-1.2">
                             <?= Localization::translate('scorm_1_2'); ?>
                         </a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link" data-toggle="tab" href="#scorm-2004">
+                        <a class="nav-link" data-bs-toggle="tab" href="#scorm-2004">
                             <?= Localization::translate('scorm_2004'); ?>
                         </a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link" data-toggle="tab" href="#tin-can-api">
+                        <a class="nav-link" data-bs-toggle="tab" href="#tin-can-api">
                             <?= Localization::translate('tincan_api_xapi'); ?>
                         </a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link" data-toggle="tab" href="#cmi5">
+                        <a class="nav-link" data-bs-toggle="tab" href="#cmi5">
                             <?= Localization::translate('cmi5'); ?>
                         </a>
                     </li>
@@ -397,15 +397,545 @@ $languageList = $vlrController->getLanguages();
 
             <!-- ✅ NON-SCORM -->
             <div class="tab-pane" id="non-scorm">
-                <div class="d-flex justify-content-between align-items-center">
+
+
+                <!-- Non-SCORM Header Section -->
+                <div class="d-flex justify-content-between align-items-center mb-3">
                     <h3><?= Localization::translate('non_scorm'); ?></h3>
-                    <button class="btn btn-sm btn-primary" onclick="openAddModal('NON-SCORM')">+
-                        <?= Localization::translate('add'); ?></button>
+
+                    <!-- ✅ Non-SCORM "Add" Button - Opens Modal -->
+                    <button class="btn btn-primary mb-3" data-bs-toggle="modal" id="addNonScormBtn"
+                        data-bs-target="#nonScormModal">
+                        + <?= Localization::translate('add_non_scorm'); ?>
+                    </button>
+
+                    <!-- ✅ NON-SCORM ADD MODAL -->
+                    <div class="modal fade" id="nonScormModal" tabindex="-1" role="dialog"
+                        aria-labelledby="nonScormModalLabel" aria-hidden="true">
+                        <div class="modal-dialog modal-xl" role="document">
+                            <div class="modal-content">
+                                <div class="modal-header">
+                                    <h5 class="modal-title" id="nonScormModalLabel">
+                                        <?= Localization::translate('add_non_scorm_package'); ?>
+                                    </h5>
+                                    <button type="button" class="btn-close" data-bs-dismiss="modal"
+                                        aria-label="<?= Localization::translate('close'); ?>"></button>
+                                </div>
+                                <div class="modal-body">
+                                    <form id="nonScormForm"
+                                        action="index.php?controller=VLRController&action=addOrEditNonScormPackage"
+                                        method="POST" enctype="multipart/form-data">
+                                        <input type="hidden" id="non_scorm_id" name="non_scorm_id">
+                                        <input type="hidden" id="existing_content_package" name="existing_content_package">
+                                        <input type="hidden" id="existing_launch_file" name="existing_launch_file">
+                                        <input type="hidden" id="existing_thumbnail_image" name="existing_thumbnail_image">
+                                        <input type="hidden" id="existing_manifest_file" name="existing_manifest_file">
+
+                                        <!-- ✅ Title & Content Type -->
+                                        <div class="row">
+                                            <div class="col-md-6">
+                                                <div class="form-group">
+                                                    <label for="non_scorm_title"><?= Localization::translate('nonscorm.field.title'); ?> <span class="text-danger">*</span></label>
+                                                    <input type="text" id="non_scorm_title" name="non_scorm_title"
+                                                        class="form-control">
+                                                </div>
+                                            </div>
+                                            <div class="col-md-6">
+                                                <div class="form-group">
+                                                    <label for="nonscorm_content_type"><?= Localization::translate('nonscorm.field.content_type'); ?> <span class="text-danger">*</span></label>
+                                                    <select id="nonscorm_content_type" name="content_type" class="form-control">
+                                                        <option value=""><?= Localization::translate('nonscorm.placeholder.select_content_type'); ?></option>
+                                                        <option value="html5"><?= Localization::translate('html5_content'); ?></option>
+                                                        <option value="flash"><?= Localization::translate('flash_content'); ?></option>
+                                                        <option value="unity"><?= Localization::translate('unity_content'); ?></option>
+                                                        <option value="custom_web"><?= Localization::translate('custom_web_app'); ?></option>
+                                                        <option value="mobile_app"><?= Localization::translate('mobile_app'); ?></option>
+                                                    </select>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <!-- ✅ Version, Language -->
+                                        <div class="row">
+                                            <div class="col-md-6">
+                                                <div class="form-group">
+                                                    <label for="nonscorm_version"><?= Localization::translate('nonscorm.field.version'); ?> <span class="text-danger">*</span></label>
+                                                    <input type="text" id="nonscorm_version" name="version" class="form-control">
+                                                </div>
+                                            </div>
+                                            <div class="col-md-6">
+                                                <div class="form-group">
+                                                    <label for="nonscorm_language"><?= Localization::translate('nonscorm.field.language'); ?></label>
+                                                    <select class="form-control" id="nonscorm_language" name="language">
+                                                        <option value=""><?= Localization::translate('select_language'); ?></option>
+                                                        <?php
+                                                        if (!empty($languageList) && is_array($languageList)) {
+                                                            foreach ($languageList as $lang) {
+                                                                if (isset($lang['id']) && isset($lang['language_name'])) {
+                                                                    $langId = htmlspecialchars($lang['id'], ENT_QUOTES, 'UTF-8');
+                                                                    $langName = htmlspecialchars($lang['language_name'], ENT_QUOTES, 'UTF-8');
+                                                                    echo "<option value=\"$langId\">$langName</option>";
+                                                                }
+                                                            }
+                                                        } else {
+                                                            echo '<option value="">' . Localization::translate('no_languages_available') . '</option>';
+                                                        }
+                                                        ?>
+                                                    </select>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <!-- ✅ Description -->
+                                        <div class="row">
+                                            <div class="col-md-12">
+                                                <div class="form-group">
+                                                    <label for="nonscorm_description"><?= Localization::translate('nonscorm.field.description'); ?></label>
+                                                    <textarea id="nonscorm_description" name="description" class="form-control"></textarea>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <!-- ✅ Tags -->
+                                        <div class="row">
+                                            <div class="col-md-12">
+                                                <div class="form-group">
+                                                    <label for="nonscormTags"><?= Localization::translate('tags_keywords'); ?>
+                                                        <span class="text-danger">*</span></label>
+                                                    <div class="tag-input-container form-control">
+                                                        <span id="nonscormTagDisplay"></span>
+                                                        <input type="text" id="nonscormTagInput"
+                                                            placeholder="<?= Localization::translate('add_tag_placeholder'); ?>">
+                                                    </div>
+                                                    <input type="hidden" name="tagList" id="nonscormTagList">
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <!-- ✅ Content URL & Launch File -->
+                                        <div class="row">
+                                            <div class="col-md-6">
+                                                <div class="form-group">
+                                                    <label for="nonscorm_content_url" class="form-label"><?= Localization::translate('nonscorm.field.content_url'); ?> (https://example.com)</label>
+                                                    <input type="text" id="nonscorm_content_url" name="content_url" class="form-control">
+                                                    <small class="text-muted">Format: https://example.com or http://example.com</small>
+                                                </div>
+                                            </div>
+                                            <div class="col-md-6">
+                                                <div class="form-group">
+                                                    <label for="launch_file" class="form-label"><?= Localization::translate('nonscorm.field.launch_file'); ?></label>
+                                                    <input type="file" id="launch_file" name="launch_file" class="form-control" accept=".html,.htm,.swf,.unity3d">
+                                                    <small class="text-muted">Max size: 10MB. Formats: HTML, SWF, Unity3D files</small>
+                                                    <div id="launchFilePreview" class="mt-2"></div>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <!-- ✅ File Uploads -->
+                                        <div class="row">
+                                            <div class="col-md-6">
+                                                <div class="form-group">
+                                                    <label for="content_package" class="form-label"><?= Localization::translate('nonscorm.field.content_package'); ?></label>
+                                                    <input type="file" id="content_package" name="content_package" class="form-control" accept=".zip,.rar,.7z">
+                                                    <small class="text-muted">Max size: 100MB. Formats: ZIP, RAR, 7Z files</small>
+                                                    <div id="contentPackagePreview" class="mt-2"></div>
+                                                </div>
+                                            </div>
+                                            <div class="col-md-6">
+                                                <div class="form-group">
+                                                    <label for="nonscorm_thumbnail_image" class="form-label"><?= Localization::translate('nonscorm.field.thumbnail_image'); ?></label>
+                                                    <input type="file" id="nonscorm_thumbnail_image" name="thumbnail_image" class="form-control" accept="image/*">
+                                                    <small class="text-muted">Max size: 10MB. Formats: All image types</small>
+                                                    <div id="thumbnailImagePreview" class="mt-2"></div>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <!-- ✅ Manifest File -->
+                                        <div class="row">
+                                            <div class="col-md-12">
+                                                <div class="form-group">
+                                                    <label for="manifest_file" class="form-label"><?= Localization::translate('nonscorm.field.manifest_file'); ?></label>
+                                                    <input type="file" id="manifest_file" name="manifest_file" class="form-control" accept=".xml,.json,.txt">
+                                                    <small class="text-muted">Max size: 10MB. Formats: XML, JSON, TXT files</small>
+                                                    <div id="manifestFilePreview" class="mt-2"></div>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <!-- ✅ Time Limit & Mobile Support -->
+                                        <div class="row">
+                                            <div class="col-md-6">
+                                                <div class="form-group">
+                                                    <label for="nonscorm_timeLimit" class="form-label"><?= Localization::translate('nonscorm.field.time_limit'); ?></label>
+                                                    <input type="number" id="nonscorm_timeLimit" name="timeLimit" class="form-control" min="0" step="1">
+                                                    <small class="text-muted">Time limit in minutes (optional)</small>
+                                                </div>
+                                            </div>
+                                            <div class="col-md-6">
+                                                <div class="form-group">
+                                                    <label><?= Localization::translate('nonscorm.field.mobile_support'); ?></label><br>
+                                                    <label><input type="radio" name="nonscorm_mobileSupport" value="Yes">
+                                                        <?= Localization::translate('yes'); ?></label>
+                                                    <label class="ml-3"><input type="radio" name="nonscorm_mobileSupport" value="No" checked>
+                                                        <?= Localization::translate('no'); ?></label>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <!-- ✅ HTML5 Specific Fields - All in One Row -->
+                                        <div class="row html5-fields" style="display: none;">
+                                            <div class="col-md-4">
+                                                <div class="form-group mb-3">
+                                                    <label for="html5_framework" class="form-label"><?= Localization::translate('nonscorm.field.html5_framework'); ?></label>
+                                                    <select id="html5_framework" name="html5_framework" class="form-control form-select">
+                                                        <option value=""><?= Localization::translate('nonscorm.placeholder.select_framework'); ?></option>
+                                                        <option value="react"><?= Localization::translate('nonscorm.framework.react'); ?></option>
+                                                        <option value="angular"><?= Localization::translate('nonscorm.framework.angular'); ?></option>
+                                                        <option value="vue"><?= Localization::translate('nonscorm.framework.vue'); ?></option>
+                                                        <option value="vanilla"><?= Localization::translate('nonscorm.framework.vanilla'); ?></option>
+                                                    </select>
+                                                </div>
+                                            </div>
+                                            <div class="col-md-4">
+                                                <div class="form-group mb-3">
+                                                    <label class="form-label"><?= Localization::translate('nonscorm.field.responsive_design'); ?></label>
+                                                    <div class="mt-2">
+                                                        <div class="form-check form-check-inline">
+                                                            <input class="form-check-input" type="radio" name="nonscorm_responsive_design" id="responsive_yes" value="Yes" checked>
+                                                            <label class="form-check-label" for="responsive_yes"><?= Localization::translate('yes'); ?></label>
+                                                        </div>
+                                                        <div class="form-check form-check-inline">
+                                                            <input class="form-check-input" type="radio" name="nonscorm_responsive_design" id="responsive_no" value="No">
+                                                            <label class="form-check-label" for="responsive_no"><?= Localization::translate('no'); ?></label>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div class="col-md-4">
+                                                <div class="form-group mb-3">
+                                                    <label class="form-label"><?= Localization::translate('nonscorm.field.offline_support'); ?></label>
+                                                    <div class="mt-2">
+                                                        <div class="form-check form-check-inline">
+                                                            <input class="form-check-input" type="radio" name="nonscorm_offline_support" id="offline_yes" value="Yes">
+                                                            <label class="form-check-label" for="offline_yes"><?= Localization::translate('yes'); ?></label>
+                                                        </div>
+                                                        <div class="form-check form-check-inline">
+                                                            <input class="form-check-input" type="radio" name="nonscorm_offline_support" id="offline_no" value="No" checked>
+                                                            <label class="form-check-label" for="offline_no"><?= Localization::translate('no'); ?></label>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <!-- ✅ Flash Specific Fields - All in One Row -->
+                                        <div class="row flash-fields" style="display: none;">
+                                            <div class="col-md-6">
+                                                <div class="form-group mb-3">
+                                                    <label for="flash_version" class="form-label"><?= Localization::translate('nonscorm.field.flash_version'); ?></label>
+                                                    <input type="text" id="flash_version" name="flash_version" class="form-control" placeholder="e.g., 11.2.0">
+                                                </div>
+                                            </div>
+                                            <div class="col-md-6">
+                                                <div class="form-group mb-3">
+                                                    <label for="flash_security" class="form-label"><?= Localization::translate('nonscorm.field.flash_security'); ?></label>
+                                                    <select id="flash_security" name="flash_security" class="form-control form-select">
+                                                        <option value="Local"><?= Localization::translate('nonscorm.flash.local'); ?></option>
+                                                        <option value="Network"><?= Localization::translate('nonscorm.flash.network'); ?></option>
+                                                    </select>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <!-- ✅ Unity Specific Fields - All in One Row -->
+                                        <div class="row unity-fields" style="display: none;">
+                                            <div class="col-md-4">
+                                                <div class="form-group mb-3">
+                                                    <label for="unity_version" class="form-label"><?= Localization::translate('nonscorm.field.unity_version'); ?></label>
+                                                    <input type="text" id="unity_version" name="unity_version" class="form-control" placeholder="e.g., 2022.3.0f1">
+                                                </div>
+                                            </div>
+                                            <div class="col-md-4">
+                                                <div class="form-group mb-3">
+                                                    <label for="unity_platform" class="form-label"><?= Localization::translate('nonscorm.field.unity_platform'); ?></label>
+                                                    <select id="unity_platform" name="unity_platform" class="form-control form-select">
+                                                        <option value="WebGL"><?= Localization::translate('nonscorm.unity.webgl'); ?></option>
+                                                        <option value="WebPlayer"><?= Localization::translate('nonscorm.unity.webplayer'); ?></option>
+                                                    </select>
+                                                </div>
+                                            </div>
+                                            <div class="col-md-4">
+                                                <div class="form-group mb-3">
+                                                    <label for="unity_compression" class="form-label"><?= Localization::translate('nonscorm.field.unity_compression'); ?></label>
+                                                    <select id="unity_compression" name="unity_compression" class="form-control form-select">
+                                                        <option value="Gzip"><?= Localization::translate('nonscorm.compression.gzip'); ?></option>
+                                                        <option value="Brotli"><?= Localization::translate('nonscorm.compression.brotli'); ?></option>
+                                                        <option value="None"><?= Localization::translate('nonscorm.compression.none'); ?></option>
+                                                    </select>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <!-- ✅ Custom Web App Fields - All in One Row -->
+                                        <div class="row custom-web-fields" style="display: none;">
+                                            <div class="col-md-4">
+                                                <div class="form-group mb-3">
+                                                    <label for="web_technologies" class="form-label"><?= Localization::translate('nonscorm.field.web_technologies'); ?></label>
+                                                    <textarea id="web_technologies" name="web_technologies" class="form-control" rows="2" placeholder="e.g., JavaScript, CSS3, WebGL"></textarea>
+                                                </div>
+                                            </div>
+                                            <div class="col-md-4">
+                                                <div class="form-group mb-3">
+                                                    <label for="browser_requirements" class="form-label"><?= Localization::translate('nonscorm.field.browser_requirements'); ?></label>
+                                                    <textarea id="browser_requirements" name="browser_requirements" class="form-control" rows="2" placeholder="e.g., Chrome 90+, Firefox 88+"></textarea>
+                                                </div>
+                                            </div>
+                                            <div class="col-md-4">
+                                                <div class="form-group mb-3">
+                                                    <label for="external_dependencies" class="form-label"><?= Localization::translate('nonscorm.field.external_dependencies'); ?></label>
+                                                    <textarea id="external_dependencies" name="external_dependencies" class="form-control" rows="2" placeholder="e.g., jQuery, Bootstrap"></textarea>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <!-- ✅ Mobile App Fields - All in One Row -->
+                                        <div class="row mobile-app-fields" style="display: none;">
+                                            <div class="col-md-4">
+                                                <div class="form-group mb-3">
+                                                    <label for="mobile_platform" class="form-label"><?= Localization::translate('nonscorm.field.mobile_platform'); ?></label>
+                                                    <select id="mobile_platform" name="mobile_platform" class="form-control form-select">
+                                                        <option value="Cross-Platform"><?= Localization::translate('nonscorm.mobile.cross_platform'); ?></option>
+                                                        <option value="iOS"><?= Localization::translate('nonscorm.mobile.ios'); ?></option>
+                                                        <option value="Android"><?= Localization::translate('nonscorm.mobile.android'); ?></option>
+                                                    </select>
+                                                </div>
+                                            </div>
+                                            <div class="col-md-4">
+                                                <div class="form-group mb-3">
+                                                    <label for="app_store_url" class="form-label"><?= Localization::translate('nonscorm.field.app_store_url'); ?></label>
+                                                    <input type="url" id="app_store_url" name="app_store_url" class="form-control" placeholder="https://apps.apple.com/...">
+                                                </div>
+                                            </div>
+                                            <div class="col-md-4">
+                                                <div class="form-group mb-3">
+                                                    <label for="minimum_os_version" class="form-label"><?= Localization::translate('nonscorm.field.minimum_os_version'); ?></label>
+                                                    <input type="text" id="minimum_os_version" name="minimum_os_version" class="form-control" placeholder="e.g., iOS 14.0, Android 8.0">
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <!-- ✅ Progress Tracking & Assessment Integration - All in One Row -->
+                                        <div class="row">
+                                            <div class="col-md-6">
+                                                <div class="form-group mb-3">
+                                                    <label class="form-label"><?= Localization::translate('nonscorm.field.progress_tracking'); ?></label>
+                                                    <div class="mt-2">
+                                                        <div class="form-check form-check-inline">
+                                                            <input class="form-check-input" type="radio" name="nonscorm_progress_tracking" id="progress_yes" value="Yes" checked>
+                                                            <label class="form-check-label" for="progress_yes"><?= Localization::translate('yes'); ?></label>
+                                                        </div>
+                                                        <div class="form-check form-check-inline">
+                                                            <input class="form-check-input" type="radio" name="nonscorm_progress_tracking" id="progress_no" value="No">
+                                                            <label class="form-check-label" for="progress_no"><?= Localization::translate('no'); ?></label>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div class="col-md-6">
+                                                <div class="form-group mb-3">
+                                                    <label class="form-label"><?= Localization::translate('nonscorm.field.assessment_integration'); ?></label>
+                                                    <div class="mt-2">
+                                                        <div class="form-check form-check-inline">
+                                                            <input class="form-check-input" type="radio" name="nonscorm_assessment_integration" id="assessment_yes" value="Yes">
+                                                            <label class="form-check-label" for="assessment_yes"><?= Localization::translate('yes'); ?></label>
+                                                        </div>
+                                                        <div class="form-check form-check-inline">
+                                                            <input class="form-check-input" type="radio" name="nonscorm_assessment_integration" id="assessment_no" value="No" checked>
+                                                            <label class="form-check-label" for="assessment_no"><?= Localization::translate('no'); ?></label>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <!-- ✅ Completion Criteria & Scoring Method - All in One Row -->
+                                        <div class="row">
+                                            <div class="col-md-6">
+                                                <div class="form-group mb-3">
+                                                    <label for="completion_criteria" class="form-label"><?= Localization::translate('nonscorm.field.completion_criteria'); ?></label>
+                                                    <textarea id="completion_criteria" name="completion_criteria" class="form-control" rows="2" placeholder="e.g., Complete all sections, Pass final quiz"></textarea>
+                                                </div>
+                                            </div>
+                                            <div class="col-md-6">
+                                                <div class="form-group mb-3">
+                                                    <label for="scoring_method" class="form-label"><?= Localization::translate('nonscorm.field.scoring_method'); ?></label>
+                                                    <select id="scoring_method" name="scoring_method" class="form-control form-select">
+                                                        <option value="None"><?= Localization::translate('nonscorm.scoring.none'); ?></option>
+                                                        <option value="Points"><?= Localization::translate('nonscorm.scoring.points'); ?></option>
+                                                        <option value="Percentage"><?= Localization::translate('nonscorm.scoring.percentage'); ?></option>
+                                                        <option value="Pass/Fail"><?= Localization::translate('nonscorm.scoring.pass_fail'); ?></option>
+                                                    </select>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <!-- ✅ Submit & Cancel Buttons -->
+                                        <div class="modal-footer">
+                                            <button type="submit" class="btn btn-primary"><?= Localization::translate('submit'); ?></button>
+                                            <button type="button" class="btn btn-danger" id="clearNonScormForm"><?= Localization::translate('cancel'); ?></button>
+                                        </div>
+
+                                    </form>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
                 </div>
-                <div id="non-scorm-items"></div>
+
+                <!-- ✅ Non-SCORM Sub-Tabs -->
+                <ul class="nav nav-tabs" id="nonScormSubTabs">
+                    <li class="nav-item">
+                        <a class="nav-link active" data-bs-toggle="tab" href="#html5-content" onclick="console.log('HTML5 tab clicked')">
+                            <?= Localization::translate('html5_content'); ?>
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" data-bs-toggle="tab" href="#flash-content" onclick="console.log('Flash tab clicked')">
+                            <?= Localization::translate('flash_content'); ?>
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" data-bs-toggle="tab" href="#unity-content" onclick="console.log('Unity tab clicked')">
+                            <?= Localization::translate('unity_content'); ?>
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" data-bs-toggle="tab" href="#custom-web" onclick="console.log('Custom Web tab clicked')">
+                            <?= Localization::translate('custom_web_app'); ?>
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" data-bs-toggle="tab" href="#mobile-app" onclick="console.log('Mobile App tab clicked')">
+                            <?= Localization::translate('mobile_app'); ?>
+                        </a>
+                    </li>
+                </ul>
+
+                <!-- ✅ Non-SCORM Sub-Tab Content -->
+                <div class="tab-content mt-3">
+                    <?php
+                    // Validate if $nonScormPackages is set
+                    if (!isset($nonScormPackages)) {
+                        $nonScormPackages = [];
+                    }
+
+                    // Define tab IDs corresponding to content_type
+                    $categories = [
+                        'html5' => 'html5-content',
+                        'flash' => 'flash-content',
+                        'unity' => 'unity-content',
+                        'custom_web' => 'custom-web',
+                        'mobile_app' => 'mobile-app'
+                    ];
+
+
+                    // Define content for each tab
+                    $tabContents = [
+                        'html5-content' => [
+                            'title' => 'HTML5 Content',
+                            'description' => 'This section displays HTML5-based non-SCORM packages. HTML5 content includes interactive web-based learning materials that run directly in modern browsers without requiring additional plugins.',
+                            'icon' => 'fab fa-html5',
+                            'color' => '#e34c26'
+                        ],
+                        'flash-content' => [
+                            'title' => 'Flash Content',
+                            'description' => 'This section displays Flash-based non-SCORM packages. Flash content includes legacy interactive learning materials created with Adobe Flash technology.',
+                            'icon' => 'fas fa-bolt',
+                            'color' => '#cc0000'
+                        ],
+                        'unity-content' => [
+                            'title' => 'Unity Content',
+                            'description' => 'This section displays Unity-based non-SCORM packages. Unity content includes 3D interactive learning experiences and simulations built with Unity engine.',
+                            'icon' => 'fab fa-unity',
+                            'color' => '#000000'
+                        ],
+                        'custom-web' => [
+                            'title' => 'Custom Web Content',
+                            'description' => 'This section displays custom web-based non-SCORM packages. Custom web content includes specialized interactive learning materials built with various web technologies.',
+                            'icon' => 'fas fa-globe',
+                            'color' => '#007bff'
+                        ],
+                        'mobile-app' => [
+                            'title' => 'Mobile App Content',
+                            'description' => 'This section displays mobile application-based non-SCORM packages. Mobile app content includes learning materials designed specifically for mobile devices and tablets.',
+                            'icon' => 'fas fa-mobile-alt',
+                            'color' => '#28a745'
+                        ]
+                    ];
+
+                    // Group packages by content type
+                    $groupedPackages = [];
+                    foreach ($nonScormPackages as $package) {
+                        $contentType = $package['content_type'];
+                        $categoryKey = $categories[$contentType] ?? null;
+                        if ($categoryKey) {
+                            $groupedPackages[$categoryKey][] = $package;
+                        }
+                    }
+
+                    // Loop through categories and display content
+                    foreach ($categories as $key => $tabId):
+                        $content = $tabContents[$tabId] ?? [
+                            'title' => ucfirst(str_replace('-', ' ', $tabId)),
+                            'description' => 'Content for ' . $tabId,
+                            'icon' => 'fas fa-code',
+                            'color' => '#6a0dad'
+                        ];
+
+                        $packagesForTab = $groupedPackages[$tabId] ?? [];
+                        ?>
+                        <div class="tab-pane <?= $tabId === 'html5-content' ? 'show active' : ''; ?>" id="<?= $tabId ?>">
+                            <h4><?= $content['title'] ?></h4>
+                            <div class="row">
+                                <?php if (!empty($packagesForTab)): ?>
+                                    <?php foreach ($packagesForTab as $package): ?>
+                                        <div class="col-md-4">
+                                            <div class="nonscorm-card">
+                                                <div class="card-body">
+                                                    <div class="nonscorm-icon">
+                                                        <i class="<?= $content['icon'] ?>" style="color: <?= $content['color'] ?>;"></i>
+                                                    </div>
+                                                    <?php
+                                                    $displayTitle = strlen($package['title']) > 20 ? substr($package['title'], 0, 17) . '...' : $package['title'];
+                                                    ?>
+                                                    <h5 class="nonscorm-title" title="<?= htmlspecialchars($package['title']) ?>">
+                                                        <?= htmlspecialchars($displayTitle) ?>
+                                                    </h5>
+                                                    <div class="nonscorm-actions">
+                                                        <a href="#" class="edit-non-scorm" data-package='<?= json_encode($package); ?>'>
+                                                            <i class="fas fa-edit edit-icon" title="<?= Localization::translate('edit'); ?>"></i>
+                                                        </a>
+                                                        <a href="index.php?controller=VLRController&action=deleteNonScormPackage&id=<?= $package['id'] ?>"
+                                                           onclick="return confirm('<?= Localization::translate('delete_confirmation'); ?>');">
+                                                            <i class="fas fa-trash-alt delete-icon" title="<?= Localization::translate('delete'); ?>"></i>
+                                                        </a>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    <?php endforeach; ?>
+                                <?php else: ?>
+                                    <p><?= Localization::translate('no_' . str_replace('-', '_', $tabId) . '_found'); ?></p>
+                                <?php endif; ?>
+                            </div>
+                        </div>
+                    <?php endforeach; ?>
+                </div>
+
             </div>
 
-
+            
             <!-- ✅ Assessment -->
             <div class="tab-pane" id="assessment">
                 <div class="d-flex justify-content-between align-items-center">
@@ -3022,4 +3552,6 @@ $languageList = $vlrController->getLanguages();
 <script src="public/js/add_feedback_question_on_feedback.js"></script>
 <script src="public/js/interactive_validation.js"></script>
 <script src="public/js/interactive_package.js"></script>
+<script src="public/js/non_scorm_validation.js"></script>
+<script src="public/js/non_scorm_package.js"></script>
 <?php include 'includes/footer.php'; ?>
