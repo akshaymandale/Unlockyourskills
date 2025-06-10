@@ -14,6 +14,7 @@ class VLRController
     public function index()
     {
         $scormPackages = $this->VLRModel->getScormPackages();
+        $nonScormPackages = $this->VLRModel->getNonScormPackages();
         $externalContent = $this->VLRModel->getExternalContent();
         $documents = $this->VLRModel->getAllDocuments();
         $assessmentPackages = $this->VLRModel->getAllAssessments();
@@ -24,7 +25,6 @@ class VLRController
         $imagePackages = $this->VLRModel->getImagePackages();
         $interactiveContent = $this->VLRModel->getInteractiveContent();
         $languageList = $this->VLRModel->getLanguages();
-        //echo '<pre>'; print_r($audioPackages); die;
         require 'views/vlr.php';
     }
 
@@ -1240,5 +1240,114 @@ private function redirectWithAlert($message)
         echo "<script>alert('$message'); window.location.href='index.php?controller=VLRController';</script>";
     }
 
+    // ✅ Non-SCORM Package Methods
+
+    public function addOrEditNonScormPackage()
+    {
+        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            $nonScormId = $_POST['non_scorm_id'] ?? null;
+
+            // Handle file uploads
+            $contentPackage = $this->handleNonScormFileUpload($_FILES['content_package'] ?? null, 'package', $_POST['existing_content_package'] ?? null);
+            $launchFile = $this->handleNonScormFileUpload($_FILES['launch_file'] ?? null, 'launch', $_POST['existing_launch_file'] ?? null);
+            $thumbnailImage = $this->handleNonScormFileUpload($_FILES['thumbnail_image'] ?? null, 'thumbnail', $_POST['existing_thumbnail_image'] ?? null);
+            $manifestFile = $this->handleNonScormFileUpload($_FILES['manifest_file'] ?? null, 'manifest', $_POST['existing_manifest_file'] ?? null);
+
+            $data = [
+                'title' => $_POST['non_scorm_title'],
+                'content_type' => $_POST['content_type'],
+                'description' => $_POST['description'] ?? '',
+                'tags' => $_POST['tagList'] ?? '',
+                'version' => $_POST['version'],
+                'language' => $_POST['language'] ?? '',
+                'time_limit' => !empty($_POST['timeLimit']) ? (int)$_POST['timeLimit'] : null,
+                'mobile_support' => $_POST['nonscorm_mobileSupport'],
+                'content_url' => $_POST['content_url'] ?? '',
+                'launch_file' => $launchFile,
+                'content_package' => $contentPackage,
+                'thumbnail_image' => $thumbnailImage,
+                'manifest_file' => $manifestFile,
+                'html5_framework' => $_POST['html5_framework'] ?? '',
+                'responsive_design' => $_POST['nonscorm_responsive_design'] ?? 'Yes',
+                'offline_support' => $_POST['nonscorm_offline_support'] ?? 'No',
+                'flash_version' => $_POST['flash_version'] ?? '',
+                'flash_security' => $_POST['flash_security'] ?? 'Local',
+                'unity_version' => $_POST['unity_version'] ?? '',
+                'unity_platform' => $_POST['unity_platform'] ?? 'WebGL',
+                'unity_compression' => $_POST['unity_compression'] ?? 'Gzip',
+                'web_technologies' => $_POST['web_technologies'] ?? '',
+                'browser_requirements' => $_POST['browser_requirements'] ?? '',
+                'external_dependencies' => $_POST['external_dependencies'] ?? '',
+                'mobile_platform' => $_POST['mobile_platform'] ?? 'Cross-Platform',
+                'app_store_url' => $_POST['app_store_url'] ?? '',
+                'minimum_os_version' => $_POST['minimum_os_version'] ?? '',
+                'progress_tracking' => $_POST['nonscorm_progress_tracking'] ?? 'Yes',
+                'assessment_integration' => $_POST['nonscorm_assessment_integration'] ?? 'No',
+                'completion_criteria' => $_POST['completion_criteria'] ?? '',
+                'scoring_method' => $_POST['scoring_method'] ?? 'None',
+                'bandwidth_requirement' => $_POST['bandwidth_requirement'] ?? '',
+                'screen_resolution' => $_POST['screen_resolution'] ?? '',
+                'created_by' => $_SESSION['id']
+            ];
+
+            if ($nonScormId) {
+                // Update existing non-scorm content
+                $result = $this->VLRModel->updateNonScormPackage($nonScormId, $data);
+                $message = $result ? "Non-SCORM content updated successfully." : "Failed to update Non-SCORM content.";
+            } else {
+                // Insert new non-scorm content
+                $result = $this->VLRModel->insertNonScormPackage($data);
+                $message = $result ? "Non-SCORM content added successfully." : "Failed to insert Non-SCORM content.";
+            }
+
+            echo "<script>alert('$message'); window.location.href='index.php?controller=VLRController';</script>";
+        } else {
+            echo "<script>alert('Invalid request parameters.'); window.location.href='index.php?controller=VLRController';</script>";
+        }
+    }
+
+    private function handleNonScormFileUpload($file, $type, $existingFile = null)
+    {
+        // If no new file is uploaded, return the existing file
+        if (!$file || $file['error'] === UPLOAD_ERR_NO_FILE) {
+            return $existingFile;
+        }
+
+        $uploadDir = "uploads/non_scorm/";
+
+        // Create directory if it doesn't exist
+        if (!is_dir($uploadDir)) {
+            mkdir($uploadDir, 0755, true);
+        }
+
+        $ext = pathinfo($file['name'], PATHINFO_EXTENSION);
+        $uniqueName = uniqid("nonscorm_{$type}_") . "." . $ext;
+        $targetPath = $uploadDir . $uniqueName;
+
+        // Validate file size (100MB limit for packages, 10MB for others)
+        $maxSize = ($type === 'package') ? 100 * 1024 * 1024 : 10 * 1024 * 1024;
+        if ($file['size'] > $maxSize) {
+            return false;
+        }
+
+        if (!move_uploaded_file($file['tmp_name'], $targetPath)) {
+            return false;
+        }
+
+        return $uniqueName;
+    }
+
+    public function deleteNonScormPackage()
+    {
+        if (isset($_GET['id'])) {
+            $id = $_GET['id'];
+            $result = $this->VLRModel->deleteNonScormPackage($id);
+            $message = $result ? "Non-SCORM content deleted successfully." : "Failed to delete Non-SCORM content.";
+        } else {
+            $message = "Invalid request.";
+        }
+
+        echo "<script>alert('$message'); window.location.href='index.php?controller=VLRController';</script>";
+    }
+
 }
-?>

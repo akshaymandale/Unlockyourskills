@@ -685,5 +685,17 @@
     "js.validation.interactive_url_invalid": "कृपया एक मान्य URL दर्ज करें (जैसे, https://example.com)।",
     "js.validation.version_required_numeric": "संस्करण एक मान्य संख्या होना चाहिए।",
     "js.validation.time_limit_numeric": "समय सीमा एक मान्य संख्या होनी चाहिए।",
-    "validation.required.field": "यह फ़ील्ड आवश्यक है।"
+    "validation.required.field": "यह फ़ील्ड आवश्यक है।",
+    "no_assessment_found": "कोई मूल्यांकन नहीं मिला।",
+    "html5_content": "HTML5 सामग्री",
+    "flash_content": "Flash सामग्री",
+    "unity_content": "Unity सामग्री",
+    "custom_web_app": "कस्टम वेब ऐप",
+    "mobile_app": "मोबाइल ऐप",
+    "no_nonscorm_content_found": "कोई नॉन-स्कॉर्म सामग्री नहीं मिली।",
+    "no_html5_content_found": "कोई HTML5 सामग्री नहीं मिली।",
+    "no_flash_content_found": "कोई Flash सामग्री नहीं मिली।",
+    "no_unity_content_found": "कोई Unity सामग्री नहीं मिली।",
+    "no_custom_web_found": "कोई कस्टम वेब ऐप नहीं मिला।",
+    "no_mobile_app_found": "कोई मोबाइल ऐप नहीं मिला।"
 }

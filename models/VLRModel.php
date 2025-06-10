@@ -247,8 +247,9 @@ class VLRModel
     // Fetch a single document by ID
     public function getDocumentById($id)
     {
-        $query = "SELECT * FROM documents WHERE id = ? AND is_deleted = 0";
-        return $this->conn->fetchOne($query, [$id]);
+        $stmt = $this->conn->prepare("SELECT * FROM documents WHERE id = ? AND is_deleted = 0");
+        $stmt->execute([$id]);
+        return $stmt->fetch(PDO::FETCH_ASSOC);
     }
 
     // Add document
@@ -1213,5 +1214,177 @@ public function deleteImagePackage($id)
         return $stmt->execute([$id]);
     }
 
+    // ✅ Non-SCORM Package Methods
+
+    // Insert Non-SCORM Package
+    public function insertNonScormPackage($data)
+    {
+        // Validate required fields
+        $requiredFields = ['title', 'content_type', 'version', 'mobile_support', 'tags', 'created_by'];
+        foreach ($requiredFields as $field) {
+            if (empty($data[$field])) {
+                return false;
+            }
+        }
+
+        $stmt = $this->conn->prepare("
+            INSERT INTO non_scorm_package
+            (title, content_type, description, tags, version, language, time_limit, mobile_support,
+             content_url, launch_file, content_package, thumbnail_image, manifest_file,
+             html5_framework, responsive_design, offline_support, flash_version, flash_security,
+             unity_version, unity_platform, unity_compression, web_technologies, browser_requirements,
+             external_dependencies, mobile_platform, app_store_url, minimum_os_version,
+             progress_tracking, assessment_integration, completion_criteria, scoring_method,
+             file_size, bandwidth_requirement, screen_resolution, created_by, is_deleted, created_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, NOW())
+        ");
+
+        return $stmt->execute([
+            $data['title'],
+            $data['content_type'],
+            $data['description'] ?? null,
+            $data['tags'],
+            $data['version'],
+            $data['language'] ?? null,
+            $data['time_limit'] ?? null,
+            $data['mobile_support'],
+            $data['content_url'] ?? null,
+            $data['launch_file'] ?? null,
+            $data['content_package'] ?? null,
+            $data['thumbnail_image'] ?? null,
+            $data['manifest_file'] ?? null,
+            $data['html5_framework'] ?? null,
+            $data['responsive_design'] ?? null,
+            $data['offline_support'] ?? null,
+            $data['flash_version'] ?? null,
+            $data['flash_security'] ?? null,
+            $data['unity_version'] ?? null,
+            $data['unity_platform'] ?? null,
+            $data['unity_compression'] ?? null,
+            $data['web_technologies'] ?? null,
+            $data['browser_requirements'] ?? null,
+            $data['external_dependencies'] ?? null,
+            $data['mobile_platform'] ?? null,
+            $data['app_store_url'] ?? null,
+            $data['minimum_os_version'] ?? null,
+            $data['progress_tracking'] ?? null,
+            $data['assessment_integration'] ?? null,
+            $data['completion_criteria'] ?? null,
+            $data['scoring_method'] ?? null,
+            $data['file_size'] ?? null,
+            $data['bandwidth_requirement'] ?? null,
+            $data['screen_resolution'] ?? null,
+            $data['created_by']
+        ]);
+    }
+
+    // Update Non-SCORM Package
+    public function updateNonScormPackage($id, $data)
+    {
+        if (empty($id)) {
+            return false;
+        }
+
+        $stmt = $this->conn->prepare("
+            UPDATE non_scorm_package SET
+                title = ?,
+                content_type = ?,
+                description = ?,
+                tags = ?,
+                version = ?,
+                language = ?,
+                time_limit = ?,
+                mobile_support = ?,
+                content_url = ?,
+                launch_file = ?,
+                content_package = ?,
+                thumbnail_image = ?,
+                manifest_file = ?,
+                html5_framework = ?,
+                responsive_design = ?,
+                offline_support = ?,
+                flash_version = ?,
+                flash_security = ?,
+                unity_version = ?,
+                unity_platform = ?,
+                unity_compression = ?,
+                web_technologies = ?,
+                browser_requirements = ?,
+                external_dependencies = ?,
+                mobile_platform = ?,
+                app_store_url = ?,
+                minimum_os_version = ?,
+                progress_tracking = ?,
+                assessment_integration = ?,
+                completion_criteria = ?,
+                scoring_method = ?,
+                file_size = ?,
+                bandwidth_requirement = ?,
+                screen_resolution = ?,
+                updated_by = ?,
+                updated_at = NOW()
+            WHERE id = ?
+        ");
+
+        return $stmt->execute([
+            $data['title'],
+            $data['content_type'],
+            $data['description'] ?? null,
+            $data['tags'],
+            $data['version'],
+            $data['language'] ?? null,
+            $data['time_limit'] ?? null,
+            $data['mobile_support'],
+            $data['content_url'] ?? null,
+            $data['launch_file'] ?? null,
+            $data['content_package'] ?? null,
+            $data['thumbnail_image'] ?? null,
+            $data['manifest_file'] ?? null,
+            $data['html5_framework'] ?? null,
+            $data['responsive_design'] ?? null,
+            $data['offline_support'] ?? null,
+            $data['flash_version'] ?? null,
+            $data['flash_security'] ?? null,
+            $data['unity_version'] ?? null,
+            $data['unity_platform'] ?? null,
+            $data['unity_compression'] ?? null,
+            $data['web_technologies'] ?? null,
+            $data['browser_requirements'] ?? null,
+            $data['external_dependencies'] ?? null,
+            $data['mobile_platform'] ?? null,
+            $data['app_store_url'] ?? null,
+            $data['minimum_os_version'] ?? null,
+            $data['progress_tracking'] ?? null,
+            $data['assessment_integration'] ?? null,
+            $data['completion_criteria'] ?? null,
+            $data['scoring_method'] ?? null,
+            $data['file_size'] ?? null,
+            $data['bandwidth_requirement'] ?? null,
+            $data['screen_resolution'] ?? null,
+            $data['created_by'],
+            $id
+        ]);
+    }
+
+    // Get Non-SCORM Packages (non-deleted)
+    public function getNonScormPackages()
+    {
+        try {
+            $stmt = $this->conn->prepare("SELECT * FROM non_scorm_package WHERE is_deleted = 0 ORDER BY created_at DESC");
+            $stmt->execute();
+            $data = $stmt->fetchAll(PDO::FETCH_ASSOC);
+            return $data;
+        } catch (Exception $e) {
+            error_log("Error fetching Non-SCORM packages: " . $e->getMessage());
+            return [];
+        }
+    }
+
+    // Soft Delete Non-SCORM Package
+    public function deleteNonScormPackage($id)
+    {
+        $stmt = $this->conn->prepare("UPDATE non_scorm_package SET is_deleted = 1 WHERE id = ?");
+        return $stmt->execute([$id]);
+    }
+
 }
-?>
