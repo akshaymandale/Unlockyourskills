@@ -235,7 +235,7 @@ document.addEventListener("DOMContentLoaded", function () {
     });
 
 
-    //VLR 
+    //VLR - Simplified Tab Management
 
     let mainTabs = document.querySelectorAll("#vlrTabs a"); // Main tabs
     let scormTabs = document.querySelectorAll("#scormSubTabs a"); // SCORM sub-tabs
@@ -485,6 +485,7 @@ document.addEventListener("DOMContentLoaded", function () {
     });
 
     // ✅ ENSURE FIRST SUB-TAB IS VISIBLE ON PAGE LOAD ✅
+    // Simple sub-tab initialization - let Bootstrap handle the rest
     if (scormTabs.length > 0) {
         scormTabs[0].classList.add("active");
         let firstTarget = scormTabs[0].getAttribute("href").substring(1);

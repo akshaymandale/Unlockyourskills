@@ -125,10 +125,17 @@ document.addEventListener("DOMContentLoaded", function () {
             case "articleUrl":
             case "audio_url":
             case "audioUrl":
-                if (value === "") {
+                // ✅ Only validate URLs if they are visible/required for the current content type
+                const contentTypeField = document.getElementById("contentType");
+                const currentContentType = contentTypeField ? contentTypeField.value : "";
+
+                // Check if this field is required for the current content type
+                const isFieldRequired = isFieldRequiredForContentType(fieldName, currentContentType);
+
+                if (isFieldRequired && value === "") {
                     showError(field, translate("validation.required.url"));
                     isValid = false;
-                } else if (!isValidURL(value)) {
+                } else if (value !== "" && !isValidURL(value)) {
                     showError(field, translate("validation.invalid.url"));
                     isValid = false;
                 } else {
@@ -140,7 +147,12 @@ document.addEventListener("DOMContentLoaded", function () {
             case "platformName":
             case "audio_source":
             case "audioSource":
-                if (value === "") {
+                // ✅ Only validate if required for the current content type
+                const contentTypeForField = document.getElementById("contentType");
+                const currentContentTypeForField = contentTypeForField ? contentTypeForField.value : "";
+                const isThisFieldRequired = isFieldRequiredForContentType(fieldName, currentContentTypeForField);
+
+                if (isThisFieldRequired && value === "") {
                     showError(field, translate("validation.required.field"));
                     isValid = false;
                 } else {
@@ -150,10 +162,18 @@ document.addEventListener("DOMContentLoaded", function () {
 
             case "audio_file":
             case "audioFile":
-                if (field.files.length === 0) {
+                // ✅ Only validate audio file for podcasts-audio content type with upload source
+                const contentTypeForAudio = document.getElementById("contentType");
+                const audioSourceField = document.getElementById("audioSource");
+                const currentContentTypeForAudio = contentTypeForAudio ? contentTypeForAudio.value : "";
+                const currentAudioSource = audioSourceField ? audioSourceField.value : "";
+
+                const isAudioFileRequired = currentContentTypeForAudio === "podcasts-audio" && currentAudioSource === "upload";
+
+                if (isAudioFileRequired && field.files.length === 0) {
                     showError(field, translate("validation.required.audio_file"));
                     isValid = false;
-                } else if (!isValidAudioFile(field.files[0])) {
+                } else if (field.files.length > 0 && !isValidAudioFile(field.files[0])) {
                     showError(field, translate("validation.invalid.audio_file"));
                     isValid = false;
                 } else {
@@ -162,10 +182,8 @@ document.addEventListener("DOMContentLoaded", function () {
                 break;
 
             case "thumbnail":
-                if (field.files.length === 0) {
-                    showError(field, translate("validation.required.thumbnail"));
-                    isValid = false;
-                } else if (!isValidThumbnail(field.files[0])) {
+                // ✅ Thumbnail is optional, only validate if file is selected
+                if (field.files.length > 0 && !isValidThumbnail(field.files[0])) {
                     showError(field, translate("validation.invalid.thumbnail"));
                     isValid = false;
                 } else {
@@ -217,6 +235,26 @@ document.addEventListener("DOMContentLoaded", function () {
     function isValidThumbnail(file) {
         let allowedTypes = ["image/jpeg", "image/png", "image/gif", "image/webp"];
         return allowedTypes.includes(file.type) && file.size <= 5 * 1024 * 1024; // 5MB limit
+    }
+
+    // ✅ Helper function to check if field is required for content type
+    function isFieldRequiredForContentType(fieldName, contentType) {
+        const fieldRequirements = {
+            'youtube-vimeo': ['video_url', 'videoUrl'],
+            'linkedin-udemy': ['course_url', 'courseUrl', 'platform_name', 'platformName'],
+            'web-links-blogs': ['article_url', 'articleUrl'],
+            'podcasts-audio': ['audio_source', 'audioSource']
+        };
+
+        // ✅ Special case for audio_url - required when audio_source is "url"
+        if ((fieldName === 'audio_url' || fieldName === 'audioUrl') && contentType === 'podcasts-audio') {
+            const audioSourceField = document.getElementById("audioSource");
+            const currentAudioSource = audioSourceField ? audioSourceField.value : "";
+            return currentAudioSource === "url";
+        }
+
+        const requiredFields = fieldRequirements[contentType] || [];
+        return requiredFields.includes(fieldName);
     }
 
 

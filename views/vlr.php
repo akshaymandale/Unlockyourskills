@@ -22,59 +22,63 @@ $languageList = $vlrController->getLanguages();
         </h1>
 
         <!-- ✅ Tabs Section -->
+        <?php
+        // Get the active tab from URL parameter
+        $activeTab = $_GET['tab'] ?? 'scorm'; // Default to scorm if no tab parameter
+        ?>
         <ul class="nav nav-tabs" id="vlrTabs">
             <li class="nav-item">
-                <a class="nav-link active" data-toggle="tab" href="#scorm">
+                <a class="nav-link <?= $activeTab === 'scorm' ? 'active' : ''; ?>" data-bs-toggle="tab" href="#scorm">
                     <?= Localization::translate('scorm'); ?>
                 </a>
             </li>
             <li class="nav-item">
-                <a class="nav-link" data-toggle="tab" href="#non-scorm">
+                <a class="nav-link <?= $activeTab === 'non-scorm' ? 'active' : ''; ?>" data-bs-toggle="tab" href="#non-scorm">
                     <?= Localization::translate('non_scorm'); ?>
                 </a>
             </li>
             <li class="nav-item">
-                <a class="nav-link" data-toggle="tab" href="#assessment">
+                <a class="nav-link <?= $activeTab === 'assessment' ? 'active' : ''; ?>" data-bs-toggle="tab" href="#assessment">
                     <?= Localization::translate('assessment'); ?>
                 </a>
             </li>
             <li class="nav-item">
-                <a class="nav-link" data-toggle="tab" href="#audio">
+                <a class="nav-link <?= $activeTab === 'audio' ? 'active' : ''; ?>" data-bs-toggle="tab" href="#audio">
                     <?= Localization::translate('audio'); ?>
                 </a>
             </li>
             <li class="nav-item">
-                <a class="nav-link" data-toggle="tab" href="#video">
+                <a class="nav-link <?= $activeTab === 'video' ? 'active' : ''; ?>" data-bs-toggle="tab" href="#video">
                     <?= Localization::translate('video'); ?>
                 </a>
             </li>
             <li class="nav-item">
-                <a class="nav-link" data-toggle="tab" href="#document">
+                <a class="nav-link <?= $activeTab === 'document' ? 'active' : ''; ?>" data-bs-toggle="tab" href="#document">
                     <?= Localization::translate('document'); ?>
                 </a>
             </li>
             <li class="nav-item">
-                <a class="nav-link" data-toggle="tab" href="#image">
+                <a class="nav-link <?= $activeTab === 'image' ? 'active' : ''; ?>" data-bs-toggle="tab" href="#image">
                     <?= Localization::translate('image'); ?>
                 </a>
             </li>
             <li class="nav-item">
-                <a class="nav-link" data-toggle="tab" href="#external">
+                <a class="nav-link <?= $activeTab === 'external' ? 'active' : ''; ?>" data-bs-toggle="tab" href="#external">
                     <?= Localization::translate('external_content'); ?>
                 </a>
             </li>
             <li class="nav-item">
-                <a class="nav-link" data-toggle="tab" href="#survey">
+                <a class="nav-link <?= $activeTab === 'survey' ? 'active' : ''; ?>" data-bs-toggle="tab" href="#survey">
                     <?= Localization::translate('survey'); ?>
                 </a>
             </li>
             <li class="nav-item">
-                <a class="nav-link" data-toggle="tab" href="#feedback">
+                <a class="nav-link <?= $activeTab === 'feedback' ? 'active' : ''; ?>" data-bs-toggle="tab" href="#feedback">
                     <?= Localization::translate('feedback'); ?>
                 </a>
             </li>
             <li class="nav-item">
-                <a class="nav-link" data-toggle="tab" href="#interactive">
+                <a class="nav-link <?= $activeTab === 'interactive' ? 'active' : ''; ?>" data-bs-toggle="tab" href="#interactive">
                     <?= Localization::translate('interactive_ai_content'); ?>
                 </a>
             </li>
@@ -84,7 +88,7 @@ $languageList = $vlrController->getLanguages();
         <div class="tab-content mt-3">
 
             <!-- ✅ SCORM Package -->
-            <div class="tab-pane show active" id="scorm">
+            <div class="tab-pane <?= $activeTab === 'scorm' ? 'show active' : ''; ?>" id="scorm">
                 <!-- SCORM Header Section -->
                 <div class="d-flex justify-content-between align-items-center mb-3">
                     <h3><?= Localization::translate('scorm'); ?></h3>
@@ -396,7 +400,7 @@ $languageList = $vlrController->getLanguages();
 
 
             <!-- ✅ NON-SCORM -->
-            <div class="tab-pane" id="non-scorm">
+            <div class="tab-pane <?= $activeTab === 'non-scorm' ? 'show active' : ''; ?>" id="non-scorm">
 
 
                 <!-- Non-SCORM Header Section -->
@@ -937,7 +941,7 @@ $languageList = $vlrController->getLanguages();
 
             
             <!-- ✅ Assessment -->
-            <div class="tab-pane" id="assessment">
+            <div class="tab-pane <?= $activeTab === 'assessment' ? 'show active' : ''; ?>" id="assessment">
                 <div class="d-flex justify-content-between align-items-center">
                     <h3><?= Localization::translate('assessment'); ?></h3>
                     <div class="d-flex gap-2">
@@ -1319,7 +1323,7 @@ $languageList = $vlrController->getLanguages();
 
 
             <!-- ✅ Audio -->
-            <div class="tab-pane" id="audio">
+            <div class="tab-pane <?= $activeTab === 'audio' ? 'show active' : ''; ?>" id="audio">
                 <div class="d-flex justify-content-between align-items-center">
                     <h3><?= Localization::translate('audio'); ?></h3>
 
@@ -1499,7 +1503,7 @@ $languageList = $vlrController->getLanguages();
 
 
             <!-- ✅ Video -->
-            <div class="tab-pane" id="video">
+            <div class="tab-pane <?= $activeTab === 'video' ? 'show active' : ''; ?>" id="video">
                 <div class="d-flex justify-content-between align-items-center">
                     <h3><?= Localization::translate('video'); ?></h3>
                     <!-- ✅ Video "Add" Button -->
@@ -1681,7 +1685,7 @@ $languageList = $vlrController->getLanguages();
 
 
             <!-- ✅ DOCUMENTS Tab Content -->
-            <div class="tab-pane" id="document">
+            <div class="tab-pane <?= $activeTab === 'document' ? 'show active' : ''; ?>" id="document">
                 <!-- Document Header Section -->
                 <div class="d-flex justify-content-between align-items-center mb-3">
                     <h3><?= Localization::translate('documents'); ?></h3>
@@ -1895,17 +1899,17 @@ $languageList = $vlrController->getLanguages();
                 <!-- ✅ Document Sub-Tabs -->
                 <ul class="nav nav-tabs" id="documentSubTabs">
                     <li class="nav-item">
-                        <a class="nav-link active" data-toggle="tab" href="#word-excel-ppt">
+                        <a class="nav-link active" data-bs-toggle="tab" href="#word-excel-ppt">
                             <?= Localization::translate('word_excel_ppt'); ?>
                         </a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link" data-toggle="tab" href="#ebook-manual">
+                        <a class="nav-link" data-bs-toggle="tab" href="#ebook-manual">
                             <?= Localization::translate('ebook_manual'); ?>
                         </a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link" data-toggle="tab" href="#research-case-studies">
+                        <a class="nav-link" data-bs-toggle="tab" href="#research-case-studies">
                             <?= Localization::translate('research_case_studies'); ?>
                         </a>
                     </li>
@@ -2009,7 +2013,7 @@ $languageList = $vlrController->getLanguages();
             </div>
 
             <!-- ✅ Image -->
-            <div class="tab-pane" id="image">
+            <div class="tab-pane <?= $activeTab === 'image' ? 'show active' : ''; ?>" id="image">
                 <div class="d-flex justify-content-between align-items-center">
                     <h3><?= Localization::translate('image'); ?></h3>
                     <!-- ✅ Image "Add" Button -->
@@ -2184,7 +2188,7 @@ $languageList = $vlrController->getLanguages();
 
 
             <!-- ✅ EXTERNAL CONTENT Tab Content -->
-            <div class="tab-pane" id="external">
+            <div class="tab-pane <?= $activeTab === 'external' ? 'show active' : ''; ?>" id="external">
                 <!-- External Content Header Section -->
                 <div class="d-flex justify-content-between align-items-center mb-3">
                     <h3><?= Localization::translate('external_content'); ?></h3>
@@ -2414,13 +2418,13 @@ $languageList = $vlrController->getLanguages();
                                                 <div class="form-group">
                                                     <label
                                                         for="audioFile"><?= Localization::translate('upload_audio'); ?>
-                                                        (MP3/WAV)</label>
+                                                        (MP3/WAV) <span class="text-danger">*</span></label>
                                                     <input type="file" class="form-control" id="audioFile"
                                                         name="audio_file" accept=".mp3, .wav">
                                                 </div>
                                                 <div class="form-group">
                                                     <label
-                                                        for="audioUrl"><?= Localization::translate('audio_url'); ?></label>
+                                                        for="audioUrl"><?= Localization::translate('audio_url'); ?> <span class="text-danger">*</span></label>
                                                     <input type="url" class="form-control" id="audioUrl"
                                                         name="audio_url">
                                                 </div>
@@ -2449,22 +2453,22 @@ $languageList = $vlrController->getLanguages();
                 <!-- ✅ External Content Sub-Tabs -->
                 <ul class="nav nav-tabs" id="externalSubTabs">
                     <li class="nav-item">
-                        <a class="nav-link active" data-toggle="tab" href="#youtube-vimeo">
+                        <a class="nav-link active" data-bs-toggle="tab" href="#youtube-vimeo">
                             <?= Localization::translate('youtube_vimeo_ul'); ?>
                         </a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link" data-toggle="tab" href="#linkedin-udemy">
+                        <a class="nav-link" data-bs-toggle="tab" href="#linkedin-udemy">
                             <?= Localization::translate('linkedin_udemy_coursera_ul'); ?>
                         </a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link" data-toggle="tab" href="#web-links-blogs">
+                        <a class="nav-link" data-bs-toggle="tab" href="#web-links-blogs">
                             <?= Localization::translate('web_links_blogs_ul'); ?>
                         </a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link" data-toggle="tab" href="#podcasts-audio">
+                        <a class="nav-link" data-bs-toggle="tab" href="#podcasts-audio">
                             <?= Localization::translate('podcasts_audio_lessons_ul'); ?>
                         </a>
                     </li>
@@ -2587,7 +2591,7 @@ $languageList = $vlrController->getLanguages();
 
 
             <!-- ✅ Survey -->
-            <div class="tab-pane" id="survey">
+            <div class="tab-pane <?= $activeTab === 'survey' ? 'show active' : ''; ?>" id="survey">
                 <div class="d-flex justify-content-between align-items-center">
                     <h3><?= Localization::translate('survey'); ?></h3>
                     <div class="d-flex gap-2">
@@ -2831,7 +2835,7 @@ $languageList = $vlrController->getLanguages();
 
             <!-- ✅ Feedback -->
             <!-- ✅ Feedback -->
-            <div class="tab-pane" id="feedback">
+            <div class="tab-pane <?= $activeTab === 'feedback' ? 'show active' : ''; ?>" id="feedback">
                 <div class="d-flex justify-content-between align-items-center">
                     <h3><?= Localization::translate('feedback'); ?></h3>
                     <div class="d-flex gap-2">
@@ -3071,7 +3075,7 @@ $languageList = $vlrController->getLanguages();
 
 
             <!-- ✅ INTERACTIVE & AI POWERED CONTENT Tab Content -->
-            <div class="tab-pane" id="interactive">
+            <div class="tab-pane <?= $activeTab === 'interactive' ? 'show active' : ''; ?>" id="interactive">
                 <!-- Interactive & AI Powered Content Header Section -->
                 <div class="d-flex justify-content-between align-items-center mb-3">
                     <h3><?= Localization::translate('interactive_ai_content'); ?></h3>
@@ -3424,17 +3428,17 @@ $languageList = $vlrController->getLanguages();
                 <!-- ✅ Interactive & AI Powered Content Sub-Tabs -->
                 <ul class="nav nav-tabs" id="interactiveSubTabs">
                     <li class="nav-item">
-                        <a class="nav-link active" data-toggle="tab" href="#adaptive-learning">
+                        <a class="nav-link active" data-bs-toggle="tab" href="#adaptive-learning">
                             <?= Localization::translate('adaptive_learning'); ?>
                         </a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link" data-toggle="tab" href="#ai-tutoring">
+                        <a class="nav-link" data-bs-toggle="tab" href="#ai-tutoring">
                             <?= Localization::translate('interactive_ai_tutoring'); ?>
                         </a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link" data-toggle="tab" href="#ar-vr">
+                        <a class="nav-link" data-bs-toggle="tab" href="#ar-vr">
                             <?= Localization::translate('ar_vr'); ?>
                         </a>
                     </li>
@@ -3554,4 +3558,312 @@ $languageList = $vlrController->getLanguages();
 <script src="public/js/interactive_package.js"></script>
 <script src="public/js/non_scorm_validation.js"></script>
 <script src="public/js/non_scorm_package.js"></script>
+
+<!-- ✅ Tab Management Script -->
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Get the active tab from URL parameter
+    const urlParams = new URLSearchParams(window.location.search);
+    const activeTab = urlParams.get('tab') || 'scorm';
+
+    // Ensure the correct tab is active and shown
+    const tabLink = document.querySelector(`a[href="#${activeTab}"]`);
+    const tabPane = document.querySelector(`#${activeTab}`);
+
+    if (tabLink && tabPane) {
+        // Remove active classes from all tabs and panes
+        document.querySelectorAll('#vlrTabs .nav-link').forEach(link => {
+            link.classList.remove('active');
+        });
+        document.querySelectorAll('.tab-content > .tab-pane').forEach(pane => {
+            pane.classList.remove('show', 'active');
+        });
+
+        // Add active classes to the correct tab and pane
+        tabLink.classList.add('active');
+        tabPane.classList.add('show', 'active');
+
+        // Trigger Bootstrap tab shown event to ensure proper initialization
+        const tabTrigger = new bootstrap.Tab(tabLink);
+        tabTrigger.show();
+
+        // ✅ Initialize sub-tabs after a delay
+        setTimeout(() => {
+            initializeSubTabsForActiveTab(activeTab);
+        }, 300);
+    }
+
+    // Add event listeners to all tab links to remove tab parameter from URL when manually clicked
+    document.querySelectorAll('#vlrTabs .nav-link').forEach(tabLink => {
+        tabLink.addEventListener('shown.bs.tab', function(e) {
+            // Remove tab parameter from URL when user manually clicks tabs
+            const url = new URL(window.location);
+            if (url.searchParams.has('tab')) {
+                url.searchParams.delete('tab');
+                window.history.replaceState({}, '', url);
+            }
+        });
+    });
+
+    // ✅ Initialize sub-tabs for modules that have them
+    initializeSubTabs();
+
+    // ✅ Initialize sub-tab click handlers for Document, External, and Interactive modules
+    initializeSubTabClickHandlers();
+});
+
+// ✅ Function to initialize sub-tabs for Document, External Content, and Interactive modules
+function initializeSubTabs() {
+    // Document Sub-tabs
+    const documentTabLinks = document.querySelectorAll('#documentSubTabs .nav-link');
+    documentTabLinks.forEach(tabLink => {
+        tabLink.addEventListener('click', function(e) {
+            e.preventDefault();
+
+            // Remove active class from all document sub-tabs
+            documentTabLinks.forEach(link => link.classList.remove('active'));
+
+            // Remove active class from all document sub-tab panes
+            const documentTabContent = document.querySelector('#document .tab-content');
+            if (documentTabContent) {
+                documentTabContent.querySelectorAll('.tab-pane').forEach(tabPane => {
+                    tabPane.classList.remove('show', 'active');
+                });
+            }
+
+            // Add active class to clicked tab
+            this.classList.add('active');
+
+            // Show corresponding tab pane
+            const targetId = this.getAttribute('href');
+            const targetPane = document.querySelector(targetId);
+            if (targetPane) {
+                targetPane.classList.add('show', 'active');
+            }
+        });
+    });
+
+    // External Content Sub-tabs
+    const externalTabLinks = document.querySelectorAll('#externalSubTabs .nav-link');
+    externalTabLinks.forEach(tabLink => {
+        tabLink.addEventListener('click', function(e) {
+            e.preventDefault();
+
+            // Remove active class from all external sub-tabs
+            externalTabLinks.forEach(link => link.classList.remove('active'));
+
+            // Remove active class from all external sub-tab panes
+            const externalTabContent = document.querySelector('#external .tab-content');
+            if (externalTabContent) {
+                externalTabContent.querySelectorAll('.tab-pane').forEach(tabPane => {
+                    tabPane.classList.remove('show', 'active');
+                });
+            }
+
+            // Add active class to clicked tab
+            this.classList.add('active');
+
+            // Show corresponding tab pane
+            const targetId = this.getAttribute('href');
+            const targetPane = document.querySelector(targetId);
+            if (targetPane) {
+                targetPane.classList.add('show', 'active');
+            }
+        });
+    });
+
+    // Interactive Content Sub-tabs
+    const interactiveTabLinks = document.querySelectorAll('#interactiveSubTabs .nav-link');
+    interactiveTabLinks.forEach(tabLink => {
+        tabLink.addEventListener('click', function(e) {
+            e.preventDefault();
+
+            // Remove active class from all interactive sub-tabs
+            interactiveTabLinks.forEach(link => link.classList.remove('active'));
+
+            // Remove active class from all interactive sub-tab panes
+            const interactiveTabContent = document.querySelector('#interactive .tab-content');
+            if (interactiveTabContent) {
+                interactiveTabContent.querySelectorAll('.tab-pane').forEach(tabPane => {
+                    tabPane.classList.remove('show', 'active');
+                });
+            }
+
+            // Add active class to clicked tab
+            this.classList.add('active');
+
+            // Show corresponding tab pane
+            const targetId = this.getAttribute('href');
+            const targetPane = document.querySelector(targetId);
+            if (targetPane) {
+                targetPane.classList.add('show', 'active');
+            }
+        });
+    });
+}
+
+// ✅ Function to initialize sub-tabs for the active main tab
+function initializeSubTabsForActiveTab(activeTab) {
+    // Only handle tabs that have sub-tabs
+    if (!['document', 'external', 'interactive'].includes(activeTab)) {
+        return;
+    }
+
+    let subTabsContainer, firstSubTabId;
+
+    switch(activeTab) {
+        case 'document':
+            subTabsContainer = '#documentSubTabs';
+            firstSubTabId = '#word-excel-ppt';
+            break;
+        case 'external':
+            subTabsContainer = '#externalSubTabs';
+            firstSubTabId = '#youtube-vimeo';
+            break;
+        case 'interactive':
+            subTabsContainer = '#interactiveSubTabs';
+            firstSubTabId = '#adaptive-learning';
+            break;
+    }
+
+    // Get sub-tab elements
+    const subTabLinks = document.querySelectorAll(`${subTabsContainer} .nav-link`);
+    const firstSubTabLink = document.querySelector(`${subTabsContainer} .nav-link[href="${firstSubTabId}"]`);
+    const firstSubTabPane = document.querySelector(firstSubTabId);
+
+    if (subTabLinks.length > 0 && firstSubTabLink && firstSubTabPane) {
+        // Remove active from all sub-tabs
+        subTabLinks.forEach(link => link.classList.remove('active'));
+
+        // Remove active from all sub-tab panes in this section
+        const mainTabPane = document.querySelector(`#${activeTab}`);
+        if (mainTabPane) {
+            const subTabPanes = mainTabPane.querySelectorAll('.tab-content .tab-pane');
+            subTabPanes.forEach(pane => pane.classList.remove('show', 'active'));
+        }
+
+        // Activate first sub-tab and its pane
+        firstSubTabLink.classList.add('active');
+        firstSubTabPane.classList.add('show', 'active');
+
+        // ✅ Force display and trigger reflow to ensure content is visible
+        firstSubTabPane.style.display = 'block';
+        firstSubTabPane.offsetHeight; // Force reflow
+
+        // Trigger Bootstrap tab to ensure proper initialization
+        if (typeof bootstrap !== 'undefined' && bootstrap.Tab) {
+            const subTabTrigger = new bootstrap.Tab(firstSubTabLink);
+            subTabTrigger.show();
+        }
+
+        // ✅ Additional check to ensure content is visible
+        setTimeout(() => {
+            if (firstSubTabPane && !firstSubTabPane.classList.contains('show')) {
+                firstSubTabPane.classList.add('show', 'active');
+            }
+
+            // ✅ Force visibility with inline styles as backup
+            if (firstSubTabPane) {
+                firstSubTabPane.style.display = 'block';
+                firstSubTabPane.style.opacity = '1';
+                firstSubTabPane.style.visibility = 'visible';
+            }
+        }, 100);
+    }
+}
+
+// ✅ Function to initialize sub-tab click handlers for Document, External, and Interactive modules
+function initializeSubTabClickHandlers() {
+    // Document Sub-tab Click Handlers
+    const documentTabLinks = document.querySelectorAll('#documentSubTabs .nav-link');
+    documentTabLinks.forEach(tabLink => {
+        tabLink.addEventListener('click', function(e) {
+            e.preventDefault();
+
+            // Remove active class from all document sub-tabs
+            documentTabLinks.forEach(link => link.classList.remove('active'));
+
+            // Remove active class from all document sub-tab panes
+            const documentTabContent = document.querySelector('#document .tab-content');
+            if (documentTabContent) {
+                documentTabContent.querySelectorAll('.tab-pane').forEach(tabPane => {
+                    tabPane.classList.remove('show', 'active');
+                });
+            }
+
+            // Add active class to clicked tab
+            this.classList.add('active');
+
+            // Show corresponding tab pane
+            const targetId = this.getAttribute('href');
+            const targetPane = document.querySelector(targetId);
+            if (targetPane) {
+                targetPane.classList.add('show', 'active');
+                targetPane.style.display = 'block';
+            }
+        });
+    });
+
+    // External Content Sub-tab Click Handlers
+    const externalTabLinks = document.querySelectorAll('#externalSubTabs .nav-link');
+    externalTabLinks.forEach(tabLink => {
+        tabLink.addEventListener('click', function(e) {
+            e.preventDefault();
+
+            // Remove active class from all external sub-tabs
+            externalTabLinks.forEach(link => link.classList.remove('active'));
+
+            // Remove active class from all external sub-tab panes
+            const externalTabContent = document.querySelector('#external .tab-content');
+            if (externalTabContent) {
+                externalTabContent.querySelectorAll('.tab-pane').forEach(tabPane => {
+                    tabPane.classList.remove('show', 'active');
+                });
+            }
+
+            // Add active class to clicked tab
+            this.classList.add('active');
+
+            // Show corresponding tab pane
+            const targetId = this.getAttribute('href');
+            const targetPane = document.querySelector(targetId);
+            if (targetPane) {
+                targetPane.classList.add('show', 'active');
+                targetPane.style.display = 'block';
+            }
+        });
+    });
+
+    // Interactive Content Sub-tab Click Handlers
+    const interactiveTabLinks = document.querySelectorAll('#interactiveSubTabs .nav-link');
+    interactiveTabLinks.forEach(tabLink => {
+        tabLink.addEventListener('click', function(e) {
+            e.preventDefault();
+
+            // Remove active class from all interactive sub-tabs
+            interactiveTabLinks.forEach(link => link.classList.remove('active'));
+
+            // Remove active class from all interactive sub-tab panes
+            const interactiveTabContent = document.querySelector('#interactive .tab-content');
+            if (interactiveTabContent) {
+                interactiveTabContent.querySelectorAll('.tab-pane').forEach(tabPane => {
+                    tabPane.classList.remove('show', 'active');
+                });
+            }
+
+            // Add active class to clicked tab
+            this.classList.add('active');
+
+            // Show corresponding tab pane
+            const targetId = this.getAttribute('href');
+            const targetPane = document.querySelector(targetId);
+            if (targetPane) {
+                targetPane.classList.add('show', 'active');
+                targetPane.style.display = 'block';
+            }
+        });
+    });
+}
+</script>
+
 <?php include 'includes/footer.php'; ?>

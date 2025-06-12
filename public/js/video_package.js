@@ -84,8 +84,9 @@ document.addEventListener("DOMContentLoaded", function () {
         descriptionVideo.value = videoData.description;
         existingVideo.value = videoData.video_file;
 
+        // ✅ Show existing file preview with remove button (following Non-SCORM pattern)
         if (videoData.video_file) {
-            videoDisplay.innerHTML = `Current File: <a href="uploads/video/${videoData.video_file}" target="_blank">${videoData.video_file}</a>`;
+            createExistingFilePreview(videoData.video_file, videoDisplay, 'uploads/video/');
         } else {
             videoDisplay.innerHTML = "No video file uploaded.";
         }
@@ -131,6 +132,54 @@ document.addEventListener("DOMContentLoaded", function () {
             videoModal.show();
         });
     }
+
+    // ✅ File Preview Functions (following Non-SCORM pattern)
+    function createExistingFilePreview(fileName, previewContainer, uploadPath = 'uploads/video/') {
+        const fileExtension = fileName.split('.').pop().toLowerCase();
+        let previewHTML = '';
+
+        if (['mp4', 'avi', 'mov', 'wmv', 'flv', 'webm'].includes(fileExtension)) {
+            // Video preview with cross button
+            previewHTML = `
+                <div class="preview-wrapper" style="position: relative; display: inline-block; margin-top: 10px;">
+                    <div style="padding: 10px; border: 1px solid #ddd; border-radius: 5px; background: #f8f9fa;">
+                        <i class="fas fa-video" style="font-size: 24px; color: #6c757d;"></i>
+                        <button type="button" class="remove-preview" onclick="removeVideoFilePreview('${previewContainer.id}')" style="position: absolute; top: -5px; right: -5px; background: #dc3545; color: white; border: none; border-radius: 50%; width: 20px; height: 20px; font-size: 12px; cursor: pointer;">×</button>
+                    </div>
+                    <p style="margin-top: 5px; font-size: 12px; color: #6c757d;">Current file: <a href="${uploadPath}${fileName}" target="_blank">${fileName}</a></p>
+                </div>
+            `;
+        } else {
+            // Generic file preview with cross button
+            previewHTML = `
+                <div class="preview-wrapper" style="position: relative; display: inline-block; margin-top: 10px;">
+                    <div style="padding: 10px; border: 1px solid #ddd; border-radius: 5px; background: #f8f9fa;">
+                        <i class="fas fa-file" style="font-size: 24px; color: #6c757d;"></i>
+                        <button type="button" class="remove-preview" onclick="removeVideoFilePreview('${previewContainer.id}')" style="position: absolute; top: -5px; right: -5px; background: #dc3545; color: white; border: none; border-radius: 50%; width: 20px; height: 20px; font-size: 12px; cursor: pointer;">×</button>
+                    </div>
+                    <p style="margin-top: 5px; font-size: 12px; color: #6c757d;">Current file: <a href="${uploadPath}${fileName}" target="_blank">${fileName}</a></p>
+                </div>
+            `;
+        }
+
+        previewContainer.innerHTML = previewHTML;
+    }
+
+    // Global function to remove file preview
+    window.removeVideoFilePreview = function(containerId) {
+        const container = document.getElementById(containerId);
+        if (container) {
+            container.innerHTML = '';
+        }
+
+        // Clear the corresponding file input and hidden field
+        if (containerId === 'existingVideoDisplay') {
+            const videoInput = document.getElementById('videoFilevideo');
+            if (videoInput) videoInput.value = '';
+            const existingVideoField = document.getElementById('existing_video');
+            if (existingVideoField) existingVideoField.value = '';
+        }
+    };
 
     // Optional: Add validation here
     videoForm.addEventListener("submit", function (event) {
