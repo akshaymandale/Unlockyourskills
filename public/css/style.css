@@ -2034,6 +2034,33 @@ html, body {
     margin-top: 10px;
 }
 
+#nonScormModal .preview-wrapper img {
+    border: 1px solid #ddd;
+    border-radius: 5px;
+}
+
+#nonScormModal .remove-preview {
+    position: absolute;
+    top: 0;
+    right: 0;
+    background: #dc3545;
+    color: white;
+    border: none;
+    width: 22px;
+    height: 22px;
+    font-size: 16px;
+    font-weight: bold;
+    line-height: 18px;
+    text-align: center;
+    border-radius: 3px; /* Square like other modules */
+    cursor: pointer;
+    z-index: 10;
+}
+
+#nonScormModal .remove-preview:hover {
+    background: #c82333;
+}
+
 #nonScormModal .remove-preview {
     position: absolute;
     top: 0;
