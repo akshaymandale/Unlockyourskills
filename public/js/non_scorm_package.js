@@ -170,31 +170,53 @@ document.addEventListener("DOMContentLoaded", function () {
         previewContainer.appendChild(previewWrapper);
     }
 
-    function createExistingFilePreview(fileName, previewContainer, removeCallback) {
-        const previewWrapper = document.createElement('div');
-        previewWrapper.className = 'preview-wrapper';
-        previewWrapper.style.position = 'relative';
-        previewWrapper.style.display = 'inline-block';
-        previewWrapper.style.marginTop = '10px';
+    function createExistingFilePreview(fileName, previewContainer) {
+        const fileExtension = fileName.split('.').pop().toLowerCase();
+        let previewHTML = '';
 
-        const fileInfo = document.createElement('div');
-        fileInfo.innerHTML = `<strong>Current file:</strong> ${fileName}`;
-        fileInfo.style.padding = '10px';
-        fileInfo.style.border = '1px solid #ddd';
-        fileInfo.style.borderRadius = '4px';
-        fileInfo.style.backgroundColor = '#e9ecef';
-        previewWrapper.appendChild(fileInfo);
+        if (['jpg', 'jpeg', 'png', 'gif', 'webp'].includes(fileExtension)) {
+            // Image preview with cross button
+            previewHTML = `
+                <div class="preview-wrapper">
+                    <img src="uploads/non_scorm/${fileName}" alt="Preview" style="max-width: 150px; max-height: 100px; object-fit: cover; border: 1px solid #ddd; border-radius: 5px;">
+                    <button type="button" class="remove-preview" onclick="removeNonScormFilePreview('${previewContainer.id}')">×</button>
+                </div>
+                <p style="margin-top: 5px; font-size: 12px; color: #6c757d;">Current file: ${fileName}</p>
+            `;
+        } else {
+            // File link preview with cross button
+            previewHTML = `
+                <div class="preview-wrapper">
+                    <div style="padding: 10px; border: 1px solid #ddd; border-radius: 5px; background: #f8f9fa; position: relative;">
+                        <i class="fas fa-file" style="font-size: 24px; color: #6c757d;"></i>
+                        <button type="button" class="remove-preview" onclick="removeNonScormFilePreview('${previewContainer.id}')">×</button>
+                    </div>
+                    <p style="margin-top: 5px; font-size: 12px; color: #6c757d;">Current file: <a href="uploads/non_scorm/${fileName}" target="_blank">${fileName}</a></p>
+                </div>
+            `;
+        }
 
-        const removeBtn = document.createElement('button');
-        removeBtn.type = 'button';
-        removeBtn.className = 'remove-preview';
-        removeBtn.innerHTML = '×';
-        removeBtn.onclick = removeCallback;
-        previewWrapper.appendChild(removeBtn);
-
-        previewContainer.innerHTML = '';
-        previewContainer.appendChild(previewWrapper);
+        previewContainer.innerHTML = previewHTML;
     }
+
+    // Global function to remove file preview
+    window.removeNonScormFilePreview = function(containerId) {
+        const container = document.getElementById(containerId);
+        if (container) {
+            container.innerHTML = '';
+        }
+
+        // Clear the corresponding hidden field
+        if (containerId === 'contentPackagePreview') {
+            document.getElementById('existing_content_package').value = '';
+        } else if (containerId === 'launchFilePreview') {
+            document.getElementById('existing_launch_file').value = '';
+        } else if (containerId === 'thumbnailImagePreview') {
+            document.getElementById('existing_thumbnail_image').value = '';
+        } else if (containerId === 'manifestFilePreview') {
+            document.getElementById('existing_manifest_file').value = '';
+        }
+    };
 
     // ✅ File Input Event Listeners
     if (contentPackageInput) {
@@ -254,6 +276,17 @@ document.addEventListener("DOMContentLoaded", function () {
         button.addEventListener("click", function () {
             const nonScormData = JSON.parse(this.dataset.package);
 
+            // Clear all preview containers first to prevent showing old previews
+            document.querySelectorAll('#contentPackagePreview, #launchFilePreview, #thumbnailImagePreview, #manifestFilePreview').forEach(container => {
+                container.innerHTML = "";
+            });
+
+            // Clear all hidden fields
+            document.getElementById("existing_content_package").value = "";
+            document.getElementById("existing_launch_file").value = "";
+            document.getElementById("existing_thumbnail_image").value = "";
+            document.getElementById("existing_manifest_file").value = "";
+
             // Check if elements exist before setting values
             if (nonScormId) nonScormId.value = nonScormData.id || "";
             if (nonScormTitle) nonScormTitle.value = nonScormData.title || "";
@@ -303,31 +336,19 @@ document.addEventListener("DOMContentLoaded", function () {
 
             // Show existing file previews
             if (nonScormData.content_package) {
-                createExistingFilePreview(nonScormData.content_package, document.getElementById('contentPackagePreview'), () => {
-                    document.getElementById("existing_content_package").value = "";
-                    document.getElementById('contentPackagePreview').innerHTML = "";
-                });
+                createExistingFilePreview(nonScormData.content_package, document.getElementById('contentPackagePreview'));
             }
 
             if (nonScormData.launch_file) {
-                createExistingFilePreview(nonScormData.launch_file, document.getElementById('launchFilePreview'), () => {
-                    document.getElementById("existing_launch_file").value = "";
-                    document.getElementById('launchFilePreview').innerHTML = "";
-                });
+                createExistingFilePreview(nonScormData.launch_file, document.getElementById('launchFilePreview'));
             }
 
             if (nonScormData.thumbnail_image) {
-                createExistingFilePreview(nonScormData.thumbnail_image, document.getElementById('thumbnailImagePreview'), () => {
-                    document.getElementById("existing_thumbnail_image").value = "";
-                    document.getElementById('thumbnailImagePreview').innerHTML = "";
-                });
+                createExistingFilePreview(nonScormData.thumbnail_image, document.getElementById('thumbnailImagePreview'));
             }
 
             if (nonScormData.manifest_file) {
-                createExistingFilePreview(nonScormData.manifest_file, document.getElementById('manifestFilePreview'), () => {
-                    document.getElementById("existing_manifest_file").value = "";
-                    document.getElementById('manifestFilePreview').innerHTML = "";
-                });
+                createExistingFilePreview(nonScormData.manifest_file, document.getElementById('manifestFilePreview'));
             }
 
             // Pre-select radio buttons with error checking
@@ -391,19 +412,21 @@ document.addEventListener("DOMContentLoaded", function () {
     function clearNonScormForm() {
         if (nonScormForm) {
             nonScormForm.reset();
-            
+
             // Clear tags
             nonScormTags = [];
             updateNonScormTagDisplay();
             updateNonScormHiddenTagList();
-            
+
             // Clear file previews
             document.querySelectorAll('#contentPackagePreview, #launchFilePreview, #thumbnailImagePreview, #manifestFilePreview').forEach(container => {
                 container.innerHTML = "";
             });
-            
-            // Clear hidden fields
-            document.getElementById("non_scorm_id").value = "";
+
+            // Clear hidden fields - use correct ID
+            const nonScormIdField = document.getElementById("non_scorm_id") || document.getElementById("nonscorm_id");
+            if (nonScormIdField) nonScormIdField.value = "";
+
             document.getElementById("existing_content_package").value = "";
             document.getElementById("existing_launch_file").value = "";
             document.getElementById("existing_thumbnail_image").value = "";
