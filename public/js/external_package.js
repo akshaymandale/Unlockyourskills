@@ -51,6 +51,8 @@ document.addEventListener("DOMContentLoaded", function () {
         // ✅ Ensure audio fields toggle properly when Podcasts & Audio is selected
         if (selectedType === "podcasts-audio") {
             toggleAudioFields();
+            // ✅ Update asterisks when showing podcasts-audio section
+            updateAudioFieldAsterisks();
         }
     }
 
@@ -75,6 +77,31 @@ document.addEventListener("DOMContentLoaded", function () {
         } else {
             audioFile.parentElement.style.display = "none";
             audioUrl.parentElement.style.display = "block";
+        }
+
+        // ✅ Update asterisk visibility based on audio source
+        updateAudioFieldAsterisks();
+    }
+
+    // ✅ Function to update asterisk visibility for audio fields
+    function updateAudioFieldAsterisks() {
+        const audioFileLabel = document.querySelector('label[for="audioFile"]');
+        const audioUrlLabel = document.querySelector('label[for="audioUrl"]');
+
+        if (audioFileLabel && audioUrlLabel) {
+            // Get existing asterisks
+            const audioFileAsterisk = audioFileLabel.querySelector('.text-danger');
+            const audioUrlAsterisk = audioUrlLabel.querySelector('.text-danger');
+
+            if (audioSource.value === "upload") {
+                // Show asterisk for audio file, hide for audio URL
+                if (audioFileAsterisk) audioFileAsterisk.style.display = 'inline';
+                if (audioUrlAsterisk) audioUrlAsterisk.style.display = 'none';
+            } else {
+                // Show asterisk for audio URL, hide for audio file
+                if (audioFileAsterisk) audioFileAsterisk.style.display = 'none';
+                if (audioUrlAsterisk) audioUrlAsterisk.style.display = 'inline';
+            }
         }
     }
 
@@ -188,27 +215,136 @@ document.addEventListener("DOMContentLoaded", function () {
         hideAllSections();
         tags = [];
         updateTagDisplay();
+
+        // Clear all preview elements
         thumbnailPreview.style.display = "none";
+        const thumbnailFileLink = document.getElementById("thumbnailFileLink");
+        if (thumbnailFileLink) thumbnailFileLink.innerHTML = '';
+
         modalTitle.textContent = "Add External Content";
     });
 
-    // ✅ Handle thumbnail preview
+    // ✅ Enhanced thumbnail preview with remove functionality
     document.getElementById("thumbnail").addEventListener("change", function (event) {
         const file = event.target.files[0];
+        const previewContainer = document.getElementById("thumbnailFileLink");
+
         if (file) {
-            const reader = new FileReader();
-            reader.onload = function (e) {
-                thumbnailPreview.src = e.target.result;
-                thumbnailPreview.style.display = "block";
-            };
-            reader.readAsDataURL(file);
+            createFilePreview(file, previewContainer, () => {
+                this.value = '';
+                previewContainer.innerHTML = '';
+                thumbnailPreview.style.display = "none";
+            });
         } else {
+            previewContainer.innerHTML = '';
             thumbnailPreview.style.display = "none";
         }
     });
 
+    // ✅ File Preview Functions (following Non-SCORM pattern)
+    function createFilePreview(file, previewContainer, removeCallback) {
+        const previewWrapper = document.createElement('div');
+        previewWrapper.className = 'preview-wrapper';
+        previewWrapper.style.position = 'relative';
+        previewWrapper.style.display = 'inline-block';
+        previewWrapper.style.marginTop = '10px';
+
+        if (file.type && file.type.startsWith('image/')) {
+            const img = document.createElement('img');
+            img.src = URL.createObjectURL(file);
+            img.style.maxWidth = '150px';
+            img.style.maxHeight = '100px';
+            img.style.objectFit = 'cover';
+            img.style.border = '1px solid #ddd';
+            img.style.borderRadius = '5px';
+            previewWrapper.appendChild(img);
+        } else {
+            const fileInfo = document.createElement('div');
+            fileInfo.innerHTML = `<i class="fas fa-file"></i> ${file.name}`;
+            fileInfo.style.padding = '10px';
+            fileInfo.style.border = '1px solid #ddd';
+            fileInfo.style.borderRadius = '4px';
+            fileInfo.style.backgroundColor = '#f8f9fa';
+            previewWrapper.appendChild(fileInfo);
+        }
+
+        const removeBtn = document.createElement('button');
+        removeBtn.type = 'button';
+        removeBtn.className = 'remove-preview';
+        removeBtn.innerHTML = '×';
+        removeBtn.style.position = 'absolute';
+        removeBtn.style.top = '-5px';
+        removeBtn.style.right = '-5px';
+        removeBtn.style.background = '#dc3545';
+        removeBtn.style.color = 'white';
+        removeBtn.style.border = 'none';
+        removeBtn.style.borderRadius = '50%';
+        removeBtn.style.width = '20px';
+        removeBtn.style.height = '20px';
+        removeBtn.style.fontSize = '12px';
+        removeBtn.style.cursor = 'pointer';
+        removeBtn.onclick = removeCallback;
+        previewWrapper.appendChild(removeBtn);
+
+        previewContainer.innerHTML = '';
+        previewContainer.appendChild(previewWrapper);
+    }
+
+    function createExistingFilePreview(fileName, previewContainer, uploadPath = 'uploads/external_content/') {
+        const fileExtension = fileName.split('.').pop().toLowerCase();
+        let previewHTML = '';
+
+        if (['jpg', 'jpeg', 'png', 'gif', 'webp'].includes(fileExtension)) {
+            // Image preview with cross button
+            previewHTML = `
+                <div class="preview-wrapper" style="position: relative; display: inline-block; margin-top: 10px;">
+                    <img src="${uploadPath}${fileName}" alt="Preview" style="max-width: 150px; max-height: 100px; object-fit: cover; border: 1px solid #ddd; border-radius: 5px;">
+                    <button type="button" class="remove-preview" onclick="removeExternalFilePreview('${previewContainer.id}')" style="position: absolute; top: -5px; right: -5px; background: #dc3545; color: white; border: none; border-radius: 50%; width: 20px; height: 20px; font-size: 12px; cursor: pointer;">×</button>
+                </div>
+                <p style="margin-top: 5px; font-size: 12px; color: #6c757d;">Current file: ${fileName}</p>
+            `;
+        } else {
+            // File link preview with cross button
+            previewHTML = `
+                <div class="preview-wrapper" style="position: relative; display: inline-block; margin-top: 10px;">
+                    <div style="padding: 10px; border: 1px solid #ddd; border-radius: 5px; background: #f8f9fa;">
+                        <i class="fas fa-file" style="font-size: 24px; color: #6c757d;"></i>
+                        <button type="button" class="remove-preview" onclick="removeExternalFilePreview('${previewContainer.id}')" style="position: absolute; top: -5px; right: -5px; background: #dc3545; color: white; border: none; border-radius: 50%; width: 20px; height: 20px; font-size: 12px; cursor: pointer;">×</button>
+                    </div>
+                    <p style="margin-top: 5px; font-size: 12px; color: #6c757d;">Current file: <a href="${uploadPath}${fileName}" target="_blank">${fileName}</a></p>
+                </div>
+            `;
+        }
+
+        previewContainer.innerHTML = previewHTML;
+    }
+
+    // Global function to remove file preview
+    window.removeExternalFilePreview = function(containerId) {
+        const container = document.getElementById(containerId);
+        if (container) {
+            container.innerHTML = '';
+        }
+
+        // Clear the corresponding file input and hidden field
+        if (containerId === 'thumbnailFileLink') {
+            const thumbnailInput = document.getElementById('thumbnail');
+            if (thumbnailInput) thumbnailInput.value = '';
+            const thumbnailPreview = document.getElementById('thumbnailPreview');
+            if (thumbnailPreview) thumbnailPreview.style.display = 'none';
+        }
+    };
+
     // ✅ Ensure correct audio field visibility on edit
-    audioSource.addEventListener("change", toggleAudioFields);
+    audioSource.addEventListener("change", function() {
+        toggleAudioFields();
+
+        // ✅ Re-validate audio URL field when source changes
+        const audioUrlField = document.getElementById("audioUrl");
+        if (audioUrlField && typeof validateExternalContentField === 'function') {
+            validateExternalContentField(audioUrlField);
+        }
+    });
 
     // ✅ Handle edit content modal
     document.querySelectorAll(".edit-content").forEach(button => {
@@ -218,6 +354,12 @@ document.addEventListener("DOMContentLoaded", function () {
             const contentData = JSON.parse(this.getAttribute("data-content"));
 
             modalTitle.textContent = "Edit External Content";
+
+            // Clear existing previews first
+            const thumbnailFileLink = document.getElementById("thumbnailFileLink");
+            if (thumbnailFileLink) thumbnailFileLink.innerHTML = '';
+            const thumbnailPreview = document.getElementById("thumbnailPreview");
+            if (thumbnailPreview) thumbnailPreview.style.display = 'none';
 
             document.getElementById("external_id").value = contentData.id || "";
             document.getElementById("title").value = contentData.title || "";
@@ -232,6 +374,11 @@ document.addEventListener("DOMContentLoaded", function () {
             tags = contentData.tags ? contentData.tags.split(",") : [];
             updateTagDisplay();
 
+            // ✅ Update asterisks after setting audio source value
+            setTimeout(() => {
+                updateAudioFieldAsterisks();
+            }, 100);
+
             document.getElementById("videoUrl").value = contentData.video_url || "";
             document.getElementById("courseUrl").value = contentData.course_url || "";
             document.getElementById("platformName").value = contentData.platform_name || "";
@@ -239,6 +386,19 @@ document.addEventListener("DOMContentLoaded", function () {
             document.getElementById("author").value = contentData.author || "";
             document.getElementById("audioSource").value = contentData.audio_source || "upload";
             document.getElementById("audioUrl").value = contentData.audio_url || "";
+
+            // ✅ Show existing file previews (following Non-SCORM pattern)
+            if (contentData.thumbnail && thumbnailFileLink) {
+                createExistingFilePreview(contentData.thumbnail, thumbnailFileLink);
+            }
+
+            // Set mobile support radio buttons
+            const mobileSupport = document.querySelectorAll('input[name="mobile_support"]');
+            mobileSupport.forEach(radio => {
+                if (radio.value === contentData.mobile_support) {
+                    radio.checked = true;
+                }
+            });
 
             $("#externalContentModal").modal("show");
         });

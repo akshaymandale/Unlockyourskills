@@ -75,7 +75,7 @@ class VLRController
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             // Validate session (ensure user is logged in)
             if (!isset($_SESSION['id'])) {
-                echo "<script>alert('Unauthorized access. Please log in.'); window.location.href='index.php?controller=VLRController';</script>";
+                echo "<script>alert('Unauthorized access. Please log in.'); window.location.href='index.php?controller=VLRController&tab=scorm';</script>";
                 exit();
             }
 
@@ -92,7 +92,7 @@ class VLRController
                 if (move_uploaded_file($_FILES['zipFile']['tmp_name'], $uploadFilePath)) {
                     $zipFileName = $uniqueFileName;
                 } else {
-                    echo "<script>alert('File upload failed.'); window.location.href='index.php?controller=VLRController';</script>";
+                    echo "<script>alert('File upload failed.'); window.location.href='index.php?controller=VLRController&tab=scorm';</script>";
                     exit();
                 }
             }
@@ -122,9 +122,9 @@ class VLRController
                 $message = $result ? "SCORM package added successfully." : "Failed to insert SCORM package.";
             }
 
-            echo "<script>alert('$message'); window.location.href='index.php?controller=VLRController';</script>";
+            echo "<script>alert('$message'); window.location.href='index.php?controller=VLRController&tab=scorm';</script>";
         } else {
-            echo "<script>alert('Invalid request parameters.'); window.location.href='index.php?controller=VLRController';</script>";
+            echo "<script>alert('Invalid request parameters.'); window.location.href='index.php?controller=VLRController&tab=scorm';</script>";
         }
     }
 
@@ -136,9 +136,9 @@ class VLRController
             $result = $this->VLRModel->deleteScormPackage($id);
 
             if ($result) {
-                echo "<script>alert('SCORM package deleted successfully.'); window.location.href='index.php?controller=VLRController';</script>";
+                echo "<script>alert('SCORM package deleted successfully.'); window.location.href='index.php?controller=VLRController&tab=scorm';</script>";
             } else {
-                echo "<script>alert('Failed to delete SCORM package.'); window.location.href='index.php?controller=VLRController';</script>";
+                echo "<script>alert('Failed to delete SCORM package.'); window.location.href='index.php?controller=VLRController&tab=scorm';</script>";
             }
         }
     }
@@ -152,15 +152,15 @@ class VLRController
             $isEdit = isset($_POST['id']) && !empty($_POST['id']);
             $id = $isEdit ? intval($_POST['id']) : null;
 
-            // Sanitize and fetch input values
-            $title = trim($_POST['title']);
-            $contentType = trim($_POST['content_type']);
-            $versionNumber = trim($_POST['version_number']);
-            $mobileSupport = trim($_POST['mobile_support']);
-            $languageSupport = trim($_POST['language_support']);
+            // ✅ Sanitize and fetch input values with null coalescing
+            $title = trim($_POST['title'] ?? '');
+            $contentType = trim($_POST['content_type'] ?? '');
+            $versionNumber = trim($_POST['version_number'] ?? '');
+            $mobileSupport = trim($_POST['mobile_support'] ?? '');
+            $languageSupport = trim($_POST['language_support'] ?? '');
             $timeLimit = isset($_POST['time_limit']) ? intval($_POST['time_limit']) : null;
-            $description = trim($_POST['description']);
-            $tags = trim($_POST['tags']);
+            $description = trim($_POST['description'] ?? '');
+            $tags = trim($_POST['tags'] ?? '');
             $modifiedBy = $_SESSION['id']; // Session-based user
 
             // Content type specific fields
@@ -186,8 +186,7 @@ class VLRController
                 $errors[] = "Version number is required.";
             if (!in_array($mobileSupport, ['Yes', 'No']))
                 $errors[] = "Invalid mobile support value.";
-            if (empty($languageSupport))
-                $errors[] = "Language support is required.";
+            // ✅ Language support is optional - removed required validation
             if (!empty($timeLimit) && !is_numeric($timeLimit))
                 $errors[] = "Time limit must be a number.";
             if (empty($tags))
@@ -224,9 +223,15 @@ class VLRController
                 } elseif ($thumbnailSize > 5 * 1024 * 1024) { // 5MB limit
                     $errors[] = "Thumbnail size should not exceed 5MB.";
                 } else {
+                    // ✅ Ensure upload directory exists
+                    $uploadDir = "uploads/external/thumbnails/";
+                    if (!is_dir($uploadDir)) {
+                        mkdir($uploadDir, 0755, true);
+                    }
+
                     // Save file
                     $newThumbnailName = time() . "_" . basename($thumbnailName);
-                    $thumbnailUploadPath = "uploads/external/thumbnails/" . $newThumbnailName;
+                    $thumbnailUploadPath = $uploadDir . $newThumbnailName;
 
                     if (move_uploaded_file($thumbnailTmp, $thumbnailUploadPath)) {
                         $thumbnail = $newThumbnailName;
@@ -253,9 +258,15 @@ class VLRController
                 } elseif ($fileSize > 5 * 1024 * 1024) {
                     $errors[] = "Audio file size should not exceed 5MB.";
                 } else {
+                    // ✅ Ensure upload directory exists
+                    $audioUploadDir = "uploads/external/audio/";
+                    if (!is_dir($audioUploadDir)) {
+                        mkdir($audioUploadDir, 0755, true);
+                    }
+
                     // Save file
                     $newFileName = time() . "_" . basename($fileName);
-                    $uploadPath = "uploads/external/audio/" . $newFileName;
+                    $uploadPath = $audioUploadDir . $newFileName;
 
                     if (move_uploaded_file($fileTmp, $uploadPath)) {
                         $audioFile = $newFileName;
@@ -265,9 +276,10 @@ class VLRController
                 }
             }
 
-            // If errors exist, return response
+            // ✅ If errors exist, redirect with alert using consistent method
             if (!empty($errors)) {
-                echo json_encode(["status" => "error", "messages" => $errors]);
+                $errorMessage = implode('\n', $errors);
+                $this->redirectWithAlert($errorMessage, "external");
                 return;
             }
 
@@ -293,11 +305,9 @@ class VLRController
                 'updated_by' => $modifiedBy,
             ];
 
-            // Include uploaded files if present
+            // ✅ Include uploaded files if present (thumbnail already set in main array)
             if ($audioFile)
                 $data['audio_file'] = $audioFile;
-            if ($thumbnail)
-                $data['thumbnail'] = $thumbnail;
 
             // Insert or update the database
             if ($isEdit) {
@@ -309,8 +319,8 @@ class VLRController
                 $message = $result ? "External Content package added successfully." : "Failed to insert External Content package.";
             }
 
-            // Return JSON response
-            echo json_encode(["status" => $result ? "success" : "error", "message" => $message]);
+            // ✅ Use consistent redirect method like other modules
+            $this->redirectWithAlert($message, "external");
         }
     }
 
@@ -322,9 +332,9 @@ class VLRController
             $result = $this->VLRModel->deleteExternalContent($id);
 
             if ($result) {
-                echo "<script>alert('External Content deleted successfully.'); window.location.href='index.php?controller=VLRController';</script>";
+                echo "<script>alert('External Content deleted successfully.'); window.location.href='index.php?controller=VLRController&tab=external';</script>";
             } else {
-                echo "<script>alert('Failed to delete External Content package.'); window.location.href='index.php?controller=VLRController';</script>";
+                echo "<script>alert('Failed to delete External Content package.'); window.location.href='index.php?controller=VLRController&tab=external';</script>";
             }
         }
 
@@ -446,7 +456,7 @@ class VLRController
                 $message = $result['success'] ? "Document added successfully." : "Failed to add document.";
             }
 
-            $this->redirectWithAlert($message);
+            $this->redirectWithAlert($message, "document");
         }
     }
 
@@ -462,9 +472,9 @@ class VLRController
             $result = $this->VLRModel->deleteDocument($id);
 
             if ($result) {
-                echo "<script>alert('Document deleted successfully.'); window.location.href='index.php?controller=VLRController';</script>";
+                echo "<script>alert('Document deleted successfully.'); window.location.href='index.php?controller=VLRController&tab=document';</script>";
             } else {
-                echo "<script>alert('Failed to delete document.'); window.location.href='index.php?controller=VLRController';</script>";
+                echo "<script>alert('Failed to delete document.'); window.location.href='index.php?controller=VLRController&tab=document';</script>";
             }
         }
     }
@@ -558,10 +568,10 @@ class VLRController
 
         if ($result) {
             $message = "Assessment saved successfully!";
-            echo "<script>alert('$message'); window.location.href='index.php?controller=VLRController';</script>";
+            echo "<script>alert('$message'); window.location.href='index.php?controller=VLRController&tab=assessment';</script>";
         } else {
             $message = "Failed to save assessment.";
-            echo "<script>alert('$message'); window.location.href='index.php?controller=VLRController';</script>";
+            echo "<script>alert('$message'); window.location.href='index.php?controller=VLRController&tab=assessment';</script>";
         }
     }
 
@@ -574,12 +584,12 @@ class VLRController
             $result = $this->VLRModel->deleteAssessment($id);
 
             if ($result) {
-                echo "<script>alert('Assessment deleted successfully.'); window.location.href='index.php?controller=VLRController';</script>";
+                echo "<script>alert('Assessment deleted successfully.'); window.location.href='index.php?controller=VLRController&tab=assessment';</script>";
             } else {
-                echo "<script>alert('Failed to delete assessment.'); window.location.href='index.php?controller=VLRController';</script>";
+                echo "<script>alert('Failed to delete assessment.'); window.location.href='index.php?controller=VLRController&tab=assessment';</script>";
             }
         } else {
-            echo "<script>alert('Invalid request.'); window.location.href='index.php?controller=VLRController';</script>";
+            echo "<script>alert('Invalid request.'); window.location.href='index.php?controller=VLRController&tab=assessment';</script>";
         }
     }
 
@@ -587,13 +597,13 @@ class VLRController
 public function addOrEditAudioPackage()
 {
     if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
-        $this->redirectWithAlert("Invalid request parameters.");
+        $this->redirectWithAlert("Invalid request parameters.", "audio");
         return;
     }
 
     // ✅ Ensure session is valid
     if (!isset($_SESSION['id'])) {
-        $this->redirectWithAlert("Unauthorized access. Please log in.");
+        $this->redirectWithAlert("Unauthorized access. Please log in.", "audio");
         return;
     }
 
@@ -635,7 +645,7 @@ public function addOrEditAudioPackage()
 
     // ✅ Handle validation failure
     if (!empty($errors)) {
-        $this->redirectWithAlert(implode('\n', $errors));
+        $this->redirectWithAlert(implode('\n', $errors), "audio");
         return;
     }
 
@@ -648,7 +658,7 @@ public function addOrEditAudioPackage()
         $targetPath = $uploadDir . $uniqueName;
 
         if (!move_uploaded_file($audioFile['tmp_name'], $targetPath)) {
-            $this->redirectWithAlert("Audio upload failed.");
+            $this->redirectWithAlert("Audio upload failed.", "audio");
             return;
         }
 
@@ -677,7 +687,7 @@ public function addOrEditAudioPackage()
         $message = $success ? "Audio package added successfully." : "Failed to add Audio package.";
     }
 
-    $this->redirectWithAlert($message);
+    $this->redirectWithAlert($message, "audio");
 }
 
 
@@ -685,7 +695,7 @@ public function addOrEditAudioPackage()
 public function deleteAudioPackage()
 {
     if (!isset($_GET['id'])) {
-        $this->redirectWithAlert("Invalid request.");
+        $this->redirectWithAlert("Invalid request.", "audio");
         return;
     }
 
@@ -693,7 +703,7 @@ public function deleteAudioPackage()
     $success = $this->VLRModel->deleteAudioPackage($id);
 
     $message = $success ? "Audio package deleted successfully." : "Failed to delete Audio package.";
-    $this->redirectWithAlert($message);
+    $this->redirectWithAlert($message, "audio");
 }
 
 
@@ -702,13 +712,13 @@ public function deleteAudioPackage()
 public function addOrEditVideoPackage()
 {
     if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
-        $this->redirectWithAlert("Invalid request parameters.");
+        $this->redirectWithAlert("Invalid request parameters.", "video");
         return;
     }
 
     // ✅ Ensure session is valid
     if (!isset($_SESSION['id'])) {
-        $this->redirectWithAlert("Unauthorized access. Please log in.");
+        $this->redirectWithAlert("Unauthorized access. Please log in.", "video");
         return;
     }
 
@@ -750,7 +760,7 @@ public function addOrEditVideoPackage()
 
     // ✅ Handle validation failure
     if (!empty($errors)) {
-        $this->redirectWithAlert(implode('\n', $errors));
+        $this->redirectWithAlert(implode('\n', $errors), "video");
         return;
     }
 
@@ -763,7 +773,7 @@ public function addOrEditVideoPackage()
         $targetPath = $uploadDir . $uniqueName;
 
         if (!move_uploaded_file($videoFile['tmp_name'], $targetPath)) {
-            $this->redirectWithAlert("Video upload failed.");
+            $this->redirectWithAlert("Video upload failed.", "video");
             return;
         }
 
@@ -792,14 +802,14 @@ public function addOrEditVideoPackage()
         $message = $success ? "Video package added successfully." : "Failed to add Video package.";
     }
 
-    $this->redirectWithAlert($message);
+    $this->redirectWithAlert($message, "video");
 }
 
 // ✅ Delete Video Package
 public function deleteVideoPackage()
 {
     if (!isset($_GET['id'])) {
-        $this->redirectWithAlert("Invalid request.");
+        $this->redirectWithAlert("Invalid request.", "video");
         return;
     }
 
@@ -807,7 +817,7 @@ public function deleteVideoPackage()
     $success = $this->VLRModel->deleteVideoPackage($id);
 
     $message = $success ? "Video package deleted successfully." : "Failed to delete Video package.";
-    $this->redirectWithAlert($message);
+    $this->redirectWithAlert($message, "video");
 }
 
 
@@ -815,13 +825,13 @@ public function deleteVideoPackage()
 public function addOrEditImagePackage()
 {
     if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
-        $this->redirectWithAlert("Invalid request parameters.");
+        $this->redirectWithAlert("Invalid request parameters.", "image");
         return;
     }
 
     // ✅ Ensure session is valid
     if (!isset($_SESSION['id'])) {
-        $this->redirectWithAlert("Unauthorized access. Please log in.");
+        $this->redirectWithAlert("Unauthorized access. Please log in.", "image");
         return;
     }
 
@@ -857,7 +867,7 @@ public function addOrEditImagePackage()
 
     // ✅ Handle validation failure
     if (!empty($errors)) {
-        $this->redirectWithAlert(implode('\n', $errors));
+        $this->redirectWithAlert(implode('\n', $errors), "image");
         return;
     }
 
@@ -870,7 +880,7 @@ public function addOrEditImagePackage()
         $targetPath = $uploadDir . $uniqueName;
 
         if (!move_uploaded_file($imageFile['tmp_name'], $targetPath)) {
-            $this->redirectWithAlert("Image upload failed.");
+            $this->redirectWithAlert("Image upload failed.", "image");
             return;
         }
 
@@ -898,14 +908,14 @@ public function addOrEditImagePackage()
         $message = $success ? "Image package added successfully." : "Failed to add Image package.";
     }
 
-    $this->redirectWithAlert($message);
+    $this->redirectWithAlert($message, "image");
 }
 
 // ✅ Delete Image Package
 public function deleteImagePackage()
 {
     if (!isset($_GET['id'])) {
-        $this->redirectWithAlert("Invalid request.");
+        $this->redirectWithAlert("Invalid request.", "image");
         return;
     }
 
@@ -913,15 +923,19 @@ public function deleteImagePackage()
     $success = $this->VLRModel->deleteImagePackage($id);
 
     $message = $success ? "Image package deleted successfully." : "Failed to delete Image package.";
-    $this->redirectWithAlert($message);
+    $this->redirectWithAlert($message, "image");
 }
 
 
 
 // 🔁 Utility function for redirecting with alert
-private function redirectWithAlert($message)
+private function redirectWithAlert($message, $tab = null)
 {
-    echo "<script>alert('$message'); window.location.href='index.php?controller=VLRController';</script>";
+    $url = 'index.php?controller=VLRController';
+    if ($tab) {
+        $url .= '&tab=' . $tab;
+    }
+    echo "<script>alert('$message'); window.location.href='$url';</script>";
     exit();
 }
 
@@ -984,7 +998,7 @@ private function redirectWithAlert($message)
             $message = $result ? "Survey saved successfully!" : "Failed to save survey.";
         }
 
-        echo "<script>alert('$message'); window.location.href='index.php?controller=VLRController';</script>";
+        echo "<script>alert('$message'); window.location.href='index.php?controller=VLRController&tab=survey';</script>";
     }
 
 
@@ -998,12 +1012,12 @@ private function redirectWithAlert($message)
             $result = $this->VLRModel->deleteSurvey($id);
 
             if ($result) {
-                echo "<script>alert('Survey deleted successfully.'); window.location.href='index.php?controller=VLRController';</script>";
+                echo "<script>alert('Survey deleted successfully.'); window.location.href='index.php?controller=VLRController&tab=survey';</script>";
             } else {
-                echo "<script>alert('Failed to delete survey.'); window.location.href='index.php?controller=VLRController';</script>";
+                echo "<script>alert('Failed to delete survey.'); window.location.href='index.php?controller=VLRController&tab=survey';</script>";
             }
         } else {
-            echo "<script>alert('Invalid request.'); window.location.href='index.php?controller=VLRController';</script>";
+            echo "<script>alert('Invalid request.'); window.location.href='index.php?controller=VLRController&tab=survey';</script>";
         }
     }
 
@@ -1089,7 +1103,7 @@ private function redirectWithAlert($message)
             $message = $result ? "Feedback saved successfully!" : "Failed to save feedback.";
         }
 
-        echo "<script>alert('$message'); window.location.href='index.php?controller=VLRController';</script>";
+        echo "<script>alert('$message'); window.location.href='index.php?controller=VLRController&tab=feedback';</script>";
     }
 
     // Feedback Delete
@@ -1100,12 +1114,12 @@ private function redirectWithAlert($message)
             $result = $this->VLRModel->deleteFeedback($id);
 
             if ($result) {
-                echo "<script>alert('Feedback deleted successfully.'); window.location.href='index.php?controller=VLRController';</script>";
+                echo "<script>alert('Feedback deleted successfully.'); window.location.href='index.php?controller=VLRController&tab=feedback';</script>";
             } else {
-                echo "<script>alert('Failed to delete feedback.'); window.location.href='index.php?controller=VLRController';</script>";
+                echo "<script>alert('Failed to delete feedback.'); window.location.href='index.php?controller=VLRController&tab=feedback';</script>";
             }
         } else {
-            echo "<script>alert('Invalid request.'); window.location.href='index.php?controller=VLRController';</script>";
+            echo "<script>alert('Invalid request.'); window.location.href='index.php?controller=VLRController&tab=feedback';</script>";
         }
     }
 
@@ -1125,7 +1139,7 @@ private function redirectWithAlert($message)
             if (isset($_FILES['content_file']) && $_FILES['content_file']['error'] === UPLOAD_ERR_OK) {
                 $contentFile = $this->handleInteractiveFileUpload($_FILES['content_file'], 'content');
                 if (!$contentFile) {
-                    $this->redirectWithAlert("Content file upload failed.");
+                    $this->redirectWithAlert("Content file upload failed.", "interactive");
                     return;
                 }
             } else if (!empty($_POST['existing_content_file'])) {
@@ -1136,7 +1150,7 @@ private function redirectWithAlert($message)
             if (isset($_FILES['thumbnail_image']) && $_FILES['thumbnail_image']['error'] === UPLOAD_ERR_OK) {
                 $thumbnailImage = $this->handleInteractiveFileUpload($_FILES['thumbnail_image'], 'thumbnail');
                 if (!$thumbnailImage) {
-                    $this->redirectWithAlert("Thumbnail image upload failed.");
+                    $this->redirectWithAlert("Thumbnail image upload failed.", "interactive");
                     return;
                 }
             } else if (!empty($_POST['existing_thumbnail_image'])) {
@@ -1147,7 +1161,7 @@ private function redirectWithAlert($message)
             if (isset($_FILES['metadata_file']) && $_FILES['metadata_file']['error'] === UPLOAD_ERR_OK) {
                 $metadataFile = $this->handleInteractiveFileUpload($_FILES['metadata_file'], 'metadata');
                 if (!$metadataFile) {
-                    $this->redirectWithAlert("Metadata file upload failed.");
+                    $this->redirectWithAlert("Metadata file upload failed.", "interactive");
                     return;
                 }
             } else if (!empty($_POST['existing_metadata_file'])) {
@@ -1196,9 +1210,9 @@ private function redirectWithAlert($message)
                 $message = $result ? "Interactive content added successfully." : "Failed to insert interactive content.";
             }
 
-            echo "<script>alert('$message'); window.location.href='index.php?controller=VLRController';</script>";
+            echo "<script>alert('$message'); window.location.href='index.php?controller=VLRController&tab=interactive';</script>";
         } else {
-            echo "<script>alert('Invalid request parameters.'); window.location.href='index.php?controller=VLRController';</script>";
+            echo "<script>alert('Invalid request parameters.'); window.location.href='index.php?controller=VLRController&tab=interactive';</script>";
         }
     }
 
@@ -1237,7 +1251,7 @@ private function redirectWithAlert($message)
             $message = "Invalid request.";
         }
 
-        echo "<script>alert('$message'); window.location.href='index.php?controller=VLRController';</script>";
+        echo "<script>alert('$message'); window.location.href='index.php?controller=VLRController&tab=interactive';</script>";
     }
 
     // ✅ Non-SCORM Package Methods
@@ -1300,7 +1314,7 @@ private function redirectWithAlert($message)
                 $message = $result ? "Non-SCORM content added successfully." : "Failed to insert Non-SCORM content.";
             }
 
-            echo "<script>alert('$message'); window.location.href='index.php?controller=VLRController';</script>";
+            echo "<script>alert('$message'); window.location.href='index.php?controller=VLRController&tab=non-scorm';</script>";
         } else {
             echo "<script>alert('Invalid request parameters.'); window.location.href='index.php?controller=VLRController';</script>";
         }
@@ -1347,7 +1361,7 @@ private function redirectWithAlert($message)
             $message = "Invalid request.";
         }
 
-        echo "<script>alert('$message'); window.location.href='index.php?controller=VLRController';</script>";
+        echo "<script>alert('$message'); window.location.href='index.php?controller=VLRController&tab=non-scorm';</script>";
     }
 
 }

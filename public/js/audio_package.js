@@ -84,8 +84,9 @@ document.addEventListener("DOMContentLoaded", function () {
             descriptionAudio.value = audioData.description;
             existingAudio.value = audioData.audio_file;
 
+            // ✅ Show existing file preview with remove button (following Non-SCORM pattern)
             if (audioData.audio_file) {
-                audioDisplay.innerHTML = `Current File: <a href="uploads/audio/${audioData.audio_file}" target="_blank">${audioData.audio_file}</a>`;
+                createExistingFilePreview(audioData.audio_file, audioDisplay, 'uploads/audio/');
             } else {
                 audioDisplay.innerHTML = "No audio file uploaded.";
             }
@@ -130,6 +131,54 @@ document.addEventListener("DOMContentLoaded", function () {
             audioModal.show();
         });
     }
+
+    // ✅ File Preview Functions (following Non-SCORM pattern)
+    function createExistingFilePreview(fileName, previewContainer, uploadPath = 'uploads/audio/') {
+        const fileExtension = fileName.split('.').pop().toLowerCase();
+        let previewHTML = '';
+
+        if (['mp3', 'wav', 'ogg', 'm4a'].includes(fileExtension)) {
+            // Audio preview with cross button
+            previewHTML = `
+                <div class="preview-wrapper" style="position: relative; display: inline-block; margin-top: 10px;">
+                    <div style="padding: 10px; border: 1px solid #ddd; border-radius: 5px; background: #f8f9fa;">
+                        <i class="fas fa-music" style="font-size: 24px; color: #6c757d;"></i>
+                        <button type="button" class="remove-preview" onclick="removeAudioFilePreview('${previewContainer.id}')" style="position: absolute; top: -5px; right: -5px; background: #dc3545; color: white; border: none; border-radius: 50%; width: 20px; height: 20px; font-size: 12px; cursor: pointer;">×</button>
+                    </div>
+                    <p style="margin-top: 5px; font-size: 12px; color: #6c757d;">Current file: <a href="${uploadPath}${fileName}" target="_blank">${fileName}</a></p>
+                </div>
+            `;
+        } else {
+            // Generic file preview with cross button
+            previewHTML = `
+                <div class="preview-wrapper" style="position: relative; display: inline-block; margin-top: 10px;">
+                    <div style="padding: 10px; border: 1px solid #ddd; border-radius: 5px; background: #f8f9fa;">
+                        <i class="fas fa-file" style="font-size: 24px; color: #6c757d;"></i>
+                        <button type="button" class="remove-preview" onclick="removeAudioFilePreview('${previewContainer.id}')" style="position: absolute; top: -5px; right: -5px; background: #dc3545; color: white; border: none; border-radius: 50%; width: 20px; height: 20px; font-size: 12px; cursor: pointer;">×</button>
+                    </div>
+                    <p style="margin-top: 5px; font-size: 12px; color: #6c757d;">Current file: <a href="${uploadPath}${fileName}" target="_blank">${fileName}</a></p>
+                </div>
+            `;
+        }
+
+        previewContainer.innerHTML = previewHTML;
+    }
+
+    // Global function to remove file preview
+    window.removeAudioFilePreview = function(containerId) {
+        const container = document.getElementById(containerId);
+        if (container) {
+            container.innerHTML = '';
+        }
+
+        // Clear the corresponding file input and hidden field
+        if (containerId === 'existingAudioDisplay') {
+            const audioInput = document.getElementById('audioFileaudio');
+            if (audioInput) audioInput.value = '';
+            const existingAudioField = document.getElementById('existing_audio');
+            if (existingAudioField) existingAudioField.value = '';
+        }
+    };
 
     // Optional: Add validation here
     audioForm.addEventListener("submit", function (event) {

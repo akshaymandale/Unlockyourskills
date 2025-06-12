@@ -132,19 +132,19 @@ document.addEventListener("DOMContentLoaded", function () {
                 document.getElementById("doc_version").value = documentData.version_number;
                 document.getElementById("doc_time_limit").value = documentData.time_limit;
     
-                // ✅ Display Existing Files and Show Sections if Files Exist
+                // ✅ Display Existing Files with Remove Buttons (following Non-SCORM pattern)
                 if (documentData.word_excel_ppt_file) {
-                    wordExcelPptDisplay.innerHTML = `Current File: <a href="uploads/documents/${documentData.word_excel_ppt_file}" target="_blank">${documentData.word_excel_ppt_file}</a>`;
+                    createExistingFilePreview(documentData.word_excel_ppt_file, wordExcelPptDisplay, 'uploads/documents/', 'wordExcelPptDisplay');
                     wordExcelPptDisplay.style.display = "block"; // Show only if file exists
                 }
-    
+
                 if (documentData.ebook_manual_file) {
-                    ebookManualDisplay.innerHTML = `Current File: <a href="uploads/documents/${documentData.ebook_manual_file}" target="_blank">${documentData.ebook_manual_file}</a>`;
+                    createExistingFilePreview(documentData.ebook_manual_file, ebookManualDisplay, 'uploads/documents/', 'ebookManualDisplay');
                     ebookManualDisplay.style.display = "block"; // Show only if file exists
                 }
-    
+
                 if (documentData.research_file) {
-                    researchDisplay.innerHTML = `Current File: <a href="uploads/documents/${documentData.research_file}" target="_blank">${documentData.research_file}</a>`;
+                    createExistingFilePreview(documentData.research_file, researchDisplay, 'uploads/documents/', 'researchDisplay');
                     researchDisplay.style.display = "block"; // Show only if file exists
                 }
     
@@ -253,5 +253,97 @@ document.addEventListener("DOMContentLoaded", function () {
 
         toggleCategoryFields();
     });
+
+    // ✅ File Preview Functions (following Non-SCORM pattern)
+    function createExistingFilePreview(fileName, previewContainer, uploadPath = 'uploads/documents/', containerId) {
+        const fileExtension = fileName.split('.').pop().toLowerCase();
+        let previewHTML = '';
+
+        if (['pdf'].includes(fileExtension)) {
+            // PDF preview with cross button
+            previewHTML = `
+                <div class="preview-wrapper" style="position: relative; display: inline-block; margin-top: 10px;">
+                    <div style="padding: 10px; border: 1px solid #ddd; border-radius: 5px; background: #f8f9fa;">
+                        <i class="fas fa-file-pdf" style="font-size: 24px; color: #dc3545;"></i>
+                        <button type="button" class="remove-preview" onclick="removeDocumentFilePreview('${containerId}')" style="position: absolute; top: -5px; right: -5px; background: #dc3545; color: white; border: none; border-radius: 50%; width: 20px; height: 20px; font-size: 12px; cursor: pointer;">×</button>
+                    </div>
+                    <p style="margin-top: 5px; font-size: 12px; color: #6c757d;">Current file: <a href="${uploadPath}${fileName}" target="_blank">${fileName}</a></p>
+                </div>
+            `;
+        } else if (['doc', 'docx'].includes(fileExtension)) {
+            // Word document preview with cross button
+            previewHTML = `
+                <div class="preview-wrapper" style="position: relative; display: inline-block; margin-top: 10px;">
+                    <div style="padding: 10px; border: 1px solid #ddd; border-radius: 5px; background: #f8f9fa;">
+                        <i class="fas fa-file-word" style="font-size: 24px; color: #2b579a;"></i>
+                        <button type="button" class="remove-preview" onclick="removeDocumentFilePreview('${containerId}')" style="position: absolute; top: -5px; right: -5px; background: #dc3545; color: white; border: none; border-radius: 50%; width: 20px; height: 20px; font-size: 12px; cursor: pointer;">×</button>
+                    </div>
+                    <p style="margin-top: 5px; font-size: 12px; color: #6c757d;">Current file: <a href="${uploadPath}${fileName}" target="_blank">${fileName}</a></p>
+                </div>
+            `;
+        } else if (['xls', 'xlsx'].includes(fileExtension)) {
+            // Excel document preview with cross button
+            previewHTML = `
+                <div class="preview-wrapper" style="position: relative; display: inline-block; margin-top: 10px;">
+                    <div style="padding: 10px; border: 1px solid #ddd; border-radius: 5px; background: #f8f9fa;">
+                        <i class="fas fa-file-excel" style="font-size: 24px; color: #217346;"></i>
+                        <button type="button" class="remove-preview" onclick="removeDocumentFilePreview('${containerId}')" style="position: absolute; top: -5px; right: -5px; background: #dc3545; color: white; border: none; border-radius: 50%; width: 20px; height: 20px; font-size: 12px; cursor: pointer;">×</button>
+                    </div>
+                    <p style="margin-top: 5px; font-size: 12px; color: #6c757d;">Current file: <a href="${uploadPath}${fileName}" target="_blank">${fileName}</a></p>
+                </div>
+            `;
+        } else if (['ppt', 'pptx'].includes(fileExtension)) {
+            // PowerPoint document preview with cross button
+            previewHTML = `
+                <div class="preview-wrapper" style="position: relative; display: inline-block; margin-top: 10px;">
+                    <div style="padding: 10px; border: 1px solid #ddd; border-radius: 5px; background: #f8f9fa;">
+                        <i class="fas fa-file-powerpoint" style="font-size: 24px; color: #d24726;"></i>
+                        <button type="button" class="remove-preview" onclick="removeDocumentFilePreview('${containerId}')" style="position: absolute; top: -5px; right: -5px; background: #dc3545; color: white; border: none; border-radius: 50%; width: 20px; height: 20px; font-size: 12px; cursor: pointer;">×</button>
+                    </div>
+                    <p style="margin-top: 5px; font-size: 12px; color: #6c757d;">Current file: <a href="${uploadPath}${fileName}" target="_blank">${fileName}</a></p>
+                </div>
+            `;
+        } else {
+            // Generic file preview with cross button
+            previewHTML = `
+                <div class="preview-wrapper" style="position: relative; display: inline-block; margin-top: 10px;">
+                    <div style="padding: 10px; border: 1px solid #ddd; border-radius: 5px; background: #f8f9fa;">
+                        <i class="fas fa-file" style="font-size: 24px; color: #6c757d;"></i>
+                        <button type="button" class="remove-preview" onclick="removeDocumentFilePreview('${containerId}')" style="position: absolute; top: -5px; right: -5px; background: #dc3545; color: white; border: none; border-radius: 50%; width: 20px; height: 20px; font-size: 12px; cursor: pointer;">×</button>
+                    </div>
+                    <p style="margin-top: 5px; font-size: 12px; color: #6c757d;">Current file: <a href="${uploadPath}${fileName}" target="_blank">${fileName}</a></p>
+                </div>
+            `;
+        }
+
+        previewContainer.innerHTML = previewHTML;
+    }
+
+    // Global function to remove file preview
+    window.removeDocumentFilePreview = function(containerId) {
+        const container = document.getElementById(containerId);
+        if (container) {
+            container.innerHTML = '';
+            container.style.display = 'none';
+        }
+
+        // Clear the corresponding file input and hidden field
+        if (containerId === 'wordExcelPptDisplay') {
+            const fileInput = document.getElementById('documentFileWordExcelPpt');
+            if (fileInput) fileInput.value = '';
+            const hiddenField = document.getElementById('existingDocumentWordExcelPpt');
+            if (hiddenField) hiddenField.value = '';
+        } else if (containerId === 'ebookManualDisplay') {
+            const fileInput = document.getElementById('documentFileEbookManual');
+            if (fileInput) fileInput.value = '';
+            const hiddenField = document.getElementById('existingDocumentEbookManual');
+            if (hiddenField) hiddenField.value = '';
+        } else if (containerId === 'researchDisplay') {
+            const fileInput = document.getElementById('documentFileResearch');
+            if (fileInput) fileInput.value = '';
+            const hiddenField = document.getElementById('existingDocumentResearch');
+            if (hiddenField) hiddenField.value = '';
+        }
+    };
 
 });
