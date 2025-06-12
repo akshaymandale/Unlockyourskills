@@ -8,7 +8,7 @@
   <div class="container add-survey-question-container">
 
     <div class="back-arrow-container">
-      <a href="index.php?controller=VLRController" class="back-link">
+      <a href="index.php?controller=VLRController&tab=survey" class="back-link">
         <i class="fas fa-arrow-left"></i>
       </a>
       <span class="divider-line"></span>

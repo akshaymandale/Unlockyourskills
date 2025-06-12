@@ -10,7 +10,7 @@
         <div class="container add-question-container">
 
             <div class="back-arrow-container">
-                <a href="index.php?controller=VLRController" class="back-link">
+                <a href="index.php?controller=VLRController&tab=assessment" class="back-link">
                     <i class="fas fa-arrow-left"></i>
                 </a>
                 <span class="divider-line"></span>
