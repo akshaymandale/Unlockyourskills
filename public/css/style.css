@@ -2289,6 +2289,72 @@ body select:focus,
     box-shadow: 0 0 0 0.2rem rgba(106, 13, 173, 0.25) !important;
 }
 
+/* ✅ Import Modal Theme Styling */
+.import-modal .modal-header {
+    background-color: #6a0dad !important;
+    color: white !important;
+}
+
+.import-modal .btn-close-white {
+    filter: invert(1) grayscale(100%) brightness(200%);
+}
+
+.import-modal .alert-theme {
+    background-color: rgba(106, 13, 173, 0.1) !important;
+    border-color: #6a0dad !important;
+    color: #6a0dad !important;
+}
+
+.import-modal .card-theme {
+    border-color: #6a0dad !important;
+}
+
+.import-modal .card-header-theme {
+    background-color: #6a0dad !important;
+    color: white !important;
+}
+
+.import-modal .btn-outline-theme {
+    border-color: #6a0dad !important;
+    color: #6a0dad !important;
+    background-color: transparent !important;
+    transition: all 0.3s ease;
+}
+
+.import-modal .btn-outline-theme:hover {
+    background-color: #6a0dad !important;
+    color: white !important;
+}
+
+.import-modal .btn-theme {
+    background-color: #6a0dad !important;
+    border-color: #6a0dad !important;
+    color: white !important;
+}
+
+.import-modal .btn-theme:hover {
+    background-color: #5a0b9d !important;
+    border-color: #5a0b9d !important;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 8px rgba(106, 13, 173, 0.3);
+}
+
+.import-modal .btn-theme:active {
+    transform: translateY(0);
+    box-shadow: 0 2px 4px rgba(106, 13, 173, 0.3);
+}
+
+/* ✅ Template Download Buttons Styling */
+.import-modal .d-grid .btn {
+    font-size: 0.9rem;
+    padding: 0.5rem 1rem;
+}
+
+.import-modal .d-grid .btn i {
+    width: 16px;
+    text-align: center;
+}
+
 /* ✅ Universal File Upload Styling - Consistent Across All Modules */
 .form-control[type="file"] {
     padding: 0.375rem 0.75rem;
