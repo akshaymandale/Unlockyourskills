@@ -641,6 +641,15 @@ html, body {
     font-size: 16px;
 }
 
+/* ✅ Search Bar Focus Styling */
+.search-bar:focus,
+.search-input:focus,
+.language-search:focus {
+    border-color: #6a0dad !important;
+    box-shadow: 0 0 0 0.2rem rgba(106, 13, 173, 0.25) !important;
+    outline: none !important;
+}
+
 .search-icon {
     position: absolute;
     right: 10px;
@@ -898,6 +907,18 @@ html, body {
     border: none;
     outline: none;
     flex-grow: 1;
+}
+
+/* ✅ Tag Input Container Focus Styling */
+.tag-input-container:focus-within {
+    border-color: #6a0dad !important;
+    box-shadow: 0 0 0 0.2rem rgba(106, 13, 173, 0.25) !important;
+}
+
+.tag-input-container input:focus {
+    outline: none !important;
+    border: none !important;
+    box-shadow: none !important;
 }
 
 
@@ -2183,6 +2204,155 @@ html, body {
 #interactiveModal .is-invalid:focus {
     border-color: #dc3545 !important;
     box-shadow: 0 0 0 0.2rem rgba(220, 53, 69, 0.25) !important;
+}
+
+/* ✅ Global Form Control Theme Styling - Consistent Across All Modules */
+.form-control:focus,
+.form-select:focus,
+textarea.form-control:focus,
+input.form-control:focus,
+select.form-control:focus,
+input[type="text"]:focus,
+input[type="email"]:focus,
+input[type="password"]:focus,
+input[type="number"]:focus,
+input[type="url"]:focus,
+input[type="search"]:focus,
+input[type="tel"]:focus,
+input[type="date"]:focus,
+input[type="datetime-local"]:focus,
+input[type="time"]:focus,
+textarea:focus,
+select:focus {
+    border-color: #6a0dad !important;
+    outline: 0;
+    box-shadow: 0 0 0 0.2rem rgba(106, 13, 173, 0.25) !important;
+}
+
+/* ✅ Bootstrap Custom Form Controls Theme Styling */
+.form-check-input:focus,
+.form-range:focus,
+.btn-check:focus + .btn,
+.form-floating > .form-control:focus,
+.form-floating > .form-select:focus {
+    border-color: #6a0dad !important;
+    box-shadow: 0 0 0 0.2rem rgba(106, 13, 173, 0.25) !important;
+}
+
+/* ✅ Modal Form Controls Theme Styling */
+.modal .form-control:focus,
+.modal .form-select:focus,
+.modal textarea:focus,
+.modal input:focus,
+.modal select:focus {
+    border-color: #6a0dad !important;
+    box-shadow: 0 0 0 0.2rem rgba(106, 13, 173, 0.25) !important;
+}
+
+/* ✅ Override Bootstrap Default Focus Styles */
+.form-control:not(.is-invalid):focus,
+.form-select:not(.is-invalid):focus {
+    border-color: #6a0dad !important;
+    box-shadow: 0 0 0 0.2rem rgba(106, 13, 173, 0.25) !important;
+}
+
+/* ✅ Ensure Theme Color for All Input Types */
+input:not([type="checkbox"]):not([type="radio"]):not(.btn):focus,
+textarea:not(.btn):focus,
+select:not(.btn):focus {
+    border-color: #6a0dad !important;
+    box-shadow: 0 0 0 0.2rem rgba(106, 13, 173, 0.25) !important;
+}
+
+/* ✅ High Priority Theme Color Override - Ensures Purple Theme Across All Forms */
+body .form-control:focus,
+body .form-select:focus,
+body input:focus,
+body textarea:focus,
+body select:focus,
+.container .form-control:focus,
+.container .form-select:focus,
+.container input:focus,
+.container textarea:focus,
+.container select:focus {
+    border-color: #6a0dad !important;
+    box-shadow: 0 0 0 0.2rem rgba(106, 13, 173, 0.25) !important;
+    outline: none !important;
+}
+
+/* ✅ Specific Bootstrap Form States Override */
+.was-validated .form-control:valid:focus,
+.was-validated .form-select:valid:focus,
+.form-control.is-valid:focus,
+.form-select.is-valid:focus {
+    border-color: #6a0dad !important;
+    box-shadow: 0 0 0 0.2rem rgba(106, 13, 173, 0.25) !important;
+}
+
+/* ✅ Import Modal Theme Styling */
+.import-modal .modal-header {
+    background-color: #6a0dad !important;
+    color: white !important;
+}
+
+.import-modal .btn-close-white {
+    filter: invert(1) grayscale(100%) brightness(200%);
+}
+
+.import-modal .alert-theme {
+    background-color: rgba(106, 13, 173, 0.1) !important;
+    border-color: #6a0dad !important;
+    color: #6a0dad !important;
+}
+
+.import-modal .card-theme {
+    border-color: #6a0dad !important;
+}
+
+.import-modal .card-header-theme {
+    background-color: #6a0dad !important;
+    color: white !important;
+}
+
+.import-modal .btn-outline-theme {
+    border-color: #6a0dad !important;
+    color: #6a0dad !important;
+    background-color: transparent !important;
+    transition: all 0.3s ease;
+}
+
+.import-modal .btn-outline-theme:hover {
+    background-color: #6a0dad !important;
+    color: white !important;
+}
+
+.import-modal .btn-theme {
+    background-color: #6a0dad !important;
+    border-color: #6a0dad !important;
+    color: white !important;
+}
+
+.import-modal .btn-theme:hover {
+    background-color: #5a0b9d !important;
+    border-color: #5a0b9d !important;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 8px rgba(106, 13, 173, 0.3);
+}
+
+.import-modal .btn-theme:active {
+    transform: translateY(0);
+    box-shadow: 0 2px 4px rgba(106, 13, 173, 0.3);
+}
+
+/* ✅ Template Download Buttons Styling */
+.import-modal .d-grid .btn {
+    font-size: 0.9rem;
+    padding: 0.5rem 1rem;
+}
+
+.import-modal .d-grid .btn i {
+    width: 16px;
+    text-align: center;
 }
 
 /* ✅ Universal File Upload Styling - Consistent Across All Modules */

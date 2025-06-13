@@ -872,4 +872,97 @@ document.addEventListener('DOMContentLoaded', function () {
             renderTags();
         };
     }
+
+    // ✅ Import Assessment Questions Modal Validation
+    const importModal = document.getElementById('importAssessmentQuestionModal');
+    const importForm = document.getElementById('importAssessmentQuestionForm');
+
+    if (importForm) {
+        importForm.addEventListener('submit', function(e) {
+            e.preventDefault();
+
+            const fileInput = document.getElementById('importFile');
+            const questionTypeSelect = document.getElementById('questionType');
+
+            let isValid = true;
+            let errorMessage = '';
+
+            // Validate file selection
+            if (!fileInput.files || fileInput.files.length === 0) {
+                isValid = false;
+                errorMessage += 'Please select an Excel file to import.\n';
+            } else {
+                const file = fileInput.files[0];
+                const allowedTypes = [
+                    'application/vnd.ms-excel',
+                    'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+                    'text/csv'
+                ];
+
+                if (!allowedTypes.includes(file.type)) {
+                    isValid = false;
+                    errorMessage += 'Invalid file type. Please select an Excel (.xlsx, .xls) or CSV file.\n';
+                }
+
+                // Check file size (10MB limit)
+                const maxSize = 10 * 1024 * 1024; // 10MB in bytes
+                if (file.size > maxSize) {
+                    isValid = false;
+                    errorMessage += 'File size exceeds 10MB limit. Please select a smaller file.\n';
+                }
+            }
+
+            // Validate question type selection
+            if (!questionTypeSelect.value) {
+                isValid = false;
+                errorMessage += 'Please select a question type (Objective or Subjective).\n';
+            }
+
+            if (!isValid) {
+                alert('Please fix the following errors:\n\n' + errorMessage);
+                return false;
+            }
+
+            // Show confirmation dialog
+            const confirmMessage = `Are you sure you want to import questions from this file?\n\nFile: ${fileInput.files[0].name}\nType: ${questionTypeSelect.options[questionTypeSelect.selectedIndex].text}\n\nThis action cannot be undone.`;
+
+            if (confirm(confirmMessage)) {
+                // Show loading state
+                const submitButton = importForm.querySelector('button[type="submit"]');
+                const originalText = submitButton.innerHTML;
+                submitButton.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Importing...';
+                submitButton.disabled = true;
+
+                // Maintain theme color during loading
+                submitButton.style.backgroundColor = '#6a0dad';
+                submitButton.style.borderColor = '#6a0dad';
+                submitButton.style.color = 'white';
+
+                // Submit the form
+                importForm.submit();
+            }
+        });
+    }
+
+    // Reset import form when modal is closed
+    if (importModal) {
+        importModal.addEventListener('hidden.bs.modal', function() {
+            if (importForm) {
+                importForm.reset();
+
+                // Reset submit button state with theme styling
+                const submitButton = importForm.querySelector('button[type="submit"]');
+                if (submitButton) {
+                    submitButton.innerHTML = '<i class="fas fa-upload me-2"></i>Import Questions';
+                    submitButton.disabled = false;
+
+                    // Restore theme styling
+                    submitButton.style.backgroundColor = '#6a0dad';
+                    submitButton.style.borderColor = '#6a0dad';
+                    submitButton.style.color = 'white';
+                }
+            }
+        });
+    }
+
 });

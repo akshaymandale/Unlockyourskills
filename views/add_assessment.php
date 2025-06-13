@@ -95,12 +95,12 @@
                         <div class="col-md-auto">
                         </div>
 
-                        <!-- Import Button under Add button -->
+                        <!-- Import Assessment Question Button -->
                         <div class="col-md-auto">
-                            <button type="button" class="btn btn-sm btn-primary"
-                                onclick="window.location.href='index.php?controller=UserManagementController&action=import'"
-                                title="<?= Localization::translate('buttons_import_user_tooltip'); ?>">
-                                <i class="fas fa-upload me-1"></i> <?= Localization::translate('buttons_import_user'); ?>
+                            <button type="button" class="btn btn-sm btn-primary" data-bs-toggle="modal"
+                                data-bs-target="#importAssessmentQuestionModal"
+                                title="<?= Localization::translate('import_assessment_questions_tooltip'); ?>">
+                                <i class="fas fa-upload me-1"></i> <?= Localization::translate('import_assessment_questions'); ?>
                             </button>
                         </div>
 
@@ -351,6 +351,119 @@
                     </div>
 
                 </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- ✅ Import Assessment Question Modal -->
+    <div class="modal fade import-modal" id="importAssessmentQuestionModal" tabindex="-1" aria-labelledby="importAssessmentQuestionModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="importAssessmentQuestionModalLabel">
+                        <i class="fas fa-upload me-2"></i><?= Localization::translate('import_assessment_questions'); ?>
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <!-- Import Instructions -->
+                    <div class="alert alert-theme">
+                        <h6><i class="fas fa-info-circle me-2"></i><?= Localization::translate('import_instructions_title'); ?></h6>
+                        <ol class="mb-2">
+                            <li><?= Localization::translate('import_step_1'); ?></li>
+                            <li><?= Localization::translate('import_step_2'); ?></li>
+                            <li><?= Localization::translate('import_step_3'); ?></li>
+                            <li><?= Localization::translate('import_step_4'); ?></li>
+                        </ol>
+                        <div class="mt-2">
+                            <small><strong>Note:</strong> CSV format is recommended for best compatibility with Excel on Mac and Windows. The Excel format may show compatibility warnings when saving.</small>
+                        </div>
+                    </div>
+
+                    <!-- Template Download Section -->
+                    <div class="row mb-4">
+                        <div class="col-md-6">
+                            <div class="card card-theme">
+                                <div class="card-header card-header-theme">
+                                    <h6 class="mb-0"><i class="fas fa-list-ul me-2"></i><?= Localization::translate('objective_questions'); ?></h6>
+                                </div>
+                                <div class="card-body text-center">
+                                    <p class="text-muted"><?= Localization::translate('objective_template_description'); ?></p>
+                                    <div class="d-grid gap-2">
+                                        <a href="index.php?controller=QuestionController&action=downloadTemplate&type=objective&format=csv"
+                                           class="btn btn-outline-theme">
+                                            <i class="fas fa-file-csv me-2"></i>Download CSV (Recommended)
+                                        </a>
+                                        <a href="index.php?controller=QuestionController&action=downloadTemplate&type=objective&format=excel"
+                                           class="btn btn-outline-theme">
+                                            <i class="fas fa-file-excel me-2"></i>Download Excel (.xls)
+                                        </a>
+                                    </div>
+                                    <small class="text-muted mt-2 d-block">CSV format is recommended for best compatibility</small>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="card card-theme">
+                                <div class="card-header card-header-theme">
+                                    <h6 class="mb-0"><i class="fas fa-edit me-2"></i><?= Localization::translate('subjective_questions'); ?></h6>
+                                </div>
+                                <div class="card-body text-center">
+                                    <p class="text-muted"><?= Localization::translate('subjective_template_description'); ?></p>
+                                    <div class="d-grid gap-2">
+                                        <a href="index.php?controller=QuestionController&action=downloadTemplate&type=subjective&format=csv"
+                                           class="btn btn-outline-theme">
+                                            <i class="fas fa-file-csv me-2"></i>Download CSV (Recommended)
+                                        </a>
+                                        <a href="index.php?controller=QuestionController&action=downloadTemplate&type=subjective&format=excel"
+                                           class="btn btn-outline-theme">
+                                            <i class="fas fa-file-excel me-2"></i>Download Excel (.xls)
+                                        </a>
+                                    </div>
+                                    <small class="text-muted mt-2 d-block">CSV format is recommended for best compatibility</small>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Upload Form -->
+                    <form id="importAssessmentQuestionForm" action="index.php?controller=QuestionController&action=importQuestions"
+                          method="POST" enctype="multipart/form-data">
+                        <div class="mb-3">
+                            <label for="importFile" class="form-label">
+                                <i class="fas fa-file-excel me-2"></i><?= Localization::translate('select_excel_file'); ?> <span class="text-danger">*</span>
+                            </label>
+                            <input type="file" class="form-control" id="importFile" name="importFile"
+                                   accept=".xlsx,.xls,.csv" required>
+                            <div class="form-text">Excel (.xlsx, .xls) or CSV (.csv) files allowed. Maximum file size: 10MB</div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="questionType" class="form-label">
+                                <i class="fas fa-question-circle me-2"></i><?= Localization::translate('question_type'); ?> <span class="text-danger">*</span>
+                            </label>
+                            <select class="form-select" id="questionType" name="questionType" required>
+                                <option value=""><?= Localization::translate('select_question_type'); ?></option>
+                                <option value="objective"><?= Localization::translate('objective_questions'); ?></option>
+                                <option value="subjective"><?= Localization::translate('subjective_questions'); ?></option>
+                            </select>
+                        </div>
+
+                        <div class="alert alert-warning">
+                            <i class="fas fa-exclamation-triangle me-2"></i>
+                            <strong><?= Localization::translate('important_note'); ?>:</strong>
+                            <?= Localization::translate('import_warning_message'); ?>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                        <i class="fas fa-times me-2"></i><?= Localization::translate('cancel'); ?>
+                    </button>
+                    <button type="submit" form="importAssessmentQuestionForm" class="btn btn-theme">
+                        <i class="fas fa-upload me-2"></i><?= Localization::translate('import_questions'); ?>
+                    </button>
+                </div>
             </div>
         </div>
     </div>
