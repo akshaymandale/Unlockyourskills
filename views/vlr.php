@@ -922,8 +922,7 @@ $languageList = $vlrController->getLanguages();
                                                         <a href="#" class="edit-non-scorm" data-package='<?= json_encode($package); ?>'>
                                                             <i class="fas fa-edit edit-icon" title="<?= Localization::translate('edit'); ?>"></i>
                                                         </a>
-                                                        <a href="index.php?controller=VLRController&action=deleteNonScormPackage&id=<?= $package['id'] ?>"
-                                                           onclick="return confirm('<?= Localization::translate('delete_confirmation'); ?>');">
+                                                        <a href="#" class="delete-non-scorm" data-id="<?= $package['id'] ?>" data-title="<?= htmlspecialchars($package['title']) ?>">
                                                             <i class="fas fa-trash-alt delete-icon" title="<?= Localization::translate('delete'); ?>"></i>
                                                         </a>
                                                     </div>
@@ -1300,8 +1299,7 @@ $languageList = $vlrController->getLanguages();
                                                         <i class="fas fa-edit edit-icon"
                                                             title="<?= Localization::translate('edit'); ?>"></i>
                                                     </a>
-                                                    <a href="index.php?controller=VLRController&action=deleteAssessment&id=<?= $assessment['id'] ?>"
-                                                        onclick="return confirm('<?= Localization::translate('delete_confirmation'); ?>');">
+                                                    <a href="#" class="delete-assessment" data-id="<?= $assessment['id'] ?>" data-title="<?= htmlspecialchars($assessment['title']) ?>">
                                                         <i class="fas fa-trash-alt delete-icon"
                                                             title="<?= Localization::translate('delete'); ?>"></i>
                                                     </a>
@@ -1489,8 +1487,7 @@ $languageList = $vlrController->getLanguages();
                                                         <i class="fas fa-edit edit-icon"
                                                             title="<?= Localization::translate('edit'); ?>"></i>
                                                     </a>
-                                                    <a href="index.php?controller=VLRController&action=deleteAudioPackage&id=<?= $audio['id'] ?>"
-                                                        onclick="return confirm('<?= Localization::translate('delete_confirmation'); ?>');">
+                                                    <a href="#" class="delete-audio" data-id="<?= $audio['id'] ?>" data-title="<?= htmlspecialchars($audio['title']) ?>">
                                                         <i class="fas fa-trash-alt delete-icon"
                                                             title="<?= Localization::translate('delete'); ?>"></i>
                                                     </a>
@@ -1672,8 +1669,7 @@ $languageList = $vlrController->getLanguages();
                                                         <i class="fas fa-edit edit-icon"
                                                             title="<?= Localization::translate('edit'); ?>"></i>
                                                     </a>
-                                                    <a href="index.php?controller=VLRController&action=deleteVideoPackage&id=<?= $video['id'] ?>"
-                                                        onclick="return confirm('<?= Localization::translate('delete_confirmation'); ?>');">
+                                                    <a href="#" class="delete-video" data-id="<?= $video['id'] ?>" data-title="<?= htmlspecialchars($video['title']) ?>">
                                                         <i class="fas fa-trash-alt delete-icon"
                                                             title="<?= Localization::translate('delete'); ?>"></i>
                                                     </a>
@@ -2184,8 +2180,7 @@ $languageList = $vlrController->getLanguages();
                                                         <i class="fas fa-edit edit-icon"
                                                             title="<?= Localization::translate('edit'); ?>"></i>
                                                     </a>
-                                                    <a href="index.php?controller=VLRController&action=deleteImagePackage&id=<?= $image['id'] ?>"
-                                                        onclick="return confirm('<?= Localization::translate('delete_confirmation'); ?>');">
+                                                    <a href="#" class="delete-image" data-id="<?= $image['id'] ?>" data-title="<?= htmlspecialchars($image['title']) ?>">
                                                         <i class="fas fa-trash-alt delete-icon"
                                                             title="<?= Localization::translate('delete'); ?>"></i>
                                                     </a>
@@ -3074,8 +3069,7 @@ $languageList = $vlrController->getLanguages();
                                                         <i class="fas fa-edit edit-icon"
                                                             title="<?= Localization::translate('edit'); ?>"></i>
                                                     </a>
-                                                    <a href="index.php?controller=VLRController&action=deleteFeedback&id=<?= $feedback['id'] ?>"
-                                                        onclick="return confirm('<?= Localization::translate('confirm_delete'); ?>');">
+                                                    <a href="#" class="delete-feedback" data-id="<?= $feedback['id'] ?>" data-title="<?= htmlspecialchars($feedback['title']) ?>">
                                                         <i class="fas fa-trash-alt delete-icon"
                                                             title="<?= Localization::translate('delete'); ?>"></i>
                                                     </a>
@@ -3579,6 +3573,7 @@ $languageList = $vlrController->getLanguages();
 <script src="public/js/interactive_package.js"></script>
 <script src="public/js/non_scorm_validation.js"></script>
 <script src="public/js/non_scorm_package.js"></script>
+<script src="public/js/confirmation_modal.js"></script>
 
 <!-- ✅ Tab Management Script -->
 <script>
@@ -3885,7 +3880,7 @@ function initializeSubTabClickHandlers() {
         });
     });
 
-    // ✅ Professional Delete Confirmations
+    // ✅ Professional Delete Confirmations using Modal
     document.addEventListener('click', function(e) {
         // SCORM Package Delete
         if (e.target.closest('.delete-scorm')) {
@@ -3944,6 +3939,78 @@ function initializeSubTabClickHandlers() {
 
             confirmDelete('interactive content "' + title + '"', function() {
                 window.location.href = 'index.php?controller=VLRController&action=deleteInteractiveContent&id=' + id;
+            });
+        }
+
+        // Non-SCORM Package Delete
+        if (e.target.closest('.delete-non-scorm')) {
+            e.preventDefault();
+            const link = e.target.closest('.delete-non-scorm');
+            const id = link.dataset.id;
+            const title = link.dataset.title;
+
+            confirmDelete('non-SCORM package "' + title + '"', function() {
+                window.location.href = 'index.php?controller=VLRController&action=deleteNonScormPackage&id=' + id;
+            });
+        }
+
+        // Assessment Package Delete
+        if (e.target.closest('.delete-assessment')) {
+            e.preventDefault();
+            const link = e.target.closest('.delete-assessment');
+            const id = link.dataset.id;
+            const title = link.dataset.title;
+
+            confirmDelete('assessment "' + title + '"', function() {
+                window.location.href = 'index.php?controller=VLRController&action=deleteAssessment&id=' + id;
+            });
+        }
+
+        // Audio Package Delete
+        if (e.target.closest('.delete-audio')) {
+            e.preventDefault();
+            const link = e.target.closest('.delete-audio');
+            const id = link.dataset.id;
+            const title = link.dataset.title;
+
+            confirmDelete('audio package "' + title + '"', function() {
+                window.location.href = 'index.php?controller=VLRController&action=deleteAudioPackage&id=' + id;
+            });
+        }
+
+        // Video Package Delete
+        if (e.target.closest('.delete-video')) {
+            e.preventDefault();
+            const link = e.target.closest('.delete-video');
+            const id = link.dataset.id;
+            const title = link.dataset.title;
+
+            confirmDelete('video package "' + title + '"', function() {
+                window.location.href = 'index.php?controller=VLRController&action=deleteVideoPackage&id=' + id;
+            });
+        }
+
+        // Image Package Delete
+        if (e.target.closest('.delete-image')) {
+            e.preventDefault();
+            const link = e.target.closest('.delete-image');
+            const id = link.dataset.id;
+            const title = link.dataset.title;
+
+            confirmDelete('image package "' + title + '"', function() {
+                window.location.href = 'index.php?controller=VLRController&action=deleteImagePackage&id=' + id;
+            });
+        }
+
+        // Feedback Package Delete
+        if (e.target.closest('.delete-feedback')) {
+            e.preventDefault();
+            const link = e.target.closest('.delete-feedback');
+            const id = link.dataset.id;
+            const title = link.dataset.title;
+
+            confirmDelete('feedback "' + title + '"', function() {
+                window.location.href = 'index.php?controller=VLRController&action=deleteFeedback&id=' + id;
             });
         }
     });
