@@ -66,17 +66,17 @@ $countries = $stmt->fetchAll(PDO::FETCH_ASSOC);
                         </div>
                         <div class="col-lg-6 col-md-6 col-sm-12 form-group">
                             <label><?= Localization::translate('full_name'); ?> *</label>
-                            <input type="text" id="full_name" name="full_name" required class="input-field">
+                            <input type="text" id="full_name" name="full_name" class="input-field">
                         </div>
                     </div>
                     <div class="row">
                         <div class="col-lg-6 col-md-6 col-sm-12 form-group">
                             <label><?= Localization::translate('email'); ?> *</label>
-                            <input type="text" id="email" name="email" required class="input-field">
+                            <input type="text" id="email" name="email" class="input-field">
                         </div>
                         <div class="col-lg-6 col-md-6 col-sm-12 form-group">
                             <label><?= Localization::translate('contact_number'); ?> *</label>
-                            <input type="text" id="contact_number" name="contact_number" required class="input-field">
+                            <input type="text" id="contact_number" name="contact_number" class="input-field">
                         </div>
                     </div>
                     <div class="row">
@@ -97,7 +97,7 @@ $countries = $stmt->fetchAll(PDO::FETCH_ASSOC);
                     <div class="row">
                         <div class="col-lg-6 col-md-6 col-sm-12 form-group">
                             <label><?= Localization::translate('user_role'); ?> *</label>
-                            <select id="user_role" name="user_role" required class="input-field">
+                            <select id="user_role" name="user_role" class="input-field">
                                 <option value=""><?= Localization::translate('select_user_role'); ?></option>
                                 <option value="Admin"><?= Localization::translate('admin'); ?></option>
                                 <option value="End User"><?= Localization::translate('end_user'); ?></option>

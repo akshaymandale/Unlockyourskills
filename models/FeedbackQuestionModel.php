@@ -326,7 +326,11 @@ class FeedbackQuestionModel {
             $ext = pathinfo($file['name'], PATHINFO_EXTENSION);
             $randomName = bin2hex(random_bytes(10)) . '.' . $ext;
             $uploadDir = "uploads/$folder/";
-            if (!is_dir($uploadDir)) mkdir($uploadDir, 0777, true);
+            // ✅ Create directory if it doesn't exist with proper permissions
+            if (!is_dir($uploadDir)) {
+                mkdir($uploadDir, 0777, true);
+                chmod($uploadDir, 0777); // Ensure proper permissions
+            }
             $targetPath = $uploadDir . $randomName;
 
             if (move_uploaded_file($file['tmp_name'], $targetPath)) {

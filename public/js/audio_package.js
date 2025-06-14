@@ -164,6 +164,56 @@ document.addEventListener("DOMContentLoaded", function () {
         previewContainer.innerHTML = previewHTML;
     }
 
+    // ✅ Add file change listener for new uploads
+    audioFile.addEventListener('change', function() {
+        if (this.files && this.files[0]) {
+            const file = this.files[0];
+            showNewAudioFilePreview(file);
+        }
+    });
+
+    // ✅ Show preview for new audio file uploads
+    function showNewAudioFilePreview(file) {
+        const fileName = file.name;
+        const fileExtension = fileName.split('.').pop().toLowerCase();
+        let previewHTML = '';
+
+        if (['mp3', 'wav', 'ogg', 'aac', 'm4a'].includes(fileExtension)) {
+            // Audio preview with player and remove button
+            previewHTML = `
+                <div class="preview-wrapper" style="position: relative; display: inline-block; margin-top: 10px;">
+                    <div style="padding: 10px; border: 1px solid #ddd; border-radius: 5px; background: #e8f5e8;">
+                        <audio controls style="width: 200px;">
+                            <source src="${URL.createObjectURL(file)}" type="audio/${fileExtension}">
+                            Your browser does not support the audio element.
+                        </audio>
+                        <button type="button" class="remove-preview" onclick="clearNewAudioFileInput()" style="position: absolute; top: -5px; right: -5px; background: #dc3545; color: white; border: none; border-radius: 50%; width: 20px; height: 20px; font-size: 12px; cursor: pointer;">×</button>
+                    </div>
+                    <p style="margin-top: 5px; font-size: 12px; color: #6c757d;">New file: ${fileName} (${(file.size / 1024 / 1024).toFixed(2)} MB)</p>
+                </div>
+            `;
+        } else {
+            // Generic file preview
+            previewHTML = `
+                <div class="preview-wrapper" style="position: relative; display: inline-block; margin-top: 10px;">
+                    <div style="padding: 10px; border: 1px solid #ddd; border-radius: 5px; background: #e8f5e8;">
+                        <i class="fas fa-file-audio" style="font-size: 24px; color: #6a0dad;"></i>
+                        <button type="button" class="remove-preview" onclick="clearNewAudioFileInput()" style="position: absolute; top: -5px; right: -5px; background: #dc3545; color: white; border: none; border-radius: 50%; width: 20px; height: 20px; font-size: 12px; cursor: pointer;">×</button>
+                    </div>
+                    <p style="margin-top: 5px; font-size: 12px; color: #6c757d;">New file: ${fileName} (${(file.size / 1024 / 1024).toFixed(2)} MB)</p>
+                </div>
+            `;
+        }
+
+        audioDisplay.innerHTML = previewHTML;
+    }
+
+    // ✅ Global function to clear new audio file input
+    window.clearNewAudioFileInput = function() {
+        audioFile.value = '';
+        audioDisplay.innerHTML = '';
+    };
+
     // Global function to remove file preview
     window.removeAudioFilePreview = function(containerId) {
         const container = document.getElementById(containerId);

@@ -1,0 +1,34 @@
+# PHP Upload Configuration for VLR System
+# Increase upload limits to support large files
+
+# Maximum file upload size (100MB)
+php_value upload_max_filesize 100M
+
+# Maximum POST data size (120MB to accommodate multiple files)
+php_value post_max_size 120M
+
+# Maximum number of files that can be uploaded simultaneously
+php_value max_file_uploads 20
+
+# Maximum execution time for uploads (5 minutes)
+php_value max_execution_time 300
+
+# Maximum input time for uploads (5 minutes)
+php_value max_input_time 300
+
+# Memory limit for processing uploads (256MB)
+php_value memory_limit 256M
+
+# Enable file uploads
+php_flag file_uploads On
+
+# Temporary directory for uploads (optional)
+# php_value upload_tmp_dir /tmp
+
+# Security: Disable dangerous functions
+php_flag allow_url_fopen Off
+php_flag allow_url_include Off
+
+# Error reporting (disable in production)
+# php_flag display_errors Off
+# php_flag log_errors On

@@ -76,7 +76,10 @@ class SurveyQuestionModel {
                     $ext = pathinfo($file['name'], PATHINFO_EXTENSION);
                     $randomName = bin2hex(random_bytes(10)) . '.' . $ext;
                     $uploadDir = "uploads/survey/";
-                    if (!is_dir($uploadDir)) mkdir($uploadDir, 0777, true);
+                    if (!is_dir($uploadDir)) {
+                        mkdir($uploadDir, 0777, true);
+                        chmod($uploadDir, 0777); // Ensure proper permissions
+                    }
                     $targetPath = $uploadDir . $randomName;
 
                     if (move_uploaded_file($file['tmp_name'], $targetPath)) {
@@ -176,7 +179,8 @@ protected function handleUpload(array $file, string $folder)
     // Create uploads folder if not exists
     $uploadDir = "uploads/survey/";
     if (!is_dir($uploadDir)) {
-        mkdir($uploadDir, 0755, true);
+        mkdir($uploadDir, 0777, true);
+        chmod($uploadDir, 0777); // Ensure proper permissions
     }
 
     // Generate unique filename with original extension

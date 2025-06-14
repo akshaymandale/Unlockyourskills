@@ -135,10 +135,10 @@
                                         title="<?= Localization::translate('feedback_grid_edit'); ?>">
                                         <i class="fas fa-edit"></i>
                                     </button>
-                                    <a href="index.php?controller=FeedbackQuestionController&action=delete&id=<?= $question['id']; ?>"
-                                        class="btn theme-btn-danger"
-                                        title="<?= Localization::translate('feedback_grid_delete'); ?>"
-                                        onclick="return confirm('<?= Localization::translate('feedback_grid_delete_confirm'); ?>');">
+                                    <a href="#" class="btn theme-btn-danger delete-feedback-question"
+                                        data-id="<?= $question['id']; ?>"
+                                        data-title="<?= htmlspecialchars($question['title']); ?>"
+                                        title="<?= Localization::translate('feedback_grid_delete'); ?>">
                                         <i class="fas fa-trash-alt"></i>
                                     </a>
                                 </td>
@@ -315,5 +315,21 @@
 
 <script src="public/js/feedback_question_validation.js"></script>
 <script src="public/js/feedback_question.js"></script>
+
+<script>
+// ✅ Professional Feedback Question Delete Confirmations
+document.addEventListener('click', function(e) {
+    if (e.target.closest('.delete-feedback-question')) {
+        e.preventDefault();
+        const link = e.target.closest('.delete-feedback-question');
+        const id = link.dataset.id;
+        const title = link.dataset.title;
+
+        confirmDelete('feedback question "' + title + '"', function() {
+            window.location.href = 'index.php?controller=FeedbackQuestionController&action=delete&id=' + id;
+        });
+    }
+});
+</script>
 
 <?php include 'includes/footer.php'; ?>

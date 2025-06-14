@@ -1,7 +1,8 @@
 <?php
 require_once 'models/QuestionModel.php';
+require_once 'controllers/BaseController.php';
 
-class QuestionController {
+class QuestionController extends BaseController {
     private $questionModel;
 
     public function __construct() {
@@ -27,8 +28,8 @@ class QuestionController {
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
             if (!isset($_SESSION['id'])) {
-                echo "<script>alert('Unauthorized access. Please log in.'); window.location.href='index.php?controller=VLRController';</script>";
-                exit();
+                $this->toastError('Unauthorized access. Please log in.', 'index.php?controller=VLRController');
+                return;
             }
 
             $errors = [];
@@ -58,7 +59,10 @@ class QuestionController {
             // Handle file upload
             if ($mediaType !== 'text' && isset($_FILES['mediaFile']) && $_FILES['mediaFile']['error'] === 0) {
                 $targetDir = "uploads/media/";
-                if (!is_dir($targetDir)) mkdir($targetDir, 0777, true);
+                if (!is_dir($targetDir)) {
+                    mkdir($targetDir, 0777, true);
+                    chmod($targetDir, 0777); // Ensure proper permissions
+                }
                 $fileName = basename($_FILES["mediaFile"]["name"]);
                 $mediaFilePath = $targetDir . time() . "_" . $fileName;
 
@@ -105,13 +109,16 @@ class QuestionController {
                     }
                 }
 
-                $message = $questionId ? "Question added successfully." : "Failed to insert question.";
-                echo "<script>alert('$message'); window.location.href='index.php?controller=QuestionController';</script>";
-                exit();
+                if ($questionId) {
+                    $this->toastSuccess('Question added successfully!', 'index.php?controller=QuestionController');
+                } else {
+                    $this->toastError('Failed to insert question.', 'index.php?controller=QuestionController');
+                }
+                return;
             } else {
-                $errorMsg = implode("\\n", $errors);
-                echo "<script>alert('Error(s):\\n$errorMsg'); window.location.href='index.php?controller=QuestionController';</script>";
-                exit();
+                $errorMsg = implode(', ', $errors);
+                $this->toastError("Error(s): $errorMsg", 'index.php?controller=QuestionController');
+                return;
             }
         }
 
@@ -120,8 +127,8 @@ class QuestionController {
 
     public function edit() {
         if (!isset($_SESSION['id'])) {
-            echo "<script>alert('Unauthorized access. Please log in.'); window.location.href='index.php?controller=VLRController';</script>";
-            exit();
+            $this->toastError('Unauthorized access. Please log in.', 'index.php?controller=VLRController');
+            return;
         }
     
         // Handle form submission
@@ -150,7 +157,10 @@ class QuestionController {
     
             if ($mediaType !== 'text' && isset($_FILES['mediaFile']) && $_FILES['mediaFile']['error'] === 0) {
                 $targetDir = "uploads/media/";
-                if (!is_dir($targetDir)) mkdir($targetDir, 0777, true);
+                if (!is_dir($targetDir)) {
+                    mkdir($targetDir, 0777, true);
+                    chmod($targetDir, 0777); // Ensure proper permissions
+                }
                 $fileName = basename($_FILES["mediaFile"]["name"]);
                 $mediaFilePath = $targetDir . time() . "_" . $fileName;
     
@@ -197,13 +207,16 @@ class QuestionController {
                     }
                 }
     
-                $msg = $updateResult ? "Question updated successfully." : "Failed to update question.";
-                echo "<script>alert('$msg'); window.location.href='index.php?controller=QuestionController';</script>";
-                exit();
+                if ($updateResult) {
+                    $this->toastSuccess('Question updated successfully!', 'index.php?controller=QuestionController');
+                } else {
+                    $this->toastError('Failed to update question.', 'index.php?controller=QuestionController');
+                }
+                return;
             } else {
-                $errorMsg = implode("\\n", $errors);
-                echo "<script>alert('Error(s):\\n$errorMsg'); window.location.href='index.php?controller=QuestionController';</script>";
-                exit();
+                $errorMsg = implode(', ', $errors);
+                $this->toastError("Error(s): $errorMsg", 'index.php?controller=QuestionController');
+                return;
             }
         }
         // Handle initial page load (GET)
@@ -217,12 +230,12 @@ class QuestionController {
                 $isEdit = true;
                 require 'views/add_assessment_question.php';
             } else {
-                echo "<script>alert('Question not found.'); window.location.href='index.php?controller=QuestionController';</script>";
-                exit();
+                $this->toastError('Question not found.', 'index.php?controller=QuestionController');
+                return;
             }
         } else {
-            echo "<script>alert('Invalid request.'); window.location.href='index.php?controller=QuestionController';</script>";
-            exit();
+            $this->toastError('Invalid request.', 'index.php?controller=QuestionController');
+            return;
         }
     }
     
@@ -232,10 +245,13 @@ class QuestionController {
         if (isset($_GET['id'])) {
             $id = intval($_GET['id']);
             $success = $this->questionModel->softDeleteQuestion($id);
-            $message = $success ? "Question deleted successfully." : "Failed to delete question.";
-            echo "<script>alert('$message'); window.location.href='index.php?controller=QuestionController';</script>";
+            if ($success) {
+                $this->toastSuccess('Question deleted successfully!', 'index.php?controller=QuestionController');
+            } else {
+                $this->toastError('Failed to delete question.', 'index.php?controller=QuestionController');
+            }
         } else {
-            echo "<script>alert('Invalid request.'); window.location.href='index.php?controller=QuestionController';</script>";
+            $this->toastError('Invalid request.', 'index.php?controller=QuestionController');
         }
     }
 
@@ -292,12 +308,12 @@ class QuestionController {
 
     public function save() {
         if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
-            echo "<script>alert('Invalid request method.'); window.location.href='index.php?controller=QuestionController';</script>";
+            $this->toastError('Invalid request method.', 'index.php?controller=QuestionController');
             return;
         }
 
         if (!isset($_SESSION['id'])) {
-            echo "<script>alert('Unauthorized access. Please log in.'); window.location.href='index.php?controller=VLRController';</script>";
+            $this->toastError('Unauthorized access. Please log in.', 'index.php?controller=VLRController');
             return;
         }
 
@@ -357,7 +373,10 @@ class QuestionController {
 
             if (empty($errors)) {
                 $targetDir = "uploads/media/";
-                if (!is_dir($targetDir)) mkdir($targetDir, 0777, true);
+                if (!is_dir($targetDir)) {
+                    mkdir($targetDir, 0777, true);
+                    chmod($targetDir, 0777); // Ensure proper permissions
+                }
                 $fileName = basename($file["name"]);
                 $mediaFilePath = $targetDir . time() . "_" . $fileName;
 
@@ -420,13 +439,20 @@ class QuestionController {
                 }
             }
 
-            $message = $result ? ($questionId ? "Question updated successfully." : "Question added successfully.") : "Failed to save question.";
-            echo "<script>alert('$message'); window.location.href='index.php?controller=QuestionController';</script>";
-            exit();
+            if ($result) {
+                if ($questionId) {
+                    $this->toastSuccess('Question updated successfully!', 'index.php?controller=QuestionController');
+                } else {
+                    $this->toastSuccess('Question added successfully!', 'index.php?controller=QuestionController');
+                }
+            } else {
+                $this->toastError('Failed to save question.', 'index.php?controller=QuestionController');
+            }
+            return;
         } else {
-            $errorMsg = implode("\\n", $errors);
-            echo "<script>alert('Error(s):\\n$errorMsg'); window.location.href='index.php?controller=QuestionController';</script>";
-            exit();
+            $errorMsg = implode(', ', $errors);
+            $this->toastError("Error(s): $errorMsg", 'index.php?controller=QuestionController');
+            return;
         }
     }
 
@@ -909,6 +935,7 @@ class QuestionController {
         $uploadDir = "uploads/temp/";
         if (!is_dir($uploadDir)) {
             mkdir($uploadDir, 0777, true);
+            chmod($uploadDir, 0777); // Ensure proper permissions
         }
 
         $tempFile = $uploadDir . time() . '_' . $file['name'];

@@ -1,7 +1,8 @@
 <?php
 require_once 'models/SurveyQuestionModel.php';
+require_once 'controllers/BaseController.php';
 
-class SurveyQuestionController
+class SurveyQuestionController extends BaseController
 {
     private $surveyQuestionModel;
 
@@ -66,8 +67,8 @@ class SurveyQuestionController
         }
 
         if (!empty($errors)) {
-            $message = implode('\n', $errors);
-            echo "<script>alert('$message'); window.location.href='index.php?controller=SurveyQuestionController';</script>";
+            $message = implode(', ', $errors);
+            $this->toastError($message, 'index.php?controller=SurveyQuestionController');
             return;
         }
 
@@ -103,7 +104,7 @@ class SurveyQuestionController
                 $this->surveyQuestionModel->updateOptions($questionId, $options, $optionMedias, $createdBy, $existingOptionMedias);
             }
 
-            $message = 'Survey question updated successfully.';
+            $this->toastSuccess('Survey question updated successfully!', 'index.php?controller=SurveyQuestionController');
         } else {
             // INSERT
             $questionId = $this->surveyQuestionModel->saveQuestion($data);
@@ -114,10 +115,8 @@ class SurveyQuestionController
                 $this->surveyQuestionModel->saveOptions($questionId, $options, $optionMedias, $createdBy);
             }
 
-            $message = 'Survey question saved successfully.';
+            $this->toastSuccess('Survey question saved successfully!', 'index.php?controller=SurveyQuestionController');
         }
-
-        echo "<script>alert('$message'); window.location.href='index.php?controller=SurveyQuestionController';</script>";
     } else {
         echo "<script>alert('Invalid request parameters.'); window.location.href='index.php?controller=SurveyQuestionController';</script>";
     }
@@ -137,8 +136,10 @@ class SurveyQuestionController
         $randomName = bin2hex(random_bytes(10)) . '.' . $ext;
         $uploadDir = "uploads/$folder/";
 
-        if (!is_dir($uploadDir))
+        if (!is_dir($uploadDir)) {
             mkdir($uploadDir, 0777, true);
+            chmod($uploadDir, 0777); // Ensure proper permissions
+        }
 
         $targetPath = $uploadDir . $randomName;
 
@@ -152,14 +153,12 @@ class SurveyQuestionController
             $success = $this->surveyQuestionModel->deleteQuestion($id); // Soft delete
 
             if ($success) {
-                $message = 'Survey question deleted successfully.';
+                $this->toastSuccess('Survey question deleted successfully!', 'index.php?controller=SurveyQuestionController');
             } else {
-                $message = 'Failed to delete survey question.';
+                $this->toastError('Failed to delete survey question.', 'index.php?controller=SurveyQuestionController');
             }
-
-            echo "<script>alert('$message'); window.location.href='index.php?controller=SurveyQuestionController';</script>";
         } else {
-            echo "<script>alert('Invalid request parameters.'); window.location.href='index.php?controller=SurveyQuestionController';</script>";
+            $this->toastError('Invalid request parameters.', 'index.php?controller=SurveyQuestionController');
         }
     }
 

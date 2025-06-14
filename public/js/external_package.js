@@ -228,18 +228,149 @@ document.addEventListener("DOMContentLoaded", function () {
     document.getElementById("thumbnail").addEventListener("change", function (event) {
         const file = event.target.files[0];
         const previewContainer = document.getElementById("thumbnailFileLink");
+        const thumbnailImg = document.getElementById("thumbnailPreview");
 
         if (file) {
-            createFilePreview(file, previewContainer, () => {
-                this.value = '';
-                previewContainer.innerHTML = '';
-                thumbnailPreview.style.display = "none";
-            });
+            // Show new file preview
+            showNewThumbnailPreview(file, previewContainer);
+            // Hide the old img element
+            if (thumbnailImg) {
+                thumbnailImg.style.display = "none";
+            }
         } else {
             previewContainer.innerHTML = '';
-            thumbnailPreview.style.display = "none";
+            previewContainer.style.display = "none";
+            if (thumbnailImg) {
+                thumbnailImg.style.display = "none";
+            }
         }
     });
+
+    // ✅ Show preview for new thumbnail uploads
+    function showNewThumbnailPreview(file, previewContainer) {
+        const fileName = file.name;
+        const fileExtension = fileName.split('.').pop().toLowerCase();
+        let previewHTML = '';
+
+        if (['jpg', 'jpeg', 'png', 'gif', 'webp', 'bmp', 'svg'].includes(fileExtension)) {
+            // Image thumbnail preview with remove button
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                previewHTML = `
+                    <div class="preview-wrapper" style="position: relative; display: inline-block; margin-top: 10px;">
+                        <img src="${e.target.result}" alt="Thumbnail Preview" style="max-width: 150px; max-height: 100px; object-fit: cover; border: 1px solid #ddd; border-radius: 5px;">
+                        <button type="button" class="remove-preview" onclick="clearNewExternalThumbnail()" style="position: absolute; top: -5px; right: -5px; background: #dc3545; color: white; border: none; border-radius: 50%; width: 20px; height: 20px; font-size: 12px; cursor: pointer;">×</button>
+                    </div>
+                    <p style="margin-top: 5px; font-size: 12px; color: #6c757d;">New thumbnail: ${fileName} (${(file.size / 1024 / 1024).toFixed(2)} MB)</p>
+                `;
+                previewContainer.innerHTML = previewHTML;
+                previewContainer.style.display = 'block';
+            };
+            reader.readAsDataURL(file);
+        } else {
+            // Generic file preview for non-images
+            previewHTML = `
+                <div class="preview-wrapper" style="position: relative; display: inline-block; margin-top: 10px;">
+                    <div style="padding: 10px; border: 1px solid #ddd; border-radius: 5px; background: #e8f5e8;">
+                        <i class="fas fa-file-image" style="font-size: 24px; color: #6a0dad;"></i>
+                        <button type="button" class="remove-preview" onclick="clearNewExternalThumbnail()" style="position: absolute; top: -5px; right: -5px; background: #dc3545; color: white; border: none; border-radius: 50%; width: 20px; height: 20px; font-size: 12px; cursor: pointer;">×</button>
+                    </div>
+                    <p style="margin-top: 5px; font-size: 12px; color: #6c757d;">New file: ${fileName} (${(file.size / 1024 / 1024).toFixed(2)} MB)</p>
+                </div>
+            `;
+            previewContainer.innerHTML = previewHTML;
+            previewContainer.style.display = 'block';
+        }
+    }
+
+    // ✅ Global function to clear new thumbnail
+    window.clearNewExternalThumbnail = function() {
+        const thumbnailInput = document.getElementById('thumbnail');
+        const previewContainer = document.getElementById('thumbnailFileLink');
+        const thumbnailImg = document.getElementById('thumbnailPreview');
+
+        if (thumbnailInput) thumbnailInput.value = '';
+        if (previewContainer) {
+            previewContainer.innerHTML = '';
+            previewContainer.style.display = 'none';
+        }
+        if (thumbnailImg) {
+            thumbnailImg.style.display = 'none';
+        }
+    };
+
+    // ✅ Add audio file preview functionality
+    if (audioFile) {
+        audioFile.addEventListener("change", function (event) {
+            const file = event.target.files[0];
+            const previewContainer = document.getElementById("audioFilePreview") || createAudioPreviewContainer();
+
+            if (file) {
+                showNewAudioFilePreview(file, previewContainer);
+            } else {
+                previewContainer.innerHTML = '';
+                previewContainer.style.display = "none";
+            }
+        });
+    }
+
+    // ✅ Create audio preview container if it doesn't exist
+    function createAudioPreviewContainer() {
+        const container = document.createElement('div');
+        container.id = 'audioFilePreview';
+        container.style.marginTop = '10px';
+        audioFile.parentElement.appendChild(container);
+        return container;
+    }
+
+    // ✅ Show preview for new audio file uploads
+    function showNewAudioFilePreview(file, previewContainer) {
+        const fileName = file.name;
+        const fileExtension = fileName.split('.').pop().toLowerCase();
+        let previewHTML = '';
+
+        if (['mp3', 'wav', 'ogg', 'aac', 'm4a'].includes(fileExtension)) {
+            // Audio preview with player and remove button
+            previewHTML = `
+                <div class="preview-wrapper" style="position: relative; display: inline-block; margin-top: 10px;">
+                    <div style="padding: 10px; border: 1px solid #ddd; border-radius: 5px; background: #e8f5e8;">
+                        <audio controls style="width: 200px;">
+                            <source src="${URL.createObjectURL(file)}" type="audio/${fileExtension}">
+                            Your browser does not support the audio element.
+                        </audio>
+                        <button type="button" class="remove-preview" onclick="clearNewExternalAudioFile()" style="position: absolute; top: -5px; right: -5px; background: #dc3545; color: white; border: none; border-radius: 50%; width: 20px; height: 20px; font-size: 12px; cursor: pointer;">×</button>
+                    </div>
+                    <p style="margin-top: 5px; font-size: 12px; color: #6c757d;">New file: ${fileName} (${(file.size / 1024 / 1024).toFixed(2)} MB)</p>
+                </div>
+            `;
+        } else {
+            // Generic file preview
+            previewHTML = `
+                <div class="preview-wrapper" style="position: relative; display: inline-block; margin-top: 10px;">
+                    <div style="padding: 10px; border: 1px solid #ddd; border-radius: 5px; background: #e8f5e8;">
+                        <i class="fas fa-file-audio" style="font-size: 24px; color: #6a0dad;"></i>
+                        <button type="button" class="remove-preview" onclick="clearNewExternalAudioFile()" style="position: absolute; top: -5px; right: -5px; background: #dc3545; color: white; border: none; border-radius: 50%; width: 20px; height: 20px; font-size: 12px; cursor: pointer;">×</button>
+                    </div>
+                    <p style="margin-top: 5px; font-size: 12px; color: #6c757d;">New file: ${fileName} (${(file.size / 1024 / 1024).toFixed(2)} MB)</p>
+                </div>
+            `;
+        }
+
+        previewContainer.innerHTML = previewHTML;
+        previewContainer.style.display = 'block';
+    }
+
+    // ✅ Global function to clear new audio file input
+    window.clearNewExternalAudioFile = function() {
+        if (audioFile) {
+            audioFile.value = '';
+        }
+        const previewContainer = document.getElementById("audioFilePreview");
+        if (previewContainer) {
+            previewContainer.innerHTML = '';
+            previewContainer.style.display = 'none';
+        }
+    };
 
     // ✅ File Preview Functions (following Non-SCORM pattern)
     function createFilePreview(file, previewContainer, removeCallback) {

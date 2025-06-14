@@ -134,10 +134,13 @@ $languageList = $vlrController->getLanguages();
                                             </div>
                                             <div class="col-md-6">
                                                 <div class="form-group">
-                                                    <label for="zipFile" class="form-label"><?= Localization::translate('upload_scorm_zip'); ?> <span class="text-danger">*</span></label>
+                                                    <label for="zipFile" class="form-label">
+                                                        <?= Localization::translate('upload_scorm_zip'); ?>
+                                                        <span class="text-danger" id="zipRequired">*</span>
+                                                        <span class="text-muted" id="zipOptional" style="display: none;">(Optional - leave empty to keep existing file)</span>
+                                                    </label>
                                                     <input type="file" class="form-control" id="zipFile" name="zipFile" accept=".zip,.rar,.7z">
                                                     <small class="text-muted">Max size: 50MB. Formats: ZIP, RAR, 7Z files</small>
-                                                    <input type="hidden" id="existing_zip" name="existing_zip">
                                                     <div id="scormZipPreview" class="mt-2"></div>
                                                 </div>
                                             </div>
@@ -378,8 +381,7 @@ $languageList = $vlrController->getLanguages();
                                                             <i class="fas fa-edit edit-icon"
                                                                 title="<?= Localization::translate('edit'); ?>"></i>
                                                         </a>
-                                                        <a href="index.php?controller=VLRController&action=delete&id=<?= $scorm['id'] ?>"
-                                                            onclick="return confirm('<?= Localization::translate('delete_confirmation_scrom'); ?>');">
+                                                        <a href="#" class="delete-scorm" data-id="<?= $scorm['id'] ?>" data-title="<?= htmlspecialchars($scorm['title']) ?>">
                                                             <i class="fas fa-trash-alt delete-icon"
                                                                 title="<?= Localization::translate('delete'); ?>"></i></a>
                                                     </div>
@@ -2004,8 +2006,7 @@ $languageList = $vlrController->getLanguages();
                                                             <i class="fas fa-edit edit-icon"
                                                                 title="<?= Localization::translate('edit'); ?>"></i>
                                                         </a>
-                                                        <a href="index.php?controller=VLRController&action=deleteDocument&id=<?= $document['id'] ?>"
-                                                            onclick="return confirm('<?= Localization::translate('confirm_delete_document'); ?>');">
+                                                        <a href="#" class="delete-document" data-id="<?= $document['id'] ?>" data-title="<?= htmlspecialchars($document['title']) ?>">
                                                             <i class="fas fa-trash-alt delete-icon"
                                                                 title="<?= Localization::translate('delete'); ?>"></i>
                                                         </a>
@@ -2590,8 +2591,7 @@ $languageList = $vlrController->getLanguages();
                                                             <i class="fas fa-edit edit-icon"
                                                                 title="<?= Localization::translate('edit'); ?>"></i>
                                                         </a>
-                                                        <a href="index.php?controller=VLRController&action=deleteExternal&id=<?= $content['id'] ?>"
-                                                            onclick="return confirm('<?= Localization::translate('confirm_delete'); ?>');">
+                                                        <a href="#" class="delete-external" data-id="<?= $content['id'] ?>" data-title="<?= htmlspecialchars($content['title']) ?>">
                                                             <i class="fas fa-trash-alt delete-icon"
                                                                 title="<?= Localization::translate('delete'); ?>"></i>
                                                         </a>
@@ -2836,8 +2836,7 @@ $languageList = $vlrController->getLanguages();
                                                         <i class="fas fa-edit edit-icon"
                                                             title="<?= Localization::translate('edit'); ?>"></i>
                                                     </a>
-                                                    <a href="index.php?controller=VLRController&action=deleteSurvey&id=<?= $survey['id'] ?>"
-                                                        onclick="return confirm('<?= Localization::translate('confirm_delete'); ?>');">
+                                                    <a href="#" class="delete-survey" data-id="<?= $survey['id'] ?>" data-title="<?= htmlspecialchars($survey['title']) ?>">
                                                         <i class="fas fa-trash-alt delete-icon"
                                                             title="<?= Localization::translate('delete'); ?>"></i>
                                                     </a>
@@ -3126,7 +3125,7 @@ $languageList = $vlrController->getLanguages();
                                         method="POST" enctype="multipart/form-data">
                                         <input type="hidden" id="interactive_id" name="interactive_id">
                                         <input type="hidden" id="existing_content_file" name="existing_content_file">
-                                        <input type="hidden" id="existing_thumbnail_image" name="existing_thumbnail_image">
+                                        <input type="hidden" id="existing_interactive_thumbnail_image" name="existing_thumbnail_image">
                                         <input type="hidden" id="existing_metadata_file" name="existing_metadata_file">
 
                                         <!-- ✅ Title & Content Type -->
@@ -3247,10 +3246,10 @@ $languageList = $vlrController->getLanguages();
                                             </div>
                                             <div class="col-md-4">
                                                 <div class="form-group">
-                                                    <label for="thumbnail_image" class="form-label"><?= Localization::translate('interactive.field.thumbnail_image'); ?></label>
-                                                    <input type="file" class="form-control" id="thumbnail_image" name="thumbnail_image" accept="image/*">
+                                                    <label for="interactive_thumbnail_image" class="form-label"><?= Localization::translate('interactive.field.thumbnail_image'); ?></label>
+                                                    <input type="file" class="form-control" id="interactive_thumbnail_image" name="thumbnail_image" accept="image/*">
                                                     <small class="text-muted">Max size: 10MB. Formats: JPG, PNG, GIF.</small>
-                                                    <div id="thumbnailImagePreview" class="mt-2"></div>
+                                                    <div id="interactiveThumbnailImagePreview" class="mt-2"></div>
                                                 </div>
                                             </div>
                                             <div class="col-md-4">
@@ -3530,8 +3529,7 @@ $languageList = $vlrController->getLanguages();
                                                         <a href="#" class="edit-interactive" data-interactive='<?= json_encode($interactive); ?>'>
                                                             <i class="fas fa-edit edit-icon" title="<?= Localization::translate('edit'); ?>"></i>
                                                         </a>
-                                                        <a href="index.php?controller=VLRController&action=deleteInteractiveContent&id=<?= $interactive['id'] ?>"
-                                                            onclick="return confirm('<?= Localization::translate('delete_confirmation'); ?>');">
+                                                        <a href="#" class="delete-interactive" data-id="<?= $interactive['id'] ?>" data-title="<?= htmlspecialchars($interactive['title']) ?>">
                                                             <i class="fas fa-trash-alt delete-icon" title="<?= Localization::translate('delete'); ?>"></i>
                                                         </a>
                                                     </div>
@@ -3885,6 +3883,69 @@ function initializeSubTabClickHandlers() {
                 targetPane.style.display = 'block';
             }
         });
+    });
+
+    // ✅ Professional Delete Confirmations
+    document.addEventListener('click', function(e) {
+        // SCORM Package Delete
+        if (e.target.closest('.delete-scorm')) {
+            e.preventDefault();
+            const link = e.target.closest('.delete-scorm');
+            const id = link.dataset.id;
+            const title = link.dataset.title;
+
+            confirmDelete('SCORM package "' + title + '"', function() {
+                window.location.href = 'index.php?controller=VLRController&action=delete&id=' + id;
+            });
+        }
+
+        // Document Delete
+        if (e.target.closest('.delete-document')) {
+            e.preventDefault();
+            const link = e.target.closest('.delete-document');
+            const id = link.dataset.id;
+            const title = link.dataset.title;
+
+            confirmDelete('document "' + title + '"', function() {
+                window.location.href = 'index.php?controller=VLRController&action=deleteDocument&id=' + id;
+            });
+        }
+
+        // External Content Delete
+        if (e.target.closest('.delete-external')) {
+            e.preventDefault();
+            const link = e.target.closest('.delete-external');
+            const id = link.dataset.id;
+            const title = link.dataset.title;
+
+            confirmDelete('external content "' + title + '"', function() {
+                window.location.href = 'index.php?controller=VLRController&action=deleteExternal&id=' + id;
+            });
+        }
+
+        // Survey Delete
+        if (e.target.closest('.delete-survey')) {
+            e.preventDefault();
+            const link = e.target.closest('.delete-survey');
+            const id = link.dataset.id;
+            const title = link.dataset.title;
+
+            confirmDelete('survey "' + title + '"', function() {
+                window.location.href = 'index.php?controller=VLRController&action=deleteSurvey&id=' + id;
+            });
+        }
+
+        // Interactive Content Delete
+        if (e.target.closest('.delete-interactive')) {
+            e.preventDefault();
+            const link = e.target.closest('.delete-interactive');
+            const id = link.dataset.id;
+            const title = link.dataset.title;
+
+            confirmDelete('interactive content "' + title + '"', function() {
+                window.location.href = 'index.php?controller=VLRController&action=deleteInteractiveContent&id=' + id;
+            });
+        }
     });
 }
 </script>

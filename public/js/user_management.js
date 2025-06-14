@@ -203,16 +203,16 @@ function updateUsersTable(users) {
             : '<span class="badge bg-primary">Unlocked</span>';
         
         const lockButton = user.locked_status == 1
-            ? `<a href="index.php?controller=UserManagementController&action=toggleLock&id=${user.profile_id}&status=0"
-                 class="btn theme-btn-warning"
-                 title="Unlock User"
-                 onclick="return confirm('Are you sure you want to unlock this user?');">
+            ? `<a href="#" class="btn theme-btn-warning unlock-user"
+                 data-id="${user.profile_id}"
+                 data-name="${escapeHtml(user.full_name)}"
+                 title="Unlock User">
                  <i class="fas fa-lock-open"></i>
                </a>`
-            : `<a href="index.php?controller=UserManagementController&action=toggleLock&id=${user.profile_id}&status=1"
-                 class="btn theme-btn-danger"
-                 title="Lock User"
-                 onclick="return confirm('Are you sure you want to lock this user?');">
+            : `<a href="#" class="btn theme-btn-danger lock-user"
+                 data-id="${user.profile_id}"
+                 data-name="${escapeHtml(user.full_name)}"
+                 title="Lock User">
                  <i class="fas fa-lock"></i>
                </a>`;
 
@@ -231,10 +231,10 @@ function updateUsersTable(users) {
                   <i class="fas fa-edit"></i>
                 </a>
                 ${lockButton}
-                <a href="index.php?controller=UserManagementController&action=deleteUser&id=${user.profile_id}"
-                  class="btn theme-btn-danger"
-                  title="Delete User"
-                  onclick="return confirm('Are you sure you want to delete this user?');">
+                <a href="#" class="btn theme-btn-danger delete-user"
+                  data-id="${user.profile_id}"
+                  data-name="${escapeHtml(user.full_name)}"
+                  title="Delete User">
                   <i class="fas fa-trash-alt"></i>
                 </a>
             </td>

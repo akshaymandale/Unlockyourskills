@@ -614,10 +614,10 @@ document.addEventListener('DOMContentLoaded', function () {
                         title="Edit">
                         <i class="fas fa-edit"></i>
                     </button>
-                    <a href="index.php?controller=FeedbackQuestionController&action=delete&id=${question.id}"
-                        class="btn theme-btn-danger"
-                        title="Delete"
-                        onclick="return confirm('Are you sure you want to delete this question?');">
+                    <a href="#" class="btn theme-btn-danger delete-feedback-question"
+                        data-id="${question.id}"
+                        data-title="${escapeHtml(question.title)}"
+                        title="Delete">
                         <i class="fas fa-trash-alt"></i>
                     </a>
                 </td>
