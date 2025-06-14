@@ -985,6 +985,49 @@ html, body {
     text-decoration: none; /* Ensures no underline on hover */
 }
 
+/* ✅ SCORM File Preview Styling - Consistent with Other Modules */
+#scormZipPreview .preview-wrapper {
+    position: relative;
+    display: inline-block;
+    margin-right: 10px;
+}
+
+#scormZipPreview .remove-preview {
+    position: absolute;
+    top: -5px;
+    right: -5px;
+    background: #dc3545;
+    color: white;
+    border: none;
+    border-radius: 50%;
+    width: 20px;
+    height: 20px;
+    font-size: 12px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 10;
+}
+
+#scormZipPreview .remove-preview:hover {
+    background: #c82333;
+}
+
+#scormZipPreview p {
+    margin: 0;
+    word-break: break-all;
+}
+
+#scormZipPreview a {
+    color: #6a0dad;
+    text-decoration: none;
+}
+
+#scormZipPreview a:hover {
+    text-decoration: underline;
+}
+
 /* External content CSS for card */
 /* ✅ General Styling */
 /* ✅ External Content Card Styling */
@@ -2430,6 +2473,117 @@ body select:focus,
 .form-control[type="file"].is-invalid:focus {
     border-color: #dc3545;
     box-shadow: 0 0 0 0.2rem rgba(220, 53, 69, 0.25);
+}
+
+/* ✅ Toast Notification Styles */
+.toast-container {
+    z-index: 9999 !important;
+    max-width: 400px;
+}
+
+.toast {
+    min-width: 300px;
+    max-width: 400px;
+    margin-bottom: 10px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    border-radius: 8px;
+    animation: slideInRight 0.3s ease-out;
+}
+
+.toast.show {
+    animation: slideInRight 0.3s ease-out;
+}
+
+.toast.hide {
+    animation: slideOutRight 0.3s ease-in;
+}
+
+@keyframes slideInRight {
+    from {
+        transform: translateX(100%);
+        opacity: 0;
+    }
+    to {
+        transform: translateX(0);
+        opacity: 1;
+    }
+}
+
+@keyframes slideOutRight {
+    from {
+        transform: translateX(0);
+        opacity: 1;
+    }
+    to {
+        transform: translateX(100%);
+        opacity: 0;
+    }
+}
+
+.toast-body {
+    font-size: 14px;
+    font-weight: 500;
+    padding: 12px 16px;
+}
+
+.toast-body i {
+    font-size: 16px;
+    margin-right: 8px;
+}
+
+.toast .btn-close {
+    padding: 8px;
+    margin: 4px;
+}
+
+/* Success Toast */
+.toast.text-bg-success {
+    background-color: #198754 !important;
+    border-left: 4px solid #146c43;
+}
+
+/* Error Toast */
+.toast.text-bg-danger {
+    background-color: #dc3545 !important;
+    border-left: 4px solid #b02a37;
+}
+
+/* Warning Toast */
+.toast.text-bg-warning {
+    background-color: #fd7e14 !important;
+    border-left: 4px solid #e55a00;
+    color: #000 !important;
+}
+
+.toast.text-bg-warning .btn-close {
+    filter: invert(1) grayscale(100%) brightness(0);
+}
+
+/* Info Toast */
+.toast.text-bg-info {
+    background-color: #0dcaf0 !important;
+    border-left: 4px solid #087990;
+    color: #000 !important;
+}
+
+.toast.text-bg-info .btn-close {
+    filter: invert(1) grayscale(100%) brightness(0);
+}
+
+/* ✅ Toast Responsive Design */
+@media (max-width: 768px) {
+    .toast-container {
+        left: 10px !important;
+        right: 10px !important;
+        top: 10px !important;
+        max-width: none;
+    }
+
+    .toast {
+        min-width: auto;
+        max-width: none;
+        width: 100%;
+    }
 }
 
 

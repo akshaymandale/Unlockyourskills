@@ -85,30 +85,96 @@ class VLRController
             $zipFileName = $_POST['existing_zip'] ?? null;
             if (!empty($_FILES['zipFile']['name'])) {
                 $uploadDir = "uploads/scorm/";
-                $fileExtension = pathinfo($_FILES['zipFile']['name'], PATHINFO_EXTENSION);
-                $uniqueFileName = uniqid('scorm_') . '.' . $fileExtension; // Generate unique file name
+
+                // Create directory if it doesn't exist
+                if (!is_dir($uploadDir)) {
+                    mkdir($uploadDir, 0755, true);
+                }
+
+                // Validate file upload
+                if ($_FILES['zipFile']['error'] !== UPLOAD_ERR_OK) {
+                    $uploadErrors = [
+                        UPLOAD_ERR_INI_SIZE => 'File size exceeds server limit.',
+                        UPLOAD_ERR_FORM_SIZE => 'File size exceeds form limit.',
+                        UPLOAD_ERR_PARTIAL => 'File was only partially uploaded.',
+                        UPLOAD_ERR_NO_FILE => 'No file was uploaded.',
+                        UPLOAD_ERR_NO_TMP_DIR => 'Missing temporary folder.',
+                        UPLOAD_ERR_CANT_WRITE => 'Failed to write file to disk.',
+                        UPLOAD_ERR_EXTENSION => 'File upload stopped by extension.'
+                    ];
+                    $errorMessage = $uploadErrors[$_FILES['zipFile']['error']] ?? 'Unknown upload error.';
+                    echo "<script>alert('File upload failed: $errorMessage'); window.location.href='index.php?controller=VLRController&tab=scorm';</script>";
+                    exit();
+                }
+
+                // Validate file type
+                $fileExtension = strtolower(pathinfo($_FILES['zipFile']['name'], PATHINFO_EXTENSION));
+                $allowedExtensions = ['zip', 'rar', '7z'];
+                if (!in_array($fileExtension, $allowedExtensions)) {
+                    echo "<script>alert('Invalid file type. Only ZIP, RAR, and 7Z files are allowed.'); window.location.href='index.php?controller=VLRController&tab=scorm';</script>";
+                    exit();
+                }
+
+                // Validate file size (50MB limit)
+                $maxSize = 50 * 1024 * 1024; // 50MB
+                if ($_FILES['zipFile']['size'] > $maxSize) {
+                    echo "<script>alert('File size too large. Maximum size is 50MB.'); window.location.href='index.php?controller=VLRController&tab=scorm';</script>";
+                    exit();
+                }
+
+                $uniqueFileName = uniqid('scorm_') . '.' . $fileExtension;
                 $uploadFilePath = $uploadDir . $uniqueFileName;
 
                 if (move_uploaded_file($_FILES['zipFile']['tmp_name'], $uploadFilePath)) {
                     $zipFileName = $uniqueFileName;
                 } else {
-                    echo "<script>alert('File upload failed.'); window.location.href='index.php?controller=VLRController&tab=scorm';</script>";
+                    echo "<script>alert('File upload failed. Please check directory permissions.'); window.location.href='index.php?controller=VLRController&tab=scorm';</script>";
                     exit();
                 }
             }
 
+            // Validate required fields
+            $errors = [];
+
+            if (empty($_POST['scorm_title'])) {
+                $errors[] = 'SCORM title is required.';
+            }
+            if (empty($_POST['version'])) {
+                $errors[] = 'Version is required.';
+            }
+            if (empty($_POST['scormCategory'])) {
+                $errors[] = 'SCORM category is required.';
+            }
+            if (empty($_POST['mobileSupport'])) {
+                $errors[] = 'Mobile support selection is required.';
+            }
+            if (empty($_POST['assessment'])) {
+                $errors[] = 'Assessment selection is required.';
+            }
+
+            // For new SCORM packages, zip file is required
+            if (!$scormId && empty($zipFileName)) {
+                $errors[] = 'ZIP file is required for new SCORM packages.';
+            }
+
+            if (!empty($errors)) {
+                $errorMessage = implode('\\n', $errors);
+                echo "<script>alert('Validation errors:\\n$errorMessage'); window.location.href='index.php?controller=VLRController&tab=scorm';</script>";
+                exit();
+            }
+
             // Prepare data
             $data = [
-                'title' => $_POST['scorm_title'],
+                'title' => trim($_POST['scorm_title']),
                 'zip_file' => $zipFileName,  // Use new or existing file
-                'description' => $_POST['description'] ?? '',
-                'tags' => $_POST['tagList'] ?? '',
-                'version' => $_POST['version'],
-                'language' => $_POST['language'] ?? '',
-                'scorm_category' => $_POST['scormCategory'],
-                'time_limit' => $_POST['timeLimit'] ?? null,
-                'mobile_support' => $_POST['mobileSupport'],
-                'assessment' => $_POST['assessment'],
+                'description' => trim($_POST['description'] ?? ''),
+                'tags' => trim($_POST['tagList'] ?? ''),
+                'version' => trim($_POST['version']),
+                'language' => trim($_POST['language'] ?? ''),
+                'scorm_category' => trim($_POST['scormCategory']),
+                'time_limit' => !empty($_POST['timeLimit']) ? intval($_POST['timeLimit']) : null,
+                'mobile_support' => trim($_POST['mobileSupport']),
+                'assessment' => trim($_POST['assessment']),
                 'created_by' => $_SESSION['id']  // Store logged-in user
             ];
 

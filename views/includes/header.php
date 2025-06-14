@@ -54,6 +54,8 @@ if (session_status() === PHP_SESSION_NONE) {
         ?>
         </script>
         <script src="public/js/translations.js"></script>
+        <!-- Toast notifications (optional) - uncomment to enable -->
+        <!-- <script src="public/js/toast_notifications.js"></script> -->
 </head>
 <body>
 
