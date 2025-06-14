@@ -5,12 +5,13 @@ error_reporting(E_ALL);
 require_once 'models/AssessmentModel.php';
 
 class AssessmentController
-{
-    private $model;
+{ 
+    private $model; 
 
     public function __construct()
     {
-        $this->model = new AssessmentModel();
+        $this->model = new AssessmentModel();  
+        $this->assessmentQuestionModel = new AssessmentQuestionModel();
     }
 
     // Used to serve the assessment form view
