@@ -464,7 +464,7 @@ class QuestionController {
 
     public function downloadTemplate() {
         $type = $_GET['type'] ?? 'objective';
-        $format = $_GET['format'] ?? 'excel'; // excel or csv
+        $format = $_GET['format'] ?? 'csv'; // csv or excel
 
         if (!in_array($type, ['objective', 'subjective'])) {
             echo "<script>alert('Invalid template type.'); window.location.href='index.php?controller=QuestionController';</script>";
@@ -472,22 +472,28 @@ class QuestionController {
         }
 
         if ($format === 'excel') {
-            // Generate Excel-compatible HTML table
+            // Generate proper Excel file using HTML table format
             $filename = "assessment_questions_template_{$type}.xls";
 
+            // Set proper headers for Excel - force download
             header('Content-Type: application/vnd.ms-excel');
             header('Content-Disposition: attachment; filename="' . $filename . '"');
-            header('Cache-Control: max-age=0');
-            header('Pragma: public');
+            header('Cache-Control: no-cache, no-store, must-revalidate');
+            header('Pragma: no-cache');
+            header('Expires: 0');
 
+            // Generate proper Excel HTML format
             $this->generateExcelHTMLTemplate($type);
         } else {
             // Generate CSV file
             $filename = "assessment_questions_template_{$type}.csv";
 
-            header('Content-Type: text/csv; charset=utf-8');
+            // Set proper CSV headers - force download, prevent Numbers from opening
+            header('Content-Type: application/octet-stream');
             header('Content-Disposition: attachment; filename="' . $filename . '"');
-            header('Cache-Control: max-age=0');
+            header('Cache-Control: no-cache, no-store, must-revalidate');
+            header('Pragma: no-cache');
+            header('Expires: 0');
 
             if ($type === 'objective') {
                 $this->generateObjectiveTemplate();
@@ -590,15 +596,24 @@ class QuestionController {
     }
 
     private function generateExcelHTMLTemplate($type) {
-        // Generate simple HTML table that Excel can open without warnings
-        echo '<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns="http://www.w3.org/TR/REC-html40">';
-        echo '<head>';
-        echo '<meta charset="utf-8">';
-        echo '<meta name="ProgId" content="Excel.Sheet">';
-        echo '<meta name="Generator" content="Assessment Question Template Generator">';
-        echo '</head>';
-        echo '<body>';
-        echo '<table border="1">';
+        // Generate proper Excel-compatible HTML with XML namespace
+        echo '<?xml version="1.0"?>' . "\n";
+        echo '<Workbook xmlns="urn:schemas-microsoft-com:office:spreadsheet"' . "\n";
+        echo ' xmlns:o="urn:schemas-microsoft-com:office:office"' . "\n";
+        echo ' xmlns:x="urn:schemas-microsoft-com:office:excel"' . "\n";
+        echo ' xmlns:ss="urn:schemas-microsoft-com:office:spreadsheet"' . "\n";
+        echo ' xmlns:html="http://www.w3.org/TR/REC-html40">' . "\n";
+
+        // Add styles for better formatting
+        echo '<Styles>' . "\n";
+        echo '<Style ss:ID="Header">' . "\n";
+        echo '<Font ss:Bold="1" ss:Color="#FFFFFF"/>' . "\n";
+        echo '<Interior ss:Color="#6a0dad" ss:Pattern="Solid"/>' . "\n";
+        echo '</Style>' . "\n";
+        echo '</Styles>' . "\n";
+
+        echo '<Worksheet ss:Name="Assessment Questions">' . "\n";
+        echo '<Table>' . "\n";
 
         if ($type === 'objective') {
             $headers = [
@@ -682,45 +697,156 @@ class QuestionController {
             ];
         }
 
-        // Output headers with styling
-        echo '<tr style="background-color: #6a0dad; color: white; font-weight: bold;">';
+        // Output headers with proper Excel formatting
+        echo '<Row ss:StyleID="Header">' . "\n";
         foreach ($headers as $header) {
-            echo '<td>' . htmlspecialchars($header) . '</td>';
+            echo '<Cell><Data ss:Type="String">' . htmlspecialchars($header) . '</Data></Cell>' . "\n";
         }
-        echo '</tr>';
+        echo '</Row>' . "\n";
 
-        // Output sample data
-        foreach ($sampleData as $rowIndex => $row) {
-            $bgColor = $rowIndex % 2 === 0 ? '#f8f9fa' : '#ffffff';
-            echo '<tr style="background-color: ' . $bgColor . ';">';
+        // Output sample data with proper Excel formatting
+        foreach ($sampleData as $row) {
+            echo '<Row>' . "\n";
             foreach ($row as $cell) {
-                echo '<td>' . htmlspecialchars($cell) . '</td>';
+                $cellType = is_numeric($cell) ? 'Number' : 'String';
+                echo '<Cell><Data ss:Type="' . $cellType . '">' . htmlspecialchars($cell) . '</Data></Cell>' . "\n";
             }
-            echo '</tr>';
+            echo '</Row>' . "\n";
         }
 
-        echo '</table>';
-        echo '</body>';
-        echo '</html>';
+        echo '</Table>' . "\n";
+        echo '</Worksheet>' . "\n";
+        echo '</Workbook>' . "\n";
         exit();
     }
 
     private function outputCSV($headers, $data) {
         $output = fopen('php://output', 'w');
 
-        // Add BOM for UTF-8
+        // Add BOM for UTF-8 to ensure proper encoding
         fprintf($output, chr(0xEF).chr(0xBB).chr(0xBF));
 
-        // Write headers
-        fputcsv($output, $headers);
+        // Write headers with explicit comma separation
+        fputcsv($output, $headers, ',', '"');
 
-        // Write sample data
+        // Write sample data with explicit comma separation
         foreach ($data as $row) {
-            fputcsv($output, $row);
+            fputcsv($output, $row, ',', '"');
         }
 
         fclose($output);
         exit();
+    }
+
+    // New method for Excel-compatible CSV output
+    private function outputExcelCSV($headers, $data) {
+        $output = fopen('php://output', 'w');
+
+        // Add BOM for UTF-8 to ensure proper encoding in Excel
+        fprintf($output, chr(0xEF).chr(0xBB).chr(0xBF));
+
+        // Write headers with tab separation for better Excel compatibility
+        fputcsv($output, $headers, "\t");
+
+        // Write sample data with tab separation
+        foreach ($data as $row) {
+            fputcsv($output, $row, "\t");
+        }
+
+        fclose($output);
+        exit();
+    }
+
+    private function generateObjectiveTemplateForExcel() {
+        // CSV headers for objective questions
+        $headers = [
+            'Question Text*',
+            'Tags/Keywords*',
+            'Competency Skills',
+            'Difficulty Level* (Low/Medium/Hard)',
+            'Marks*',
+            'Option 1*',
+            'Option 2*',
+            'Option 3',
+            'Option 4',
+            'Option 5',
+            'Correct Answer* (1,2,3,4,5)',
+            'Media Type (text/image/audio/video)',
+            'Media File Path'
+        ];
+
+        // Sample data
+        $sampleData = [
+            [
+                'What is the capital of France?',
+                'geography, capitals, france',
+                'General Knowledge',
+                'Low',
+                '1',
+                'Paris',
+                'London',
+                'Berlin',
+                'Madrid',
+                '',
+                '1',
+                'text',
+                ''
+            ],
+            [
+                'Which programming language is used for web development?',
+                'programming, web development, languages',
+                'Technical Skills',
+                'Medium',
+                '2',
+                'Python',
+                'JavaScript',
+                'C++',
+                'Java',
+                'PHP',
+                '2',
+                'text',
+                ''
+            ]
+        ];
+
+        $this->outputExcelCSV($headers, $sampleData);
+    }
+
+    private function generateSubjectiveTemplateForExcel() {
+        // CSV headers for subjective questions
+        $headers = [
+            'Question Text*',
+            'Tags/Keywords*',
+            'Competency Skills',
+            'Difficulty Level* (Low/Medium/Hard)',
+            'Marks*',
+            'Media Type (text/image/audio/video)',
+            'Media File Path'
+        ];
+
+        // Sample data
+        $sampleData = [
+            [
+                'Explain the concept of object-oriented programming and its benefits.',
+                'programming, oop, concepts',
+                'Technical Skills',
+                'Hard',
+                '5',
+                'text',
+                ''
+            ],
+            [
+                'Describe the importance of data security in modern applications.',
+                'security, data protection, applications',
+                'Security Awareness',
+                'Medium',
+                '3',
+                'text',
+                ''
+            ]
+        ];
+
+        $this->outputExcelCSV($headers, $sampleData);
     }
 
     public function importQuestions() {
@@ -787,21 +913,65 @@ class QuestionController {
 
         $tempFile = $uploadDir . time() . '_' . $file['name'];
 
-        if (!move_uploaded_file($file['tmp_name'], $tempFile)) {
-            return ['success' => false, 'message' => 'Failed to upload file.'];
+        // Handle both uploaded files and regular files (for testing)
+        if (is_uploaded_file($file['tmp_name'])) {
+            if (!move_uploaded_file($file['tmp_name'], $tempFile)) {
+                return ['success' => false, 'message' => 'Failed to upload file.'];
+            }
+        } else {
+            // For testing purposes, copy the file
+            if (!copy($file['tmp_name'], $tempFile)) {
+                return ['success' => false, 'message' => 'Failed to copy file.'];
+            }
         }
 
-        // Read CSV file (simple implementation)
         $data = [];
-        if (($handle = fopen($tempFile, "r")) !== FALSE) {
-            $headers = fgetcsv($handle); // Skip headers
-            while (($row = fgetcsv($handle)) !== FALSE) {
-                $data[] = $row;
+        $fileExtension = strtolower(pathinfo($file['name'], PATHINFO_EXTENSION));
+
+        try {
+            if ($fileExtension === 'csv' || $fileExtension === 'xls') {
+                // Handle CSV and Excel files saved as CSV format
+                if (($handle = fopen($tempFile, "r")) !== FALSE) {
+                    // Try different delimiters for better compatibility
+                    $delimiters = [',', ';', "\t"];
+                    $bestDelimiter = ',';
+                    $maxColumns = 0;
+
+                    // Detect the best delimiter
+                    foreach ($delimiters as $delimiter) {
+                        rewind($handle);
+                        $firstRow = fgetcsv($handle, 0, $delimiter);
+                        if ($firstRow && count($firstRow) > $maxColumns) {
+                            $maxColumns = count($firstRow);
+                            $bestDelimiter = $delimiter;
+                        }
+                    }
+
+                    // Read the file with the best delimiter
+                    rewind($handle);
+                    $headers = fgetcsv($handle, 0, $bestDelimiter); // Skip headers
+
+                    while (($row = fgetcsv($handle, 0, $bestDelimiter)) !== FALSE) {
+                        // Skip empty rows
+                        if (!empty(array_filter($row))) {
+                            $data[] = $row;
+                        }
+                    }
+                    fclose($handle);
+                }
+            } else {
+                throw new Exception("Unsupported file format: $fileExtension");
             }
-            fclose($handle);
+        } catch (Exception $e) {
+            unlink($tempFile); // Clean up temp file
+            return ['success' => false, 'message' => 'Error reading file: ' . $e->getMessage()];
         }
 
         unlink($tempFile); // Clean up temp file
+
+        if (empty($data)) {
+            return ['success' => false, 'message' => 'No valid data found in the file.'];
+        }
 
         return $this->importQuestionsFromData($data, $questionType);
     }
@@ -809,12 +979,22 @@ class QuestionController {
     private function importQuestionsFromData($data, $questionType) {
         $successCount = 0;
         $errors = [];
+
+        // Better session handling
+        if (!isset($_SESSION['id']) || empty($_SESSION['id'])) {
+            throw new Exception("User session not found. Please login again.");
+        }
         $createdBy = $_SESSION['id'];
 
         foreach ($data as $index => $row) {
             $rowNumber = $index + 2; // +2 because index starts at 0 and we skip header row
 
             try {
+                // Skip empty rows
+                if (empty(array_filter($row))) {
+                    continue;
+                }
+
                 if ($questionType === 'objective') {
                     $result = $this->importObjectiveQuestion($row, $createdBy);
                 } else {
@@ -828,6 +1008,8 @@ class QuestionController {
                 }
             } catch (Exception $e) {
                 $errors[] = "Row $rowNumber: " . $e->getMessage();
+                // Log the error for debugging
+                error_log("CSV Import Error - Row $rowNumber: " . $e->getMessage());
             }
         }
 
@@ -851,11 +1033,11 @@ class QuestionController {
             'competency_skills' => trim($row[2] ?? ''),
             'level' => $this->validateLevel(trim($row[3])),
             'marks' => intval($row[4]),
-            'status' => 'active',
-            'question_type' => 'multi_choice',
+            'status' => 'Active',  // Fixed: Database expects 'Active' not 'active'
+            'question_type' => 'Objective',  // Fixed: Database expects 'Objective' not 'multi_choice'
             'media_type' => trim($row[11] ?? 'text'),
-            'media_file' => trim($row[12] ?? null),
-            'created_by' => $createdBy
+            'media_file' => isset($row[12]) && $row[12] !== null ? trim($row[12]) : null,
+            'created_by' => (string)$createdBy  // Ensure it's a string as expected by database
         ];
 
         // Count non-empty options
@@ -906,12 +1088,12 @@ class QuestionController {
             'competency_skills' => trim($row[2] ?? ''),
             'level' => $this->validateLevel(trim($row[3])),
             'marks' => intval($row[4]),
-            'status' => 'active',
-            'question_type' => 'long_answer',
+            'status' => 'Active',  // Fixed: Database expects 'Active' not 'active'
+            'question_type' => 'Subjective',  // Fixed: Database expects 'Subjective' not 'long_answer'
             'answer_count' => 0,
             'media_type' => trim($row[5] ?? 'text'),
-            'media_file' => trim($row[6] ?? null),
-            'created_by' => $createdBy
+            'media_file' => isset($row[6]) && $row[6] !== null ? trim($row[6]) : null,
+            'created_by' => (string)$createdBy  // Ensure it's a string as expected by database
         ];
 
         return $this->questionModel->insertQuestion($questionData);

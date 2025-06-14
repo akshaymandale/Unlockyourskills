@@ -135,10 +135,10 @@ $languageList = $vlrController->getLanguages();
                                             <div class="col-md-6">
                                                 <div class="form-group">
                                                     <label for="zipFile" class="form-label"><?= Localization::translate('upload_scorm_zip'); ?> <span class="text-danger">*</span></label>
-                                                    <input type="file" class="form-control" id="zipFile" name="zipFile" accept=".zip">
-                                                    <small class="text-muted">Max size: 100MB. Formats: ZIP files only.</small>
+                                                    <input type="file" class="form-control" id="zipFile" name="zipFile" accept=".zip,.rar,.7z">
+                                                    <small class="text-muted">Max size: 50MB. Formats: ZIP, RAR, 7Z files</small>
                                                     <input type="hidden" id="existing_zip" name="existing_zip">
-                                                    <div id="existingZipDisplay" class="mt-2"></div>
+                                                    <div id="scormZipPreview" class="mt-2"></div>
                                                 </div>
                                             </div>
                                         </div>

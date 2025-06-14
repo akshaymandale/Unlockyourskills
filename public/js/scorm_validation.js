@@ -68,7 +68,7 @@ document.addEventListener("DOMContentLoaded", function () {
         switch (fieldName) {
             case "scorm_title":
                 if (value === "") {
-                    showError(field, translate('validation.scorm_title_required'));
+                    showError(field, getValidationMessage('scorm_title_required', 'SCORM title is required.'));
                     isValid = false;
                 } else {
                     hideError(field);
@@ -78,7 +78,7 @@ document.addEventListener("DOMContentLoaded", function () {
             case "zipFile":
                 const existingZip = document.getElementById("existing_zip").value;
                 if (field.files.length === 0 && existingZip === "") {
-                    showError(field, translate('validation.scorm_zip_required'));
+                    showError(field, getValidationMessage('scorm_zip_required', 'ZIP file is required.'));
                     isValid = false;
                 } else {
                     hideError(field);
@@ -87,7 +87,7 @@ document.addEventListener("DOMContentLoaded", function () {
 
             case "version":
                 if (value === "") {
-                    showError(field, translate('validation.version_required'));
+                    showError(field, getValidationMessage('version_required', 'Version is required.'));
                     isValid = false;
                 } else {
                     hideError(field);
@@ -96,7 +96,7 @@ document.addEventListener("DOMContentLoaded", function () {
 
             case "scormCategory":
                 if (value === "") {
-                    showError(field, translate('validation.scorm_category_required'));
+                    showError(field, getValidationMessage('scorm_category_required', 'SCORM category is required.'));
                     isValid = false;
                 } else {
                     hideError(field);
@@ -105,6 +105,16 @@ document.addEventListener("DOMContentLoaded", function () {
         }
 
         return isValid;
+    }
+
+    // ✅ Get validation message with fallback
+    function getValidationMessage(key, fallback) {
+        if (typeof translate === 'function') {
+            const translated = translate('validation.' + key);
+            // If translation returns the key itself, use fallback
+            return translated !== ('validation.' + key) ? translated : fallback;
+        }
+        return fallback;
     }
 
     // ✅ Show Error Messages with Translations
