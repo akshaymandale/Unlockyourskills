@@ -10,7 +10,7 @@ class AssessmentController
 
     public function __construct()
     {
-        $this->model = new AssessmentModel();
+        $this->model = new AssessmentModel(); 
     }
 
     // Used to serve the assessment form view
