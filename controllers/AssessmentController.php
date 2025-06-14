@@ -5,8 +5,8 @@ error_reporting(E_ALL);
 require_once 'models/AssessmentModel.php';
 
 class AssessmentController
-{
-    private $model;
+{ 
+    private $model; 
 
     public function __construct()
     {
@@ -55,6 +55,8 @@ class AssessmentController
 
     public function getFilterOptions()
     {
+        header('Content-Type: application/json');
+
         $marks = $this->model->getDistinctMarks();
         $types = $this->model->getDistinctTypes();
 

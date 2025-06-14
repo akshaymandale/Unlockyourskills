@@ -31,10 +31,10 @@ class AssessmentModel
             $params[':type'] = $type;
         }
 
-        $sql = "SELECT * FROM assessment_questions";
-        if (!empty($where)) {
-            $sql .= " WHERE " . implode(" AND ", $where);
-        }
+        // Always exclude deleted questions
+        $where[] = "is_deleted = 0";
+
+        $sql = "SELECT * FROM assessment_questions WHERE " . implode(" AND ", $where);
 
         $sql .= " LIMIT :limit OFFSET :offset";
 
@@ -70,10 +70,10 @@ class AssessmentModel
             $params[':type'] = $type;
         }
 
-        $sql = "SELECT COUNT(*) FROM assessment_questions";
-        if (!empty($where)) {
-            $sql .= " WHERE " . implode(" AND ", $where);
-        }
+        // Always exclude deleted questions
+        $where[] = "is_deleted = 0";
+
+        $sql = "SELECT COUNT(*) FROM assessment_questions WHERE " . implode(" AND ", $where);
 
         $stmt = $this->conn->prepare($sql);
         $stmt->execute($params);
@@ -87,7 +87,7 @@ class AssessmentModel
             return [];
 
         $placeholders = implode(',', array_fill(0, count($ids), '?'));
-        $sql = "SELECT * FROM assessment_questions WHERE id IN ($placeholders)";
+        $sql = "SELECT * FROM assessment_questions WHERE id IN ($placeholders) AND is_deleted = 0";
 
         $stmt = $this->conn->prepare($sql);
         $stmt->execute($ids);

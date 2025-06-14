@@ -449,7 +449,7 @@ class VLRModel
             }
 
             $this->conn->commit();
-            return true;
+            return $assessmentPackageId;
 
         } catch (Exception $e) {
             $this->conn->rollBack();
