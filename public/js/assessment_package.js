@@ -100,6 +100,12 @@ document.addEventListener("DOMContentLoaded", function () {
         tagContainer.innerHTML = "";
         updateHiddenInput();
 
+        // Clear assessment ID for new assessment
+        let assessmentIdInput = document.getElementById('assessmentId');
+        if (assessmentIdInput) {
+            assessmentIdInput.remove();
+        }
+
         selectedQuestionsBody.innerHTML = "";
         selectedQuestionIdsInput.value = "";
         selectedQuestionCountInput.value = "";
@@ -198,6 +204,18 @@ document.addEventListener("DOMContentLoaded", function () {
             .then(response => response.json())
             .then(assessmentData => {
                 console.log(assessmentData);
+
+                // Add hidden input for assessment ID (crucial for update vs insert logic)
+                let assessmentIdInput = document.getElementById('assessmentId');
+                if (!assessmentIdInput) {
+                    assessmentIdInput = document.createElement('input');
+                    assessmentIdInput.type = 'hidden';
+                    assessmentIdInput.name = 'assessmentId';
+                    assessmentIdInput.id = 'assessmentId';
+                    assessmentForm.appendChild(assessmentIdInput);
+                }
+                assessmentIdInput.value = assessmentData.id;
+
                 assessmentTitle.value = assessmentData.title;
                 numAttempts.value = assessmentData.num_attempts;
                 passingPercentage.value = assessmentData.passing_percentage;
@@ -285,6 +303,12 @@ document.addEventListener("DOMContentLoaded", function () {
         tags = [];
         tagContainer.innerHTML = "";
         updateHiddenInput();
+
+        // Clear assessment ID when modal is closed
+        let assessmentIdInput = document.getElementById('assessmentId');
+        if (assessmentIdInput) {
+            assessmentIdInput.remove();
+        }
 
         selectedQuestionsBody.innerHTML = "";
         selectedQuestionIdsInput.value = "";

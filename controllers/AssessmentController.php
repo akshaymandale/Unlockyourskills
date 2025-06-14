@@ -10,8 +10,7 @@ class AssessmentController
 
     public function __construct()
     {
-        $this->model = new AssessmentModel();  
-        $this->assessmentQuestionModel = new AssessmentQuestionModel();
+        $this->model = new AssessmentModel();
     }
 
     // Used to serve the assessment form view
@@ -56,6 +55,8 @@ class AssessmentController
 
     public function getFilterOptions()
     {
+        header('Content-Type: application/json');
+
         $marks = $this->model->getDistinctMarks();
         $types = $this->model->getDistinctTypes();
 

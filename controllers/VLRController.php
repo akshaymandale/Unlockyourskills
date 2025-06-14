@@ -562,17 +562,13 @@ class VLRController
         // Insert or update logic
         if (!empty($assessmentId)) {
             $result = $this->VLRModel->updateAssessmentWithQuestions($data, $assessmentId);
+            $message = $result ? "Assessment updated successfully!" : "Failed to update assessment.";
         } else {
             $result = $this->VLRModel->saveAssessmentWithQuestions($data);
+            $message = $result ? "Assessment saved successfully!" : "Failed to save assessment.";
         }
 
-        if ($result) {
-            $message = "Assessment saved successfully!";
-            echo "<script>alert('$message'); window.location.href='index.php?controller=VLRController&tab=assessment';</script>";
-        } else {
-            $message = "Failed to save assessment.";
-            echo "<script>alert('$message'); window.location.href='index.php?controller=VLRController&tab=assessment';</script>";
-        }
+        echo "<script>alert('$message'); window.location.href='index.php?controller=VLRController&tab=assessment';</script>";
     }
 
 
