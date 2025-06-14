@@ -204,10 +204,15 @@ class VLRModel
         }
     }
 
-    // Get data for External Content
+    // Get data for External Content with Language Names
     public function getExternalContent()
     {
-        $stmt = $this->conn->prepare("SELECT * FROM external_content WHERE is_deleted = 0");
+        $stmt = $this->conn->prepare("
+            SELECT e.*, l.language_name
+            FROM external_content e
+            LEFT JOIN languages l ON e.language_support = l.id
+            WHERE e.is_deleted = 0
+        ");
         $stmt->execute();
         $data = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
@@ -674,10 +679,16 @@ public function updateAudioPackage($id, $data)
     ]);
 }
 
-// ✅ Get Audio Packages (non-deleted)
+// ✅ Get Audio Packages (non-deleted) with Language Names
 public function getAudioPackages()
 {
-    $stmt = $this->conn->prepare("SELECT * FROM audio_package WHERE is_deleted = 0 ORDER BY created_at DESC");
+    $stmt = $this->conn->prepare("
+        SELECT a.*, l.language_name
+        FROM audio_package a
+        LEFT JOIN languages l ON a.language = l.id
+        WHERE a.is_deleted = 0
+        ORDER BY a.created_at DESC
+    ");
     $stmt->execute();
     return $stmt->fetchAll(PDO::FETCH_ASSOC);
 }
@@ -755,10 +766,16 @@ public function updateVideoPackage($id, $data)
     ]);
 }
 
-// ✅ Get Video Packages (non-deleted)
+// ✅ Get Video Packages (non-deleted) with Language Names
 public function getVideoPackages()
 {
-    $stmt = $this->conn->prepare("SELECT * FROM video_package WHERE is_deleted = 0 ORDER BY created_at DESC");
+    $stmt = $this->conn->prepare("
+        SELECT v.*, l.language_name
+        FROM video_package v
+        LEFT JOIN languages l ON v.language = l.id
+        WHERE v.is_deleted = 0
+        ORDER BY v.created_at DESC
+    ");
     $stmt->execute();
     return $stmt->fetchAll(PDO::FETCH_ASSOC);
 }
@@ -833,10 +850,16 @@ public function updateImagePackage($id, $data)
     ]);
 }
 
-// ✅ Get Image Packages (non-deleted)
+// ✅ Get Image Packages (non-deleted) with Language Names
 public function getImagePackages()
 {
-    $stmt = $this->conn->prepare("SELECT * FROM image_package WHERE is_deleted = 0 ORDER BY created_at DESC");
+    $stmt = $this->conn->prepare("
+        SELECT i.*, l.language_name
+        FROM image_package i
+        LEFT JOIN languages l ON i.language = l.id
+        WHERE i.is_deleted = 0
+        ORDER BY i.created_at DESC
+    ");
     $stmt->execute();
     return $stmt->fetchAll(PDO::FETCH_ASSOC);
 }

@@ -1479,6 +1479,10 @@ $languageList = $vlrController->getLanguages();
                                                     <?= htmlspecialchars(strlen($audio['title']) > 20 ? substr($audio['title'], 0, 17) . '...' : $audio['title']) ?>
                                                 </h5>
                                                 <div class="audio-actions">
+                                                    <a href="#" class="preview-audio" data-audio='<?= json_encode($audio); ?>'>
+                                                        <i class="fas fa-eye preview-icon"
+                                                            title="<?= Localization::translate('preview'); ?>"></i>
+                                                    </a>
                                                     <a href="#" class="edit-audio" data-audio='<?= json_encode($audio); ?>'>
                                                         <i class="fas fa-edit edit-icon"
                                                             title="<?= Localization::translate('edit'); ?>"></i>
@@ -1658,6 +1662,10 @@ $languageList = $vlrController->getLanguages();
                                                     <?= htmlspecialchars(strlen($video['title']) > 20 ? substr($video['title'], 0, 17) . '...' : $video['title']) ?>
                                                 </h5>
                                                 <div class="video-actions">
+                                                    <a href="#" class="preview-video" data-video='<?= json_encode($video); ?>'>
+                                                        <i class="fas fa-eye preview-icon"
+                                                            title="<?= Localization::translate('preview'); ?>"></i>
+                                                    </a>
                                                     <a href="#" class="edit-video" data-video='<?= json_encode($video); ?>'>
                                                         <i class="fas fa-edit edit-icon"
                                                             title="<?= Localization::translate('edit'); ?>"></i>
@@ -1986,6 +1994,11 @@ $languageList = $vlrController->getLanguages();
                                                     </h5>
 
                                                     <div class="content-actions">
+                                                        <a href="#" class="preview-document"
+                                                            data-document='<?= json_encode($document); ?>'>
+                                                            <i class="fas fa-eye preview-icon"
+                                                                title="<?= Localization::translate('preview'); ?>"></i>
+                                                        </a>
                                                         <a href="#" class="edit-document"
                                                             data-document='<?= json_encode($document); ?>'>
                                                             <i class="fas fa-edit edit-icon"
@@ -2162,6 +2175,10 @@ $languageList = $vlrController->getLanguages();
                                                     <?= htmlspecialchars(strlen($image['title']) > 20 ? substr($image['title'], 0, 17) . '...' : $image['title']) ?>
                                                 </h5>
                                                 <div class="image-actions">
+                                                    <a href="#" class="preview-image" data-image='<?= json_encode($image); ?>'>
+                                                        <i class="fas fa-eye preview-icon"
+                                                            title="<?= Localization::translate('preview'); ?>"></i>
+                                                    </a>
                                                     <a href="#" class="edit-image" data-image='<?= json_encode($image); ?>'>
                                                         <i class="fas fa-edit edit-icon"
                                                             title="<?= Localization::translate('edit'); ?>"></i>
@@ -2563,6 +2580,11 @@ $languageList = $vlrController->getLanguages();
                                                         <?= htmlspecialchars($displayTitle) ?>
                                                     </h5>
                                                     <div class="content-actions">
+                                                        <a href="#" class="preview-external"
+                                                            data-content='<?= json_encode($content); ?>'>
+                                                            <i class="fas fa-eye preview-icon"
+                                                                title="<?= Localization::translate('preview'); ?>"></i>
+                                                        </a>
                                                         <a href="#" class="edit-content"
                                                             data-content='<?= json_encode($content); ?>'>
                                                             <i class="fas fa-edit edit-icon"
@@ -3548,6 +3570,7 @@ $languageList = $vlrController->getLanguages();
 <script src="public/js/image_package.js"></script>
 <script src="public/js/external_content_validation.js"></script>
 <script src="public/js/external_package.js"></script>
+<script src="public/js/content_preview.js"></script>
 <script src="public/js/survey_validation.js"></script>
 <script src="public/js/survey_package.js"></script>
 <script src="public/js/add_survey_question_on_survey.js"></script>
@@ -3865,5 +3888,23 @@ function initializeSubTabClickHandlers() {
     });
 }
 </script>
+
+<!-- ✅ Universal Preview Modal -->
+<div class="modal fade" id="previewModal" tabindex="-1" aria-labelledby="previewModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-xl">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="previewModalLabel">Content Preview</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body" id="previewModalBody">
+                <!-- Dynamic content will be loaded here -->
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
 
 <?php include 'includes/footer.php'; ?>
