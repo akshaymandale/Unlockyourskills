@@ -1,7 +1,8 @@
 <?php
 require_once 'models/FeedbackQuestionModel.php';
+require_once 'controllers/BaseController.php';
 
-class FeedbackQuestionController
+class FeedbackQuestionController extends BaseController
 {
     private $feedbackQuestionModel;
 
@@ -30,12 +31,12 @@ class FeedbackQuestionController
     public function save()
     {
         if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
-            $this->redirectWithAlert('Invalid request method.', 'FeedbackQuestionController');
+            $this->toastError('Invalid request method.', 'index.php?controller=FeedbackQuestionController');
             return;
         }
 
         if (!isset($_SESSION['id'])) {
-            $this->redirectWithAlert('Unauthorized access. Please log in.', 'VLRController');
+            $this->toastError('Unauthorized access. Please log in.', 'index.php?controller=VLRController');
             return;
         }
 
@@ -71,7 +72,7 @@ class FeedbackQuestionController
             $existingQuestion = $this->feedbackQuestionModel->getQuestionById($id);
 
             if (!$existingQuestion) {
-                $this->redirectWithAlert('Feedback question not found.', 'FeedbackQuestionController');
+                $this->toastError('Feedback question not found.', 'index.php?controller=FeedbackQuestionController');
                 return;
             }
             if (!$mediaFileName) {
@@ -82,7 +83,8 @@ class FeedbackQuestionController
         }
 
         if ($errors) {
-            $this->redirectWithAlert(implode('\n', $errors), 'FeedbackQuestionController');
+            $errorMessage = implode(', ', $errors);
+            $this->toastError($errorMessage, 'index.php?controller=FeedbackQuestionController');
             return;
         }
 
@@ -155,14 +157,14 @@ class FeedbackQuestionController
             }
         }
 
-        $msg = $id ? 'Feedback question updated successfully.' : 'Feedback question saved successfully.';
-        $this->redirectWithAlert($msg, 'FeedbackQuestionController');
+        if ($id) {
+            $this->toastSuccess('Feedback question updated successfully!', 'index.php?controller=FeedbackQuestionController');
+        } else {
+            $this->toastSuccess('Feedback question saved successfully!', 'index.php?controller=FeedbackQuestionController');
+        }
     }
 
-    private function redirectWithAlert($message, $controller)
-    {
-        echo "<script>alert('$message'); window.location.href='index.php?controller=$controller';</script>";
-    }
+
 
     // File upload helper
     private function handleUpload($file, $folder = 'feedback')
@@ -179,8 +181,10 @@ class FeedbackQuestionController
         $randomName = bin2hex(random_bytes(10)) . '.' . $ext;
         $uploadDir = "uploads/$folder/";
 
+        // ✅ Create directory if it doesn't exist with proper permissions
         if (!is_dir($uploadDir)) {
             mkdir($uploadDir, 0777, true);
+            chmod($uploadDir, 0777); // Ensure proper permissions
         }
 
         $targetPath = $uploadDir . $randomName;
@@ -192,15 +196,18 @@ class FeedbackQuestionController
     public function delete()
     {
         if (!isset($_GET['id']) || !is_numeric($_GET['id'])) {
-            $this->redirectWithAlert('Invalid request parameters.', 'FeedbackQuestionController');
+            $this->toastError('Invalid request parameters.', 'index.php?controller=FeedbackQuestionController');
             return;
         }
 
         $id = (int)$_GET['id'];
         $success = $this->feedbackQuestionModel->deleteQuestion($id);
 
-        $message = $success ? 'Feedback question deleted successfully.' : 'Failed to delete feedback question.';
-        $this->redirectWithAlert($message, 'FeedbackQuestionController');
+        if ($success) {
+            $this->toastSuccess('Feedback question deleted successfully!', 'index.php?controller=FeedbackQuestionController');
+        } else {
+            $this->toastError('Failed to delete feedback question.', 'index.php?controller=FeedbackQuestionController');
+        }
     }
 
     // AJAX: get filtered paginated questions as JSON

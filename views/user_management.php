@@ -171,26 +171,26 @@
 
                                     <!-- ✅ Lock/Unlock Button -->
                                     <?php if ($user['locked_status'] == 1): ?>
-                                        <a href="index.php?controller=UserManagementController&action=toggleLock&id=<?= $user['profile_id']; ?>&status=0"
-                                            class="btn theme-btn-warning"
-                                            title="<?= Localization::translate('user_grid_unlock_user'); ?>"
-                                            onclick="return confirm('<?= Localization::translate('user_grid_unlock_confirm'); ?>');">
+                                        <a href="#" class="btn theme-btn-warning unlock-user"
+                                            data-id="<?= $user['profile_id']; ?>"
+                                            data-name="<?= htmlspecialchars($user['full_name']); ?>"
+                                            title="<?= Localization::translate('user_grid_unlock_user'); ?>">
                                             <i class="fas fa-lock-open"></i>
                                         </a>
                                     <?php else: ?>
-                                        <a href="index.php?controller=UserManagementController&action=toggleLock&id=<?= $user['profile_id']; ?>&status=1"
-                                            class="btn theme-btn-danger"
-                                            title="<?= Localization::translate('user_grid_lock_user'); ?>"
-                                            onclick="return confirm('<?= Localization::translate('user_grid_lock_confirm'); ?>');">
+                                        <a href="#" class="btn theme-btn-danger lock-user"
+                                            data-id="<?= $user['profile_id']; ?>"
+                                            data-name="<?= htmlspecialchars($user['full_name']); ?>"
+                                            title="<?= Localization::translate('user_grid_lock_user'); ?>">
                                             <i class="fas fa-lock"></i>
                                         </a>
                                     <?php endif; ?>
 
                                     <!-- ✅ Delete Button -->
-                                    <a href="index.php?controller=UserManagementController&action=deleteUser&id=<?= $user['profile_id']; ?>"
-                                        class="btn theme-btn-danger"
-                                        title="<?= Localization::translate('user_grid_delete_user'); ?>"
-                                        onclick="return confirm('<?= Localization::translate('user_grid_delete_confirm'); ?>');">
+                                    <a href="#" class="btn theme-btn-danger delete-user"
+                                        data-id="<?= $user['profile_id']; ?>"
+                                        data-name="<?= htmlspecialchars($user['full_name']); ?>"
+                                        title="<?= Localization::translate('user_grid_delete_user'); ?>">
                                         <i class="fas fa-trash-alt"></i>
                                     </a>
                                 </td>
@@ -236,5 +236,46 @@
 </div>
 
 <script src="public/js/user_management.js"></script>
+
+<script>
+// ✅ Professional User Management Confirmations
+document.addEventListener('click', function(e) {
+    // Delete User Confirmation
+    if (e.target.closest('.delete-user')) {
+        e.preventDefault();
+        const link = e.target.closest('.delete-user');
+        const id = link.dataset.id;
+        const name = link.dataset.name;
+
+        confirmDelete('user "' + name + '"', function() {
+            window.location.href = 'index.php?controller=UserManagementController&action=deleteUser&id=' + id;
+        });
+    }
+
+    // Lock User Confirmation
+    if (e.target.closest('.lock-user')) {
+        e.preventDefault();
+        const link = e.target.closest('.lock-user');
+        const id = link.dataset.id;
+        const name = link.dataset.name;
+
+        confirmAction('Lock', 'user "' + name + '"', function() {
+            window.location.href = 'index.php?controller=UserManagementController&action=toggleLock&id=' + id + '&status=1';
+        });
+    }
+
+    // Unlock User Confirmation
+    if (e.target.closest('.unlock-user')) {
+        e.preventDefault();
+        const link = e.target.closest('.unlock-user');
+        const id = link.dataset.id;
+        const name = link.dataset.name;
+
+        confirmAction('Unlock', 'user "' + name + '"', function() {
+            window.location.href = 'index.php?controller=UserManagementController&action=toggleLock&id=' + id + '&status=0';
+        });
+    }
+});
+</script>
 
 <?php include 'includes/footer.php'; ?>

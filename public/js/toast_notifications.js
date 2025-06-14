@@ -1,65 +1,71 @@
 /**
- * Toast Notification System
+ * Bulletproof Toast Notification System
  * Provides consistent success, warning, and error notifications
  * Replaces alert() calls with professional toast notifications
  */
 
-class ToastNotification {
-    constructor() {
-        this.container = null;
-        this.init();
-    }
+// Immediately override alert to prevent any alerts from showing
+(function() {
+    'use strict';
 
-    init() {
-        // Create toast container if it doesn't exist
-        if (!document.getElementById('toast-container')) {
-            this.createContainer();
+    console.log('🎯 Bulletproof Toast System Loading...');
+
+    // Store original alert immediately
+    window.originalAlert = window.alert;
+
+    // Override alert immediately - before any other scripts can use it
+    window.alert = function(message) {
+        console.log('🎯 Alert Override Called:', message);
+
+        try {
+            // If toast system is ready, use it
+            if (typeof window.showSimpleToast === 'function') {
+                const messageType = detectMessageType(message);
+                window.showSimpleToast(message, messageType);
+            } else {
+                // Queue the message for when toast system is ready
+                if (!window.toastQueue) window.toastQueue = [];
+                window.toastQueue.push(message);
+                console.log('📋 Queued alert message:', message);
+            }
+        } catch (error) {
+            console.error('❌ Error in alert override:', error);
+            window.originalAlert(message);
         }
-        this.container = document.getElementById('toast-container');
-    }
+    };
 
-    createContainer() {
-        const container = document.createElement('div');
+    console.log('✅ Alert override installed immediately');
+})();
+
+// Simple toast function that works immediately
+function showSimpleToast(message, type = 'success') {
+    console.log('🎯 Simple toast called:', message, type);
+
+    // Ensure container exists
+    let container = document.getElementById('toast-container');
+    if (!container) {
+        container = document.createElement('div');
         container.id = 'toast-container';
         container.className = 'toast-container position-fixed top-0 end-0 p-3';
         container.style.zIndex = '9999';
-        document.body.appendChild(container);
+
+        // Wait for body if not available
+        if (document.body) {
+            document.body.appendChild(container);
+            console.log('✅ Toast container created and added to body');
+        } else {
+            // If body not ready, wait and try again
+            setTimeout(() => showSimpleToast(message, type), 100);
+            return;
+        }
     }
 
-    show(message, type = 'success', duration = 5000) {
-        const toast = this.createToast(message, type, duration);
-        this.container.appendChild(toast);
+    // Create toast element
+    const toastId = 'toast-' + Date.now();
+    const config = getToastConfig(type);
 
-        // Initialize Bootstrap toast
-        const bsToast = new bootstrap.Toast(toast, {
-            autohide: true,
-            delay: duration
-        });
-
-        // Show the toast
-        bsToast.show();
-
-        // Remove from DOM after hiding
-        toast.addEventListener('hidden.bs.toast', () => {
-            toast.remove();
-        });
-
-        return bsToast;
-    }
-
-    createToast(message, type, duration) {
-        const toastId = 'toast-' + Date.now() + '-' + Math.random().toString(36).substr(2, 9);
-        
-        const config = this.getTypeConfig(type);
-        
-        const toast = document.createElement('div');
-        toast.id = toastId;
-        toast.className = `toast align-items-center text-bg-${config.bgClass} border-0`;
-        toast.setAttribute('role', 'alert');
-        toast.setAttribute('aria-live', 'assertive');
-        toast.setAttribute('aria-atomic', 'true');
-
-        toast.innerHTML = `
+    const toastHtml = `
+        <div id="${toastId}" class="toast align-items-center text-bg-${config.bgClass} border-0" role="alert" aria-live="assertive" aria-atomic="true">
             <div class="d-flex">
                 <div class="toast-body d-flex align-items-center">
                     <i class="${config.icon} me-2"></i>
@@ -67,97 +73,118 @@ class ToastNotification {
                 </div>
                 <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
             </div>
-        `;
+        </div>
+    `;
 
-        return toast;
-    }
+    container.insertAdjacentHTML('beforeend', toastHtml);
+    const toastElement = document.getElementById(toastId);
 
-    getTypeConfig(type) {
-        const configs = {
-            success: {
-                bgClass: 'success',
-                icon: 'fas fa-check-circle'
-            },
-            error: {
-                bgClass: 'danger',
-                icon: 'fas fa-exclamation-circle'
-            },
-            warning: {
-                bgClass: 'warning',
-                icon: 'fas fa-exclamation-triangle'
-            },
-            info: {
-                bgClass: 'info',
-                icon: 'fas fa-info-circle'
-            }
-        };
-
-        return configs[type] || configs.info;
-    }
-
-    // Convenience methods
-    success(message, duration = 5000) {
-        return this.show(message, 'success', duration);
-    }
-
-    error(message, duration = 7000) {
-        return this.show(message, 'error', duration);
-    }
-
-    warning(message, duration = 6000) {
-        return this.show(message, 'warning', duration);
-    }
-
-    info(message, duration = 5000) {
-        return this.show(message, 'info', duration);
-    }
-
-    // Clear all toasts
-    clearAll() {
-        const toasts = this.container.querySelectorAll('.toast');
-        toasts.forEach(toast => {
-            const bsToast = bootstrap.Toast.getInstance(toast);
-            if (bsToast) {
-                bsToast.hide();
-            }
+    // Show toast with or without Bootstrap
+    if (typeof bootstrap !== 'undefined' && bootstrap.Toast) {
+        const bsToast = new bootstrap.Toast(toastElement, {
+            autohide: true,
+            delay: type === 'error' ? 7000 : 5000
         });
+        bsToast.show();
+
+        // Remove after hiding
+        toastElement.addEventListener('hidden.bs.toast', () => {
+            toastElement.remove();
+        });
+    } else {
+        // Fallback without Bootstrap
+        toastElement.style.display = 'block';
+        toastElement.classList.add('show');
+
+        setTimeout(() => {
+            toastElement.remove();
+        }, type === 'error' ? 7000 : 5000);
+    }
+
+    console.log('✅ Simple toast displayed');
+}
+
+function getToastConfig(type) {
+    // Theme-consistent toast configurations
+    const configs = {
+        success: {
+            bgClass: 'success',
+            icon: 'fas fa-check-circle'
+        },
+        error: {
+            bgClass: 'danger',
+            icon: 'fas fa-times-circle'  // Changed for better theme consistency
+        },
+        warning: {
+            bgClass: 'warning',
+            icon: 'fas fa-exclamation-triangle'
+        },
+        info: {
+            bgClass: 'info',
+            icon: 'fas fa-info-circle'
+        },
+        primary: {
+            bgClass: 'primary',
+            icon: 'fas fa-bell'  // Theme purple notifications
+        }
+    };
+    return configs[type] || configs.info;
+}
+
+// Message type detection function
+function detectMessageType(message) {
+    const lowerMessage = message.toLowerCase();
+    console.log('🔍 Detecting message type for:', lowerMessage);
+
+    if (lowerMessage.includes('success') || lowerMessage.includes('added') ||
+        lowerMessage.includes('updated') || lowerMessage.includes('saved') ||
+        lowerMessage.includes('deleted') || lowerMessage.includes('imported')) {
+        console.log('✅ Detected as success message');
+        return 'success';
+    } else if (lowerMessage.includes('error') || lowerMessage.includes('failed') ||
+               lowerMessage.includes('invalid') || lowerMessage.includes('unauthorized')) {
+        console.log('❌ Detected as error message');
+        return 'error';
+    } else if (lowerMessage.includes('warning') || lowerMessage.includes('note')) {
+        console.log('⚠️ Detected as warning message');
+        return 'warning';
+    } else {
+        console.log('ℹ️ Detected as info message');
+        return 'info';
     }
 }
 
-// Create global instance
-window.toastNotification = new ToastNotification();
+// Make functions globally available
+window.showSimpleToast = showSimpleToast;
+window.detectMessageType = detectMessageType;
 
-// Global convenience functions for easy usage
+// Global convenience functions
 window.showToast = {
-    success: (message, duration) => window.toastNotification.success(message, duration),
-    error: (message, duration) => window.toastNotification.error(message, duration),
-    warning: (message, duration) => window.toastNotification.warning(message, duration),
-    info: (message, duration) => window.toastNotification.info(message, duration)
+    success: (message) => showSimpleToast(message, 'success'),
+    error: (message) => showSimpleToast(message, 'error'),
+    warning: (message) => showSimpleToast(message, 'warning'),
+    info: (message) => showSimpleToast(message, 'info')
 };
 
-// Store original alert function
-window.originalAlert = window.alert;
-
-// Optional alert override (disabled by default to prevent breaking existing code)
-window.enableToastAlertOverride = function() {
-    window.alert = function(message) {
-        // Determine message type based on content
-        const lowerMessage = message.toLowerCase();
-
-        if (lowerMessage.includes('success') || lowerMessage.includes('added') ||
-            lowerMessage.includes('updated') || lowerMessage.includes('saved') ||
-            lowerMessage.includes('deleted') || lowerMessage.includes('imported')) {
-            window.showToast.success(message);
-        } else if (lowerMessage.includes('error') || lowerMessage.includes('failed') ||
-                   lowerMessage.includes('invalid') || lowerMessage.includes('unauthorized')) {
-            window.showToast.error(message);
-        } else if (lowerMessage.includes('warning') || lowerMessage.includes('note')) {
-            window.showToast.warning(message);
-        } else {
-            window.showToast.info(message);
-        }
-    };
+// Legacy compatibility
+window.toastNotification = {
+    show: showSimpleToast,
+    success: (message) => showSimpleToast(message, 'success'),
+    error: (message) => showSimpleToast(message, 'error'),
+    warning: (message) => showSimpleToast(message, 'warning'),
+    info: (message) => showSimpleToast(message, 'info'),
+    initialized: true
 };
+
+// Process any queued messages
+if (window.toastQueue && window.toastQueue.length > 0) {
+    console.log('📋 Processing queued messages:', window.toastQueue.length);
+    window.toastQueue.forEach(message => {
+        const messageType = detectMessageType(message);
+        showSimpleToast(message, messageType);
+    });
+    window.toastQueue = [];
+}
 
 // Function to restore original alert
 window.disableToastAlertOverride = function() {
@@ -170,24 +197,37 @@ document.addEventListener('DOMContentLoaded', function() {
     const urlParams = new URLSearchParams(window.location.search);
     const message = urlParams.get('message');
     const messageType = urlParams.get('type') || 'info';
-    
+
     if (message) {
         // Decode the message
         const decodedMessage = decodeURIComponent(message);
-        window.toastNotification.show(decodedMessage, messageType);
-        
+        showSimpleToast(decodedMessage, messageType);
+
         // Clean up URL parameters
-        const newUrl = window.location.pathname + '?' + 
+        const newUrl = window.location.pathname + '?' +
             Array.from(urlParams.entries())
                 .filter(([key]) => key !== 'message' && key !== 'type')
                 .map(([key, value]) => `${key}=${value}`)
                 .join('&');
-        
+
         window.history.replaceState({}, '', newUrl);
     }
 });
 
-// Export for module usage
-if (typeof module !== 'undefined' && module.exports) {
-    module.exports = ToastNotification;
-}
+console.log('🎯 Bulletproof Toast Notification System Loaded');
+console.log('🔍 Alert function type:', typeof window.alert);
+console.log('🔍 Original alert type:', typeof window.originalAlert);
+console.log('🔍 showSimpleToast type:', typeof showSimpleToast);
+console.log('🔍 Alert override active:', window.alert !== window.originalAlert);
+console.log('🔍 Toast functions available:', typeof window.showToast);
+console.log('🔍 Toast notification object:', typeof window.toastNotification);
+
+// Test the system immediately
+setTimeout(() => {
+    console.log('🧪 Testing toast system...');
+    if (typeof showSimpleToast === 'function') {
+        console.log('✅ Toast system ready for use');
+    } else {
+        console.error('❌ Toast system failed to initialize');
+    }
+}, 100);

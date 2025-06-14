@@ -91,6 +91,10 @@ document.addEventListener("DOMContentLoaded", function () {
             timeLimit.value = scormData.time_limit;
             existingZip.value = scormData.zip_file;
 
+            // Debug logging
+            console.log('🔍 SCORM Edit Mode - Setting existing ZIP file:', scormData.zip_file);
+            console.log('🔍 existingZip field value:', existingZip.value);
+
             // Display Existing ZIP File Preview
             if (scormData.zip_file) {
                 showExistingScormFilePreview(scormData.zip_file);
@@ -120,6 +124,13 @@ document.addEventListener("DOMContentLoaded", function () {
             }
 
             document.getElementById("scormModalLabel").textContent = "Edit SCORM Package"; // Change modal title
+
+            // Show that ZIP file is optional when editing
+            const zipRequired = document.getElementById("zipRequired");
+            const zipOptional = document.getElementById("zipOptional");
+            if (zipRequired) zipRequired.style.display = "none";
+            if (zipOptional) zipOptional.style.display = "inline";
+
             scormModal.show(); // Open modal
         });
     });
@@ -147,6 +158,12 @@ document.addEventListener("DOMContentLoaded", function () {
 
             // Set Modal Title to "Add SCORM Package"
             document.getElementById("scormModalLabel").textContent = "Add SCORM Package";
+
+            // Show that ZIP file is required when adding new
+            const zipRequired = document.getElementById("zipRequired");
+            const zipOptional = document.getElementById("zipOptional");
+            if (zipRequired) zipRequired.style.display = "inline";
+            if (zipOptional) zipOptional.style.display = "none";
 
             scormModal.show();
         });
@@ -217,4 +234,24 @@ document.addEventListener("DOMContentLoaded", function () {
         zipFile.value = '';
         zipPreview.innerHTML = '';
     };
+
+    // Add form submission logging
+    scormForm.addEventListener('submit', function(e) {
+        console.log('🔍 SCORM Form Submission Debug:');
+        console.log('- SCORM ID (edit mode):', scormId.value);
+        console.log('- Existing ZIP file:', existingZip.value);
+        console.log('- New ZIP file selected:', zipFile.files.length > 0 ? zipFile.files[0].name : 'None');
+        console.log('- Form action:', this.action);
+
+        // Check if we're in edit mode and no new file is selected
+        if (scormId.value && zipFile.files.length === 0) {
+            console.log('✅ Edit mode with no new file - existing ZIP should be preserved:', existingZip.value);
+        } else if (scormId.value && zipFile.files.length > 0) {
+            console.log('✅ Edit mode with new file - ZIP will be replaced');
+        } else if (!scormId.value && zipFile.files.length > 0) {
+            console.log('✅ Add mode with new file');
+        } else if (!scormId.value && zipFile.files.length === 0) {
+            console.log('❌ Add mode with no file - this should show validation error');
+        }
+    });
 });

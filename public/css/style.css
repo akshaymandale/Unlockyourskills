@@ -785,6 +785,7 @@ html, body {
 
 .theme-btn-primary:hover {
     background-color: #530b8a; /* Darker shade */
+    color: white !important; /* Maintain white text on hover */
 }
 
 .theme-btn-warning {
@@ -811,6 +812,7 @@ html, body {
 
 .theme-btn-danger:hover {
     background-color: #bd2130; /* Darker shade */
+    color: white !important; /* Maintain white text on hover */
 }
 
 /* ✅ Consistent button sizing across all grids - let theme buttons use their natural size */
@@ -2536,34 +2538,142 @@ body select:focus,
     margin: 4px;
 }
 
-/* Success Toast */
+/* ✅ Theme-Consistent Toast Notifications */
+
+/* Success Toast - Theme Green */
 .toast.text-bg-success {
-    background-color: #198754 !important;
+    background: linear-gradient(135deg, #198754, #20c997) !important;
     border-left: 4px solid #146c43;
+    color: white !important;
+    box-shadow: 0 4px 12px rgba(25, 135, 84, 0.3);
 }
 
-/* Error Toast */
+/* Error Toast - Theme Red */
 .toast.text-bg-danger {
-    background-color: #dc3545 !important;
+    background: linear-gradient(135deg, #dc3545, #e74c3c) !important;
     border-left: 4px solid #b02a37;
+    color: white !important;
+    box-shadow: 0 4px 12px rgba(220, 53, 69, 0.3);
 }
 
-/* Warning Toast */
+/* Warning Toast - Theme Yellow */
 .toast.text-bg-warning {
-    background-color: #fd7e14 !important;
-    border-left: 4px solid #e55a00;
+    background: linear-gradient(135deg, #ffc107, #ffca2c) !important;
+    border-left: 4px solid #e0a800;
     color: #000 !important;
+    box-shadow: 0 4px 12px rgba(255, 193, 7, 0.3);
 }
 
 .toast.text-bg-warning .btn-close {
     filter: invert(1) grayscale(100%) brightness(0);
 }
 
-/* Info Toast */
+/* Info Toast - Theme Purple */
 .toast.text-bg-info {
-    background-color: #0dcaf0 !important;
-    border-left: 4px solid #087990;
-    color: #000 !important;
+    background: linear-gradient(135deg, #6a0dad, #8c52ff) !important;
+    border-left: 4px solid #530b8a;
+    color: white !important;
+    box-shadow: 0 4px 12px rgba(106, 13, 173, 0.3);
+}
+
+/* Primary Toast - Theme Purple */
+.toast.text-bg-primary {
+    background: linear-gradient(135deg, #6a0dad, #8c52ff) !important;
+    border-left: 4px solid #530b8a;
+    color: white !important;
+    box-shadow: 0 4px 12px rgba(106, 13, 173, 0.3);
+}
+
+/* ✅ Theme-Consistent Confirmation Modal */
+.theme-modal {
+    border: 2px solid #6a0dad;
+    border-radius: 10px;
+    box-shadow: 0 8px 25px rgba(106, 13, 173, 0.2);
+}
+
+.theme-modal-header {
+    background: linear-gradient(135deg, #6a0dad, #8c52ff);
+    color: white;
+    border-bottom: 2px solid #530b8a;
+    border-radius: 8px 8px 0 0;
+}
+
+.theme-modal-header .modal-title {
+    font-weight: 600;
+    color: white;
+}
+
+.theme-modal-body {
+    background: #f8f9fa;
+    padding: 25px;
+}
+
+.theme-modal-message {
+    font-size: 16px;
+    font-weight: 500;
+    color: #333;
+    margin-bottom: 8px;
+}
+
+.theme-modal-subtext {
+    color: #6c757d;
+    font-style: italic;
+}
+
+.theme-modal-footer {
+    background: #f8f9fa;
+    border-top: 1px solid #dee2e6;
+    padding: 15px 25px;
+    border-radius: 0 0 8px 8px;
+}
+
+/* Theme Secondary Button */
+.theme-btn-secondary {
+    background-color: #6c757d;
+    color: white;
+    border: none;
+    padding: 8px 16px;
+    border-radius: 5px;
+    font-weight: 500;
+    transition: all 0.3s ease;
+}
+
+.theme-btn-secondary:hover {
+    background-color: #5a6268;
+    color: white !important; /* Maintain white text on hover */
+    transform: translateY(-1px);
+    box-shadow: 0 4px 8px rgba(108, 117, 125, 0.3);
+}
+
+/* Enhanced Theme Button Animations */
+.theme-btn-primary:hover,
+.theme-btn-danger:hover,
+.theme-btn-warning:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+}
+
+/* Ensure text colors don't change on hover for confirmation buttons */
+.theme-btn-primary:hover {
+    color: white !important;
+}
+
+.theme-btn-danger:hover {
+    color: white !important;
+}
+
+.theme-btn-warning:hover {
+    color: black !important;
+}
+
+/* Modal Animation Enhancement */
+.modal.fade .modal-dialog {
+    transition: transform 0.3s ease-out;
+    transform: translate(0, -50px);
+}
+
+.modal.show .modal-dialog {
+    transform: none;
 }
 
 .toast.text-bg-info .btn-close {

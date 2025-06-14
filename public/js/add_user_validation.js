@@ -2,31 +2,45 @@ document.addEventListener("DOMContentLoaded", function () {
     const addUserForm = document.getElementById("addUserForm");
 
     if (addUserForm) {
-        // ✅ Validate on Form Submit
-        addUserForm.addEventListener("submit", function (event) {
-            event.preventDefault();
-            let isValid = validateForm();
-            if (isValid) {
-                addUserForm.submit();
-            }
-        });
+        // ✅ Remove any existing event listeners to prevent duplicates
+        addUserForm.removeEventListener("submit", userFormSubmitHandler);
+        addUserForm.addEventListener("submit", userFormSubmitHandler);
 
         // ✅ Validate on Focus Out (Blur Event)
         document.querySelectorAll("#addUserForm input, #addUserForm select").forEach(field => {
-            field.addEventListener("blur", function () {
-                validateField(field);
-            });
+            field.removeEventListener("blur", userFieldBlurHandler);
+            field.addEventListener("blur", userFieldBlurHandler);
         });
+    }
+
+    // ✅ Form Submit Handler (like SCORM)
+    function userFormSubmitHandler(event) {
+        event.preventDefault(); // Always prevent default submission
+
+        let isValid = validateForm();
+
+        if (isValid) {
+            // Use the native form submit (bypasses event listeners)
+            event.target.submit();
+        }
+    }
+
+    // ✅ Field Blur Handler
+    function userFieldBlurHandler(event) {
+        validateField(event.target);
     }
 
     // ✅ Function to Validate Entire Form
     function validateForm() {
         let isValid = true;
-        document.querySelectorAll("#addUserForm input, #addUserForm select").forEach(field => {
+        const fields = document.querySelectorAll("#addUserForm input, #addUserForm select");
+
+        fields.forEach(field => {
             if (!validateField(field)) {
                 isValid = false;
             }
         });
+
         return isValid;
     }
 
@@ -60,7 +74,8 @@ document.addEventListener("DOMContentLoaded", function () {
                 break;
 
             case "contact_number":
-                let contactPattern = /^[0-9]{10}$/;
+                // Allow 10-15 digits, with optional spaces, dashes, or parentheses
+                let contactPattern = /^[\d\s\-\(\)\+]{10,15}$/;
                 if (value === "") {
                     showError(field, "validation.contact_required");
                     isValid = false;
@@ -74,10 +89,8 @@ document.addEventListener("DOMContentLoaded", function () {
 
             case "dob":
                 let today = new Date().toISOString().split("T")[0];
-                if (value === "") {
-                    showError(field, "validation.dob_required");
-                    isValid = false;
-                } else if (value > today) {
+                // DOB is optional, only validate if provided
+                if (value !== "" && value > today) {
                     showError(field, "validation.dob_future");
                     isValid = false;
                 } else {
@@ -129,6 +142,23 @@ document.addEventListener("DOMContentLoaded", function () {
 
     // ✅ Function to Show Error Beside Label & Add Red Border
     function showError(input, key) {
+        // Check if translations object exists
+        if (typeof translations === 'undefined') {
+            console.warn('⚠️ Translations object not found, using fallback messages');
+            window.translations = {
+                "validation.full_name_required": "Full name is required",
+                "validation.email_required": "Email is required",
+                "validation.email_invalid": "Please enter a valid email address",
+                "validation.contact_required": "Contact number is required",
+                "validation.contact_invalid": "Please enter a valid 10-digit contact number",
+                "validation.user_role_required": "User role is required",
+                "validation.dob_future": "Date of birth cannot be in the future",
+                "validation.profile_expiry_invalid": "Profile expiry date cannot be in the past",
+                "validation.image_format": "Only JPG and PNG images are allowed",
+                "validation.image_size": "Image size must be less than 5MB"
+            };
+        }
+
         let message = translations[key] || key; // Use translation or fallback to key
 
         let errorElement = input.parentNode.querySelector(".error-message");
@@ -142,8 +172,8 @@ document.addEventListener("DOMContentLoaded", function () {
         errorElement.style.marginLeft = "10px";
         errorElement.style.fontSize = "12px";
 
-        // Add red border on error
-        input.classList.add("input-error");
+        // Add Bootstrap error styling (like SCORM - red border only)
+        input.classList.add("is-invalid");
     }
 
     // ✅ Function to Hide Error & Remove Red Border
@@ -153,7 +183,9 @@ document.addEventListener("DOMContentLoaded", function () {
             errorElement.textContent = "";
         }
 
-        // Remove red border when valid
-        input.classList.remove("input-error");
+        // Remove error styling when valid (like SCORM)
+        input.classList.remove("is-invalid");
     }
+
+
 });
