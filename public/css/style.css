@@ -1034,6 +1034,12 @@ html, body {
     right: 15px;
 }
 
+.content-actions .preview-icon {
+    color: #28a745; /* Green */
+    margin-right: 10px;
+    cursor: pointer;
+}
+
 .content-actions .edit-icon {
     color: #00a8ff; /* Light Blue */
     margin-right: 10px;
@@ -1243,6 +1249,12 @@ html, body {
     right: 15px;
 }
 
+.audio-actions .preview-icon {
+    color: #28a745;
+    margin-right: 10px;
+    cursor: pointer;
+}
+
 .audio-actions .edit-icon {
     color: #007bff;
     margin-right: 10px;
@@ -1321,6 +1333,12 @@ html, body {
     right: 15px;
 }
 
+.video-actions .preview-icon {
+    color: #28a745;
+    margin-right: 10px;
+    cursor: pointer;
+}
+
 .video-actions .edit-icon {
     color: #007bff;
     margin-right: 10px;
@@ -1397,6 +1415,12 @@ html, body {
     position: absolute;
     top: 10px;
     right: 15px;
+}
+
+.image-actions .preview-icon {
+    color: #28a745;
+    margin-right: 10px;
+    cursor: pointer;
 }
 
 .image-actions .edit-icon {
@@ -1799,21 +1823,23 @@ html, body {
     box-shadow: 0 0 0 0.2rem rgba(106, 13, 173, 0.25);
 }
 
-/* Interactive Content Tag Styling */
+/* Interactive Content Tag Styling - Match SCORM Styling */
 #interactiveTagDisplay .tag {
-    background-color: #6a0dad;
-    color: white;
+    background-color: #6c5ce7;
+    color: #fff;
+    border-radius: 20px;
     padding: 5px 10px;
     margin: 2px;
-    border-radius: 15px;
-    display: inline-block;
-    font-size: 12px;
+    display: inline-flex;
+    align-items: center;
 }
 
-#interactiveTagDisplay .remove-tag {
+#interactiveTagDisplay .tag .remove-tag {
+    background: none;
+    border: none;
+    color: #fff;
     margin-left: 5px;
     cursor: pointer;
-    font-weight: bold;
 }
 
 #interactiveTagDisplay .remove-tag:hover {
@@ -2104,10 +2130,10 @@ html, body {
     background: #c82333;
 }
 
-/* Non-SCORM Tag Styles */
+/* Non-SCORM Tag Styles - Match SCORM Styling */
 #nonScormModal .tag-input-container {
     min-height: 40px;
-    padding: 8px;
+    padding: 5px;
     border: 1px solid #ced4da;
     border-radius: 4px;
     display: flex;
@@ -2116,26 +2142,22 @@ html, body {
     gap: 5px;
 }
 
-#nonScormModal .tag-item {
-    background-color: #6a0dad;
-    color: white;
-    padding: 4px 8px;
-    border-radius: 4px;
-    font-size: 12px;
+#nonScormModal .tag {
+    background-color: #6c5ce7;
+    color: #fff;
+    border-radius: 20px;
+    padding: 5px 10px;
+    margin: 2px;
     display: inline-flex;
     align-items: center;
-    gap: 5px;
 }
 
-#nonScormModal .tag-remove {
+#nonScormModal .tag .remove-tag {
+    background: none;
+    border: none;
+    color: #fff;
+    margin-left: 5px;
     cursor: pointer;
-    font-weight: bold;
-    font-size: 14px;
-}
-
-#nonScormModal .tag-remove:hover {
-    background-color: rgba(255, 255, 255, 0.2);
-    border-radius: 2px;
 }
 
 #nonScormModal #nonscormTagInput {

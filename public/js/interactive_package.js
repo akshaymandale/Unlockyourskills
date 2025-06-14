@@ -40,13 +40,13 @@ document.addEventListener("DOMContentLoaded", function () {
         updateInteractiveHiddenTagList();
     }
 
-    // ✅ Update Tag Display
+    // ✅ Update Tag Display - Match SCORM Structure
     function updateInteractiveTagDisplay() {
         interactiveTagContainer.innerHTML = "";
         interactiveTags.forEach(tag => {
             const tagElement = document.createElement("span");
             tagElement.className = "tag";
-            tagElement.innerHTML = `${tag} <span class="remove-tag" onclick="removeInteractiveTag('${tag}')">&times;</span>`;
+            tagElement.innerHTML = `${tag} <button type="button" class="remove-tag" onclick="removeInteractiveTag('${tag}')">&times;</button>`;
             interactiveTagContainer.appendChild(tagElement);
         });
     }

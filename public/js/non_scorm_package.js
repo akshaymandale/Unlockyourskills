@@ -108,7 +108,7 @@ document.addEventListener("DOMContentLoaded", function () {
     function updateNonScormTagDisplay() {
         if (nonScormTagContainer) {
             nonScormTagContainer.innerHTML = nonScormTags.map(tag =>
-                `<span class="tag-item">${tag} <span class="tag-remove" onclick="removeNonScormTag('${tag}')">&times;</span></span>`
+                `<span class="tag">${tag} <button type="button" class="remove-tag" onclick="removeNonScormTag('${tag}')">&times;</button></span>`
             ).join('');
         }
     }
