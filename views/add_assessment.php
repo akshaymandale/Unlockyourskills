@@ -149,10 +149,10 @@
                                             <i class="fas fa-edit"></i>
                                         </button>
 
-                                        <a href="index.php?controller=QuestionController&action=delete&id=<?= $question['id']; ?>"
-                                            class="btn theme-btn-danger"
-                                            title="<?= Localization::translate('question_grid_delete'); ?>"
-                                            onclick="return confirm('<?= Localization::translate('question_grid_delete_confirm'); ?>');">
+                                        <a href="#" class="btn theme-btn-danger delete-assessment-question"
+                                            data-id="<?= $question['id']; ?>"
+                                            data-title="<?= htmlspecialchars($question['question_text']); ?>"
+                                            title="<?= Localization::translate('question_grid_delete'); ?>">
                                             <i class="fas fa-trash-alt"></i>
                                         </a>
                                     </td>
@@ -470,5 +470,22 @@
 
     <script src="public/js/assessment_question_validation.js"></script>
     <script src="public/js/assessment_question.js"></script>
+    <script src="public/js/confirmation_modal.js"></script>
+
+    <script>
+    // ✅ Professional Assessment Question Delete Confirmations
+    document.addEventListener('click', function(e) {
+        if (e.target.closest('.delete-assessment-question')) {
+            e.preventDefault();
+            const link = e.target.closest('.delete-assessment-question');
+            const id = link.dataset.id;
+            const title = link.dataset.title;
+
+            confirmDelete('assessment question "' + title + '"', function() {
+                window.location.href = 'index.php?controller=QuestionController&action=delete&id=' + id;
+            });
+        }
+    });
+    </script>
 
     <?php include 'includes/footer.php'; ?>

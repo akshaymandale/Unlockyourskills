@@ -636,7 +636,66 @@ document.addEventListener("DOMContentLoaded", function () {
 
 });
 
+// ✅ Professional Delete Confirmations (moved from vlr.php)
+document.addEventListener('click', function(e) {
+    // SCORM Package Delete
+    if (e.target.closest('.delete-scorm')) {
+        e.preventDefault();
+        const link = e.target.closest('.delete-scorm');
+        const id = link.dataset.id;
+        const title = link.dataset.title;
 
+        confirmDelete('SCORM package "' + title + '"', function() {
+            window.location.href = 'index.php?controller=VLRController&action=delete&id=' + id;
+        });
+    }
 
+    // Document Delete
+    if (e.target.closest('.delete-document')) {
+        e.preventDefault();
+        const link = e.target.closest('.delete-document');
+        const id = link.dataset.id;
+        const title = link.dataset.title;
 
+        confirmDelete('document "' + title + '"', function() {
+            window.location.href = 'index.php?controller=VLRController&action=deleteDocument&id=' + id;
+        });
+    }
+
+    // External Content Delete
+    if (e.target.closest('.delete-external')) {
+        e.preventDefault();
+        const link = e.target.closest('.delete-external');
+        const id = link.dataset.id;
+        const title = link.dataset.title;
+
+        confirmDelete('external content "' + title + '"', function() {
+            window.location.href = 'index.php?controller=VLRController&action=deleteExternal&id=' + id;
+        });
+    }
+
+    // Survey Delete
+    if (e.target.closest('.delete-survey')) {
+        e.preventDefault();
+        const link = e.target.closest('.delete-survey');
+        const id = link.dataset.id;
+        const title = link.dataset.title;
+
+        confirmDelete('survey "' + title + '"', function() {
+            window.location.href = 'index.php?controller=VLRController&action=deleteSurvey&id=' + id;
+        });
+    }
+
+    // Interactive Content Delete
+    if (e.target.closest('.delete-interactive')) {
+        e.preventDefault();
+        const link = e.target.closest('.delete-interactive');
+        const id = link.dataset.id;
+        const title = link.dataset.title;
+
+        confirmDelete('interactive content "' + title + '"', function() {
+            window.location.href = 'index.php?controller=VLRController&action=deleteInteractiveContent&id=' + id;
+        });
+    }
+});
 

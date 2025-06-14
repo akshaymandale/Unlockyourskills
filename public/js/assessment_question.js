@@ -206,10 +206,10 @@ document.addEventListener('DOMContentLoaded', function () {
                         title="Edit">
                         <i class="fas fa-edit"></i>
                     </button>
-                    <a href="index.php?controller=QuestionController&action=delete&id=${question.id}"
-                        class="btn theme-btn-danger"
-                        title="Delete"
-                        onclick="return confirm('Are you sure you want to delete this question?');">
+                    <a href="#" class="btn theme-btn-danger delete-assessment-question"
+                        data-id="${question.id}"
+                        data-title="${escapeHtml(question.title)}"
+                        title="Delete">
                         <i class="fas fa-trash-alt"></i>
                     </a>
                 </td>
@@ -305,6 +305,27 @@ document.addEventListener('DOMContentLoaded', function () {
         div.textContent = text;
         return div.innerHTML;
     }
+
+    // ✅ Professional Assessment Question Delete Confirmations
+    document.addEventListener('click', function(e) {
+        if (e.target.closest('.delete-assessment-question')) {
+            e.preventDefault();
+            const link = e.target.closest('.delete-assessment-question');
+            const id = link.dataset.id;
+            const title = link.dataset.title;
+
+            // Use confirmDelete if available, otherwise fallback to browser confirm
+            if (typeof confirmDelete === 'function') {
+                confirmDelete('assessment question "' + title + '"', function() {
+                    window.location.href = 'index.php?controller=QuestionController&action=delete&id=' + id;
+                });
+            } else {
+                if (confirm('Are you sure you want to delete assessment question "' + title + '"?')) {
+                    window.location.href = 'index.php?controller=QuestionController&action=delete&id=' + id;
+                }
+            }
+        }
+    });
 
     // ✅ Modal functionality for Assessment Questions
     const assessmentModal = document.getElementById('addAssessmentQuestionModal');

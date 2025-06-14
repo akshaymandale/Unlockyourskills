@@ -71,6 +71,30 @@ class ConfirmationModal {
                 this.cleanup();
             }
         });
+
+        // Handle modal hide event (before hidden)
+        document.addEventListener('hide.bs.modal', (e) => {
+            if (e.target.id === this.modalId) {
+                // Start cleanup process
+                setTimeout(() => {
+                    this.cleanup();
+                }, 100);
+            }
+        });
+
+        // Handle cancel button and close button clicks
+        document.addEventListener('click', (e) => {
+            if (e.target.hasAttribute('data-bs-dismiss') && e.target.closest(`#${this.modalId}`)) {
+                this.handleCancel();
+            }
+        });
+
+        // Handle backdrop click
+        document.addEventListener('click', (e) => {
+            if (e.target.id === this.modalId) {
+                this.handleCancel();
+            }
+        });
     }
 
     show(options = {}) {
@@ -110,15 +134,27 @@ class ConfirmationModal {
         this.onConfirm = onConfirm;
         this.onCancel = onCancel;
 
-        // Show modal
-        const modal = new bootstrap.Modal(document.getElementById(this.modalId));
+        // Show modal with proper backdrop handling
+        const modalElement = document.getElementById(this.modalId);
+        const modal = new bootstrap.Modal(modalElement, {
+            backdrop: true,
+            keyboard: true,
+            focus: true
+        });
+
+        // Clean up any existing backdrops before showing
+        this.cleanup();
+
         modal.show();
     }
 
     handleConfirm() {
         // Hide modal first
-        const modal = bootstrap.Modal.getInstance(document.getElementById(this.modalId));
-        modal.hide();
+        const modalElement = document.getElementById(this.modalId);
+        const modal = bootstrap.Modal.getInstance(modalElement);
+        if (modal) {
+            modal.hide();
+        }
 
         // Execute callback
         if (this.onConfirm && typeof this.onConfirm === 'function') {
@@ -126,9 +162,35 @@ class ConfirmationModal {
         }
     }
 
+    handleCancel() {
+        // Hide modal first
+        const modalElement = document.getElementById(this.modalId);
+        const modal = bootstrap.Modal.getInstance(modalElement);
+        if (modal) {
+            modal.hide();
+        }
+
+        // Execute cancel callback if provided
+        if (this.onCancel && typeof this.onCancel === 'function') {
+            this.onCancel();
+        }
+    }
+
     cleanup() {
+        // Clear callbacks
         this.onConfirm = null;
         this.onCancel = null;
+
+        // Force remove any remaining backdrops
+        const backdrops = document.querySelectorAll('.modal-backdrop');
+        backdrops.forEach(backdrop => {
+            backdrop.remove();
+        });
+
+        // Ensure body classes are cleaned up
+        document.body.classList.remove('modal-open');
+        document.body.style.overflow = '';
+        document.body.style.paddingRight = '';
     }
 
     // Static method for easy usage
