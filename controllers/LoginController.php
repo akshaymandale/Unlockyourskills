@@ -28,7 +28,19 @@ class LoginController {
                     $_SESSION['username'] = $username;
                     $_SESSION['client_code'] = $client_code;
                     $_SESSION['id'] = $user['id'];
-                    $_SESSION['lang'] = $user['language'];
+                    // ✅ Set language with fallback to 'en' if user language is empty
+                    $_SESSION['lang'] = !empty($user['language']) ? $user['language'] : 'en';
+
+                    // ✅ Set complete user data for multi-tenant access control
+                    $_SESSION['user'] = [
+                        'id' => $user['id'],
+                        'client_id' => $user['client_id'],
+                        'full_name' => $user['full_name'],
+                        'email' => $user['email'],
+                        'user_role' => $user['user_role'],
+                        'system_role' => $user['system_role'] ?? 'user', // Default to 'user' if not set
+                        'client_name' => $user['client_name'] ?? 'Unknown Client'
+                    ];
 
                     //print_r($_SESSION); die;
 
