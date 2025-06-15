@@ -315,6 +315,7 @@
 
 <script src="public/js/feedback_question_validation.js"></script>
 <script src="public/js/feedback_question.js"></script>
-<!-- ✅ Feedback question delete confirmations now handled by centralized system -->
+<!-- ✅ Feedback Question Delete Confirmations -->
+<script src="public/js/modules/survey_confirmations.js"></script>
 
 <?php include 'includes/footer.php'; ?>

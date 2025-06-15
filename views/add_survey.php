@@ -304,4 +304,6 @@
 
 <script src="public/js/survey_question_validation.js"></script>
 <script src="public/js/survey_question.js"></script>
+<!-- ✅ Survey Question Delete Confirmations -->
+<script src="public/js/modules/survey_confirmations.js"></script>
 <?php include 'includes/footer.php'; ?>

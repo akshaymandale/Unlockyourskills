@@ -307,34 +307,50 @@ window.cleanupModalBackdrop = function() {
     console.log('🧹 Modal backdrop cleaned up');
 };
 
-// General confirmation function for different actions
+// Helper function to get translation with fallback
+function getTranslation(key, replacements = {}) {
+    if (typeof translate === 'function') {
+        return translate(key, replacements);
+    } else if (typeof window.translations === 'object' && window.translations[key]) {
+        let text = window.translations[key];
+        // Replace placeholders
+        Object.keys(replacements).forEach(placeholder => {
+            const regex = new RegExp(`\\{${placeholder}\\}`, 'g');
+            text = text.replace(regex, replacements[placeholder]);
+        });
+        return text;
+    }
+    return key; // Fallback to key if no translation found
+}
+
+// General confirmation function for different actions with internationalization
 window.confirmAction = function(actionType, itemName, onConfirm, customMessage = null) {
     const actionConfig = {
         'delete': {
-            title: 'Delete Confirmation',
+            title: getTranslation('confirmation.delete.title', {}) || 'Delete Confirmation',
             icon: 'fas fa-exclamation-triangle',
             iconColor: '#ffc107',
-            message: customMessage || `Are you sure you want to delete this ${itemName}?`,
-            subtext: 'This action is not reversible.',
-            confirmText: 'Delete',
+            message: customMessage || getTranslation('confirmation.delete.message', {item: itemName}) || `Are you sure you want to delete this ${itemName}?`,
+            subtext: getTranslation('confirmation.delete.subtext', {}) || 'This action is not reversible.',
+            confirmText: getTranslation('confirmation.delete.button', {}) || 'Delete',
             confirmClass: 'theme-btn-primary'
         },
         'lock': {
-            title: 'Lock Confirmation',
+            title: getTranslation('confirmation.lock.title', {}) || 'Lock Confirmation',
             icon: 'fas fa-lock',
             iconColor: '#dc3545',
-            message: customMessage || `Are you sure you want to lock this ${itemName}?`,
-            subtext: 'This will prevent the user from logging in.',
-            confirmText: 'Lock',
+            message: customMessage || getTranslation('confirmation.lock.message', {item: itemName}) || `Are you sure you want to lock this ${itemName}?`,
+            subtext: getTranslation('confirmation.lock.subtext', {}) || 'This will prevent the user from logging in.',
+            confirmText: getTranslation('confirmation.lock.button', {}) || 'Lock',
             confirmClass: 'theme-btn-danger'
         },
         'unlock': {
-            title: 'Unlock Confirmation',
+            title: getTranslation('confirmation.unlock.title', {}) || 'Unlock Confirmation',
             icon: 'fas fa-lock-open',
             iconColor: '#28a745',
-            message: customMessage || `Are you sure you want to unlock this ${itemName}?`,
-            subtext: 'This will allow the user to log in again.',
-            confirmText: 'Unlock',
+            message: customMessage || getTranslation('confirmation.unlock.message', {item: itemName}) || `Are you sure you want to unlock this ${itemName}?`,
+            subtext: getTranslation('confirmation.unlock.subtext', {}) || 'This will allow the user to log in again.',
+            confirmText: getTranslation('confirmation.unlock.button', {}) || 'Unlock',
             confirmClass: 'theme-btn-warning'
         }
     };
@@ -367,7 +383,7 @@ window.confirmAction = function(actionType, itemName, onConfirm, customMessage =
                         </div>
                         <div class="modal-footer theme-modal-footer">
                             <button type="button" class="btn" id="actionConfirmBtn">Confirm</button>
-                            <button type="button" class="btn theme-btn-danger" data-bs-dismiss="modal">Cancel</button>
+                            <button type="button" class="btn theme-btn-danger" data-bs-dismiss="modal" id="actionCancelBtn">Cancel</button>
                         </div>
                     </div>
                 </div>
@@ -421,6 +437,10 @@ window.confirmAction = function(actionType, itemName, onConfirm, customMessage =
     const confirmBtn = document.getElementById('actionConfirmBtn');
     confirmBtn.textContent = config.confirmText;
     confirmBtn.className = 'btn ' + config.confirmClass;
+
+    // Update cancel button text
+    const cancelBtn = document.getElementById('actionCancelBtn');
+    cancelBtn.textContent = getTranslation('confirmation.cancel.button', {}) || 'Cancel';
 
     // Remove any existing event listeners and add new one
     const newConfirmBtn = confirmBtn.cloneNode(true);

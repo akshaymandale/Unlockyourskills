@@ -13,6 +13,35 @@ class UserConfirmations {
         this.init();
     }
 
+    // Helper function to get translation with fallback
+    getTranslation(key, replacements = {}) {
+        if (typeof translate === 'function') {
+            return translate(key, replacements);
+        } else if (typeof window.translations === 'object' && window.translations[key]) {
+            let text = window.translations[key];
+            // Replace placeholders
+            Object.keys(replacements).forEach(placeholder => {
+                const regex = new RegExp(`\\{${placeholder}\\}`, 'g');
+                text = text.replace(regex, replacements[placeholder]);
+            });
+            return text;
+        }
+        return key; // Fallback to key if no translation found
+    }
+
+    // Get translated item name for user
+    getTranslatedItemName(data) {
+        const replacements = {
+            name: data.name
+        };
+
+        if (data.email) {
+            replacements.name = `${data.name} (${data.email})`;
+        }
+
+        return this.getTranslation('item.user', replacements) || `user "${data.name}"${data.email ? ` (${data.email})` : ''}`;
+    }
+
     init() {
         // User delete confirmations
         document.addEventListener('click', (e) => {
@@ -86,45 +115,47 @@ class UserConfirmations {
     }
 
     showUserConfirmation(data) {
-        const itemName = `user "${data.name}"`;
-        const extraInfo = data.email ? ` (${data.email})` : '';
+        const itemName = this.getTranslatedItemName(data);
 
         if (typeof confirmDelete === 'function') {
-            confirmDelete(itemName + extraInfo, () => {
+            confirmDelete(itemName, () => {
                 window.location.href = data.action;
             });
         } else {
-            if (confirm(`Are you sure you want to delete ${itemName}${extraInfo}?`)) {
+            const fallbackMessage = this.getTranslation('confirmation.delete.message', {item: itemName}) || `Are you sure you want to delete ${itemName}?`;
+            if (confirm(fallbackMessage)) {
                 window.location.href = data.action;
             }
         }
     }
 
     showUserLockConfirmation(data) {
-        const itemName = `user "${data.name}"`;
-        const extraInfo = data.email ? ` (${data.email})` : '';
+        const itemName = this.getTranslatedItemName(data);
 
         if (typeof confirmAction === 'function') {
-            confirmAction('lock', itemName + extraInfo, () => {
+            confirmAction('lock', itemName, () => {
                 window.location.href = data.action;
             });
         } else {
-            if (confirm(`Are you sure you want to lock ${itemName}${extraInfo}?\n\nThis will prevent the user from logging in.`)) {
+            const fallbackMessage = this.getTranslation('confirmation.lock.message', {item: itemName}) || `Are you sure you want to lock ${itemName}?`;
+            const fallbackSubtext = this.getTranslation('confirmation.lock.subtext', {}) || 'This will prevent the user from logging in.';
+            if (confirm(`${fallbackMessage}\n\n${fallbackSubtext}`)) {
                 window.location.href = data.action;
             }
         }
     }
 
     showUserUnlockConfirmation(data) {
-        const itemName = `user "${data.name}"`;
-        const extraInfo = data.email ? ` (${data.email})` : '';
+        const itemName = this.getTranslatedItemName(data);
 
         if (typeof confirmAction === 'function') {
-            confirmAction('unlock', itemName + extraInfo, () => {
+            confirmAction('unlock', itemName, () => {
                 window.location.href = data.action;
             });
         } else {
-            if (confirm(`Are you sure you want to unlock ${itemName}${extraInfo}?\n\nThis will allow the user to log in again.`)) {
+            const fallbackMessage = this.getTranslation('confirmation.unlock.message', {item: itemName}) || `Are you sure you want to unlock ${itemName}?`;
+            const fallbackSubtext = this.getTranslation('confirmation.unlock.subtext', {}) || 'This will allow the user to log in again.';
+            if (confirm(`${fallbackMessage}\n\n${fallbackSubtext}`)) {
                 window.location.href = data.action;
             }
         }
@@ -133,15 +164,16 @@ class UserConfirmations {
     // Static helper methods
     static deleteUser(id, name, email = '') {
         const url = `index.php?controller=UserManagementController&action=deleteUser&id=${id}`;
-        const itemName = `user "${name}"`;
-        const extraInfo = email ? ` (${email})` : '';
+        const data = { name: name, email: email };
+        const itemName = UserConfirmations.getStaticTranslatedItemName(data);
 
         if (typeof confirmDelete === 'function') {
-            confirmDelete(itemName + extraInfo, () => {
+            confirmDelete(itemName, () => {
                 window.location.href = url;
             });
         } else {
-            if (confirm(`Are you sure you want to delete ${itemName}${extraInfo}?`)) {
+            const fallbackMessage = UserConfirmations.getStaticTranslation('confirmation.delete.message', {item: itemName}) || `Are you sure you want to delete ${itemName}?`;
+            if (confirm(fallbackMessage)) {
                 window.location.href = url;
             }
         }
@@ -149,15 +181,17 @@ class UserConfirmations {
 
     static lockUser(id, name, email = '') {
         const url = `index.php?controller=UserManagementController&action=lockUser&id=${id}`;
-        const itemName = `user "${name}"`;
-        const extraInfo = email ? ` (${email})` : '';
+        const data = { name: name, email: email };
+        const itemName = UserConfirmations.getStaticTranslatedItemName(data);
 
         if (typeof confirmAction === 'function') {
-            confirmAction('lock', itemName + extraInfo, () => {
+            confirmAction('lock', itemName, () => {
                 window.location.href = url;
             });
         } else {
-            if (confirm(`Are you sure you want to lock ${itemName}${extraInfo}?\n\nThis will prevent the user from logging in.`)) {
+            const fallbackMessage = UserConfirmations.getStaticTranslation('confirmation.lock.message', {item: itemName}) || `Are you sure you want to lock ${itemName}?`;
+            const fallbackSubtext = UserConfirmations.getStaticTranslation('confirmation.lock.subtext', {}) || 'This will prevent the user from logging in.';
+            if (confirm(`${fallbackMessage}\n\n${fallbackSubtext}`)) {
                 window.location.href = url;
             }
         }
@@ -165,18 +199,48 @@ class UserConfirmations {
 
     static unlockUser(id, name, email = '') {
         const url = `index.php?controller=UserManagementController&action=unlockUser&id=${id}`;
-        const itemName = `user "${name}"`;
-        const extraInfo = email ? ` (${email})` : '';
+        const data = { name: name, email: email };
+        const itemName = UserConfirmations.getStaticTranslatedItemName(data);
 
         if (typeof confirmAction === 'function') {
-            confirmAction('unlock', itemName + extraInfo, () => {
+            confirmAction('unlock', itemName, () => {
                 window.location.href = url;
             });
         } else {
-            if (confirm(`Are you sure you want to unlock ${itemName}${extraInfo}?\n\nThis will allow the user to log in again.`)) {
+            const fallbackMessage = UserConfirmations.getStaticTranslation('confirmation.unlock.message', {item: itemName}) || `Are you sure you want to unlock ${itemName}?`;
+            const fallbackSubtext = UserConfirmations.getStaticTranslation('confirmation.unlock.subtext', {}) || 'This will allow the user to log in again.';
+            if (confirm(`${fallbackMessage}\n\n${fallbackSubtext}`)) {
                 window.location.href = url;
             }
         }
+    }
+
+    // Static helper methods for translations
+    static getStaticTranslation(key, replacements = {}) {
+        if (typeof translate === 'function') {
+            return translate(key, replacements);
+        } else if (typeof window.translations === 'object' && window.translations[key]) {
+            let text = window.translations[key];
+            // Replace placeholders
+            Object.keys(replacements).forEach(placeholder => {
+                const regex = new RegExp(`\\{${placeholder}\\}`, 'g');
+                text = text.replace(regex, replacements[placeholder]);
+            });
+            return text;
+        }
+        return key; // Fallback to key if no translation found
+    }
+
+    static getStaticTranslatedItemName(data) {
+        const replacements = {
+            name: data.name
+        };
+
+        if (data.email) {
+            replacements.name = `${data.name} (${data.email})`;
+        }
+
+        return UserConfirmations.getStaticTranslation('item.user', replacements) || `user "${data.name}"${data.email ? ` (${data.email})` : ''}`;
     }
 
     // Bulk delete confirmation

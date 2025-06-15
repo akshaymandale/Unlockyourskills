@@ -620,17 +620,5 @@ document.addEventListener('DOMContentLoaded', function () {
         return div.innerHTML;
     }
 
-    // ✅ Professional Survey Question Delete Confirmations
-    document.addEventListener('click', function(e) {
-        if (e.target.closest('.delete-survey-question')) {
-            e.preventDefault();
-            const link = e.target.closest('.delete-survey-question');
-            const id = link.dataset.id;
-            const title = link.dataset.title;
-
-            confirmDelete('survey question "' + title + '"', function() {
-                window.location.href = 'index.php?controller=SurveyQuestionController&action=delete&id=' + id;
-            });
-        }
-    });
+    // ✅ Survey Question Delete Confirmations now handled by survey_confirmations.js module
 });

@@ -33,7 +33,7 @@ if (session_status() === PHP_SESSION_NONE) {
         $translationsFile = "locales/{$currentLang}.json";
         if (file_exists($translationsFile)) {
             $translations = json_decode(file_get_contents($translationsFile), true);
-            // Filter only JavaScript validation translations to reduce size
+            // Filter JavaScript translations including confirmations
             $jsTranslations = array_filter($translations, function($key) {
                 return strpos($key, 'js.') === 0 ||
                        strpos($key, 'validation.') === 0 ||
@@ -42,6 +42,8 @@ if (session_status() === PHP_SESSION_NONE) {
                        strpos($key, 'document.modal.') === 0 ||
                        strpos($key, 'document.category.') === 0 ||
                        strpos($key, 'error.') === 0 ||
+                       strpos($key, 'confirmation.') === 0 ||
+                       strpos($key, 'item.') === 0 ||
                        in_array($key, [
                            'buttons_cancel', 'buttons_close', 'buttons_submit_feedback_question',
                            'buttons_submit_survey_question', 'add_tag', 'upload_image_video_pdf'

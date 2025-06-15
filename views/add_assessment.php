@@ -470,6 +470,7 @@
 
     <script src="public/js/assessment_question_validation.js"></script>
     <script src="public/js/assessment_question.js"></script>
-    <!-- ✅ Assessment question delete confirmations now handled by centralized system -->
+    <!-- ✅ Assessment Question Delete Confirmations -->
+    <script src="public/js/modules/assessment_confirmations.js"></script>
 
     <?php include 'includes/footer.php'; ?>

@@ -24,6 +24,35 @@ class SurveyConfirmations {
         });
     }
 
+    // Helper function to get translation with fallback
+    getTranslation(key, replacements = {}) {
+        if (typeof translate === 'function') {
+            return translate(key, replacements);
+        } else if (typeof window.translations === 'object' && window.translations[key]) {
+            let text = window.translations[key];
+            // Replace placeholders
+            Object.keys(replacements).forEach(placeholder => {
+                const regex = new RegExp(`\\{${placeholder}\\}`, 'g');
+                text = text.replace(regex, replacements[placeholder]);
+            });
+            return text;
+        }
+        return key; // Fallback to key if no translation found
+    }
+
+    // Get translated item name for survey/feedback questions
+    getTranslatedItemName(data) {
+        const replacements = { title: data.title };
+
+        if (data.type === 'survey question') {
+            return this.getTranslation('item.survey_question', replacements) || `survey question "${data.title}"`;
+        } else if (data.type === 'feedback question') {
+            return this.getTranslation('item.feedback_question', replacements) || `feedback question "${data.title}"`;
+        } else {
+            return this.getTranslation('item.question', replacements) || `${data.type} "${data.title}"`;
+        }
+    }
+
     handleSurveyFeedbackDelete(button) {
         const data = this.extractSurveyFeedbackData(button);
         
@@ -59,14 +88,15 @@ class SurveyConfirmations {
     }
 
     showSurveyFeedbackConfirmation(data) {
-        const itemName = `${data.type} "${data.title}"`;
-        
-        if (typeof confirmDelete === 'function') {
-            confirmDelete(itemName, () => {
+        const itemName = this.getTranslatedItemName(data);
+
+        if (typeof window.confirmDelete === 'function') {
+            window.confirmDelete(itemName, () => {
                 window.location.href = data.action;
             });
         } else {
-            if (confirm(`Are you sure you want to delete ${itemName}?`)) {
+            const fallbackMessage = this.getTranslation('confirmation.delete.message', {item: itemName}) || `Are you sure you want to delete ${itemName}?`;
+            if (confirm(fallbackMessage)) {
                 window.location.href = data.action;
             }
         }
@@ -75,14 +105,16 @@ class SurveyConfirmations {
     // Static helper methods
     static deleteSurveyQuestion(id, title) {
         const url = `index.php?controller=SurveyQuestionController&action=delete&id=${id}`;
-        const itemName = `survey question "${title}"`;
+        const data = { title: title };
+        const itemName = SurveyConfirmations.getStaticTranslatedItemName(data);
 
-        if (typeof confirmDelete === 'function') {
-            confirmDelete(itemName, () => {
+        if (typeof window.confirmDelete === 'function') {
+            window.confirmDelete(itemName, () => {
                 window.location.href = url;
             });
         } else {
-            if (confirm(`Are you sure you want to delete ${itemName}?`)) {
+            const fallbackMessage = SurveyConfirmations.getStaticTranslation('confirmation.delete.message', {item: itemName}) || `Are you sure you want to delete ${itemName}?`;
+            if (confirm(fallbackMessage)) {
                 window.location.href = url;
             }
         }
@@ -90,27 +122,73 @@ class SurveyConfirmations {
 
     static deleteFeedbackQuestion(id, title) {
         const url = `index.php?controller=FeedbackQuestionController&action=delete&id=${id}`;
-        const itemName = `feedback question "${title}"`;
+        const data = { title: title };
+        const replacements = { title: title };
+        const itemName = SurveyConfirmations.getStaticTranslation('item.feedback_question', replacements) || `feedback question "${title}"`;
 
-        if (typeof confirmDelete === 'function') {
-            confirmDelete(itemName, () => {
+        if (typeof window.confirmDelete === 'function') {
+            window.confirmDelete(itemName, () => {
                 window.location.href = url;
             });
         } else {
-            if (confirm(`Are you sure you want to delete ${itemName}?`)) {
+            const fallbackMessage = SurveyConfirmations.getStaticTranslation('confirmation.delete.message', {item: itemName}) || `Are you sure you want to delete ${itemName}?`;
+            if (confirm(fallbackMessage)) {
                 window.location.href = url;
             }
         }
+    }
+
+    // Static helper methods for translations
+    static getStaticTranslation(key, replacements = {}) {
+        if (typeof translate === 'function') {
+            return translate(key, replacements);
+        } else if (typeof window.translations === 'object' && window.translations[key]) {
+            let text = window.translations[key];
+            // Replace placeholders
+            Object.keys(replacements).forEach(placeholder => {
+                const regex = new RegExp(`\\{${placeholder}\\}`, 'g');
+                text = text.replace(regex, replacements[placeholder]);
+            });
+            return text;
+        }
+        return key; // Fallback to key if no translation found
+    }
+
+    static getStaticTranslatedItemName(data) {
+        const replacements = { title: data.title };
+        // For static methods, we assume survey questions by default
+        return SurveyConfirmations.getStaticTranslation('item.survey_question', replacements) || `survey question "${data.title}"`;
     }
 }
 
 // Initialize Survey confirmations
 document.addEventListener('DOMContentLoaded', function() {
-    // Only initialize if we're on a survey/feedback page
-    if (document.querySelector('.survey-container, .feedback-container, [data-survey-page], [data-feedback-page]')) {
+    // Check for survey/feedback page elements
+    const surveyPageElement = document.querySelector(
+        '.survey-container, .feedback-container, [data-survey-page], [data-feedback-page], ' +
+        '.add-survey-question-container, .add-feedback-question-container, ' +
+        '#surveyQuestionGrid, #feedbackQuestionGrid, ' +
+        '.delete-survey-question, .delete-feedback-question'
+    );
+
+    if (surveyPageElement) {
         window.surveyConfirmationsInstance = new SurveyConfirmations();
     }
 });
+
+// Also initialize immediately if DOM is already loaded
+if (document.readyState !== 'loading') {
+    const surveyPageElement = document.querySelector(
+        '.survey-container, .feedback-container, [data-survey-page], [data-feedback-page], ' +
+        '.add-survey-question-container, .add-feedback-question-container, ' +
+        '#surveyQuestionGrid, #feedbackQuestionGrid, ' +
+        '.delete-survey-question, .delete-feedback-question'
+    );
+
+    if (surveyPageElement) {
+        window.surveyConfirmationsInstance = new SurveyConfirmations();
+    }
+}
 
 // Global helper functions
 window.deleteSurveyQuestion = function(id, title) {
