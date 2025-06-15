@@ -99,12 +99,27 @@ $countries = $stmt->fetchAll(PDO::FETCH_ASSOC);
                             <label><?= Localization::translate('user_role'); ?> *</label>
                             <select id="user_role" name="user_role" class="input-field">
                                 <option value=""><?= Localization::translate('select_user_role'); ?></option>
-                                <option value="Admin"><?= Localization::translate('admin'); ?></option>
+                                <?php
+                                // Check if admin role should be disabled
+                                $adminDisabled = '';
+                                $adminText = Localization::translate('admin');
+
+                                if ($adminRoleStatus && !$adminRoleStatus['canAdd']) {
+                                    $adminDisabled = 'disabled';
+                                    $adminText .= ' (Limit Reached)';
+                                }
+                                ?>
+                                <option value="Admin" <?= $adminDisabled; ?>><?= $adminText; ?></option>
                                 <option value="End User"><?= Localization::translate('end_user'); ?></option>
                                 <option value="Instructor"><?= Localization::translate('instructor'); ?></option>
                                 <option value="Corporate Manager"><?= Localization::translate('corporate_manager'); ?>
                                 </option>
                             </select>
+                            <?php if ($adminRoleStatus && !$adminRoleStatus['canAdd']): ?>
+                                <small class="text-muted">
+                                    Admin limit: <?= $adminRoleStatus['current']; ?>/<?= $adminRoleStatus['limit']; ?>
+                                </small>
+                            <?php endif; ?>
                         </div>
                         <div class="col-lg-6 col-md-6 col-sm-12 form-group">
                             <label><?= Localization::translate('profile_expiry_date'); ?></label>
@@ -198,7 +213,16 @@ $countries = $stmt->fetchAll(PDO::FETCH_ASSOC);
                     <div class="row">
                         <div class="col-lg-6 col-md-6 col-sm-12 form-group">
                             <label><?= Localization::translate('language'); ?></label>
-                            <input type="text" name="language" class="input-field">
+                            <select name="language" class="input-field">
+                                <option value=""><?= Localization::translate('select_language'); ?></option>
+                                <?php if (!empty($languages)): ?>
+                                    <?php foreach ($languages as $language): ?>
+                                        <option value="<?= htmlspecialchars($language['language_code']); ?>">
+                                            <?= htmlspecialchars($language['language_name']); ?>
+                                        </option>
+                                    <?php endforeach; ?>
+                                <?php endif; ?>
+                            </select>
                         </div>
                         <div class="col-lg-6 col-md-6 col-sm-12 form-group">
                             <label><?= Localization::translate('reports_to'); ?></label>

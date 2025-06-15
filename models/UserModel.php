@@ -10,7 +10,10 @@ class UserModel {
     }
 
     public function getUser($client_code, $username) {
-        $stmt = $this->conn->prepare("SELECT * FROM user_profiles WHERE client_id = ? AND email = ?");
+        $stmt = $this->conn->prepare("SELECT up.*, c.client_name, c.max_users, c.current_user_count
+                                     FROM user_profiles up
+                                     LEFT JOIN clients c ON up.client_id = c.id
+                                     WHERE up.client_id = ? AND up.email = ?");
         $stmt->execute([$client_code, $username]);
         return $stmt->fetch(PDO::FETCH_ASSOC);
     }
@@ -68,13 +71,29 @@ class UserModel {
             }
         }
     
+        // Validate client_id exists
+        $clientStmt = $this->conn->prepare("SELECT id FROM clients WHERE id = ?");
+        $clientStmt->execute([$client_id]);
+        $client = $clientStmt->fetch(PDO::FETCH_ASSOC);
+        if (!$client) {
+            throw new Exception("Invalid client ID");
+        }
+
         // Insert into Database
-        $sql = "INSERT INTO user_profiles 
-            (client_id, profile_id, full_name, email, contact_number, gender, dob, user_role, profile_expiry, user_status, locked_status, leaderboard, profile_picture, country, state, city, timezone, language, reports_to, joining_date, retirement_date, customised_1, customised_2, customised_3, customised_4, customised_5, customised_6, customised_7, customised_8, customised_9, customised_10) 
-            VALUES 
-            (:client_id, :profile_id, :full_name, :email, :contact_number, :gender, :dob, :user_role, :profile_expiry, :user_status, :locked_status, :leaderboard, :profile_picture, :country, :state, :city, :timezone, :language, :reports_to, :joining_date, :retirement_date, :custom_1, :custom_2, :custom_3, :custom_4, :custom_5, :custom_6, :custom_7, :custom_8, :custom_9, :custom_10)";
+        $sql = "INSERT INTO user_profiles
+            (client_id, profile_id, full_name, email, contact_number, gender, dob, user_role, system_role, profile_expiry, user_status, locked_status, leaderboard, profile_picture, country, state, city, timezone, language, reports_to, joining_date, retirement_date, customised_1, customised_2, customised_3, customised_4, customised_5, customised_6, customised_7, customised_8, customised_9, customised_10)
+            VALUES
+            (:client_id, :profile_id, :full_name, :email, :contact_number, :gender, :dob, :user_role, :system_role, :profile_expiry, :user_status, :locked_status, :leaderboard, :profile_picture, :country, :state, :city, :timezone, :language, :reports_to, :joining_date, :retirement_date, :custom_1, :custom_2, :custom_3, :custom_4, :custom_5, :custom_6, :custom_7, :custom_8, :custom_9, :custom_10)";
     
         $stmt = $this->conn->prepare($sql);
+
+        // Determine system_role based on user_role
+        $system_role = 'user'; // default
+        if ($user_role === 'Admin') {
+            $system_role = 'admin';
+        } elseif ($user_role === 'Super Admin') {
+            $system_role = 'super_admin';
+        }
 
         try {
             $result = $stmt->execute([
@@ -86,6 +105,7 @@ class UserModel {
                 ':gender' => $gender,
                 ':dob' => $dob,
                 ':user_role' => $user_role,
+                ':system_role' => $system_role,
                 ':profile_expiry' => $profile_expiry,
                 ':user_status' => $user_status,
                 ':locked_status' => $locked_status,
@@ -411,6 +431,222 @@ class UserModel {
             error_log("UserModel updateUser general error: " . $e->getMessage());
             throw new Exception("Failed to update user: " . $e->getMessage());
         }
+    }
+
+    /**
+     * Get users by client (for client admins)
+     */
+    public function getUsersByClient($clientId, $limit = 10, $offset = 0, $search = '', $filters = []) {
+        $sql = "SELECT up.*, c.client_name, c.max_users
+                FROM user_profiles up
+                LEFT JOIN clients c ON up.client_id = c.id
+                WHERE up.client_id = ? AND up.is_deleted = 0";
+
+        $params = [$clientId];
+
+        if (!empty($search)) {
+            $sql .= " AND (up.full_name LIKE ? OR up.email LIKE ? OR up.profile_id LIKE ?)";
+            $params[] = "%$search%";
+            $params[] = "%$search%";
+            $params[] = "%$search%";
+        }
+
+        if (!empty($filters['user_status'])) {
+            $sql .= " AND up.user_status = ?";
+            $params[] = $filters['user_status'];
+        }
+
+        if (!empty($filters['locked_status'])) {
+            $sql .= " AND up.locked_status = ?";
+            $params[] = $filters['locked_status'];
+        }
+
+        if (!empty($filters['user_role'])) {
+            $sql .= " AND up.user_role = ?";
+            $params[] = $filters['user_role'];
+        }
+
+        $sql .= " ORDER BY up.id DESC LIMIT ? OFFSET ?";
+        $params[] = (int)$limit;
+        $params[] = (int)$offset;
+
+        $stmt = $this->conn->prepare($sql);
+        foreach ($params as $index => $param) {
+            $stmt->bindValue($index + 1, $param, is_int($param) ? PDO::PARAM_INT : PDO::PARAM_STR);
+        }
+        $stmt->execute();
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
+
+    /**
+     * Check if client can add more users
+     */
+    public function canClientAddUser($clientId) {
+        $sql = "SELECT c.max_users, COUNT(up.id) as current_count
+                FROM clients c
+                LEFT JOIN user_profiles up ON c.id = up.client_id AND up.user_status = 'Active' AND up.is_deleted = 0
+                WHERE c.id = ?
+                GROUP BY c.id";
+
+        $stmt = $this->conn->prepare($sql);
+        $stmt->execute([$clientId]);
+        $result = $stmt->fetch(PDO::FETCH_ASSOC);
+
+        if (!$result) return false;
+
+        return $result['current_count'] < $result['max_users'];
+    }
+
+    /**
+     * Check if client can add more admin users
+     */
+    public function canClientAddAdmin($clientId, $excludeUserId = null) {
+        // Get client's admin role limit
+        $clientSql = "SELECT admin_role_limit FROM clients WHERE id = ? AND is_deleted = 0";
+        $clientStmt = $this->conn->prepare($clientSql);
+        $clientStmt->execute([$clientId]);
+        $client = $clientStmt->fetch(PDO::FETCH_ASSOC);
+
+        if (!$client) return false;
+
+        // Count current admin users
+        $countSql = "SELECT COUNT(*) as admin_count
+                     FROM user_profiles
+                     WHERE client_id = ?
+                     AND user_role = 'Admin'
+                     AND user_status = 'Active'
+                     AND is_deleted = 0";
+
+        $params = [$clientId];
+
+        // Exclude specific user (for edit scenarios)
+        if ($excludeUserId) {
+            $countSql .= " AND id != ?";
+            $params[] = $excludeUserId;
+        }
+
+        $countStmt = $this->conn->prepare($countSql);
+        $countStmt->execute($params);
+        $result = $countStmt->fetch(PDO::FETCH_ASSOC);
+
+        $currentAdminCount = $result['admin_count'] ?? 0;
+
+        return $currentAdminCount < $client['admin_role_limit'];
+    }
+
+    /**
+     * Get admin role status for client
+     */
+    public function getAdminRoleStatus($clientId, $excludeUserId = null) {
+        // Get client's admin role limit
+        $clientSql = "SELECT admin_role_limit FROM clients WHERE id = ? AND is_deleted = 0";
+        $clientStmt = $this->conn->prepare($clientSql);
+        $clientStmt->execute([$clientId]);
+        $client = $clientStmt->fetch(PDO::FETCH_ASSOC);
+
+        if (!$client) {
+            return [
+                'canAdd' => false,
+                'limit' => 0,
+                'current' => 0,
+                'message' => 'Client not found'
+            ];
+        }
+
+        // Count current admin users
+        $countSql = "SELECT COUNT(*) as admin_count
+                     FROM user_profiles
+                     WHERE client_id = ?
+                     AND user_role = 'Admin'
+                     AND user_status = 'Active'
+                     AND is_deleted = 0";
+
+        $params = [$clientId];
+
+        // Exclude specific user (for edit scenarios)
+        if ($excludeUserId) {
+            $countSql .= " AND id != ?";
+            $params[] = $excludeUserId;
+        }
+
+        $countStmt = $this->conn->prepare($countSql);
+        $countStmt->execute($params);
+        $result = $countStmt->fetch(PDO::FETCH_ASSOC);
+
+        $currentAdminCount = $result['admin_count'] ?? 0;
+        $canAdd = $currentAdminCount < $client['admin_role_limit'];
+
+        return [
+            'canAdd' => $canAdd,
+            'limit' => $client['admin_role_limit'],
+            'current' => $currentAdminCount,
+            'message' => $canAdd ? '' : 'Admin limit reached'
+        ];
+    }
+
+    /**
+     * Get user with client details
+     */
+    public function getUserWithClient($userId) {
+        $sql = "SELECT up.*, c.client_name, c.max_users, c.current_user_count
+                FROM user_profiles up
+                LEFT JOIN clients c ON up.client_id = c.id
+                WHERE up.id = ? AND up.is_deleted = 0";
+
+        $stmt = $this->conn->prepare($sql);
+        $stmt->execute([$userId]);
+        return $stmt->fetch(PDO::FETCH_ASSOC);
+    }
+
+    /**
+     * Get user limit status for client
+     */
+    public function getUserLimitStatus($clientId) {
+        // Get client's user limit
+        $clientSql = "SELECT max_users FROM clients WHERE id = ? AND is_deleted = 0";
+        $clientStmt = $this->conn->prepare($clientSql);
+        $clientStmt->execute([$clientId]);
+        $client = $clientStmt->fetch(PDO::FETCH_ASSOC);
+
+        if (!$client) {
+            return [
+                'canAdd' => false,
+                'limit' => 0,
+                'current' => 0,
+                'message' => 'Client not found'
+            ];
+        }
+
+        // Count current active users
+        $countSql = "SELECT COUNT(*) as user_count
+                     FROM user_profiles
+                     WHERE client_id = ?
+                     AND user_status = 'Active'
+                     AND is_deleted = 0";
+
+        $countStmt = $this->conn->prepare($countSql);
+        $countStmt->execute([$clientId]);
+        $result = $countStmt->fetch(PDO::FETCH_ASSOC);
+
+        $currentUserCount = $result['user_count'] ?? 0;
+        $canAdd = $currentUserCount < $client['max_users'];
+
+        return [
+            'canAdd' => $canAdd,
+            'limit' => $client['max_users'],
+            'current' => $currentUserCount,
+            'message' => $canAdd ? '' : 'User limit reached'
+        ];
+    }
+
+    /**
+     * Get all languages for dropdown
+     */
+    public function getLanguages() {
+        $sql = "SELECT id, language_name, language_code FROM languages ORDER BY language_name ASC";
+        $stmt = $this->conn->prepare($sql);
+        $stmt->execute();
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
 }
 ?>

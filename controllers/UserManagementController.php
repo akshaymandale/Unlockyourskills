@@ -1,14 +1,17 @@
 <?php
 // controllers/UserManagementController.php
 require_once 'models/UserModel.php';
+require_once 'models/ClientModel.php';
 require_once 'controllers/BaseController.php';
 
 class UserManagementController extends BaseController {
-    
+
     private $userModel;
+    private $clientModel;
 
     public function __construct() {
         $this->userModel = new UserModel();
+        $this->clientModel = new ClientModel();
     }
 
     public function index() {
@@ -16,19 +19,69 @@ class UserManagementController extends BaseController {
         $page = 1;
         $offset = 0;
 
-        // Load initial data (no search/filters applied)
-        $users = $this->userModel->getAllUsersPaginated($limit, $offset);
-        $totalUsers = $this->userModel->getTotalUserCount();
+        // Check if filtering by client (for super admin)
+        $clientId = $_GET['client_id'] ?? null;
+        $currentUser = $_SESSION['user'] ?? null;
+
+        // Determine user scope based on role
+        if ($currentUser && $currentUser['system_role'] === 'super_admin') {
+            // Super admin can see all users or filter by client
+            if ($clientId) {
+                $users = $this->userModel->getUsersByClient($clientId, $limit, $offset);
+                $totalUsers = count($this->userModel->getUsersByClient($clientId, 999999, 0));
+                $client = $this->clientModel->getClientById($clientId);
+            } else {
+                $users = $this->userModel->getAllUsersPaginated($limit, $offset);
+                $totalUsers = $this->userModel->getTotalUserCount();
+                $client = null;
+            }
+            $clients = $this->clientModel->getAllClients(999999, 0);
+        } elseif ($currentUser && $currentUser['system_role'] === 'admin') {
+            // Client admin can only see users from their client
+            $clientId = $currentUser['client_id'];
+            $users = $this->userModel->getUsersByClient($clientId, $limit, $offset);
+            $totalUsers = count($this->userModel->getUsersByClient($clientId, 999999, 0));
+            $client = $this->clientModel->getClientById($clientId);
+            $clients = [$client]; // Only their client
+        } else {
+            // For debugging: show what we have in session
+            error_log("UserManagementController access denied. Session data: " . print_r($_SESSION, true));
+            error_log("Current user: " . print_r($currentUser, true));
+
+            // Regular users shouldn't access user management
+            $this->toastError('Access denied. Please check your login status and permissions.', 'index.php');
+            return;
+        }
+
         $totalPages = ceil($totalUsers / $limit);
 
         // Get unique values for filter dropdowns
         $uniqueUserRoles = $this->userModel->getDistinctUserRoles();
         $uniqueGenders = $this->userModel->getDistinctGenders();
 
+        // Get current user's client ID for user limit check
+        $clientId = $_SESSION['user']['client_id'] ?? null;
+        $userLimitStatus = null;
+
+        if ($clientId) {
+            $userLimitStatus = $this->userModel->getUserLimitStatus($clientId);
+        }
+
         require 'views/user_management.php';
     }
     
     public function addUser() {
+        // Get current user's client ID for admin role limit check
+        $clientId = $_SESSION['user']['client_id'] ?? null;
+        $adminRoleStatus = null;
+
+        if ($clientId) {
+            $adminRoleStatus = $this->userModel->getAdminRoleStatus($clientId);
+        }
+
+        // Fetch languages for dropdown
+        $languages = $this->userModel->getLanguages();
+
         include 'views/add_user.php';
     }
 
@@ -46,6 +99,14 @@ class UserManagementController extends BaseController {
             return;
         }
 
+        // Get admin role status for the user's client (excluding current user for edit)
+        $clientId = $user['client_id'] ?? null;
+        $adminRoleStatus = null;
+
+        if ($clientId) {
+            $adminRoleStatus = $this->userModel->getAdminRoleStatus($clientId, $profile_id);
+        }
+
         // Fetch countries for dropdown
         require_once 'config/database.php';
         $database = new Database();
@@ -57,6 +118,9 @@ class UserManagementController extends BaseController {
         } else {
             $countries = [];
         }
+
+        // Fetch languages for dropdown
+        $languages = $this->userModel->getLanguages();
 
         include 'views/edit_user.php';
     }
@@ -74,6 +138,20 @@ class UserManagementController extends BaseController {
         $user_status = trim($_POST['user_status'] ?? '');
         $locked_status = trim($_POST['locked_status'] ?? '');
         $leaderboard = trim($_POST['leaderboard'] ?? '');
+
+        // Check client user limit
+        $client = $this->clientModel->getClientById($client_id);
+        if ($client && !$this->userModel->canClientAddUser($client_id)) {
+            $this->redirectWithToast('Cannot add user. Client has reached its user limit.', 'error', 'index.php?controller=UserManagementController&action=addUser');
+            return;
+        }
+
+        // Check admin role limit if user role is Admin
+        $user_role = trim($_POST['user_role'] ?? '');
+        if ($user_role === 'Admin' && $client && !$this->userModel->canClientAddAdmin($client_id)) {
+            $this->redirectWithToast('Cannot add admin user. Client has reached its admin role limit.', 'error', 'index.php?controller=UserManagementController&action=addUser');
+            return;
+        }
         
         // Additional Details (with null coalescing and safe trim)
         $country = trim($_POST['country'] ?? '');
@@ -152,6 +230,10 @@ class UserManagementController extends BaseController {
             $result = $this->userModel->insertUser($_POST, $_FILES);
 
             if ($result) {
+                // Update client user count
+                if ($client) {
+                    $this->clientModel->updateUserCount($client['id']);
+                }
                 $this->redirectWithToast('User added successfully!', 'success', 'index.php?controller=UserManagementController');
             } else {
                 $this->redirectWithToast('Error inserting user.', 'error', 'index.php?controller=UserManagementController');
@@ -190,6 +272,22 @@ class UserManagementController extends BaseController {
         $email = trim($_POST['email'] ?? '');
         $contact_number = trim($_POST['contact_number'] ?? '');
         $user_role = trim($_POST['user_role'] ?? '');
+
+        // Get current user data to check role change
+        $currentUser = $this->userModel->getUserById($profile_id);
+        if (!$currentUser) {
+            $this->redirectWithToast('User not found.', 'error', 'index.php?controller=UserManagementController');
+            return;
+        }
+
+        // Check admin role limit if changing to Admin role
+        if ($user_role === 'Admin' && $currentUser['user_role'] !== 'Admin') {
+            $clientId = $currentUser['client_id'];
+            if (!$this->userModel->canClientAddAdmin($clientId, $profile_id)) {
+                $this->redirectWithToast('Cannot change user role to Admin. Client has reached its admin role limit.', 'error', 'javascript:history.back()');
+                return;
+            }
+        }
 
         // ✅ Backend Validations
         if (empty($full_name) || empty($email) || empty($contact_number) || empty($user_role)) {
@@ -401,6 +499,8 @@ class UserManagementController extends BaseController {
         }
         exit();
     }
+
+
 
 }
 ?>

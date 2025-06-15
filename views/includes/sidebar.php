@@ -14,6 +14,14 @@
                 <i class="fas fa-cogs"></i> <span><?= Localization::translate('manage_portal'); ?></span>
             </a>
         </li>
+
+        <?php if (isset($_SESSION['user']) && $_SESSION['user']['system_role'] === 'super_admin'): ?>
+        <li class="list-group-item">
+            <a href="index.php?controller=ClientController">
+                <i class="fas fa-building"></i> <span>Client Management</span>
+            </a>
+        </li>
+        <?php endif; ?>
         <li class="list-group-item">
             <a href="#">
                 <i class="fas fa-book"></i> <span><?= Localization::translate('my_courses'); ?></span>

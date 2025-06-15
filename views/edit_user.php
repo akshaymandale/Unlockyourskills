@@ -90,11 +90,29 @@ $clientName = $_SESSION['client_code'] ?? 'DEFAULT';
                             <label><?= Localization::translate('user_role'); ?> *</label>
                             <select id="user_role" name="user_role" class="input-field">
                                 <option value=""><?= Localization::translate('select_user_role'); ?></option>
-                                <option value="Admin" <?= $user['user_role'] == 'Admin' ? 'selected' : ''; ?>><?= Localization::translate('admin'); ?></option>
+                                <?php
+                                // Check if admin role should be disabled
+                                $adminDisabled = '';
+                                $adminText = Localization::translate('admin');
+                                $adminSelected = $user['user_role'] == 'Admin' ? 'selected' : '';
+
+                                // If user is currently admin, always allow (they can change from admin)
+                                // If user is not admin and limit reached, disable the option
+                                if ($user['user_role'] != 'Admin' && $adminRoleStatus && !$adminRoleStatus['canAdd']) {
+                                    $adminDisabled = 'disabled';
+                                    $adminText .= ' (Limit Reached)';
+                                }
+                                ?>
+                                <option value="Admin" <?= $adminSelected; ?> <?= $adminDisabled; ?>><?= $adminText; ?></option>
                                 <option value="End User" <?= $user['user_role'] == 'End User' ? 'selected' : ''; ?>><?= Localization::translate('end_user'); ?></option>
                                 <option value="Instructor" <?= $user['user_role'] == 'Instructor' ? 'selected' : ''; ?>><?= Localization::translate('instructor'); ?></option>
                                 <option value="Corporate Manager" <?= $user['user_role'] == 'Corporate Manager' ? 'selected' : ''; ?>><?= Localization::translate('corporate_manager'); ?></option>
                             </select>
+                            <?php if ($user['user_role'] != 'Admin' && $adminRoleStatus && !$adminRoleStatus['canAdd']): ?>
+                                <small class="text-muted">
+                                    Admin limit: <?= $adminRoleStatus['current']; ?>/<?= $adminRoleStatus['limit']; ?>
+                                </small>
+                            <?php endif; ?>
                         </div>
                         <div class="col-lg-6 col-md-6 col-sm-12 form-group">
                             <label><?= Localization::translate('profile_expiry_date'); ?></label>
@@ -196,8 +214,17 @@ $clientName = $_SESSION['client_code'] ?? 'DEFAULT';
                     <div class="row">
                         <div class="col-lg-6 col-md-6 col-sm-12 form-group">
                             <label><?= Localization::translate('language'); ?></label>
-                            <input type="text" name="language" class="input-field" 
-                                   value="<?= htmlspecialchars($user['language']); ?>">
+                            <select name="language" class="input-field">
+                                <option value=""><?= Localization::translate('select_language'); ?></option>
+                                <?php if (!empty($languages)): ?>
+                                    <?php foreach ($languages as $language): ?>
+                                        <option value="<?= htmlspecialchars($language['language_code']); ?>"
+                                                <?= ($user['language'] == $language['language_code']) ? 'selected' : ''; ?>>
+                                            <?= htmlspecialchars($language['language_name']); ?>
+                                        </option>
+                                    <?php endforeach; ?>
+                                <?php endif; ?>
+                            </select>
                         </div>
                         <div class="col-lg-6 col-md-6 col-sm-12 form-group">
                             <label><?= Localization::translate('reports_to'); ?></label>

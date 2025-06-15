@@ -12,57 +12,53 @@
 
         <!-- ✅ Filters & Search Section -->
         <div class="filter-section">
-            <div class="container-fluid mb-3">
-                <!-- First Row: Main Controls -->
-                <div class="row justify-content-between align-items-center g-3 mb-2">
+            <div class="container-fluid">
+                <!-- Single Compact Row -->
+                <div class="row align-items-center g-2">
 
-                    <!-- Filter Dropdowns on the left -->
-                    <div class="col-md-auto">
-                        <div class="row g-2">
-                            <div class="col-auto">
-                                <select class="form-select form-select-sm" id="userStatusFilter">
-                                    <option value=""><?= Localization::translate('filters_user_status'); ?></option>
-                                    <option value="1">Active</option>
-                                    <option value="0">Inactive</option>
-                                </select>
-                            </div>
-                            <div class="col-auto">
-                                <select class="form-select form-select-sm" id="lockedStatusFilter">
-                                    <option value=""><?= Localization::translate('filters_locked_status'); ?></option>
-                                    <option value="1">Locked</option>
-                                    <option value="0">Unlocked</option>
-                                </select>
-                            </div>
-                            <div class="col-auto">
-                                <select class="form-select form-select-sm" id="userRoleFilter">
-                                    <option value="">User Role</option>
-                                    <?php if (!empty($uniqueUserRoles)): ?>
-                                        <?php foreach ($uniqueUserRoles as $role): ?>
-                                            <option value="<?= htmlspecialchars($role); ?>">
-                                                <?= htmlspecialchars($role); ?>
-                                            </option>
-                                        <?php endforeach; ?>
-                                    <?php endif; ?>
-                                </select>
-                            </div>
-                            <div class="col-auto">
-                                <select class="form-select form-select-sm" id="genderFilter">
-                                    <option value="">Gender</option>
-                                    <?php if (!empty($uniqueGenders)): ?>
-                                        <?php foreach ($uniqueGenders as $gender): ?>
-                                            <option value="<?= htmlspecialchars($gender); ?>">
-                                                <?= htmlspecialchars($gender); ?>
-                                            </option>
-                                        <?php endforeach; ?>
-                                    <?php endif; ?>
-                                </select>
-                            </div>
-                        </div>
+                    <!-- Compact Filters -->
+                    <div class="col-auto">
+                        <select class="form-select form-select-sm compact-filter" id="userStatusFilter">
+                            <option value=""><?= Localization::translate('filters_user_status'); ?></option>
+                            <option value="1">Active</option>
+                            <option value="0">Inactive</option>
+                        </select>
+                    </div>
+                    <div class="col-auto">
+                        <select class="form-select form-select-sm compact-filter" id="lockedStatusFilter">
+                            <option value=""><?= Localization::translate('filters_locked_status'); ?></option>
+                            <option value="1">Locked</option>
+                            <option value="0">Unlocked</option>
+                        </select>
+                    </div>
+                    <div class="col-auto">
+                        <select class="form-select form-select-sm compact-filter" id="userRoleFilter">
+                            <option value="">User Role</option>
+                            <?php if (!empty($uniqueUserRoles)): ?>
+                                <?php foreach ($uniqueUserRoles as $role): ?>
+                                    <option value="<?= htmlspecialchars($role); ?>">
+                                        <?= htmlspecialchars($role); ?>
+                                    </option>
+                                <?php endforeach; ?>
+                            <?php endif; ?>
+                        </select>
+                    </div>
+                    <div class="col-auto">
+                        <select class="form-select form-select-sm compact-filter" id="genderFilter">
+                            <option value="">Gender</option>
+                            <?php if (!empty($uniqueGenders)): ?>
+                                <?php foreach ($uniqueGenders as $gender): ?>
+                                    <option value="<?= htmlspecialchars($gender); ?>">
+                                        <?= htmlspecialchars($gender); ?>
+                                    </option>
+                                <?php endforeach; ?>
+                            <?php endif; ?>
+                        </select>
                     </div>
 
-                    <!-- Search Bar in the middle -->
-                    <div class="col-md-auto">
-                        <div class="input-group input-group-sm">
+                    <!-- Search -->
+                    <div class="col-auto">
+                        <div class="input-group input-group-sm compact-search">
                             <input type="text" id="searchInput" class="form-control"
                                 placeholder="<?= Localization::translate('filters_search_placeholder'); ?>"
                                 title="<?= Localization::translate('filters_search'); ?>">
@@ -73,41 +69,48 @@
                         </div>
                     </div>
 
-                    <!-- Empty space on the right for first row -->
-                    <div class="col-md-auto">
-                    </div>
-
-                </div>
-
-                <!-- Second Row: Clear Filters and Action Buttons -->
-                <div class="row justify-content-between align-items-center g-3">
-
-                    <!-- Clear Filters Button under filters -->
-                    <div class="col-md-auto">
-                        <button type="button" class="btn btn-sm btn-clear-filters" id="clearFiltersBtn"
+                    <!-- Clear Filters -->
+                    <div class="col-auto">
+                        <button type="button" class="btn btn-sm btn-secondary" id="clearFiltersBtn"
                             title="Clear all filters">
-                            <i class="fas fa-times me-1"></i> Clear Filters
+                            <i class="fas fa-times me-1"></i> Clear
                         </button>
                     </div>
 
-                    <!-- Add User and Import Buttons side by side on the right -->
-                    <div class="col-md-auto">
-                        <div class="row g-2">
-                            <div class="col-auto">
-                                <button type="button" class="btn btn-sm btn-primary add-user-btn"
-                                    onclick="window.location.href='index.php?controller=UserManagementController&action=addUser'"
-                                    title="<?= Localization::translate('buttons_add_user_tooltip'); ?>">
-                                    <?= Localization::translate('buttons_add_user'); ?>
-                                </button>
-                            </div>
-                            <div class="col-auto">
-                                <button type="button" class="btn btn-sm btn-primary"
-                                    onclick="window.location.href='index.php?controller=UserManagementController&action=import'"
-                                    title="<?= Localization::translate('buttons_import_user_tooltip'); ?>">
-                                    <i class="fas fa-upload me-1"></i> <?= Localization::translate('buttons_import_user'); ?>
-                                </button>
-                            </div>
+                    <!-- Action Buttons -->
+                    <div class="col-auto ms-auto">
+                        <div class="d-flex gap-2 align-items-center">
+                            <button type="button" class="btn btn-sm btn-primary" id="importUserBtn"
+                                title="Import Users">
+                                <i class="fas fa-upload me-1"></i> Import Users
+                            </button>
+                            <?php
+                            // Check if user limit is reached
+                            $addUserDisabled = '';
+                            $addUserText = Localization::translate('buttons_add_user');
+                            $addUserOnclick = "window.location.href='index.php?controller=UserManagementController&action=addUser'";
+                            $addUserTitle = Localization::translate('buttons_add_user_tooltip');
+
+                            if ($userLimitStatus && !$userLimitStatus['canAdd']) {
+                                $addUserDisabled = 'disabled';
+                                $addUserText .= ' (Limit Reached)';
+                                $addUserOnclick = '';
+                                $addUserTitle = 'User limit reached: ' . $userLimitStatus['current'] . '/' . $userLimitStatus['limit'];
+                            }
+                            ?>
+                            <button type="button"
+                                    class="btn btn-sm btn-primary add-user-btn"
+                                    onclick="<?= $addUserOnclick; ?>"
+                                    title="<?= $addUserTitle; ?>"
+                                    <?= $addUserDisabled; ?>>
+                                <i class="fas fa-plus me-1"></i><?= $addUserText; ?>
+                            </button>
                         </div>
+                        <?php if ($userLimitStatus && !$userLimitStatus['canAdd']): ?>
+                            <small class="text-muted d-block mt-1 text-end">
+                                Users: <?= $userLimitStatus['current']; ?>/<?= $userLimitStatus['limit']; ?>
+                            </small>
+                        <?php endif; ?>
                     </div>
 
                 </div>
@@ -122,10 +125,10 @@
 
         <!-- Loading Indicator -->
         <div id="loadingIndicator" class="text-center" style="display: none;">
-            <div class="spinner-border text-primary" role="status">
+            <div class="spinner-border" style="color: #6a0dad;" role="status">
                 <span class="visually-hidden">Loading...</span>
             </div>
-            <p class="mt-2">Loading users...</p>
+            <p class="mt-2" style="color: #6a0dad;">Loading users...</p>
         </div>
 
 

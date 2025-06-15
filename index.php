@@ -28,9 +28,15 @@ if (isset($_GET['lang'])) {
     exit();
 }
 
-// ✅ Set default language or use saved one
+// ✅ Set default language or use saved one with validation
 $lang = $_SESSION['lang'] ?? $_COOKIE['lang'] ?? 'en';
 
+// ✅ Validate and sanitize language code
+$lang = trim($lang);
+if (empty($lang) || !preg_match('/^[a-z]{2}$/', $lang)) {
+    $lang = 'en'; // Fallback to English
+    $_SESSION['lang'] = $lang; // Update session with valid language
+}
 
 error_log("Language file loaded for: " . $lang);
 // ✅ Load language file
