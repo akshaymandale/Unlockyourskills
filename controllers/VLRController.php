@@ -205,16 +205,28 @@ class VLRController extends BaseController
     // Delete SCROM Package
     public function delete()
     {
+        // Validate session (ensure user is logged in)
+        if (!isset($_SESSION['id'])) {
+            $this->toastError('Unauthorized access. Please log in.', 'index.php?controller=VLRController&tab=scorm');
+            return;
+        }
+
         if (isset($_GET['id'])) {
             $id = $_GET['id'];
+            error_log("📦 Deleting SCORM package with ID: " . $id);
+
             $result = $this->VLRModel->deleteScormPackage($id);
+            error_log("✅ Delete result: " . ($result ? 'SUCCESS' : 'FAILED'));
 
             if ($result) {
+                error_log("🎉 SCORM package deleted successfully!");
                 $this->toastSuccess('SCORM package deleted successfully!', 'index.php?controller=VLRController&tab=scorm');
             } else {
+                error_log("❌ Failed to delete SCORM package");
                 $this->toastError('Failed to delete SCORM package.', 'index.php?controller=VLRController&tab=scorm');
             }
         } else {
+            error_log("❌ No ID provided in request");
             $this->toastError('Invalid request.', 'index.php?controller=VLRController&tab=scorm');
         }
     }

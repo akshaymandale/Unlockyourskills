@@ -315,21 +315,6 @@
 
 <script src="public/js/feedback_question_validation.js"></script>
 <script src="public/js/feedback_question.js"></script>
-
-<script>
-// ✅ Professional Feedback Question Delete Confirmations
-document.addEventListener('click', function(e) {
-    if (e.target.closest('.delete-feedback-question')) {
-        e.preventDefault();
-        const link = e.target.closest('.delete-feedback-question');
-        const id = link.dataset.id;
-        const title = link.dataset.title;
-
-        confirmDelete('feedback question "' + title + '"', function() {
-            window.location.href = 'index.php?controller=FeedbackQuestionController&action=delete&id=' + id;
-        });
-    }
-});
-</script>
+<!-- ✅ Feedback question delete confirmations now handled by centralized system -->
 
 <?php include 'includes/footer.php'; ?>

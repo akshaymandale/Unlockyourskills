@@ -5,15 +5,22 @@
 
 class ConfirmationModal {
     constructor() {
+        console.log('🏗️ ConfirmationModal constructor called');
         this.modalId = 'confirmationModal';
+        this.onConfirm = null;
+        this.onCancel = null;
+        console.log('📝 Creating modal...');
         this.createModal();
+        console.log('🔗 Binding events...');
         this.bindEvents();
+        console.log('✅ ConfirmationModal initialized');
     }
 
     createModal() {
         // Remove existing modal if it exists
         const existingModal = document.getElementById(this.modalId);
         if (existingModal) {
+            console.log('🗑️ Removing existing modal');
             existingModal.remove();
         }
 
@@ -55,30 +62,44 @@ class ConfirmationModal {
 
         // Add modal to body
         document.body.insertAdjacentHTML('beforeend', modalHTML);
+
+        // Verify modal was created
+        const createdModal = document.getElementById(this.modalId);
+        const createdButton = document.getElementById('confirmButton');
+        console.log('✅ Modal created:', !!createdModal);
+        console.log('✅ Confirm button created:', !!createdButton);
+        if (createdButton) {
+            console.log('🔍 Button ID:', createdButton.id);
+            console.log('🔍 Button classes:', createdButton.className);
+        }
     }
 
     bindEvents() {
-        // Handle confirm button click
+        console.log('🔧 Binding events for confirmation modal...');
+
+        // Handle confirm button click with proper context binding
         document.addEventListener('click', (e) => {
+            console.log('📱 Click event detected on:', e.target);
+            console.log('📱 Target ID:', e.target.id);
+            console.log('📱 Target classes:', e.target.className);
+
             if (e.target.id === 'confirmButton') {
+                console.log('🎯 Confirm button clicked! Calling handleConfirm...');
+                console.log('🔍 this context:', this);
+                // Use arrow function to preserve 'this' context
                 this.handleConfirm();
+            } else {
+                console.log('❌ Not the confirm button');
             }
         });
 
         // Handle modal hidden event to clean up
         document.addEventListener('hidden.bs.modal', (e) => {
             if (e.target.id === this.modalId) {
-                this.cleanup();
-            }
-        });
-
-        // Handle modal hide event (before hidden)
-        document.addEventListener('hide.bs.modal', (e) => {
-            if (e.target.id === this.modalId) {
-                // Start cleanup process
+                // Delay cleanup to allow callback execution
                 setTimeout(() => {
                     this.cleanup();
-                }, 100);
+                }, 200);
             }
         });
 
@@ -134,6 +155,10 @@ class ConfirmationModal {
         this.onConfirm = onConfirm;
         this.onCancel = onCancel;
 
+        console.log('📦 Stored callbacks in show():');
+        console.log('  - onConfirm:', this.onConfirm);
+        console.log('  - onCancel:', this.onCancel);
+
         // Show modal with proper backdrop handling
         const modalElement = document.getElementById(this.modalId);
         const modal = new bootstrap.Modal(modalElement, {
@@ -145,20 +170,56 @@ class ConfirmationModal {
         // Clean up any existing backdrops before showing
         this.cleanup();
 
+        // Add direct event listener to the confirm button as backup
+        const confirmButton = document.getElementById('confirmButton');
+        if (confirmButton) {
+            console.log('🔗 Adding direct click listener to confirm button');
+            // Remove any existing listeners
+            confirmButton.removeEventListener('click', this.directConfirmHandler);
+            // Add new listener
+            this.directConfirmHandler = () => {
+                console.log('🎯 Direct button click handler triggered!');
+                this.handleConfirm();
+            };
+            confirmButton.addEventListener('click', this.directConfirmHandler);
+        }
+
         modal.show();
     }
 
     handleConfirm() {
+        console.log('🔘 CONFIRM BUTTON CLICKED');
+        console.log('🔍 Current onConfirm callback:', this.onConfirm);
+        console.log('🔍 Callback type:', typeof this.onConfirm);
+
+        // Store callback before hiding modal (to prevent cleanup from clearing it)
+        const callback = this.onConfirm;
+        console.log('📦 Stored callback:', callback);
+
         // Hide modal first
         const modalElement = document.getElementById(this.modalId);
         const modal = bootstrap.Modal.getInstance(modalElement);
         if (modal) {
+            console.log('🚪 Hiding modal...');
             modal.hide();
         }
 
-        // Execute callback
-        if (this.onConfirm && typeof this.onConfirm === 'function') {
-            this.onConfirm();
+        // Execute callback after a short delay to ensure modal is hidden
+        if (callback && typeof callback === 'function') {
+            console.log('✅ Executing callback in 100ms...');
+            setTimeout(() => {
+                console.log('🚀 EXECUTING CALLBACK NOW!');
+                try {
+                    callback();
+                    console.log('✅ Callback executed successfully');
+                } catch (error) {
+                    console.error('❌ Error executing callback:', error);
+                }
+            }, 100);
+        } else {
+            console.error('❌ NO VALID CALLBACK FOUND!');
+            console.log('Callback value:', callback);
+            console.log('Callback type:', typeof callback);
         }
     }
 
@@ -195,9 +256,15 @@ class ConfirmationModal {
 
     // Static method for easy usage
     static confirm(options) {
+        console.log('🏗️ ConfirmationModal.confirm called');
+        console.log('🔍 Current instance:', window.confirmationModalInstance);
+
         if (!window.confirmationModalInstance) {
+            console.log('🆕 Creating new ConfirmationModal instance');
             window.confirmationModalInstance = new ConfirmationModal();
         }
+
+        console.log('📞 Calling show() on instance');
         window.confirmationModalInstance.show(options);
     }
 }
@@ -224,26 +291,177 @@ window.confirm = function(message) {
     });
 };
 
-// Helper function for delete confirmations
+// Global function to clean up modal backdrops
+window.cleanupModalBackdrop = function() {
+    // Remove all modal backdrops
+    const backdrops = document.querySelectorAll('.modal-backdrop');
+    backdrops.forEach(backdrop => {
+        backdrop.remove();
+    });
+
+    // Clean up body classes and styles
+    document.body.classList.remove('modal-open');
+    document.body.style.overflow = '';
+    document.body.style.paddingRight = '';
+
+    console.log('🧹 Modal backdrop cleaned up');
+};
+
+// General confirmation function for different actions
+window.confirmAction = function(actionType, itemName, onConfirm, customMessage = null) {
+    const actionConfig = {
+        'delete': {
+            title: 'Delete Confirmation',
+            icon: 'fas fa-exclamation-triangle',
+            iconColor: '#ffc107',
+            message: customMessage || `Are you sure you want to delete this ${itemName}?`,
+            subtext: 'This action is not reversible.',
+            confirmText: 'Delete',
+            confirmClass: 'theme-btn-primary'
+        },
+        'lock': {
+            title: 'Lock Confirmation',
+            icon: 'fas fa-lock',
+            iconColor: '#dc3545',
+            message: customMessage || `Are you sure you want to lock this ${itemName}?`,
+            subtext: 'This will prevent the user from logging in.',
+            confirmText: 'Lock',
+            confirmClass: 'theme-btn-danger'
+        },
+        'unlock': {
+            title: 'Unlock Confirmation',
+            icon: 'fas fa-lock-open',
+            iconColor: '#28a745',
+            message: customMessage || `Are you sure you want to unlock this ${itemName}?`,
+            subtext: 'This will allow the user to log in again.',
+            confirmText: 'Unlock',
+            confirmClass: 'theme-btn-warning'
+        }
+    };
+
+    const config = actionConfig[actionType] || actionConfig['delete'];
+
+    // Create modal HTML if it doesn't exist
+    if (!document.getElementById('actionConfirmModal')) {
+        const modalHTML = `
+            <div class="modal fade" id="actionConfirmModal" tabindex="-1" aria-hidden="true">
+                <div class="modal-dialog modal-dialog-centered">
+                    <div class="modal-content theme-modal">
+                        <div class="modal-header theme-modal-header">
+                            <h5 class="modal-title" id="actionConfirmTitle">
+                                <i id="actionConfirmIcon" class="me-2"></i>
+                                <span id="actionConfirmTitleText">Confirmation</span>
+                            </h5>
+                            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                        </div>
+                        <div class="modal-body theme-modal-body">
+                            <div class="d-flex align-items-start">
+                                <div class="flex-shrink-0">
+                                    <i id="actionConfirmBodyIcon" class="fa-2x me-3"></i>
+                                </div>
+                                <div class="flex-grow-1">
+                                    <p class="mb-2" id="actionConfirmMessage">Are you sure?</p>
+                                    <small class="text-muted" id="actionConfirmSubtext">Please confirm your action.</small>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="modal-footer theme-modal-footer">
+                            <button type="button" class="btn" id="actionConfirmBtn">Confirm</button>
+                            <button type="button" class="btn theme-btn-danger" data-bs-dismiss="modal">Cancel</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+        document.body.insertAdjacentHTML('beforeend', modalHTML);
+
+        // Add event listeners for modal cleanup
+        const modalElement = document.getElementById('actionConfirmModal');
+
+        // Handle modal hidden event for backdrop cleanup
+        modalElement.addEventListener('hidden.bs.modal', function() {
+            setTimeout(window.cleanupModalBackdrop, 50);
+        });
+
+        // Handle close button and cancel button clicks
+        modalElement.addEventListener('click', function(e) {
+            if (e.target.hasAttribute('data-bs-dismiss') || e.target.closest('[data-bs-dismiss]')) {
+                setTimeout(window.cleanupModalBackdrop, 150);
+            }
+        });
+
+        // Handle backdrop click
+        modalElement.addEventListener('click', function(e) {
+            if (e.target === modalElement) {
+                setTimeout(window.cleanupModalBackdrop, 150);
+            }
+        });
+
+        // Handle escape key
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape' && modalElement.classList.contains('show')) {
+                setTimeout(window.cleanupModalBackdrop, 150);
+            }
+        });
+    }
+
+    // Clean up any existing backdrops before showing new modal
+    window.cleanupModalBackdrop();
+
+    // Update modal content
+    document.getElementById('actionConfirmTitleText').textContent = config.title;
+    document.getElementById('actionConfirmIcon').className = config.icon + ' me-2';
+    document.getElementById('actionConfirmIcon').style.color = config.iconColor;
+    document.getElementById('actionConfirmBodyIcon').className = config.icon + ' fa-2x me-3';
+    document.getElementById('actionConfirmBodyIcon').style.color = config.iconColor;
+    document.getElementById('actionConfirmMessage').textContent = config.message;
+    document.getElementById('actionConfirmSubtext').textContent = config.subtext;
+
+    // Update confirm button
+    const confirmBtn = document.getElementById('actionConfirmBtn');
+    confirmBtn.textContent = config.confirmText;
+    confirmBtn.className = 'btn ' + config.confirmClass;
+
+    // Remove any existing event listeners and add new one
+    const newConfirmBtn = confirmBtn.cloneNode(true);
+    confirmBtn.parentNode.replaceChild(newConfirmBtn, confirmBtn);
+
+    // Add click event listener
+    newConfirmBtn.addEventListener('click', function() {
+        // Hide modal
+        const modalElement = document.getElementById('actionConfirmModal');
+        const modal = bootstrap.Modal.getInstance(modalElement);
+        if (modal) {
+            modal.hide();
+        }
+
+        // Execute callback
+        if (onConfirm && typeof onConfirm === 'function') {
+            setTimeout(onConfirm, 100);
+        }
+    });
+
+    // Show modal
+    const modal = new bootstrap.Modal(document.getElementById('actionConfirmModal'), {
+        backdrop: true,
+        keyboard: true,
+        focus: true
+    });
+    modal.show();
+};
+
+// Helper function for delete confirmations (backward compatibility)
 window.confirmDelete = function(itemName, onConfirm) {
-    ConfirmationModal.confirm({
-        title: 'Delete Confirmation',
-        message: `Are you sure you want to delete this ${itemName}?`,
-        subtext: 'This action is not reversible.',
-        confirmText: 'Delete',
-        confirmClass: 'btn-primary',
-        onConfirm: onConfirm
+    window.confirmAction('delete', itemName, onConfirm);
+};
+
+// Test function to verify modal is working
+window.testConfirmationModal = function() {
+    console.log('🧪 Testing confirmation modal...');
+    window.confirmDelete('test item', function() {
+        console.log('🎉 TEST CALLBACK EXECUTED!');
+        alert('Test callback worked!');
     });
 };
 
-// Helper function for general confirmations
-window.confirmAction = function(action, itemName, onConfirm, isReversible = true) {
-    ConfirmationModal.confirm({
-        title: `${action} Confirmation`,
-        message: `Are you sure you want to ${action.toLowerCase()} this ${itemName}?`,
-        subtext: isReversible ? 'This action is reversible.' : 'This action cannot be undone.',
-        confirmText: action,
-        confirmClass: 'btn-primary',
-        onConfirm: onConfirm
-    });
-};
+
