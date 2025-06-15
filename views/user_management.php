@@ -7,7 +7,7 @@
 <?php include 'includes/sidebar.php'; ?>
 
 <div class="main-content">
-    <div class="container add-user-container">
+    <div class="container add-user-container user-management" data-user-page="true">
         <h1 class="page-title text-purple"><?= Localization::translate('user_management_title'); ?></h1>
 
         <!-- ✅ Filters & Search Section -->
@@ -174,6 +174,7 @@
                                         <a href="#" class="btn theme-btn-warning unlock-user"
                                             data-id="<?= $user['profile_id']; ?>"
                                             data-name="<?= htmlspecialchars($user['full_name']); ?>"
+                                            data-title="<?= htmlspecialchars($user['full_name']); ?>"
                                             title="<?= Localization::translate('user_grid_unlock_user'); ?>">
                                             <i class="fas fa-lock-open"></i>
                                         </a>
@@ -181,6 +182,7 @@
                                         <a href="#" class="btn theme-btn-danger lock-user"
                                             data-id="<?= $user['profile_id']; ?>"
                                             data-name="<?= htmlspecialchars($user['full_name']); ?>"
+                                            data-title="<?= htmlspecialchars($user['full_name']); ?>"
                                             title="<?= Localization::translate('user_grid_lock_user'); ?>">
                                             <i class="fas fa-lock"></i>
                                         </a>
@@ -190,6 +192,7 @@
                                     <a href="#" class="btn theme-btn-danger delete-user"
                                         data-id="<?= $user['profile_id']; ?>"
                                         data-name="<?= htmlspecialchars($user['full_name']); ?>"
+                                        data-title="<?= htmlspecialchars($user['full_name']); ?>"
                                         title="<?= Localization::translate('user_grid_delete_user'); ?>">
                                         <i class="fas fa-trash-alt"></i>
                                     </a>
@@ -235,47 +238,8 @@
     </div>
 </div>
 
+<!-- ✅ User Management Confirmations -->
+<script src="public/js/modules/user_confirmations.js"></script>
 <script src="public/js/user_management.js"></script>
-
-<script>
-// ✅ Professional User Management Confirmations
-document.addEventListener('click', function(e) {
-    // Delete User Confirmation
-    if (e.target.closest('.delete-user')) {
-        e.preventDefault();
-        const link = e.target.closest('.delete-user');
-        const id = link.dataset.id;
-        const name = link.dataset.name;
-
-        confirmDelete('user "' + name + '"', function() {
-            window.location.href = 'index.php?controller=UserManagementController&action=deleteUser&id=' + id;
-        });
-    }
-
-    // Lock User Confirmation
-    if (e.target.closest('.lock-user')) {
-        e.preventDefault();
-        const link = e.target.closest('.lock-user');
-        const id = link.dataset.id;
-        const name = link.dataset.name;
-
-        confirmAction('Lock', 'user "' + name + '"', function() {
-            window.location.href = 'index.php?controller=UserManagementController&action=toggleLock&id=' + id + '&status=1';
-        });
-    }
-
-    // Unlock User Confirmation
-    if (e.target.closest('.unlock-user')) {
-        e.preventDefault();
-        const link = e.target.closest('.unlock-user');
-        const id = link.dataset.id;
-        const name = link.dataset.name;
-
-        confirmAction('Unlock', 'user "' + name + '"', function() {
-            window.location.href = 'index.php?controller=UserManagementController&action=toggleLock&id=' + id + '&status=0';
-        });
-    }
-});
-</script>
 
 <?php include 'includes/footer.php'; ?>

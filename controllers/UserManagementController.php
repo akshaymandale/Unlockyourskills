@@ -296,7 +296,39 @@ class UserManagementController extends BaseController {
             }
         }
     }
-    // Lock and unlock user from actions
+    // Lock user
+    public function lockUser() {
+        if (isset($_GET['id'])) {
+            $profile_id = $_GET['id'];
+            $result = $this->userModel->updateLockStatus($profile_id, 1); // 1 = locked
+
+            if ($result) {
+                $this->toastSuccess('User locked successfully!', 'index.php?controller=UserManagementController');
+            } else {
+                $this->toastError('Failed to lock user.', 'index.php?controller=UserManagementController');
+            }
+        } else {
+            $this->toastError('Invalid request parameters.', 'index.php?controller=UserManagementController');
+        }
+    }
+
+    // Unlock user
+    public function unlockUser() {
+        if (isset($_GET['id'])) {
+            $profile_id = $_GET['id'];
+            $result = $this->userModel->updateLockStatus($profile_id, 0); // 0 = unlocked
+
+            if ($result) {
+                $this->toastSuccess('User unlocked successfully!', 'index.php?controller=UserManagementController');
+            } else {
+                $this->toastError('Failed to unlock user.', 'index.php?controller=UserManagementController');
+            }
+        } else {
+            $this->toastError('Invalid request parameters.', 'index.php?controller=UserManagementController');
+        }
+    }
+
+    // Legacy method - Lock and unlock user from actions
     public function toggleLock() {
         if (isset($_GET['id']) && isset($_GET['status'])) {
             $profile_id = $_GET['id'];

@@ -56,8 +56,10 @@ if (session_status() === PHP_SESSION_NONE) {
         <script src="public/js/translations.js"></script>
         <!-- Toast notifications enabled -->
         <script src="public/js/toast_notifications.js"></script>
-        <!-- Professional confirmation modals -->
+        <!-- ✅ Centralized Confirmation System -->
         <script src="public/js/confirmation_modal.js"></script>
+        <script src="public/js/confirmation_handlers.js"></script>
+        <script src="public/js/confirmation_loader.js"></script>
 </head>
 <body>
 

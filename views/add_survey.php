@@ -136,9 +136,10 @@
                     <i class="fas fa-edit"></i>
                   </button>
 
-                  <a href="index.php?controller=SurveyQuestionController&action=delete&id=<?= $question['id']; ?>"
-                    class="btn theme-btn-danger" title="<?= Localization::translate('survey_grid_delete'); ?>"
-                    onclick="return confirm('<?= Localization::translate('survey_grid_delete_confirm'); ?>');">
+                  <a href="#" class="btn theme-btn-danger delete-survey-question"
+                    data-id="<?= $question['id']; ?>"
+                    data-title="<?= htmlspecialchars($question['question_text']); ?>"
+                    title="<?= Localization::translate('survey_grid_delete'); ?>">
                     <i class="fas fa-trash-alt"></i>
                   </a>
                 </td>
