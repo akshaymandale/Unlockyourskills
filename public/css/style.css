@@ -384,14 +384,38 @@ html, body {
 }
 
 /* ✅ Login Page Styling */
+
+/* Reset all margins and padding for login page */
+.login-body * {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+.login-body html,
+.login-body body {
+    height: 100%;
+    margin: 0;
+    padding: 0;
+    overflow-x: hidden;
+}
+
+.login-body {
+    margin: 0;
+    padding: 0;
+    height: 100vh;
+    background: linear-gradient(to right, #6a0dad, #b39ddb);
+}
+
 .login-container {
+    margin: 0;
+    padding: 0;
+    height: 100vh;
+    width: 100vw;
     display: flex;
     justify-content: center;
     align-items: center;
-    height: 100vh;
     background: linear-gradient(to right, #6a0dad, #b39ddb);
-    margin: 0;
-    padding: 0;
 }
 
 .login-box {
@@ -471,6 +495,158 @@ html, body {
 
 .forgot-password a:hover {
     text-decoration: underline;
+}
+
+/* ✅ Login Form Validation Styling */
+.form-group {
+    margin-bottom: 15px;
+}
+
+.error-message {
+    color: #dc3545;
+    font-size: 12px;
+    margin-top: 5px;
+    display: none;
+}
+
+.error-message.show {
+    display: block;
+}
+
+.login-input.error {
+    border-color: #dc3545;
+    box-shadow: 0 0 0 0.2rem rgba(220, 53, 69, 0.25);
+}
+
+/* ✅ SSO Section Styling */
+.sso-section {
+    margin-top: 20px;
+}
+
+.divider {
+    text-align: center;
+    margin: 20px 0;
+    position: relative;
+}
+
+.divider::before {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 0;
+    right: 0;
+    height: 1px;
+    background: #ddd;
+}
+
+.divider span {
+    background: white;
+    padding: 0 15px;
+    color: #666;
+    font-size: 14px;
+}
+
+.sso-providers {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.sso-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 10px 15px;
+    border: 1px solid #ddd;
+    border-radius: 5px;
+    text-decoration: none;
+    color: #333;
+    transition: all 0.3s ease;
+}
+
+.sso-btn:hover {
+    background-color: #f8f9fa;
+    border-color: #007bff;
+    color: #007bff;
+}
+
+.sso-btn i {
+    margin-right: 8px;
+}
+
+.spinner {
+    margin-left: 10px;
+}
+
+/* ✅ Client Management Specific Styling */
+.client-code-input {
+    text-transform: uppercase;
+}
+
+.current-logo-preview {
+    margin-top: 10px;
+}
+
+.current-logo-img {
+    max-width: 100px;
+    max-height: 50px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+}
+
+.progress-bar-thin {
+    height: 4px;
+}
+
+.search-results-info {
+    display: none;
+}
+
+.loading-indicator {
+    display: none;
+}
+
+/* Client card styling improvements */
+.client-card {
+    transition: transform 0.2s ease-in-out;
+}
+
+.client-card:hover {
+    transform: translateY(-2px);
+}
+
+.info-item {
+    margin-bottom: 8px;
+}
+
+.info-item:last-child {
+    margin-bottom: 0;
+}
+
+/* Form validation styling for client forms */
+.client-form .error-message {
+    color: #dc3545;
+    font-size: 0.875rem;
+    margin-top: 0.25rem;
+    display: none;
+}
+
+.client-form .error-message.show {
+    display: block;
+}
+
+.client-form .is-invalid {
+    border-color: #dc3545;
+    box-shadow: 0 0 0 0.2rem rgba(220, 53, 69, 0.25);
+}
+
+/* Loading states for buttons */
+.btn-loading {
+    position: relative;
+}
+
+.btn-loading .spinner {
+    margin-right: 0.5rem;
 }
 
 /* ✅ User Management Page Styling */

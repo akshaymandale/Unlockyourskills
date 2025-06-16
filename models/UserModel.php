@@ -1,20 +1,23 @@
 <?php
 require_once 'config/Database.php';
+require_once 'models/UserRoleModel.php';
 
 class UserModel {
     private $conn;
+    private $userRoleModel;
 
     public function __construct() {
         $database = new Database();
         $this->conn = $database->connect();
+        $this->userRoleModel = new UserRoleModel();
     }
 
     public function getUser($client_code, $username) {
-        $stmt = $this->conn->prepare("SELECT up.*, c.client_name, c.max_users, c.current_user_count
+        $stmt = $this->conn->prepare("SELECT up.*, c.client_name, c.client_code, c.max_users, c.current_user_count, c.sso_enabled
                                      FROM user_profiles up
                                      LEFT JOIN clients c ON up.client_id = c.id
-                                     WHERE up.client_id = ? AND up.email = ?");
-        $stmt->execute([$client_code, $username]);
+                                     WHERE c.client_code = ? AND (up.email = ? OR up.profile_id = ?) AND up.is_deleted = 0");
+        $stmt->execute([$client_code, $username, $username]);
         return $stmt->fetch(PDO::FETCH_ASSOC);
     }
     
@@ -95,13 +98,8 @@ class UserModel {
     
         $stmt = $this->conn->prepare($sql);
 
-        // Determine system_role based on user_role
-        $system_role = 'user'; // default
-        if ($user_role === 'Admin') {
-            $system_role = 'admin';
-        } elseif ($user_role === 'Super Admin') {
-            $system_role = 'super_admin';
-        }
+        // Determine system_role based on user_role using UserRoleModel
+        $system_role = $this->userRoleModel->getSystemRoleForUserRole($user_role);
 
         try {
             $result = $stmt->execute([
@@ -280,6 +278,27 @@ class UserModel {
         $stmt = $this->conn->prepare("SELECT DISTINCT user_role FROM user_profiles WHERE is_deleted = 0 AND user_role IS NOT NULL AND user_role != '' ORDER BY user_role ASC");
         $stmt->execute();
         return $stmt->fetchAll(PDO::FETCH_COLUMN);
+    }
+
+    /**
+     * Get available user roles from user_roles table
+     */
+    public function getAvailableUserRoles() {
+        return $this->userRoleModel->getAllRoles();
+    }
+
+    /**
+     * Get client-specific user roles (excluding super admin)
+     */
+    public function getClientUserRoles() {
+        return $this->userRoleModel->getClientRoles();
+    }
+
+    /**
+     * Get admin roles only
+     */
+    public function getAdminUserRoles() {
+        return $this->userRoleModel->getAdminRoles();
     }
 
     public function getDistinctGenders() {

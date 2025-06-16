@@ -144,33 +144,39 @@ $countries = $stmt->fetchAll(PDO::FETCH_ASSOC);
                                 if ($isSuperAdminForClient): ?>
                                     <!-- Super admin adding for specific client - only Admin role -->
                                     <?php
-                                    // Check if admin role should be disabled
-                                    $adminDisabled = '';
-                                    $adminText = Localization::translate('admin');
+                                    // Get admin roles from database
+                                    foreach ($adminRoles as $role) {
+                                        $adminDisabled = '';
+                                        $adminText = $role['role_name'];
 
-                                    if ($adminRoleStatus && !$adminRoleStatus['canAdd']) {
-                                        $adminDisabled = 'disabled';
-                                        $adminText .= ' (Limit Reached)';
+                                        if ($adminRoleStatus && !$adminRoleStatus['canAdd']) {
+                                            $adminDisabled = 'disabled';
+                                            $adminText .= ' (Limit Reached)';
+                                        }
+                                        ?>
+                                        <option value="<?= htmlspecialchars($role['role_name']); ?>" <?= $adminDisabled; ?> selected><?= $adminText; ?></option>
+                                        <?php
                                     }
                                     ?>
-                                    <option value="Admin" <?= $adminDisabled; ?> selected><?= $adminText; ?></option>
                                 <?php else: ?>
                                     <!-- Regular admin or super admin not in client context - show all roles -->
                                     <option value=""><?= Localization::translate('select_user_role'); ?></option>
                                     <?php
-                                    // Check if admin role should be disabled
-                                    $adminDisabled = '';
-                                    $adminText = Localization::translate('admin');
+                                    // Display all client roles from database
+                                    foreach ($userRoles as $role) {
+                                        $roleDisabled = '';
+                                        $roleText = $role['role_name'];
 
-                                    if ($adminRoleStatus && !$adminRoleStatus['canAdd']) {
-                                        $adminDisabled = 'disabled';
-                                        $adminText .= ' (Limit Reached)';
+                                        // Check if admin role should be disabled
+                                        if ($role['system_role'] === 'admin' && $adminRoleStatus && !$adminRoleStatus['canAdd']) {
+                                            $roleDisabled = 'disabled';
+                                            $roleText .= ' (Limit Reached)';
+                                        }
+                                        ?>
+                                        <option value="<?= htmlspecialchars($role['role_name']); ?>" <?= $roleDisabled; ?>><?= $roleText; ?></option>
+                                        <?php
                                     }
                                     ?>
-                                    <option value="Admin" <?= $adminDisabled; ?>><?= $adminText; ?></option>
-                                    <option value="End User"><?= Localization::translate('end_user'); ?></option>
-                                    <option value="Instructor"><?= Localization::translate('instructor'); ?></option>
-                                    <option value="Corporate Manager"><?= Localization::translate('corporate_manager'); ?></option>
                                 <?php endif; ?>
                             </select>
 

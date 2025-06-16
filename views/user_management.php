@@ -214,38 +214,51 @@
                                     if (isset($_GET['client_id'])) {
                                         $editUserUrl .= '&client_id=' . urlencode($_GET['client_id']);
                                     }
+
+                                    // Check if user is Super Admin
+                                    $isSuperAdmin = ($user['system_role'] === 'super_admin' || $user['user_role'] === 'Super Admin');
+                                    $disabledClass = $isSuperAdmin ? 'disabled' : '';
+                                    $disabledStyle = $isSuperAdmin ? 'style="pointer-events: none; opacity: 0.5; cursor: not-allowed;"' : '';
+                                    $disabledTitle = $isSuperAdmin ? Localization::translate('user_grid_edit_disabled') : Localization::translate('user_grid_edit_user');
                                     ?>
-                                    <a href="<?= $editUserUrl; ?>"
-                                        class="btn theme-btn-primary"
-                                        title="<?= Localization::translate('user_grid_edit_user'); ?>">
+                                    <a href="<?= $isSuperAdmin ? '#' : $editUserUrl; ?>"
+                                        class="btn theme-btn-primary <?= $disabledClass; ?>"
+                                        <?= $disabledStyle; ?>
+                                        title="<?= $disabledTitle; ?>">
                                         <i class="fas fa-edit"></i>
                                     </a>
 
                                     <!-- ✅ Lock/Unlock Button -->
                                     <?php if ($user['locked_status'] == 1): ?>
-                                        <a href="#" class="btn theme-btn-warning unlock-user"
-                                            data-id="<?= $user['profile_id']; ?>"
-                                            data-name="<?= htmlspecialchars($user['full_name']); ?>"
-                                            data-title="<?= htmlspecialchars($user['full_name']); ?>"
-                                            title="<?= Localization::translate('user_grid_unlock_user'); ?>">
+                                        <a href="<?= $isSuperAdmin ? '#' : '#'; ?>"
+                                            class="btn theme-btn-warning <?= $isSuperAdmin ? 'disabled' : 'unlock-user'; ?>"
+                                            <?= $isSuperAdmin ? $disabledStyle : ''; ?>
+                                            <?= $isSuperAdmin ? '' : 'data-id="' . $user['profile_id'] . '"'; ?>
+                                            <?= $isSuperAdmin ? '' : 'data-name="' . htmlspecialchars($user['full_name']) . '"'; ?>
+                                            <?= $isSuperAdmin ? '' : 'data-title="' . htmlspecialchars($user['full_name']) . '"'; ?>
+                                            title="<?= $isSuperAdmin ? Localization::translate('user_grid_unlock_disabled') : Localization::translate('user_grid_unlock_user'); ?>">
                                             <i class="fas fa-lock-open"></i>
                                         </a>
                                     <?php else: ?>
-                                        <a href="#" class="btn theme-btn-danger lock-user"
-                                            data-id="<?= $user['profile_id']; ?>"
-                                            data-name="<?= htmlspecialchars($user['full_name']); ?>"
-                                            data-title="<?= htmlspecialchars($user['full_name']); ?>"
-                                            title="<?= Localization::translate('user_grid_lock_user'); ?>">
+                                        <a href="<?= $isSuperAdmin ? '#' : '#'; ?>"
+                                            class="btn theme-btn-danger <?= $isSuperAdmin ? 'disabled' : 'lock-user'; ?>"
+                                            <?= $isSuperAdmin ? $disabledStyle : ''; ?>
+                                            <?= $isSuperAdmin ? '' : 'data-id="' . $user['profile_id'] . '"'; ?>
+                                            <?= $isSuperAdmin ? '' : 'data-name="' . htmlspecialchars($user['full_name']) . '"'; ?>
+                                            <?= $isSuperAdmin ? '' : 'data-title="' . htmlspecialchars($user['full_name']) . '"'; ?>
+                                            title="<?= $isSuperAdmin ? Localization::translate('user_grid_lock_disabled') : Localization::translate('user_grid_lock_user'); ?>">
                                             <i class="fas fa-lock"></i>
                                         </a>
                                     <?php endif; ?>
 
                                     <!-- ✅ Delete Button -->
-                                    <a href="#" class="btn theme-btn-danger delete-user"
-                                        data-id="<?= $user['profile_id']; ?>"
-                                        data-name="<?= htmlspecialchars($user['full_name']); ?>"
-                                        data-title="<?= htmlspecialchars($user['full_name']); ?>"
-                                        title="<?= Localization::translate('user_grid_delete_user'); ?>">
+                                    <a href="#"
+                                        class="btn theme-btn-danger <?= $isSuperAdmin ? 'disabled' : 'delete-user'; ?>"
+                                        <?= $isSuperAdmin ? $disabledStyle : ''; ?>
+                                        <?= $isSuperAdmin ? '' : 'data-id="' . $user['profile_id'] . '"'; ?>
+                                        <?= $isSuperAdmin ? '' : 'data-name="' . htmlspecialchars($user['full_name']) . '"'; ?>
+                                        <?= $isSuperAdmin ? '' : 'data-title="' . htmlspecialchars($user['full_name']) . '"'; ?>
+                                        title="<?= $isSuperAdmin ? Localization::translate('user_grid_delete_disabled') : Localization::translate('user_grid_delete_user'); ?>">
                                         <i class="fas fa-trash-alt"></i>
                                     </a>
                                 </td>

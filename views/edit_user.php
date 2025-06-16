@@ -91,22 +91,24 @@ $clientName = $_SESSION['client_code'] ?? 'DEFAULT';
                             <select id="user_role" name="user_role" class="input-field">
                                 <option value=""><?= Localization::translate('select_user_role'); ?></option>
                                 <?php
-                                // Check if admin role should be disabled
-                                $adminDisabled = '';
-                                $adminText = Localization::translate('admin');
-                                $adminSelected = $user['user_role'] == 'Admin' ? 'selected' : '';
+                                // Display all client roles from database
+                                foreach ($userRoles as $role) {
+                                    $roleDisabled = '';
+                                    $roleText = $role['role_name'];
+                                    $roleSelected = $user['user_role'] == $role['role_name'] ? 'selected' : '';
 
-                                // If user is currently admin, always allow (they can change from admin)
-                                // If user is not admin and limit reached, disable the option
-                                if ($user['user_role'] != 'Admin' && $adminRoleStatus && !$adminRoleStatus['canAdd']) {
-                                    $adminDisabled = 'disabled';
-                                    $adminText .= ' (Limit Reached)';
+                                    // Check if admin role should be disabled
+                                    // If user is currently admin, always allow (they can change from admin)
+                                    // If user is not admin and limit reached, disable the option
+                                    if ($role['system_role'] === 'admin' && $user['user_role'] != $role['role_name'] && $adminRoleStatus && !$adminRoleStatus['canAdd']) {
+                                        $roleDisabled = 'disabled';
+                                        $roleText .= ' (Limit Reached)';
+                                    }
+                                    ?>
+                                    <option value="<?= htmlspecialchars($role['role_name']); ?>" <?= $roleSelected; ?> <?= $roleDisabled; ?>><?= $roleText; ?></option>
+                                    <?php
                                 }
                                 ?>
-                                <option value="Admin" <?= $adminSelected; ?> <?= $adminDisabled; ?>><?= $adminText; ?></option>
-                                <option value="End User" <?= $user['user_role'] == 'End User' ? 'selected' : ''; ?>><?= Localization::translate('end_user'); ?></option>
-                                <option value="Instructor" <?= $user['user_role'] == 'Instructor' ? 'selected' : ''; ?>><?= Localization::translate('instructor'); ?></option>
-                                <option value="Corporate Manager" <?= $user['user_role'] == 'Corporate Manager' ? 'selected' : ''; ?>><?= Localization::translate('corporate_manager'); ?></option>
                             </select>
                             <?php if ($user['user_role'] != 'Admin' && $adminRoleStatus && !$adminRoleStatus['canAdd']): ?>
                                 <small class="text-muted">
