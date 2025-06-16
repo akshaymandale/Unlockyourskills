@@ -64,25 +64,25 @@ class ClientController extends BaseController {
 
             // Validate client name
             if (empty($_POST['client_name']) || trim($_POST['client_name']) === '') {
-                $errors[] = 'Client name is required.';
+                $errors[] = Localization::translate('validation.client_name_required');
             }
 
             // Validate max users
             if (empty($_POST['max_users']) || trim($_POST['max_users']) === '') {
-                $errors[] = 'Maximum users is required.';
+                $errors[] = Localization::translate('validation.max_users_required');
             } elseif (!is_numeric($_POST['max_users'])) {
-                $errors[] = 'Maximum users must be a number.';
+                $errors[] = Localization::translate('validation.max_users_numeric');
             } elseif ((int)$_POST['max_users'] < 1) {
-                $errors[] = 'Maximum users must be at least 1.';
+                $errors[] = Localization::translate('validation.max_users_minimum');
             }
 
             // Validate admin role limit
             if (empty($_POST['admin_role_limit']) || trim($_POST['admin_role_limit']) === '') {
-                $errors[] = 'Admin role limit is required.';
+                $errors[] = Localization::translate('validation.admin_role_limit_required');
             } elseif (!is_numeric($_POST['admin_role_limit'])) {
-                $errors[] = 'Admin role limit must be a number.';
+                $errors[] = Localization::translate('validation.admin_role_limit_numeric');
             } elseif ((int)$_POST['admin_role_limit'] < 1) {
-                $errors[] = 'Admin role limit must be at least 1.';
+                $errors[] = Localization::translate('validation.admin_role_limit_minimum');
             }
 
             // Validate logo upload
@@ -118,7 +118,7 @@ class ClientController extends BaseController {
             // Handle logo upload
             $logoPath = $this->handleLogoUpload($_FILES['logo']);
             if (!$logoPath) {
-                $this->toastError('Failed to upload logo. Please try again.', 'index.php?controller=ClientController');
+                $this->toastError(Localization::translate('validation.logo_upload_failed'), 'index.php?controller=ClientController');
                 return;
             }
 
@@ -135,7 +135,7 @@ class ClientController extends BaseController {
             ];
 
             if ($this->clientModel->createClient($data)) {
-                $this->toastSuccess('Client created successfully!', 'index.php?controller=ClientController');
+                $this->toastSuccess(Localization::translate('success.client_created'), 'index.php?controller=ClientController');
             } else {
                 $this->toastError('Failed to create client. Please try again.', 'index.php?controller=ClientController');
             }
@@ -199,15 +199,15 @@ class ClientController extends BaseController {
         try {
             $clientId = $_POST['client_id'] ?? null;
             if (!$clientId) {
-                header('Location: index.php?controller=ClientController&error=client_id_required');
-                exit;
+                $this->toastError(Localization::translate('validation.client_id_required'), 'index.php?controller=ClientController');
+                return;
             }
 
             // Get existing client
             $existingClient = $this->clientModel->getClientById($clientId);
             if (!$existingClient) {
-                header('Location: index.php?controller=ClientController&error=client_not_found');
-                exit;
+                $this->toastError(Localization::translate('validation.client_not_found'), 'index.php?controller=ClientController');
+                return;
             }
 
             // ✅ Server-side validation (similar to store method but for update)
@@ -215,25 +215,25 @@ class ClientController extends BaseController {
 
             // Validate client name
             if (empty($_POST['client_name']) || trim($_POST['client_name']) === '') {
-                $errors[] = 'Client name is required.';
+                $errors[] = Localization::translate('validation.client_name_required');
             }
 
             // Validate max users
             if (empty($_POST['max_users']) || trim($_POST['max_users']) === '') {
-                $errors[] = 'Maximum users is required.';
+                $errors[] = Localization::translate('validation.max_users_required');
             } elseif (!is_numeric($_POST['max_users'])) {
-                $errors[] = 'Maximum users must be a number.';
+                $errors[] = Localization::translate('validation.max_users_numeric');
             } elseif ((int)$_POST['max_users'] < 1) {
-                $errors[] = 'Maximum users must be at least 1.';
+                $errors[] = Localization::translate('validation.max_users_minimum');
             }
 
             // Validate admin role limit
             if (empty($_POST['admin_role_limit']) || trim($_POST['admin_role_limit']) === '') {
-                $errors[] = 'Admin role limit is required.';
+                $errors[] = Localization::translate('validation.admin_role_limit_required');
             } elseif (!is_numeric($_POST['admin_role_limit'])) {
-                $errors[] = 'Admin role limit must be a number.';
+                $errors[] = Localization::translate('validation.admin_role_limit_numeric');
             } elseif ((int)$_POST['admin_role_limit'] < 1) {
-                $errors[] = 'Admin role limit must be at least 1.';
+                $errors[] = Localization::translate('validation.admin_role_limit_minimum');
             }
 
             // Handle logo upload (optional for update)
@@ -292,14 +292,14 @@ class ClientController extends BaseController {
             ];
 
             if ($this->clientModel->updateClient($clientId, $data)) {
-                $this->toastSuccess('Client updated successfully!', 'index.php?controller=ClientController');
+                $this->toastSuccess(Localization::translate('success.client_updated'), 'index.php?controller=ClientController');
             } else {
                 $this->toastError('Failed to update client. Please try again.', 'index.php?controller=ClientController');
             }
 
         } catch (Exception $e) {
             error_log("Client update error: " . $e->getMessage());
-            $this->toastError('An unexpected error occurred while updating client.', 'index.php?controller=ClientController');
+            $this->toastError(Localization::translate('error.client_update_failed'), 'index.php?controller=ClientController');
         }
     }
 

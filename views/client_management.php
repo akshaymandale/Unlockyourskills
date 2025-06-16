@@ -6,7 +6,7 @@
     <div class="container mt-4 client-management">
 
         <!-- Page Header -->
-        <h1 class="page-title text-purple">Client Management</h1>
+        <h1 class="page-title text-purple"><?= Localization::translate('client_management_title'); ?></h1>
 
         <!-- ✅ Filters & Search Section -->
         <div class="filter-section">
@@ -17,10 +17,10 @@
                     <!-- Status Filter -->
                     <div class="col-auto">
                         <select class="form-select form-select-sm" id="statusFilter">
-                            <option value="">All Statuses</option>
-                            <option value="active" <?= ($filters['status'] === 'active') ? 'selected' : ''; ?>>Active</option>
-                            <option value="inactive" <?= ($filters['status'] === 'inactive') ? 'selected' : ''; ?>>Inactive</option>
-                            <option value="suspended" <?= ($filters['status'] === 'suspended') ? 'selected' : ''; ?>>Suspended</option>
+                            <option value=""><?= Localization::translate('clients_all_statuses'); ?></option>
+                            <option value="active" <?= ($filters['status'] === 'active') ? 'selected' : ''; ?>><?= Localization::translate('clients_active'); ?></option>
+                            <option value="inactive" <?= ($filters['status'] === 'inactive') ? 'selected' : ''; ?>><?= Localization::translate('clients_inactive'); ?></option>
+                            <option value="suspended" <?= ($filters['status'] === 'suspended') ? 'selected' : ''; ?>><?= Localization::translate('clients_suspended'); ?></option>
                         </select>
                     </div>
 
@@ -29,10 +29,10 @@
                         <div class="input-group input-group-sm">
                             <input type="text" id="searchInput" class="form-control"
                                 value="<?= htmlspecialchars($search); ?>"
-                                placeholder="Search clients..."
-                                title="Search clients">
+                                placeholder="<?= Localization::translate('clients_search_placeholder'); ?>"
+                                title="<?= Localization::translate('clients_search_title'); ?>">
                             <button type="button" id="searchButton" class="btn btn-outline-secondary"
-                                title="Search clients">
+                                title="<?= Localization::translate('clients_search_title'); ?>">
                                 <i class="fas fa-search"></i>
                             </button>
                         </div>
@@ -41,8 +41,8 @@
                     <!-- Clear Filters Button -->
                     <div class="col-auto">
                         <button type="button" class="btn btn-sm btn-clear-filters" id="clearFiltersBtn"
-                            title="Clear all filters">
-                            <i class="fas fa-times me-1"></i> Clear Filters
+                            title="<?= Localization::translate('clients_clear_filters_title'); ?>">
+                            <i class="fas fa-times me-1"></i> <?= Localization::translate('clients_clear_filters'); ?>
                         </button>
                     </div>
 
@@ -51,8 +51,8 @@
                         <button type="button" class="btn btn-sm btn-primary"
                             data-bs-toggle="modal"
                             data-bs-target="#addClientModal"
-                            title="Add new client">
-                            <i class="fas fa-plus me-1"></i> Add Client
+                            title="<?= Localization::translate('clients_add_client_title'); ?>">
+                            <i class="fas fa-plus me-1"></i> <?= Localization::translate('clients_add_client'); ?>
                         </button>
                     </div>
 
@@ -71,7 +71,7 @@
             <div class="spinner-border text-primary" role="status">
                 <span class="visually-hidden">Loading...</span>
             </div>
-            <p class="mt-2">Loading clients...</p>
+            <p class="mt-2"><?= Localization::translate('clients_loading'); ?></p>
         </div>
 
             <!-- Clients Grid -->
@@ -80,7 +80,7 @@
                     <div class="col-12">
                         <div class="alert alert-info text-center">
                             <i class="fas fa-info-circle me-2"></i>
-                            No clients found
+                            <?= Localization::translate('clients_no_clients_found'); ?>
                         </div>
                     </div>
                 <?php else: ?>
@@ -108,44 +108,44 @@
                                 <div class="card-body">
                                     <div class="client-info">
                                         <div class="info-item">
-                                            <strong>Client ID:</strong>
+                                            <strong><?= Localization::translate('clients_client_id'); ?>:</strong>
                                             <span class="text-muted"><?= $client['id']; ?></span>
                                         </div>
-                                        
+
                                         <div class="info-item">
-                                            <strong>Users:</strong>
+                                            <strong><?= Localization::translate('clients_users'); ?>:</strong>
                                             <span class="text-muted">
                                                 <?= $client['active_users']; ?> / <?= $client['max_users']; ?>
                                             </span>
                                             <div class="progress mt-1" style="height: 4px;">
-                                                <div class="progress-bar" role="progressbar" 
+                                                <div class="progress-bar" role="progressbar"
                                                      style="width: <?= $client['max_users'] > 0 ? ($client['active_users'] / $client['max_users'] * 100) : 0; ?>%">
                                                 </div>
                                             </div>
                                         </div>
-                                        
+
                                         <div class="info-item">
-                                            <strong>Admin Limit:</strong>
-                                            <span class="text-muted"><?= $client['admin_role_limit'] ?? 5; ?> roles</span>
+                                            <strong><?= Localization::translate('clients_admin_limit'); ?>:</strong>
+                                            <span class="text-muted"><?= $client['admin_role_limit'] ?? 5; ?> <?= Localization::translate('clients_roles'); ?></span>
                                         </div>
 
                                         <div class="info-item">
-                                            <strong>Features:</strong>
+                                            <strong><?= Localization::translate('clients_features'); ?>:</strong>
                                             <div class="feature-badges mt-1">
                                                 <?php if (($client['reports_enabled'] ?? 1) == 1): ?>
-                                                    <span class="badge bg-success me-1">Reports</span>
+                                                    <span class="badge bg-success me-1"><?= Localization::translate('clients_reports'); ?></span>
                                                 <?php endif; ?>
                                                 <?php if (($client['theme_settings'] ?? 1) == 1): ?>
-                                                    <span class="badge bg-info me-1">Themes</span>
+                                                    <span class="badge bg-info me-1"><?= Localization::translate('clients_themes'); ?></span>
                                                 <?php endif; ?>
                                                 <?php if (($client['sso_enabled'] ?? 0) == 1): ?>
-                                                    <span class="badge bg-warning me-1">SSO</span>
+                                                    <span class="badge bg-warning me-1"><?= Localization::translate('clients_sso'); ?></span>
                                                 <?php endif; ?>
                                             </div>
                                         </div>
 
                                         <div class="info-item">
-                                            <strong>Created:</strong>
+                                            <strong><?= Localization::translate('clients_created'); ?>:</strong>
                                             <span class="text-muted"><?= date('M j, Y', strtotime($client['created_at'])); ?></span>
                                         </div>
                                     </div>
@@ -155,22 +155,22 @@
                                     <div class="btn-group w-100" role="group">
                                         <button type="button" class="btn btn-sm theme-btn-secondary edit-client-btn"
                                                 data-client-id="<?= $client['id']; ?>"
-                                                title="Edit">
+                                                title="<?= Localization::translate('clients_edit_title'); ?>">
                                             <i class="fas fa-edit"></i>
                                         </button>
                                         <a href="index.php?controller=UserManagementController&client_id=<?= $client['id']; ?>"
-                                           class="btn btn-sm btn-outline-primary" title="Manage Users">
+                                           class="btn btn-sm btn-outline-primary" title="<?= Localization::translate('clients_manage_users_title'); ?>">
                                             <i class="fas fa-users"></i>
                                         </a>
                                         <a href="index.php?controller=ClientController&action=stats&id=<?= $client['id']; ?>"
-                                           class="btn btn-sm btn-outline-info" title="Statistics">
+                                           class="btn btn-sm btn-outline-info" title="<?= Localization::translate('clients_statistics_title'); ?>">
                                             <i class="fas fa-chart-bar"></i>
                                         </a>
                                         <?php if ($client['id'] != 1): // Don't show delete for Super Admin client ?>
                                             <a href="#" class="btn btn-sm theme-btn-danger delete-client"
                                                data-id="<?= $client['id']; ?>"
                                                data-name="<?= htmlspecialchars($client['client_name']); ?>"
-                                               title="Delete">
+                                               title="<?= Localization::translate('clients_delete_title'); ?>">
                                                 <i class="fas fa-trash-alt"></i>
                                             </a>
                                         <?php endif; ?>
@@ -184,7 +184,7 @@
 
             <!-- Pagination -->
             <?php if ($totalPages > 1): ?>
-                <nav aria-label="Clients pagination">
+                <nav aria-label="<?= Localization::translate('clients_pagination_label'); ?>">
                     <ul class="pagination justify-content-center">
                         <?php for ($i = 1; $i <= $totalPages; $i++): ?>
                             <li class="page-item <?= ($i === $page) ? 'active' : ''; ?>">
@@ -205,88 +205,88 @@
         <div class="modal-content">
             <div class="modal-header">
                 <h5 class="modal-title" id="addClientModalLabel">
-                    <i class="fas fa-building me-2"></i>Add New Client
+                    <i class="fas fa-building me-2"></i><?= Localization::translate('clients_add_modal_title'); ?>
                 </h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="<?= Localization::translate('clients_close'); ?>"></button>
             </div>
             <form id="addClientForm" method="POST" action="index.php?controller=ClientController&action=store" enctype="multipart/form-data">
                 <div class="modal-body">
                     <div class="row">
                         <!-- Basic Information -->
                         <div class="col-md-6">
-                            <h6 class="text-purple mb-3">Basic Information</h6>
+                            <h6 class="text-purple mb-3"><?= Localization::translate('clients_basic_information'); ?></h6>
 
                             <div class="mb-3">
-                                <label for="client_name" class="form-label">Client Name <span class="text-danger">*</span></label>
+                                <label for="client_name" class="form-label"><?= Localization::translate('clients_client_name_required'); ?></label>
                                 <input type="text" class="form-control" id="client_name" name="client_name">
                             </div>
 
                             <div class="mb-3">
-                                <label for="max_users" class="form-label">Maximum Users <span class="text-danger">*</span></label>
-                                <input type="text" class="form-control" id="max_users" name="max_users" placeholder="Enter number of users">
+                                <label for="max_users" class="form-label"><?= Localization::translate('clients_maximum_users_required'); ?></label>
+                                <input type="text" class="form-control" id="max_users" name="max_users" placeholder="<?= Localization::translate('clients_maximum_users_placeholder'); ?>">
                             </div>
 
                             <div class="mb-3">
-                                <label for="status" class="form-label">Status</label>
+                                <label for="status" class="form-label"><?= Localization::translate('clients_status'); ?></label>
                                 <select class="form-select" id="status" name="status">
-                                    <option value="active" selected>Active</option>
-                                    <option value="inactive">Inactive</option>
-                                    <option value="suspended">Suspended</option>
+                                    <option value="active" selected><?= Localization::translate('clients_active'); ?></option>
+                                    <option value="inactive"><?= Localization::translate('clients_inactive'); ?></option>
+                                    <option value="suspended"><?= Localization::translate('clients_suspended'); ?></option>
                                 </select>
                             </div>
                         </div>
 
                         <!-- Configuration Settings -->
                         <div class="col-md-6">
-                            <h6 class="text-purple mb-3">Configuration Settings</h6>
+                            <h6 class="text-purple mb-3"><?= Localization::translate('clients_configuration_settings'); ?></h6>
 
                             <div class="mb-3">
-                                <label for="reports_enabled" class="form-label">Reports</label>
+                                <label for="reports_enabled" class="form-label"><?= Localization::translate('clients_reports_enabled'); ?></label>
                                 <select class="form-select" id="reports_enabled" name="reports_enabled">
-                                    <option value="1" selected>Yes</option>
-                                    <option value="0">No</option>
+                                    <option value="1" selected><?= Localization::translate('clients_yes'); ?></option>
+                                    <option value="0"><?= Localization::translate('clients_no'); ?></option>
                                 </select>
                             </div>
 
                             <div class="mb-3">
-                                <label for="theme_settings" class="form-label">Theme Color Setting</label>
+                                <label for="theme_settings" class="form-label"><?= Localization::translate('clients_theme_color_setting'); ?></label>
                                 <select class="form-select" id="theme_settings" name="theme_settings">
-                                    <option value="1" selected>Yes</option>
-                                    <option value="0">No</option>
+                                    <option value="1" selected><?= Localization::translate('clients_yes'); ?></option>
+                                    <option value="0"><?= Localization::translate('clients_no'); ?></option>
                                 </select>
                             </div>
 
                             <div class="mb-3">
-                                <label for="sso_enabled" class="form-label">SSO Login</label>
+                                <label for="sso_enabled" class="form-label"><?= Localization::translate('clients_sso_login'); ?></label>
                                 <select class="form-select" id="sso_enabled" name="sso_enabled">
-                                    <option value="0" selected>No</option>
-                                    <option value="1">Yes</option>
+                                    <option value="0" selected><?= Localization::translate('clients_no'); ?></option>
+                                    <option value="1"><?= Localization::translate('clients_yes'); ?></option>
                                 </select>
                             </div>
 
                             <div class="mb-3">
-                                <label for="admin_role_limit" class="form-label">Admin Role Limit <span class="text-danger">*</span></label>
+                                <label for="admin_role_limit" class="form-label"><?= Localization::translate('clients_admin_role_limit_required'); ?></label>
                                 <input type="text" class="form-control" id="admin_role_limit" name="admin_role_limit"
-                                       value="1" placeholder="Enter number of admin roles allowed">
-                                <div class="form-text">Maximum number of admin users allowed</div>
+                                       value="1" placeholder="<?= Localization::translate('clients_admin_role_limit_placeholder'); ?>">
+                                <div class="form-text"><?= Localization::translate('clients_admin_role_limit_help'); ?></div>
                             </div>
                         </div>
 
                         <!-- Branding -->
                         <div class="col-12 mt-3">
-                            <h6 class="text-purple mb-3">Branding</h6>
+                            <h6 class="text-purple mb-3"><?= Localization::translate('clients_branding'); ?></h6>
                             <div class="row">
                                 <div class="col-md-6">
                                     <div class="mb-3">
-                                        <label for="logo" class="form-label">Client Logo <span class="text-danger">*</span></label>
+                                        <label for="logo" class="form-label"><?= Localization::translate('clients_client_logo_required'); ?></label>
                                         <input type="file" class="form-control" id="logo" name="logo" accept="image/png,image/jpeg,image/gif">
-                                        <div class="form-text">Upload PNG, JPG, or GIF (max 5MB)</div>
+                                        <div class="form-text"><?= Localization::translate('clients_logo_help'); ?></div>
                                     </div>
                                 </div>
                                 <div class="col-md-6">
                                     <div class="mb-3">
-                                        <label for="description" class="form-label">Description</label>
-                                        <textarea class="form-control" id="description" name="description" rows="3" placeholder="Brief description of the client..."></textarea>
+                                        <label for="description" class="form-label"><?= Localization::translate('clients_description'); ?></label>
+                                        <textarea class="form-control" id="description" name="description" rows="3" placeholder="<?= Localization::translate('clients_description_placeholder'); ?>"></textarea>
                                     </div>
                                 </div>
                             </div>
@@ -295,10 +295,10 @@
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
-                        <i class="fas fa-times me-1"></i>Cancel
+                        <i class="fas fa-times me-1"></i><?= Localization::translate('clients_cancel'); ?>
                     </button>
                     <button type="submit" class="btn theme-btn-primary">
-                        Create Client
+                        <?= Localization::translate('clients_create_client'); ?>
                     </button>
                 </div>
             </form>
@@ -312,9 +312,9 @@
         <div class="modal-content">
             <div class="modal-header">
                 <h5 class="modal-title" id="editClientModalLabel">
-                    Edit Client
+                    <?= Localization::translate('clients_edit_modal_title'); ?>
                 </h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="<?= Localization::translate('clients_close'); ?>"></button>
             </div>
             <form id="editClientForm" method="POST" action="index.php?controller=ClientController&action=update" enctype="multipart/form-data">
                 <input type="hidden" id="edit_client_id" name="client_id">
@@ -322,83 +322,83 @@
                     <div class="row">
                         <!-- Basic Information -->
                         <div class="col-md-6">
-                            <h6 class="text-purple mb-3">Basic Information</h6>
+                            <h6 class="text-purple mb-3"><?= Localization::translate('clients_basic_information'); ?></h6>
 
                             <div class="mb-3">
-                                <label for="edit_client_name" class="form-label">Client Name <span class="text-danger">*</span></label>
+                                <label for="edit_client_name" class="form-label"><?= Localization::translate('clients_client_name_required'); ?></label>
                                 <input type="text" class="form-control" id="edit_client_name" name="client_name">
                             </div>
 
                             <div class="mb-3">
-                                <label for="edit_max_users" class="form-label">Maximum Users <span class="text-danger">*</span></label>
-                                <input type="text" class="form-control" id="edit_max_users" name="max_users" placeholder="Enter number of users">
+                                <label for="edit_max_users" class="form-label"><?= Localization::translate('clients_maximum_users_required'); ?></label>
+                                <input type="text" class="form-control" id="edit_max_users" name="max_users" placeholder="<?= Localization::translate('clients_maximum_users_placeholder'); ?>">
                             </div>
 
                             <div class="mb-3">
-                                <label for="edit_status" class="form-label">Status</label>
+                                <label for="edit_status" class="form-label"><?= Localization::translate('clients_status'); ?></label>
                                 <select class="form-select" id="edit_status" name="status">
-                                    <option value="active">Active</option>
-                                    <option value="inactive">Inactive</option>
-                                    <option value="suspended">Suspended</option>
+                                    <option value="active"><?= Localization::translate('clients_active'); ?></option>
+                                    <option value="inactive"><?= Localization::translate('clients_inactive'); ?></option>
+                                    <option value="suspended"><?= Localization::translate('clients_suspended'); ?></option>
                                 </select>
                             </div>
                         </div>
 
                         <!-- Configuration Settings -->
                         <div class="col-md-6">
-                            <h6 class="text-purple mb-3">Configuration Settings</h6>
+                            <h6 class="text-purple mb-3"><?= Localization::translate('clients_configuration_settings'); ?></h6>
 
                             <div class="mb-3">
-                                <label for="edit_reports_enabled" class="form-label">Reports</label>
+                                <label for="edit_reports_enabled" class="form-label"><?= Localization::translate('clients_reports_enabled'); ?></label>
                                 <select class="form-select" id="edit_reports_enabled" name="reports_enabled">
-                                    <option value="1">Yes</option>
-                                    <option value="0">No</option>
+                                    <option value="1"><?= Localization::translate('clients_yes'); ?></option>
+                                    <option value="0"><?= Localization::translate('clients_no'); ?></option>
                                 </select>
                             </div>
 
                             <div class="mb-3">
-                                <label for="edit_theme_settings" class="form-label">Theme Color Setting</label>
+                                <label for="edit_theme_settings" class="form-label"><?= Localization::translate('clients_theme_color_setting'); ?></label>
                                 <select class="form-select" id="edit_theme_settings" name="theme_settings">
-                                    <option value="1">Yes</option>
-                                    <option value="0">No</option>
+                                    <option value="1"><?= Localization::translate('clients_yes'); ?></option>
+                                    <option value="0"><?= Localization::translate('clients_no'); ?></option>
                                 </select>
                             </div>
 
                             <div class="mb-3">
-                                <label for="edit_sso_enabled" class="form-label">SSO Login</label>
+                                <label for="edit_sso_enabled" class="form-label"><?= Localization::translate('clients_sso_login'); ?></label>
                                 <select class="form-select" id="edit_sso_enabled" name="sso_enabled">
-                                    <option value="0">No</option>
-                                    <option value="1">Yes</option>
+                                    <option value="0"><?= Localization::translate('clients_no'); ?></option>
+                                    <option value="1"><?= Localization::translate('clients_yes'); ?></option>
                                 </select>
                             </div>
 
                             <div class="mb-3">
-                                <label for="edit_admin_role_limit" class="form-label">Admin Role Limit <span class="text-danger">*</span></label>
+                                <label for="edit_admin_role_limit" class="form-label"><?= Localization::translate('clients_admin_role_limit_required'); ?></label>
                                 <input type="text" class="form-control" id="edit_admin_role_limit" name="admin_role_limit"
-                                       placeholder="Enter number of admin roles allowed">
-                                <div class="form-text">Maximum number of admin users allowed</div>
+                                       placeholder="<?= Localization::translate('clients_admin_role_limit_placeholder'); ?>">
+                                <div class="form-text"><?= Localization::translate('clients_admin_role_limit_help'); ?></div>
                             </div>
                         </div>
 
                         <!-- Branding -->
                         <div class="col-12 mt-3">
-                            <h6 class="text-purple mb-3">Branding</h6>
+                            <h6 class="text-purple mb-3"><?= Localization::translate('clients_branding'); ?></h6>
                             <div class="row">
                                 <div class="col-md-6">
                                     <div class="mb-3">
-                                        <label for="edit_logo" class="form-label">Client Logo</label>
+                                        <label for="edit_logo" class="form-label"><?= Localization::translate('clients_client_logo'); ?></label>
                                         <input type="file" class="form-control" id="edit_logo" name="logo" accept="image/png,image/jpeg,image/gif">
-                                        <div class="form-text">Upload PNG, JPG, or GIF (max 5MB) - Leave empty to keep current logo</div>
+                                        <div class="form-text"><?= Localization::translate('clients_logo_help_edit'); ?></div>
                                         <div id="current_logo_preview" class="mt-2" style="display: none;">
-                                            <small class="text-muted">Current logo:</small><br>
+                                            <small class="text-muted"><?= Localization::translate('clients_current_logo'); ?></small><br>
                                             <img id="current_logo_img" src="" alt="Current Logo" style="max-width: 100px; max-height: 50px; border: 1px solid #ddd; border-radius: 4px;">
                                         </div>
                                     </div>
                                 </div>
                                 <div class="col-md-6">
                                     <div class="mb-3">
-                                        <label for="edit_description" class="form-label">Description</label>
-                                        <textarea class="form-control" id="edit_description" name="description" rows="3" placeholder="Brief description of the client..."></textarea>
+                                        <label for="edit_description" class="form-label"><?= Localization::translate('clients_description'); ?></label>
+                                        <textarea class="form-control" id="edit_description" name="description" rows="3" placeholder="<?= Localization::translate('clients_description_placeholder'); ?>"></textarea>
                                     </div>
                                 </div>
                             </div>
@@ -407,10 +407,10 @@
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
-                        <i class="fas fa-times me-1"></i>Cancel
+                        <i class="fas fa-times me-1"></i><?= Localization::translate('clients_cancel'); ?>
                     </button>
                     <button type="submit" class="btn theme-btn-primary">
-                        Update Client
+                        <?= Localization::translate('clients_update_client'); ?>
                     </button>
                 </div>
             </form>
@@ -422,12 +422,237 @@
 <script src="public/js/toast_notifications.js"></script>
 <!-- Include Confirmation Modal JavaScript -->
 <script src="public/js/confirmation_modal.js"></script>
+<!-- Include Translation System -->
+<script src="public/js/translations.js"></script>
+<script>
+// Load translations for JavaScript validation
+window.translations = <?= json_encode([
+    'js.validation.client_name_required' => Localization::translate('js.validation.client_name_required'),
+    'js.validation.max_users_required' => Localization::translate('js.validation.max_users_required'),
+    'js.validation.max_users_numeric' => Localization::translate('js.validation.max_users_numeric'),
+    'js.validation.max_users_minimum' => Localization::translate('js.validation.max_users_minimum'),
+    'js.validation.admin_role_limit_required' => Localization::translate('js.validation.admin_role_limit_required'),
+    'js.validation.admin_role_limit_numeric' => Localization::translate('js.validation.admin_role_limit_numeric'),
+    'js.validation.admin_role_limit_minimum' => Localization::translate('js.validation.admin_role_limit_minimum'),
+    'js.validation.client_logo_required' => Localization::translate('js.validation.client_logo_required'),
+    'js.validation.logo_format_invalid' => Localization::translate('js.validation.logo_format_invalid'),
+    'js.validation.logo_size_exceeded' => Localization::translate('js.validation.logo_size_exceeded'),
+    'js.validation.client_form_not_found' => Localization::translate('js.validation.client_form_not_found'),
+    'clients_create_client' => Localization::translate('clients_create_client'),
+    'clients_update_client' => Localization::translate('clients_update_client')
+]); ?>;
+</script>
 <!-- Include Client Validation JavaScript -->
 <script src="public/js/client_validation.js"></script>
 
 <!-- Client Management JavaScript -->
 <script>
 document.addEventListener('DOMContentLoaded', function() {
+    // Initialize client validation
+
+    // Helper functions for validation
+    function isNumeric(value) {
+        return !isNaN(value) && !isNaN(parseFloat(value));
+    }
+
+    function showFieldError(field, message) {
+        field.classList.add('is-invalid');
+
+        // Find or create error message element
+        let errorElement = field.parentNode.querySelector('.error-message');
+        if (!errorElement) {
+            errorElement = document.createElement('div');
+            errorElement.className = 'error-message text-danger small mt-1';
+            field.parentNode.appendChild(errorElement);
+        }
+
+        errorElement.textContent = message;
+        errorElement.style.display = 'block';
+    }
+
+    function hideFieldError(field) {
+        field.classList.remove('is-invalid');
+
+        const errorElement = field.parentNode.querySelector('.error-message');
+        if (errorElement) {
+            errorElement.style.display = 'none';
+            errorElement.textContent = '';
+        }
+    }
+
+    // Attach comprehensive validation to add form
+    const addForm = document.getElementById('addClientForm');
+    if (addForm) {
+        addForm.addEventListener('submit', function(e) {
+            e.preventDefault();
+
+            let isValid = true;
+
+            // Validate client name
+            const clientName = document.getElementById('client_name');
+            if (!clientName.value.trim()) {
+                showFieldError(clientName, window.translations['js.validation.client_name_required'] || 'Client name is required.');
+                isValid = false;
+            } else {
+                hideFieldError(clientName);
+            }
+
+            // Validate max users
+            const maxUsers = document.getElementById('max_users');
+            if (!maxUsers.value.trim()) {
+                showFieldError(maxUsers, window.translations['js.validation.max_users_required'] || 'Maximum users is required.');
+                isValid = false;
+            } else if (!isNumeric(maxUsers.value)) {
+                showFieldError(maxUsers, window.translations['js.validation.max_users_numeric'] || 'Maximum users must be a number.');
+                isValid = false;
+            } else if (parseInt(maxUsers.value) < 1) {
+                showFieldError(maxUsers, window.translations['js.validation.max_users_minimum'] || 'Maximum users must be at least 1.');
+                isValid = false;
+            } else {
+                hideFieldError(maxUsers);
+            }
+
+            // Validate admin role limit
+            const adminRoleLimit = document.getElementById('admin_role_limit');
+            if (!adminRoleLimit.value.trim()) {
+                showFieldError(adminRoleLimit, window.translations['js.validation.admin_role_limit_required'] || 'Admin role limit is required.');
+                isValid = false;
+            } else if (!isNumeric(adminRoleLimit.value)) {
+                showFieldError(adminRoleLimit, window.translations['js.validation.admin_role_limit_numeric'] || 'Admin role limit must be a number.');
+                isValid = false;
+            } else if (parseInt(adminRoleLimit.value) < 1) {
+                showFieldError(adminRoleLimit, window.translations['js.validation.admin_role_limit_minimum'] || 'Admin role limit must be at least 1.');
+                isValid = false;
+            } else {
+                hideFieldError(adminRoleLimit);
+            }
+
+            // Validate logo
+            const logo = document.getElementById('logo');
+            if (logo.files.length === 0) {
+                showFieldError(logo, window.translations['js.validation.client_logo_required'] || 'Client logo is required.');
+                isValid = false;
+            } else {
+                const file = logo.files[0];
+                const allowedTypes = ['image/png', 'image/jpeg', 'image/gif'];
+                const maxSize = 5 * 1024 * 1024; // 5MB
+
+                if (!allowedTypes.includes(file.type)) {
+                    showFieldError(logo, window.translations['js.validation.logo_format_invalid'] || 'Logo must be PNG, JPG, or GIF format.');
+                    isValid = false;
+                } else if (file.size > maxSize) {
+                    showFieldError(logo, window.translations['js.validation.logo_size_exceeded'] || 'Logo file size must be less than 5MB.');
+                    isValid = false;
+                } else {
+                    hideFieldError(logo);
+                }
+            }
+
+            if (isValid) {
+                // Show loading state
+                const submitBtn = this.querySelector('button[type="submit"]');
+                submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Creating...';
+                submitBtn.disabled = true;
+                this.submit();
+            }
+        });
+
+        // Add blur validation for real-time feedback
+        const fields = addForm.querySelectorAll('input, select, textarea');
+        fields.forEach(field => {
+            field.addEventListener('blur', function() {
+                validateSingleField(this);
+            });
+        });
+    }
+
+    // Single field validation function
+    function validateSingleField(field) {
+        const fieldName = field.name || field.id;
+        const value = field.value.trim();
+
+        switch (fieldName) {
+            case 'client_name':
+                if (!value) {
+                    showFieldError(field, window.translations['js.validation.client_name_required'] || 'Client name is required.');
+                } else {
+                    hideFieldError(field);
+                }
+                break;
+
+            case 'max_users':
+                if (!value) {
+                    showFieldError(field, window.translations['js.validation.max_users_required'] || 'Maximum users is required.');
+                } else if (!isNumeric(value)) {
+                    showFieldError(field, window.translations['js.validation.max_users_numeric'] || 'Maximum users must be a number.');
+                } else if (parseInt(value) < 1) {
+                    showFieldError(field, window.translations['js.validation.max_users_minimum'] || 'Maximum users must be at least 1.');
+                } else {
+                    hideFieldError(field);
+                }
+                break;
+
+            case 'admin_role_limit':
+                if (!value) {
+                    showFieldError(field, window.translations['js.validation.admin_role_limit_required'] || 'Admin role limit is required.');
+                } else if (!isNumeric(value)) {
+                    showFieldError(field, window.translations['js.validation.admin_role_limit_numeric'] || 'Admin role limit must be a number.');
+                } else if (parseInt(value) < 1) {
+                    showFieldError(field, window.translations['js.validation.admin_role_limit_minimum'] || 'Admin role limit must be at least 1.');
+                } else {
+                    hideFieldError(field);
+                }
+                break;
+
+            case 'logo':
+                if (field.files && field.files.length > 0) {
+                    const file = field.files[0];
+                    const allowedTypes = ['image/png', 'image/jpeg', 'image/gif'];
+                    const maxSize = 5 * 1024 * 1024; // 5MB
+
+                    if (!allowedTypes.includes(file.type)) {
+                        showFieldError(field, window.translations['js.validation.logo_format_invalid'] || 'Logo must be PNG, JPG, or GIF format.');
+                    } else if (file.size > maxSize) {
+                        showFieldError(field, window.translations['js.validation.logo_size_exceeded'] || 'Logo file size must be less than 5MB.');
+                    } else {
+                        hideFieldError(field);
+                    }
+                }
+                break;
+        }
+    }
+
+    // Check if validation functions are available for edit form
+    if (typeof window.attachClientValidation === 'function') {
+        // Attach validation to edit form
+        if (document.getElementById('editClientForm')) {
+            window.attachClientValidation('editClientForm');
+        }
+    }
+
+    // Reset add form when modal closes
+    $('#addClientModal').on('hidden.bs.modal', function() {
+        const form = document.getElementById('addClientForm');
+        if (form) {
+            form.reset();
+
+            // Remove validation errors
+            form.querySelectorAll('.error-message').forEach(el => {
+                el.style.display = 'none';
+                el.textContent = '';
+            });
+            form.querySelectorAll('.is-invalid').forEach(el => {
+                el.classList.remove('is-invalid');
+            });
+
+            // Reset submit button
+            const submitBtn = form.querySelector('button[type="submit"]');
+            if (submitBtn) {
+                submitBtn.innerHTML = window.translations['clients_create_client'] || 'Create Client';
+                submitBtn.disabled = false;
+            }
+        }
+    });
     // Search functionality
     const searchInput = document.getElementById('searchInput');
     const searchButton = document.getElementById('searchButton');
@@ -554,7 +779,7 @@ document.addEventListener('DOMContentLoaded', function() {
             // Reset submit button
             const submitBtn = form.querySelector('button[type="submit"]');
             if (submitBtn) {
-                submitBtn.innerHTML = 'Update Client';
+                submitBtn.innerHTML = '<?= Localization::translate('clients_update_client'); ?>';
                 submitBtn.disabled = false;
             }
         }
@@ -649,13 +874,13 @@ document.addEventListener('DOMContentLoaded', function() {
         let message = '';
         switch(success) {
             case 'client_created':
-                message = 'Client created successfully!';
+                message = '<?= Localization::translate('success.client_created'); ?>';
                 break;
             case 'client_updated':
-                message = 'Client updated successfully!';
+                message = '<?= Localization::translate('success.client_updated'); ?>';
                 break;
             case 'client_deleted':
-                message = 'Client deleted successfully!';
+                message = '<?= Localization::translate('success.client_deleted'); ?>';
                 break;
         }
         if (message && typeof window.showSimpleToast === 'function') {
