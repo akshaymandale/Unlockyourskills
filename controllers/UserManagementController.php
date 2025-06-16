@@ -23,6 +23,13 @@ class UserManagementController extends BaseController {
         $clientId = $_GET['client_id'] ?? null;
         $currentUser = $_SESSION['user'] ?? null;
 
+        // Set client management context if super admin is navigating from client management
+        if ($clientId && $currentUser && $currentUser['system_role'] === 'super_admin') {
+            $_SESSION['client_management_context'] = true;
+            $_SESSION['target_client_id'] = $clientId;
+            $_SESSION['client_management_timestamp'] = time();
+        }
+
         // Determine user scope based on role
         if ($currentUser && $currentUser['system_role'] === 'super_admin') {
             // Super admin can see all users or filter by client
@@ -71,12 +78,22 @@ class UserManagementController extends BaseController {
     }
     
     public function addUser() {
-        // Get current user's client ID for admin role limit check
-        $clientId = $_SESSION['user']['client_id'] ?? null;
-        $adminRoleStatus = null;
+        $currentUser = $_SESSION['user'] ?? null;
 
-        if ($clientId) {
-            $adminRoleStatus = $this->userModel->getAdminRoleStatus($clientId);
+        // Determine target client for user creation
+        $targetClientId = null;
+        if (isset($_GET['client_id']) && $currentUser && $currentUser['system_role'] === 'super_admin') {
+            // Super admin adding user for specific client
+            $targetClientId = $_GET['client_id'];
+        } else {
+            // Regular admin adding user for their own client
+            $targetClientId = $currentUser['client_id'] ?? null;
+        }
+
+        // Get admin role status for the target client
+        $adminRoleStatus = null;
+        if ($targetClientId) {
+            $adminRoleStatus = $this->userModel->getAdminRoleStatus($targetClientId);
         }
 
         // Fetch languages for dropdown
@@ -127,6 +144,7 @@ class UserManagementController extends BaseController {
 
     public function storeUser() {
         $client_id = trim($_POST['client_id'] ?? '');
+        $target_client_id = trim($_POST['target_client_id'] ?? '');
         $profile_id = trim($_POST['profile_id'] ?? '');
         $full_name = trim($_POST['full_name'] ?? '');
         $email = trim($_POST['email'] ?? '');
@@ -139,17 +157,40 @@ class UserManagementController extends BaseController {
         $locked_status = trim($_POST['locked_status'] ?? '');
         $leaderboard = trim($_POST['leaderboard'] ?? '');
 
+        // Use target_client_id if provided (for super admin), otherwise use client_id
+        $finalClientId = $target_client_id ?: $client_id;
+
+        // Get current user for validation
+        $currentUser = $_SESSION['user'] ?? null;
+
+        // Validate: If super admin is adding for specific client, only Admin role is allowed
+        if ($target_client_id && $currentUser && $currentUser['system_role'] === 'super_admin') {
+            if ($user_role !== 'Admin') {
+                $redirectUrl = 'index.php?controller=UserManagementController&action=addUser&client_id=' . $target_client_id;
+                $this->redirectWithToast('Super admin can only add Admin role users for client management.', 'error', $redirectUrl);
+                return;
+            }
+        }
+
         // Check client user limit
-        $client = $this->clientModel->getClientById($client_id);
-        if ($client && !$this->userModel->canClientAddUser($client_id)) {
-            $this->redirectWithToast('Cannot add user. Client has reached its user limit.', 'error', 'index.php?controller=UserManagementController&action=addUser');
+        $client = $this->clientModel->getClientById($finalClientId);
+        if ($client && !$this->userModel->canClientAddUser($finalClientId)) {
+            $redirectUrl = 'index.php?controller=UserManagementController&action=addUser';
+            if ($target_client_id) {
+                $redirectUrl .= '&client_id=' . $target_client_id;
+            }
+            $this->redirectWithToast('Cannot add user. Client has reached its user limit.', 'error', $redirectUrl);
             return;
         }
 
         // Check admin role limit if user role is Admin
         $user_role = trim($_POST['user_role'] ?? '');
-        if ($user_role === 'Admin' && $client && !$this->userModel->canClientAddAdmin($client_id)) {
-            $this->redirectWithToast('Cannot add admin user. Client has reached its admin role limit.', 'error', 'index.php?controller=UserManagementController&action=addUser');
+        if ($user_role === 'Admin' && $client && !$this->userModel->canClientAddAdmin($finalClientId)) {
+            $redirectUrl = 'index.php?controller=UserManagementController&action=addUser';
+            if ($target_client_id) {
+                $redirectUrl .= '&client_id=' . $target_client_id;
+            }
+            $this->redirectWithToast('Cannot add admin user. Client has reached its admin role limit.', 'error', $redirectUrl);
             return;
         }
         
@@ -234,9 +275,19 @@ class UserManagementController extends BaseController {
                 if ($client) {
                     $this->clientModel->updateUserCount($client['id']);
                 }
-                $this->redirectWithToast('User added successfully!', 'success', 'index.php?controller=UserManagementController');
+
+                // Redirect back to appropriate user management view
+                $redirectUrl = 'index.php?controller=UserManagementController';
+                if ($target_client_id) {
+                    $redirectUrl .= '&client_id=' . $target_client_id;
+                }
+                $this->redirectWithToast('User added successfully!', 'success', $redirectUrl);
             } else {
-                $this->redirectWithToast('Error inserting user.', 'error', 'index.php?controller=UserManagementController');
+                $redirectUrl = 'index.php?controller=UserManagementController';
+                if ($target_client_id) {
+                    $redirectUrl .= '&client_id=' . $target_client_id;
+                }
+                $this->redirectWithToast('Error inserting user.', 'error', $redirectUrl);
             }
         } catch (PDOException $e) {
             // Log the error
@@ -500,7 +551,18 @@ class UserManagementController extends BaseController {
         exit();
     }
 
+    /**
+     * Clear client management context
+     */
+    public function clearClientContext() {
+        unset($_SESSION['client_management_context']);
+        unset($_SESSION['target_client_id']);
+        unset($_SESSION['client_management_timestamp']);
 
+        // Redirect to regular user management
+        header('Location: index.php?controller=UserManagementController');
+        exit();
+    }
 
 }
 ?>

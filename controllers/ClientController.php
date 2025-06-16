@@ -122,8 +122,16 @@ class ClientController extends BaseController {
                 return;
             }
 
+            // Validate client code uniqueness
+            $clientCode = trim($_POST['client_code']);
+            if (!$this->clientModel->isClientCodeUnique($clientCode)) {
+                $this->toastError(Localization::translate('validation.client_code_unique'), 'index.php?controller=ClientController');
+                return;
+            }
+
             $data = [
                 'client_name' => trim($_POST['client_name']),
+                'client_code' => $clientCode,
                 'logo_path' => $logoPath,
                 'max_users' => (int)$_POST['max_users'],
                 'status' => $_POST['status'] ?? 'active',
@@ -279,8 +287,16 @@ class ClientController extends BaseController {
                 return;
             }
 
+            // Validate client code uniqueness (excluding current client)
+            $clientCode = trim($_POST['client_code']);
+            if (!$this->clientModel->isClientCodeUnique($clientCode, $clientId)) {
+                $this->toastError(Localization::translate('validation.client_code_unique'), 'index.php?controller=ClientController');
+                return;
+            }
+
             $data = [
                 'client_name' => trim($_POST['client_name']),
+                'client_code' => $clientCode,
                 'logo_path' => $logoPath,
                 'max_users' => (int)$_POST['max_users'],
                 'status' => $_POST['status'] ?? 'active',
