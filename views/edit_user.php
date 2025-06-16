@@ -23,28 +23,28 @@ $clientName = $_SESSION['client_code'] ?? 'DEFAULT';
             
             <!-- ✅ Tabs Section -->
             <!-- Tabs Navigation -->
-            <ul class="nav nav-tabs" id="editUserTabs">
-                <li class="nav-item">
-                    <a class="nav-link active" data-toggle="tab" href="#basic-details">
+            <ul class="nav nav-tabs" id="editUserTabs" role="tablist">
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link active" id="basic-details-tab" data-bs-toggle="tab" data-bs-target="#basic-details" type="button" role="tab" aria-controls="basic-details" aria-selected="true">
                         <?= Localization::translate('basic_details'); ?>
-                    </a>
+                    </button>
                 </li>
-                <li class="nav-item">
-                    <a class="nav-link" data-toggle="tab" href="#additional-details">
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link" id="additional-details-tab" data-bs-toggle="tab" data-bs-target="#additional-details" type="button" role="tab" aria-controls="additional-details" aria-selected="false">
                         <?= Localization::translate('additional_details'); ?>
-                    </a>
+                    </button>
                 </li>
-                <li class="nav-item">
-                    <a class="nav-link" data-toggle="tab" href="#extra-details">
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link" id="extra-details-tab" data-bs-toggle="tab" data-bs-target="#extra-details" type="button" role="tab" aria-controls="extra-details" aria-selected="false">
                         <?= Localization::translate('extra_details'); ?>
-                    </a>
+                    </button>
                 </li>
             </ul>
 
             <!-- Tabs Content -->
             <input type="hidden" name="client_id" id="clientName" value="<?php echo htmlspecialchars($clientName); ?>">
-            <div class="tab-content">
-                <div class="tab-pane show active" id="basic-details">
+            <div class="tab-content" id="editUserTabsContent">
+                <div class="tab-pane fade show active" id="basic-details" role="tabpanel" aria-labelledby="basic-details-tab" tabindex="0">
                     <div class="row">
                         <div class="col-lg-6 col-md-6 col-sm-12 form-group">
                             <label><?= Localization::translate('profile_id'); ?></label>
@@ -175,7 +175,7 @@ $clientName = $_SESSION['client_code'] ?? 'DEFAULT';
                     </div>
                 </div>
 
-                <div class="tab-pane" id="additional-details">
+                <div class="tab-pane fade" id="additional-details" role="tabpanel" aria-labelledby="additional-details-tab" tabindex="0">
                     <div class="row">
                         <div class="col-lg-6 col-md-6 col-sm-12 form-group">
                             <label for="country"><?= Localization::translate('country'); ?></label>
@@ -246,67 +246,157 @@ $clientName = $_SESSION['client_code'] ?? 'DEFAULT';
                     </div>
                 </div>
 
-                <div class="tab-pane" id="extra-details">
-                    <div class="row">
-                        <div class="col-lg-6 col-md-6 col-sm-12 form-group">
-                            <label><?= Localization::translate('customised_1'); ?></label>
-                            <input type="text" name="customised_1" class="input-field" 
-                                   value="<?= htmlspecialchars($user['customised_1']); ?>">
+                <div class="tab-pane fade" id="extra-details" role="tabpanel" aria-labelledby="extra-details-tab" tabindex="0">
+                    <?php
+                    // Get custom fields for the current client
+                    require_once 'models/CustomFieldModel.php';
+                    $customFieldModel = new CustomFieldModel();
+                    $clientId = $_SESSION['user']['client_id'] ?? null;
+                    $customFields = $clientId ? $customFieldModel->getCustomFieldsByClient($clientId) : [];
+
+                    // Get existing custom field values for this user
+                    $customFieldValues = [];
+                    if (isset($user['id'])) {
+                        $existingValues = $customFieldModel->getCustomFieldValues($user['id'], $clientId);
+                        foreach ($existingValues as $value) {
+                            $customFieldValues[$value['custom_field_id']] = $value['field_value'];
+                        }
+                    }
+
+                    if (empty($customFields)): ?>
+                        <div class="text-center py-5">
+                            <i class="fas fa-info-circle text-muted mb-3" style="font-size: 3rem;"></i>
+                            <h5 class="text-muted"><?= Localization::translate('custom_fields_no_fields'); ?></h5>
+                            <p class="text-muted"><?= Localization::translate('custom_fields_no_fields_description'); ?></p>
+                            <a href="index.php?controller=UserManagementController" class="btn btn-primary">
+                                <i class="fas fa-plus me-1"></i><?= Localization::translate('custom_fields_create_button'); ?>
+                            </a>
                         </div>
-                        <div class="col-lg-6 col-md-6 col-sm-12 form-group">
-                            <label><?= Localization::translate('customised_2'); ?></label>
-                            <input type="text" name="customised_2" class="input-field" 
-                                   value="<?= htmlspecialchars($user['customised_2']); ?>">
+                    <?php else: ?>
+                        <div class="row">
+                            <?php
+                            $fieldCount = 0;
+                            foreach ($customFields as $field):
+                                if ($fieldCount % 2 === 0 && $fieldCount > 0): ?>
+                                    </div><div class="row">
+                                <?php endif; ?>
+
+                                <div class="col-lg-6 col-md-6 col-sm-12 form-group">
+                                    <label for="custom_field_<?= $field['id']; ?>">
+                                        <?= htmlspecialchars($field['field_label']); ?>
+                                        <?php if ($field['is_required']): ?><span class="text-danger">*</span><?php endif; ?>
+                                    </label>
+
+                                    <?php
+                                    $fieldName = "custom_field_{$field['id']}";
+                                    $fieldId = "custom_field_{$field['id']}";
+                                    $currentValue = $customFieldValues[$field['id']] ?? '';
+
+                                    switch ($field['field_type']):
+                                        case 'text':
+                                        case 'email':
+                                        case 'phone':
+                                        case 'number': ?>
+                                            <input type="<?= $field['field_type']; ?>"
+                                                   id="<?= $fieldId; ?>"
+                                                   name="<?= $fieldName; ?>"
+                                                   class="input-field"
+                                                   value="<?= htmlspecialchars($currentValue); ?>">
+                                            <?php break;
+
+                                        case 'textarea': ?>
+                                            <textarea id="<?= $fieldId; ?>"
+                                                      name="<?= $fieldName; ?>"
+                                                      class="input-field"
+                                                      rows="3"><?= htmlspecialchars($currentValue); ?></textarea>
+                                            <?php break;
+
+                                        case 'select': ?>
+                                            <select id="<?= $fieldId; ?>"
+                                                    name="<?= $fieldName; ?>"
+                                                    class="input-field">
+                                                <option value="">Select an option...</option>
+                                                <?php if ($field['field_options']): ?>
+                                                    <?php foreach ($field['field_options'] as $option): ?>
+                                                        <option value="<?= htmlspecialchars($option); ?>"
+                                                                <?= ($currentValue === $option) ? 'selected' : ''; ?>>
+                                                            <?= htmlspecialchars($option); ?>
+                                                        </option>
+                                                    <?php endforeach; ?>
+                                                <?php endif; ?>
+                                            </select>
+                                            <?php break;
+
+                                        case 'radio': ?>
+                                            <?php if ($field['field_options']): ?>
+                                                <?php foreach ($field['field_options'] as $index => $option): ?>
+                                                    <div class="form-check">
+                                                        <input class="form-check-input"
+                                                               type="radio"
+                                                               id="<?= $fieldId; ?>_<?= $index; ?>"
+                                                               name="<?= $fieldName; ?>"
+                                                               value="<?= htmlspecialchars($option); ?>"
+                                                               <?= ($currentValue === $option) ? 'checked' : ''; ?>>
+                                                        <label class="form-check-label" for="<?= $fieldId; ?>_<?= $index; ?>">
+                                                            <?= htmlspecialchars($option); ?>
+                                                        </label>
+                                                    </div>
+                                                <?php endforeach; ?>
+                                            <?php endif; ?>
+                                            <?php break;
+
+                                        case 'checkbox': ?>
+                                            <?php
+                                            $selectedValues = $currentValue ? explode(',', $currentValue) : [];
+                                            if ($field['field_options']): ?>
+                                                <?php foreach ($field['field_options'] as $index => $option): ?>
+                                                    <div class="form-check">
+                                                        <input class="form-check-input"
+                                                               type="checkbox"
+                                                               id="<?= $fieldId; ?>_<?= $index; ?>"
+                                                               name="<?= $fieldName; ?>[]"
+                                                               value="<?= htmlspecialchars($option); ?>"
+                                                               <?= in_array($option, $selectedValues) ? 'checked' : ''; ?>>
+                                                        <label class="form-check-label" for="<?= $fieldId; ?>_<?= $index; ?>">
+                                                            <?= htmlspecialchars($option); ?>
+                                                        </label>
+                                                    </div>
+                                                <?php endforeach; ?>
+                                            <?php endif; ?>
+                                            <?php break;
+
+                                        case 'file': ?>
+                                            <input type="file"
+                                                   id="<?= $fieldId; ?>"
+                                                   name="<?= $fieldName; ?>"
+                                                   class="input-field">
+                                            <?php if ($currentValue): ?>
+                                                <div class="form-text">Current file: <?= htmlspecialchars($currentValue); ?></div>
+                                            <?php endif; ?>
+                                            <?php break;
+
+                                        case 'date': ?>
+                                            <input type="date"
+                                                   id="<?= $fieldId; ?>"
+                                                   name="<?= $fieldName; ?>"
+                                                   class="input-field"
+                                                   value="<?= htmlspecialchars($currentValue); ?>">
+                                            <?php break;
+
+                                        default: ?>
+                                            <input type="text"
+                                                   id="<?= $fieldId; ?>"
+                                                   name="<?= $fieldName; ?>"
+                                                   class="input-field"
+                                                   value="<?= htmlspecialchars($currentValue); ?>">
+                                            <?php break;
+                                    endswitch; ?>
+                                </div>
+
+                                <?php $fieldCount++; ?>
+                            <?php endforeach; ?>
                         </div>
-                    </div>
-                    <div class="row">
-                        <div class="col-lg-6 col-md-6 col-sm-12 form-group">
-                            <label><?= Localization::translate('customised_3'); ?></label>
-                            <input type="text" name="customised_3" class="input-field" 
-                                   value="<?= htmlspecialchars($user['customised_3']); ?>">
-                        </div>
-                        <div class="col-lg-6 col-md-6 col-sm-12 form-group">
-                            <label><?= Localization::translate('customised_4'); ?></label>
-                            <input type="text" name="customised_4" class="input-field" 
-                                   value="<?= htmlspecialchars($user['customised_4']); ?>">
-                        </div>
-                    </div>
-                    <div class="row">
-                        <div class="col-lg-6 col-md-6 col-sm-12 form-group">
-                            <label><?= Localization::translate('customised_5'); ?></label>
-                            <input type="text" name="customised_5" class="input-field" 
-                                   value="<?= htmlspecialchars($user['customised_5']); ?>">
-                        </div>
-                        <div class="col-lg-6 col-md-6 col-sm-12 form-group">
-                            <label><?= Localization::translate('customised_6'); ?></label>
-                            <input type="text" name="customised_6" class="input-field" 
-                                   value="<?= htmlspecialchars($user['customised_6']); ?>">
-                        </div>
-                    </div>
-                    <div class="row">
-                        <div class="col-md-6 col-lg-6 col-sm-12 form-group">
-                            <label><?= Localization::translate('customised_7'); ?></label>
-                            <input type="text" name="customised_7" class="input-field" 
-                                   value="<?= htmlspecialchars($user['customised_7']); ?>">
-                        </div>
-                        <div class="col-md-6 col-lg-6 col-sm-12 form-group">
-                            <label><?= Localization::translate('customised_8'); ?></label>
-                            <input type="text" name="customised_8" class="input-field" 
-                                   value="<?= htmlspecialchars($user['customised_8']); ?>">
-                        </div>
-                    </div>
-                    <div class="row">
-                        <div class="col-md-6 col-lg-6 col-sm-12 form-group">
-                            <label><?= Localization::translate('customised_9'); ?></label>
-                            <input type="text" name="customised_9" class="input-field" 
-                                   value="<?= htmlspecialchars($user['customised_9']); ?>">
-                        </div>
-                        <div class="col-md-6 col-lg-6 col-sm-12 form-group">
-                            <label><?= Localization::translate('customised_10'); ?></label>
-                            <input type="text" name="customised_10" class="input-field" 
-                                   value="<?= htmlspecialchars($user['customised_10']); ?>">
-                        </div>
-                    </div>
+                    <?php endif; ?>
                 </div>
 
                 <div class="row mt-4">
@@ -336,6 +426,8 @@ $clientName = $_SESSION['client_code'] ?? 'DEFAULT';
         "validation.image_size" => Localization::translate('validation.image_size')
     ]); ?>;
 </script>
+
+
 
 <script src="public/js/edit_user_validation.js"></script>
 <?php include 'includes/footer.php'; ?>

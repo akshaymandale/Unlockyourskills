@@ -45,17 +45,19 @@ class UserModel {
         $joining_date = !empty($postData['joining_date']) ? $postData['joining_date'] : null;
         $retirement_date = !empty($postData['retirement_date']) ? $postData['retirement_date'] : null;
     
-        // Custom fields (Ensure NULL if empty)
-        $custom_1 = !empty($postData['customised_1']) ? $postData['customised_1'] : null;
-        $custom_2 = !empty($postData['customised_2']) ? $postData['customised_2'] : null;
-        $custom_3 = !empty($postData['customised_3']) ? $postData['customised_3'] : null;
-        $custom_4 = !empty($postData['customised_4']) ? $postData['customised_4'] : null;
-        $custom_5 = !empty($postData['customised_5']) ? $postData['customised_5'] : null;
-        $custom_6 = !empty($postData['customised_6']) ? $postData['customised_6'] : null;
-        $custom_7 = !empty($postData['customised_7']) ? $postData['customised_7'] : null;
-        $custom_8 = !empty($postData['customised_8']) ? $postData['customised_8'] : null;
-        $custom_9 = !empty($postData['customised_9']) ? $postData['customised_9'] : null;
-        $custom_10 = !empty($postData['customised_10']) ? $postData['customised_10'] : null;
+        // Extract custom field values
+        $customFieldValues = [];
+        foreach ($postData as $key => $value) {
+            if (strpos($key, 'custom_field_') === 0) {
+                $fieldId = str_replace('custom_field_', '', $key);
+                if (is_array($value)) {
+                    // Handle checkbox arrays
+                    $customFieldValues[$fieldId] = implode(',', $value);
+                } else {
+                    $customFieldValues[$fieldId] = !empty($value) ? $value : null;
+                }
+            }
+        }
     
         // Handling Profile Picture Upload
         $profile_picture = null;
@@ -79,11 +81,11 @@ class UserModel {
             throw new Exception("Invalid client ID");
         }
 
-        // Insert into Database
+        // Insert into Database (without custom fields)
         $sql = "INSERT INTO user_profiles
-            (client_id, profile_id, full_name, email, contact_number, gender, dob, user_role, system_role, profile_expiry, user_status, locked_status, leaderboard, profile_picture, country, state, city, timezone, language, reports_to, joining_date, retirement_date, customised_1, customised_2, customised_3, customised_4, customised_5, customised_6, customised_7, customised_8, customised_9, customised_10)
+            (client_id, profile_id, full_name, email, contact_number, gender, dob, user_role, system_role, profile_expiry, user_status, locked_status, leaderboard, profile_picture, country, state, city, timezone, language, reports_to, joining_date, retirement_date)
             VALUES
-            (:client_id, :profile_id, :full_name, :email, :contact_number, :gender, :dob, :user_role, :system_role, :profile_expiry, :user_status, :locked_status, :leaderboard, :profile_picture, :country, :state, :city, :timezone, :language, :reports_to, :joining_date, :retirement_date, :custom_1, :custom_2, :custom_3, :custom_4, :custom_5, :custom_6, :custom_7, :custom_8, :custom_9, :custom_10)";
+            (:client_id, :profile_id, :full_name, :email, :contact_number, :gender, :dob, :user_role, :system_role, :profile_expiry, :user_status, :locked_status, :leaderboard, :profile_picture, :country, :state, :city, :timezone, :language, :reports_to, :joining_date, :retirement_date)";
     
         $stmt = $this->conn->prepare($sql);
 
@@ -118,18 +120,20 @@ class UserModel {
                 ':language' => $language,
                 ':reports_to' => $reports_to,
                 ':joining_date' => $joining_date,
-                ':retirement_date' => $retirement_date,
-                ':custom_1' => $custom_1,
-                ':custom_2' => $custom_2,
-                ':custom_3' => $custom_3,
-                ':custom_4' => $custom_4,
-                ':custom_5' => $custom_5,
-                ':custom_6' => $custom_6,
-                ':custom_7' => $custom_7,
-                ':custom_8' => $custom_8,
-                ':custom_9' => $custom_9,
-                ':custom_10' => $custom_10
+                ':retirement_date' => $retirement_date
             ]);
+
+            if ($result) {
+                // Get the inserted user ID
+                $userId = $this->conn->lastInsertId();
+
+                // Save custom field values if any
+                if (!empty($customFieldValues)) {
+                    require_once 'models/CustomFieldModel.php';
+                    $customFieldModel = new CustomFieldModel();
+                    $customFieldModel->saveCustomFieldValues($userId, $customFieldValues);
+                }
+            }
 
             if (!$result) {
                 $errorInfo = $stmt->errorInfo();
@@ -312,17 +316,19 @@ class UserModel {
             $joining_date = !empty($postData['joining_date']) ? $postData['joining_date'] : null;
             $retirement_date = !empty($postData['retirement_date']) ? $postData['retirement_date'] : null;
 
-            // Custom fields (Ensure NULL if empty)
-            $custom_1 = !empty($postData['customised_1']) ? $postData['customised_1'] : null;
-            $custom_2 = !empty($postData['customised_2']) ? $postData['customised_2'] : null;
-            $custom_3 = !empty($postData['customised_3']) ? $postData['customised_3'] : null;
-            $custom_4 = !empty($postData['customised_4']) ? $postData['customised_4'] : null;
-            $custom_5 = !empty($postData['customised_5']) ? $postData['customised_5'] : null;
-            $custom_6 = !empty($postData['customised_6']) ? $postData['customised_6'] : null;
-            $custom_7 = !empty($postData['customised_7']) ? $postData['customised_7'] : null;
-            $custom_8 = !empty($postData['customised_8']) ? $postData['customised_8'] : null;
-            $custom_9 = !empty($postData['customised_9']) ? $postData['customised_9'] : null;
-            $custom_10 = !empty($postData['customised_10']) ? $postData['customised_10'] : null;
+            // Extract custom field values
+            $customFieldValues = [];
+            foreach ($postData as $key => $value) {
+                if (strpos($key, 'custom_field_') === 0) {
+                    $fieldId = str_replace('custom_field_', '', $key);
+                    if (is_array($value)) {
+                        // Handle checkbox arrays
+                        $customFieldValues[$fieldId] = implode(',', $value);
+                    } else {
+                        $customFieldValues[$fieldId] = !empty($value) ? $value : null;
+                    }
+                }
+            }
 
             // Handle profile picture upload (optional for update)
             $profile_picture = null;
@@ -338,7 +344,7 @@ class UserModel {
                 }
             }
 
-            // Build update query
+            // Build update query (without custom fields)
             $sql = "UPDATE user_profiles SET
                 full_name = :full_name,
                 email = :email,
@@ -357,17 +363,7 @@ class UserModel {
                 language = :language,
                 reports_to = :reports_to,
                 joining_date = :joining_date,
-                retirement_date = :retirement_date,
-                customised_1 = :custom_1,
-                customised_2 = :custom_2,
-                customised_3 = :custom_3,
-                customised_4 = :custom_4,
-                customised_5 = :custom_5,
-                customised_6 = :custom_6,
-                customised_7 = :custom_7,
-                customised_8 = :custom_8,
-                customised_9 = :custom_9,
-                customised_10 = :custom_10";
+                retirement_date = :retirement_date";
 
             // Only update profile picture if a new one was uploaded
             if ($profile_picture) {
@@ -397,17 +393,7 @@ class UserModel {
                 ':language' => $language,
                 ':reports_to' => $reports_to,
                 ':joining_date' => $joining_date,
-                ':retirement_date' => $retirement_date,
-                ':custom_1' => $custom_1,
-                ':custom_2' => $custom_2,
-                ':custom_3' => $custom_3,
-                ':custom_4' => $custom_4,
-                ':custom_5' => $custom_5,
-                ':custom_6' => $custom_6,
-                ':custom_7' => $custom_7,
-                ':custom_8' => $custom_8,
-                ':custom_9' => $custom_9,
-                ':custom_10' => $custom_10
+                ':retirement_date' => $retirement_date
             ];
 
             // Add profile picture parameter if needed
@@ -420,6 +406,20 @@ class UserModel {
             if (!$result) {
                 $errorInfo = $stmt->errorInfo();
                 throw new PDOException("Database execution failed: " . $errorInfo[2]);
+            }
+
+            // Update custom field values if any
+            if (!empty($customFieldValues)) {
+                // Get user ID from profile_id
+                $userStmt = $this->conn->prepare("SELECT id FROM user_profiles WHERE profile_id = :profile_id");
+                $userStmt->execute([':profile_id' => $profile_id]);
+                $user = $userStmt->fetch(PDO::FETCH_ASSOC);
+
+                if ($user) {
+                    require_once 'models/CustomFieldModel.php';
+                    $customFieldModel = new CustomFieldModel();
+                    $customFieldModel->saveCustomFieldValues($user['id'], $customFieldValues);
+                }
             }
 
             return true;

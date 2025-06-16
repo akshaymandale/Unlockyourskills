@@ -84,6 +84,12 @@
                                 title="Import Users">
                                 <i class="fas fa-upload me-1"></i> Import Users
                             </button>
+                            <button type="button" class="btn btn-sm btn-primary"
+                                data-bs-toggle="modal"
+                                data-bs-target="#createCustomFieldModal"
+                                title="<?= Localization::translate('custom_fields_create_title'); ?>">
+                                <i class="fas fa-plus me-1"></i> <?= Localization::translate('custom_fields_create_button'); ?>
+                            </button>
                             <?php
                             // Check if user limit is reached
                             $addUserDisabled = '';
@@ -244,5 +250,126 @@
 <!-- ✅ User Management Confirmations -->
 <script src="public/js/modules/user_confirmations.js"></script>
 <script src="public/js/user_management.js"></script>
+
+<!-- Create Custom Field Modal -->
+<div class="modal fade" id="createCustomFieldModal" tabindex="-1" aria-labelledby="createCustomFieldModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <form id="createCustomFieldForm" action="index.php?controller=CustomFieldController&action=create" method="POST">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="createCustomFieldModalLabel">
+                        <i class="fas fa-plus me-2"></i><?= Localization::translate('custom_fields_create_title'); ?>
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+
+                <div class="modal-body">
+                    <div class="row">
+                        <!-- Field Name -->
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="field_name" class="form-label"><?= Localization::translate('custom_fields_field_name_required'); ?></label>
+                                <input type="text" class="form-control" id="field_name" name="field_name"
+                                       placeholder="<?= Localization::translate('custom_fields_field_name_placeholder'); ?>" required>
+                                <div class="form-text">Used internally (no spaces, use underscores)</div>
+                            </div>
+                        </div>
+
+                        <!-- Field Label -->
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="field_label" class="form-label"><?= Localization::translate('custom_fields_field_label_required'); ?></label>
+                                <input type="text" class="form-control" id="field_label" name="field_label"
+                                       placeholder="<?= Localization::translate('custom_fields_field_label_placeholder'); ?>" required>
+                                <div class="form-text">Displayed to users</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <!-- Field Type -->
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="field_type" class="form-label"><?= Localization::translate('custom_fields_field_type_required'); ?></label>
+                                <select class="form-select" id="field_type" name="field_type" required>
+                                    <option value="">Select field type...</option>
+                                    <option value="text"><?= Localization::translate('custom_fields_field_type_text'); ?></option>
+                                    <option value="textarea"><?= Localization::translate('custom_fields_field_type_textarea'); ?></option>
+                                    <option value="select"><?= Localization::translate('custom_fields_field_type_select'); ?></option>
+                                    <option value="radio"><?= Localization::translate('custom_fields_field_type_radio'); ?></option>
+                                    <option value="checkbox"><?= Localization::translate('custom_fields_field_type_checkbox'); ?></option>
+                                    <option value="file"><?= Localization::translate('custom_fields_field_type_file'); ?></option>
+                                    <option value="date"><?= Localization::translate('custom_fields_field_type_date'); ?></option>
+                                    <option value="number"><?= Localization::translate('custom_fields_field_type_number'); ?></option>
+                                    <option value="email"><?= Localization::translate('custom_fields_field_type_email'); ?></option>
+                                    <option value="phone"><?= Localization::translate('custom_fields_field_type_phone'); ?></option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <!-- Field Settings -->
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label">Field Settings</label>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" id="is_required" name="is_required" value="1">
+                                    <label class="form-check-label" for="is_required">
+                                        <?= Localization::translate('custom_fields_is_required'); ?>
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Field Options (for select, radio, checkbox) -->
+                    <div class="row" id="field_options_container" style="display: none;">
+                        <div class="col-12">
+                            <div class="mb-3">
+                                <label for="field_options" class="form-label"><?= Localization::translate('custom_fields_field_options'); ?></label>
+                                <textarea class="form-control" id="field_options" name="field_options" rows="4"
+                                          placeholder="<?= Localization::translate('custom_fields_field_options_placeholder'); ?>"></textarea>
+                                <div class="form-text"><?= Localization::translate('custom_fields_field_options_help'); ?></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                        <i class="fas fa-times me-1"></i>Cancel
+                    </button>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-plus me-1"></i><?= Localization::translate('custom_fields_create_button'); ?>
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+// Show/hide field options based on field type
+document.getElementById('field_type').addEventListener('change', function() {
+    const fieldType = this.value;
+    const optionsContainer = document.getElementById('field_options_container');
+    const optionsField = document.getElementById('field_options');
+
+    if (['select', 'radio', 'checkbox'].includes(fieldType)) {
+        optionsContainer.style.display = 'block';
+        optionsField.required = true;
+    } else {
+        optionsContainer.style.display = 'none';
+        optionsField.required = false;
+        optionsField.value = '';
+    }
+});
+
+// Reset form when modal closes
+document.getElementById('createCustomFieldModal').addEventListener('hidden.bs.modal', function() {
+    document.getElementById('createCustomFieldForm').reset();
+    document.getElementById('field_options_container').style.display = 'none';
+    document.getElementById('field_options').required = false;
+});
+</script>
 
 <?php include 'includes/footer.php'; ?>
