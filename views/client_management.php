@@ -281,6 +281,16 @@
                                        value="1" placeholder="<?= Localization::translate('clients_admin_role_limit_placeholder'); ?>">
                                 <div class="form-text"><?= Localization::translate('clients_admin_role_limit_help'); ?></div>
                             </div>
+
+                            <div class="mb-3">
+                                <label for="custom_field_creation" class="form-label"><?= Localization::translate('clients_custom_field_creation'); ?></label>
+                                <div class="form-check form-switch">
+                                    <input class="form-check-input" type="checkbox" id="custom_field_creation" name="custom_field_creation" value="1" checked>
+                                    <label class="form-check-label" for="custom_field_creation">
+                                        <?= Localization::translate('clients_custom_field_creation_help'); ?>
+                                    </label>
+                                </div>
+                            </div>
                         </div>
 
                         <!-- Branding -->
@@ -394,6 +404,16 @@
                                 <input type="text" class="form-control" id="edit_admin_role_limit" name="admin_role_limit"
                                        placeholder="<?= Localization::translate('clients_admin_role_limit_placeholder'); ?>">
                                 <div class="form-text"><?= Localization::translate('clients_admin_role_limit_help'); ?></div>
+                            </div>
+
+                            <div class="mb-3">
+                                <label for="edit_custom_field_creation" class="form-label"><?= Localization::translate('clients_custom_field_creation'); ?></label>
+                                <div class="form-check form-switch">
+                                    <input class="form-check-input" type="checkbox" id="edit_custom_field_creation" name="custom_field_creation" value="1">
+                                    <label class="form-check-label" for="edit_custom_field_creation">
+                                        <?= Localization::translate('clients_custom_field_creation_help'); ?>
+                                    </label>
+                                </div>
                             </div>
                         </div>
 
@@ -801,6 +821,7 @@ document.addEventListener('DOMContentLoaded', function() {
         document.getElementById('edit_theme_settings').value = client.theme_settings || '1';
         document.getElementById('edit_sso_enabled').value = client.sso_enabled || '0';
         document.getElementById('edit_admin_role_limit').value = client.admin_role_limit || '1';
+        document.getElementById('edit_custom_field_creation').checked = client.custom_field_creation == '1' || client.custom_field_creation === true;
 
         // Populate description
         document.getElementById('edit_description').value = client.description || '';

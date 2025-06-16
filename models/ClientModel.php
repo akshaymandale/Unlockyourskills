@@ -62,8 +62,8 @@ class ClientModel {
     public function createClient($data) {
         $sql = "INSERT INTO clients (
                     client_name, client_code, logo_path, max_users, status, description,
-                    reports_enabled, theme_settings, sso_enabled, admin_role_limit
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+                    reports_enabled, theme_settings, sso_enabled, admin_role_limit, custom_field_creation
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
 
         $stmt = $this->conn->prepare($sql);
         return $stmt->execute([
@@ -76,7 +76,8 @@ class ClientModel {
             $data['reports_enabled'] ?? 1,
             $data['theme_settings'] ?? 1,
             $data['sso_enabled'] ?? 0,
-            $data['admin_role_limit'] ?? 5
+            $data['admin_role_limit'] ?? 5,
+            $data['custom_field_creation'] ?? 1
         ]);
     }
 
@@ -95,6 +96,7 @@ class ClientModel {
                     theme_settings = ?,
                     sso_enabled = ?,
                     admin_role_limit = ?,
+                    custom_field_creation = ?,
                     updated_at = NOW()
                 WHERE id = ?";
 
@@ -110,6 +112,7 @@ class ClientModel {
             $data['theme_settings'] ?? 1,
             $data['sso_enabled'] ?? 0,
             $data['admin_role_limit'] ?? 1,
+            $data['custom_field_creation'] ?? 1,
             $id
         ]);
     }

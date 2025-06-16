@@ -74,6 +74,23 @@ class UserManagementController extends BaseController {
             $userLimitStatus = $this->userModel->getUserLimitStatus($clientId);
         }
 
+        // Get custom field creation setting for current client
+        $customFieldCreationEnabled = false;
+        if ($currentUser && $currentUser['system_role'] === 'super_admin') {
+            // For super admin, check if filtering by specific client
+            if ($clientId && $client) {
+                $customFieldCreationEnabled = $client['custom_field_creation'] == 1;
+            } else {
+                // Super admin viewing all users - enable custom fields by default
+                $customFieldCreationEnabled = true;
+            }
+        } elseif ($currentUser && $currentUser['system_role'] === 'admin') {
+            // For client admin, check their client's setting
+            if ($client) {
+                $customFieldCreationEnabled = $client['custom_field_creation'] == 1;
+            }
+        }
+
         require 'views/user_management.php';
     }
     

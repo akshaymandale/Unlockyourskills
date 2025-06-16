@@ -752,6 +752,8 @@
     "clients_client_code_required": "क्लाइंट कोड *",
     "clients_client_code_placeholder": "उदा., ACME_CORP",
     "clients_client_code_help": "क्लाइंट के लिए अद्वितीय पहचानकर्ता (बड़े अक्षर, कोई स्थान नहीं, अंडरस्कोर का उपयोग करें)",
+    "clients_custom_field_creation": "कस्टम फील्ड निर्माण",
+    "clients_custom_field_creation_help": "इस क्लाइंट को उपयोगकर्ता प्रोफाइल के लिए कस्टम फील्ड बनाने की अनुमति दें",
     "clients_maximum_users": "अधिकतम उपयोगकर्ता",
     "clients_maximum_users_required": "अधिकतम उपयोगकर्ता *",
     "clients_maximum_users_placeholder": "उपयोगकर्ताओं की संख्या दर्ज करें",

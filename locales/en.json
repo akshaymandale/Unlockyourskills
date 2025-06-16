@@ -774,6 +774,8 @@
     "clients_client_code_required": "Client Code *",
     "clients_client_code_placeholder": "e.g., ACME_CORP",
     "clients_client_code_help": "Unique identifier for the client (uppercase, no spaces, use underscores)",
+    "clients_custom_field_creation": "Custom Field Creation",
+    "clients_custom_field_creation_help": "Allow this client to create custom fields for user profiles",
     "clients_maximum_users": "Maximum Users",
     "clients_maximum_users_required": "Maximum Users *",
     "clients_maximum_users_placeholder": "Enter number of users",
