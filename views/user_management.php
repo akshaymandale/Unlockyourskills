@@ -106,12 +106,14 @@
                                 title="Import Users">
                                 <i class="fas fa-upload me-1"></i> Import Users
                             </button>
+                            <?php if ($customFieldCreationEnabled): ?>
                             <button type="button" class="btn btn-sm btn-primary"
                                 data-bs-toggle="modal"
                                 data-bs-target="#createCustomFieldModal"
                                 title="<?= Localization::translate('custom_fields_create_title'); ?>">
                                 <i class="fas fa-plus me-1"></i> <?= Localization::translate('custom_fields_create_button'); ?>
                             </button>
+                            <?php endif; ?>
                             <?php
                             // Check if user limit is reached
                             $addUserDisabled = '';
@@ -292,6 +294,7 @@
 <script src="public/js/modules/user_confirmations.js"></script>
 <script src="public/js/user_management.js"></script>
 
+<?php if ($customFieldCreationEnabled): ?>
 <!-- Create Custom Field Modal -->
 <div class="modal fade" id="createCustomFieldModal" tabindex="-1" aria-labelledby="createCustomFieldModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-lg">
@@ -412,5 +415,6 @@ document.getElementById('createCustomFieldModal').addEventListener('hidden.bs.mo
     document.getElementById('field_options').required = false;
 });
 </script>
+<?php endif; ?>
 
 <?php include 'includes/footer.php'; ?>

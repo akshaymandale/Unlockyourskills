@@ -139,7 +139,8 @@ class ClientController extends BaseController {
                 'reports_enabled' => (int)($_POST['reports_enabled'] ?? 1),
                 'theme_settings' => (int)($_POST['theme_settings'] ?? 1),
                 'sso_enabled' => (int)($_POST['sso_enabled'] ?? 0),
-                'admin_role_limit' => (int)$_POST['admin_role_limit']
+                'admin_role_limit' => (int)$_POST['admin_role_limit'],
+                'custom_field_creation' => (int)($_POST['custom_field_creation'] ?? 1)
             ];
 
             if ($this->clientModel->createClient($data)) {
@@ -304,7 +305,8 @@ class ClientController extends BaseController {
                 'reports_enabled' => (int)($_POST['reports_enabled'] ?? 1),
                 'theme_settings' => (int)($_POST['theme_settings'] ?? 1),
                 'sso_enabled' => (int)($_POST['sso_enabled'] ?? 0),
-                'admin_role_limit' => (int)$_POST['admin_role_limit']
+                'admin_role_limit' => (int)$_POST['admin_role_limit'],
+                'custom_field_creation' => (int)($_POST['custom_field_creation'] ?? 1)
             ];
 
             if ($this->clientModel->updateClient($clientId, $data)) {
