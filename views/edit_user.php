@@ -251,13 +251,29 @@ $clientName = $_SESSION['client_code'] ?? 'DEFAULT';
                     // Get custom fields for the current client
                     require_once 'models/CustomFieldModel.php';
                     $customFieldModel = new CustomFieldModel();
-                    $clientId = $_SESSION['user']['client_id'] ?? null;
-                    $customFields = $clientId ? $customFieldModel->getCustomFieldsByClient($clientId) : [];
+
+                    // Determine which client to use for custom fields
+                    $targetClientId = null;
+                    $currentUser = $_SESSION['user'] ?? null;
+
+                    // If super admin is managing a specific client (from URL parameter)
+                    if (isset($_GET['client_id']) && $currentUser && $currentUser['system_role'] === 'super_admin') {
+                        $targetClientId = $_GET['client_id'];
+                    } else {
+                        // Use the user's client ID (the user being edited)
+                        $targetClientId = $user['client_id'] ?? null;
+                    }
+
+                    // Only fetch custom fields if we have a valid client ID
+                    $customFields = [];
+                    if ($targetClientId && is_numeric($targetClientId)) {
+                        $customFields = $customFieldModel->getCustomFieldsByClient((int)$targetClientId);
+                    }
 
                     // Get existing custom field values for this user
                     $customFieldValues = [];
                     if (isset($user['id'])) {
-                        $existingValues = $customFieldModel->getCustomFieldValues($user['id'], $clientId);
+                        $existingValues = $customFieldModel->getCustomFieldValues($user['id'], $targetClientId);
                         foreach ($existingValues as $value) {
                             $customFieldValues[$value['custom_field_id']] = $value['field_value'];
                         }

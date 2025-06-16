@@ -61,13 +61,14 @@ class ClientModel {
      */
     public function createClient($data) {
         $sql = "INSERT INTO clients (
-                    client_name, logo_path, max_users, status, description,
+                    client_name, client_code, logo_path, max_users, status, description,
                     reports_enabled, theme_settings, sso_enabled, admin_role_limit
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)";
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
 
         $stmt = $this->conn->prepare($sql);
         return $stmt->execute([
             $data['client_name'],
+            $data['client_code'],
             $data['logo_path'] ?? null,
             $data['max_users'] ?? 10,
             $data['status'] ?? 'active',
@@ -85,6 +86,7 @@ class ClientModel {
     public function updateClient($id, $data) {
         $sql = "UPDATE clients SET
                     client_name = ?,
+                    client_code = ?,
                     logo_path = ?,
                     max_users = ?,
                     status = ?,
@@ -99,6 +101,7 @@ class ClientModel {
         $stmt = $this->conn->prepare($sql);
         return $stmt->execute([
             $data['client_name'],
+            $data['client_code'],
             $data['logo_path'],
             $data['max_users'],
             $data['status'],
@@ -222,6 +225,25 @@ class ClientModel {
         $sql = "DELETE FROM clients WHERE id = ? AND is_deleted = 1";
         $stmt = $this->conn->prepare($sql);
         return $stmt->execute([$id]);
+    }
+
+    /**
+     * Check if client code is unique
+     */
+    public function isClientCodeUnique($clientCode, $excludeId = null) {
+        $sql = "SELECT COUNT(*) as count FROM clients WHERE client_code = ? AND is_deleted = 0";
+        $params = [$clientCode];
+
+        if ($excludeId) {
+            $sql .= " AND id != ?";
+            $params[] = $excludeId;
+        }
+
+        $stmt = $this->conn->prepare($sql);
+        $stmt->execute($params);
+        $result = $stmt->fetch(PDO::FETCH_ASSOC);
+
+        return $result['count'] == 0;
     }
 }
 ?>

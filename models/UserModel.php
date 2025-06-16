@@ -81,11 +81,17 @@ class UserModel {
             throw new Exception("Invalid client ID");
         }
 
-        // Insert into Database (without custom fields)
+        // Get current user ID for audit fields
+        $currentUserId = $_SESSION['user']['id'] ?? null;
+
+        // Use target_client_id if provided (for super admin), otherwise use client_id
+        $finalClientId = $data['target_client_id'] ?? $client_id;
+
+        // Insert into Database (with audit fields)
         $sql = "INSERT INTO user_profiles
-            (client_id, profile_id, full_name, email, contact_number, gender, dob, user_role, system_role, profile_expiry, user_status, locked_status, leaderboard, profile_picture, country, state, city, timezone, language, reports_to, joining_date, retirement_date)
+            (client_id, profile_id, full_name, email, contact_number, gender, dob, user_role, system_role, profile_expiry, user_status, locked_status, leaderboard, profile_picture, country, state, city, timezone, language, reports_to, joining_date, retirement_date, created_by, updated_by)
             VALUES
-            (:client_id, :profile_id, :full_name, :email, :contact_number, :gender, :dob, :user_role, :system_role, :profile_expiry, :user_status, :locked_status, :leaderboard, :profile_picture, :country, :state, :city, :timezone, :language, :reports_to, :joining_date, :retirement_date)";
+            (:client_id, :profile_id, :full_name, :email, :contact_number, :gender, :dob, :user_role, :system_role, :profile_expiry, :user_status, :locked_status, :leaderboard, :profile_picture, :country, :state, :city, :timezone, :language, :reports_to, :joining_date, :retirement_date, :created_by, :updated_by)";
     
         $stmt = $this->conn->prepare($sql);
 
@@ -99,7 +105,7 @@ class UserModel {
 
         try {
             $result = $stmt->execute([
-                ':client_id' => $client_id,
+                ':client_id' => $finalClientId,
                 ':profile_id' => $profile_id,
                 ':full_name' => $full_name,
                 ':email' => $email,
@@ -120,7 +126,9 @@ class UserModel {
                 ':language' => $language,
                 ':reports_to' => $reports_to,
                 ':joining_date' => $joining_date,
-                ':retirement_date' => $retirement_date
+                ':retirement_date' => $retirement_date,
+                ':created_by' => $currentUserId,
+                ':updated_by' => $currentUserId
             ]);
 
             if ($result) {
@@ -344,7 +352,10 @@ class UserModel {
                 }
             }
 
-            // Build update query (without custom fields)
+            // Get current user ID for audit fields
+            $currentUserId = $_SESSION['user']['id'] ?? null;
+
+            // Build update query (with audit fields)
             $sql = "UPDATE user_profiles SET
                 full_name = :full_name,
                 email = :email,
@@ -363,7 +374,8 @@ class UserModel {
                 language = :language,
                 reports_to = :reports_to,
                 joining_date = :joining_date,
-                retirement_date = :retirement_date";
+                retirement_date = :retirement_date,
+                updated_by = :updated_by";
 
             // Only update profile picture if a new one was uploaded
             if ($profile_picture) {
@@ -393,7 +405,8 @@ class UserModel {
                 ':language' => $language,
                 ':reports_to' => $reports_to,
                 ':joining_date' => $joining_date,
-                ':retirement_date' => $retirement_date
+                ':retirement_date' => $retirement_date,
+                ':updated_by' => $currentUserId
             ];
 
             // Add profile picture parameter if needed

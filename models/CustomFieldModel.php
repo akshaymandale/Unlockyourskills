@@ -43,24 +43,29 @@ class CustomFieldModel {
      */
     public function getCustomFieldsByClient($clientId, $activeOnly = true) {
         try {
+            // Ensure client_id is valid
+            if (!$clientId || !is_numeric($clientId)) {
+                return [];
+            }
+
             $sql = "SELECT * FROM custom_fields WHERE client_id = :client_id";
             if ($activeOnly) {
                 $sql .= " AND is_active = 1";
             }
             $sql .= " ORDER BY field_order ASC, id ASC";
-            
+
             $stmt = $this->conn->prepare($sql);
-            $stmt->execute([':client_id' => $clientId]);
-            
+            $stmt->execute([':client_id' => (int)$clientId]);
+
             $fields = $stmt->fetchAll(PDO::FETCH_ASSOC);
-            
+
             // Decode field_options JSON
             foreach ($fields as &$field) {
                 if ($field['field_options']) {
                     $field['field_options'] = json_decode($field['field_options'], true);
                 }
             }
-            
+
             return $fields;
         } catch (PDOException $e) {
             error_log("CustomFieldModel getCustomFieldsByClient error: " . $e->getMessage());

@@ -2,9 +2,38 @@
 if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
-//echo '<pre>'; print_r($_SESSION);
-// ✅ Get Client Name from Session
-$clientName = $_SESSION['client_code'] ?? 'DEFAULT';
+
+// ✅ Determine target client for user creation
+$currentUser = $_SESSION['user'] ?? null;
+$targetClientId = null;
+$clientName = 'DEFAULT';
+
+// Simplified detection: Check if super admin is adding user for specific client
+$isFromClientManagement = false;
+
+// Check if super admin is adding user for specific client (from URL parameter)
+if (isset($_GET['client_id']) && $currentUser && $currentUser['system_role'] === 'super_admin') {
+    $isFromClientManagement = true;
+    $targetClientId = $_GET['client_id'];
+
+    // Get client name from database
+    require_once 'models/ClientModel.php';
+    $clientModel = new ClientModel();
+    $client = $clientModel->getClientById($targetClientId);
+    $clientName = $client ? $client['client_name'] : 'Unknown Client';
+
+    // Set session context for future requests
+    $_SESSION['client_management_context'] = true;
+    $_SESSION['target_client_id'] = $targetClientId;
+} else {
+    // Use current user's client or clear client management context
+    $targetClientId = $currentUser['client_id'] ?? null;
+    $clientName = $_SESSION['client_code'] ?? 'DEFAULT';
+
+    // Clear client management context
+    unset($_SESSION['client_management_context']);
+    unset($_SESSION['target_client_id']);
+}
 // Fetch all countries for the initial dropdown
 require_once 'config/database.php';
 
@@ -33,6 +62,15 @@ $countries = $stmt->fetchAll(PDO::FETCH_ASSOC);
         <h1 class="page-title text-purple">
             <?= Localization::translate('add_user_title'); ?>
         </h1>
+
+        <?php if ($isFromClientManagement): ?>
+            <div class="alert alert-primary mb-3">
+                <i class="fas fa-users-cog"></i>
+                <strong>Client Management Mode:</strong> Adding Admin user for client <strong><?= htmlspecialchars($clientName); ?></strong>
+                <br><small><i class="fas fa-lock"></i> Only Admin role is available when adding users for client management purposes.</small>
+            </div>
+        <?php endif; ?>
+
         <form action="index.php?controller=UserManagementController&action=storeUser" id="addUserForm" method="POST"
             enctype="multipart/form-data">
             <!-- ✅ Tabs Section -->
@@ -57,25 +95,26 @@ $countries = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
             <!-- Tabs Content -->
             <input type="hidden" name="client_id" id="clientName" value="<?php echo htmlspecialchars($clientName); ?>">
+            <input type="hidden" name="target_client_id" value="<?php echo htmlspecialchars($targetClientId); ?>">
             <div class="tab-content" id="addUserTabsContent">
                 <div class="tab-pane fade show active" id="basic-details" role="tabpanel" aria-labelledby="basic-details-tab" tabindex="0">
                     <div class="row">
                         <div class="col-lg-6 col-md-6 col-sm-12 form-group">
                             <label><?= Localization::translate('profile_id'); ?></label>
-                            <input type="text" id="profile_id" name="profile_id" class="input-field" readonly>
+                            <input type="text" id="profile_id" name="profile_id" class="input-field" readonly placeholder="Will be auto-generated">
                         </div>
                         <div class="col-lg-6 col-md-6 col-sm-12 form-group">
-                            <label><?= Localization::translate('full_name'); ?> *</label>
+                            <label><?= Localization::translate('full_name'); ?> <span class="text-danger">*</span></label>
                             <input type="text" id="full_name" name="full_name" class="input-field">
                         </div>
                     </div>
                     <div class="row">
                         <div class="col-lg-6 col-md-6 col-sm-12 form-group">
-                            <label><?= Localization::translate('email'); ?> *</label>
+                            <label><?= Localization::translate('email'); ?> <span class="text-danger">*</span></label>
                             <input type="text" id="email" name="email" class="input-field">
                         </div>
                         <div class="col-lg-6 col-md-6 col-sm-12 form-group">
-                            <label><?= Localization::translate('contact_number'); ?> *</label>
+                            <label><?= Localization::translate('contact_number'); ?> <span class="text-danger">*</span></label>
                             <input type="text" id="contact_number" name="contact_number" class="input-field">
                         </div>
                     </div>
@@ -96,28 +135,54 @@ $countries = $stmt->fetchAll(PDO::FETCH_ASSOC);
                     </div>
                     <div class="row">
                         <div class="col-lg-6 col-md-6 col-sm-12 form-group">
-                            <label><?= Localization::translate('user_role'); ?> *</label>
-                            <select id="user_role" name="user_role" class="input-field">
-                                <option value=""><?= Localization::translate('select_user_role'); ?></option>
+                            <label><?= Localization::translate('user_role'); ?> <span class="text-danger">*</span></label>
+                            <select id="user_role" name="user_role" class="input-field" <?= $isSuperAdminForClient ? 'readonly style="background-color: #f8f9fa; cursor: not-allowed;"' : ''; ?>>
                                 <?php
-                                // Check if admin role should be disabled
-                                $adminDisabled = '';
-                                $adminText = Localization::translate('admin');
+                                // Check if super admin is adding user for specific client
+                                $isSuperAdminForClient = $isFromClientManagement;
 
-                                if ($adminRoleStatus && !$adminRoleStatus['canAdd']) {
-                                    $adminDisabled = 'disabled';
-                                    $adminText .= ' (Limit Reached)';
-                                }
-                                ?>
-                                <option value="Admin" <?= $adminDisabled; ?>><?= $adminText; ?></option>
-                                <option value="End User"><?= Localization::translate('end_user'); ?></option>
-                                <option value="Instructor"><?= Localization::translate('instructor'); ?></option>
-                                <option value="Corporate Manager"><?= Localization::translate('corporate_manager'); ?>
-                                </option>
+                                if ($isSuperAdminForClient): ?>
+                                    <!-- Super admin adding for specific client - only Admin role -->
+                                    <?php
+                                    // Check if admin role should be disabled
+                                    $adminDisabled = '';
+                                    $adminText = Localization::translate('admin');
+
+                                    if ($adminRoleStatus && !$adminRoleStatus['canAdd']) {
+                                        $adminDisabled = 'disabled';
+                                        $adminText .= ' (Limit Reached)';
+                                    }
+                                    ?>
+                                    <option value="Admin" <?= $adminDisabled; ?> selected><?= $adminText; ?></option>
+                                <?php else: ?>
+                                    <!-- Regular admin or super admin not in client context - show all roles -->
+                                    <option value=""><?= Localization::translate('select_user_role'); ?></option>
+                                    <?php
+                                    // Check if admin role should be disabled
+                                    $adminDisabled = '';
+                                    $adminText = Localization::translate('admin');
+
+                                    if ($adminRoleStatus && !$adminRoleStatus['canAdd']) {
+                                        $adminDisabled = 'disabled';
+                                        $adminText .= ' (Limit Reached)';
+                                    }
+                                    ?>
+                                    <option value="Admin" <?= $adminDisabled; ?>><?= $adminText; ?></option>
+                                    <option value="End User"><?= Localization::translate('end_user'); ?></option>
+                                    <option value="Instructor"><?= Localization::translate('instructor'); ?></option>
+                                    <option value="Corporate Manager"><?= Localization::translate('corporate_manager'); ?></option>
+                                <?php endif; ?>
                             </select>
+
+                            <?php if ($isSuperAdminForClient): ?>
+                                <small class="text-info">
+                                    <i class="fas fa-lock"></i> <strong>Client Management Mode:</strong> Only Admin role available for client administration.
+                                </small>
+                            <?php endif; ?>
+
                             <?php if ($adminRoleStatus && !$adminRoleStatus['canAdd']): ?>
-                                <small class="text-muted">
-                                    Admin limit: <?= $adminRoleStatus['current']; ?>/<?= $adminRoleStatus['limit']; ?>
+                                <small class="text-warning">
+                                    <i class="fas fa-exclamation-triangle"></i> Admin limit reached: <?= $adminRoleStatus['current']; ?>/<?= $adminRoleStatus['limit']; ?>
                                 </small>
                             <?php endif; ?>
                         </div>
@@ -246,8 +311,24 @@ $countries = $stmt->fetchAll(PDO::FETCH_ASSOC);
                     // Get custom fields for the current client
                     require_once 'models/CustomFieldModel.php';
                     $customFieldModel = new CustomFieldModel();
-                    $clientId = $_SESSION['user']['client_id'] ?? null;
-                    $customFields = $clientId ? $customFieldModel->getCustomFieldsByClient($clientId) : [];
+
+                    // Determine which client to use for custom fields
+                    $targetClientId = null;
+                    $currentUser = $_SESSION['user'] ?? null;
+
+                    // If super admin is managing a specific client (from URL parameter)
+                    if (isset($_GET['client_id']) && $currentUser && $currentUser['system_role'] === 'super_admin') {
+                        $targetClientId = $_GET['client_id'];
+                    } else {
+                        // Use current user's client ID
+                        $targetClientId = $currentUser['client_id'] ?? $_SESSION['client_id'] ?? null;
+                    }
+
+                    // Only fetch custom fields if we have a valid client ID
+                    $customFields = [];
+                    if ($targetClientId && is_numeric($targetClientId)) {
+                        $customFields = $customFieldModel->getCustomFieldsByClient((int)$targetClientId);
+                    }
 
                     if (empty($customFields)): ?>
                         <div class="text-center py-5">
@@ -399,6 +480,36 @@ $countries = $stmt->fetchAll(PDO::FETCH_ASSOC);
         "validation.image_format" => Localization::translate('validation.image_format'),
         "validation.image_size" => Localization::translate('validation.image_size')
     ]); ?>;
+
+    // Auto-generate Profile ID
+    document.addEventListener('DOMContentLoaded', function() {
+        // Generate profile ID
+        function generateProfileId() {
+            const prefix = '<?= htmlspecialchars($clientName); ?>'.substring(0, 2).toUpperCase();
+            const timestamp = Date.now().toString().slice(-6);
+            const random = Math.floor(Math.random() * 1000).toString().padStart(3, '0');
+            return prefix + timestamp + random;
+        }
+
+        const profileIdField = document.getElementById('profile_id');
+        if (profileIdField) {
+            profileIdField.value = generateProfileId();
+        }
+
+        <?php if ($isSuperAdminForClient): ?>
+        // Super admin client mode - lock user role to Admin
+        const userRoleSelect = document.getElementById('user_role');
+        if (userRoleSelect) {
+            // Prevent any changes to the dropdown
+            userRoleSelect.addEventListener('change', function(e) {
+                e.target.value = 'Admin';
+            });
+
+            // Add visual indicator
+            userRoleSelect.title = 'Role is locked to Admin for client management';
+        }
+        <?php endif; ?>
+    });
 </script>
 
 

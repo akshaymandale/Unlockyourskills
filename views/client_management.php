@@ -113,6 +113,11 @@
                                         </div>
 
                                         <div class="info-item">
+                                            <strong><?= Localization::translate('clients_client_code'); ?>:</strong>
+                                            <span class="text-muted"><code><?= htmlspecialchars($client['client_code']); ?></code></span>
+                                        </div>
+
+                                        <div class="info-item">
                                             <strong><?= Localization::translate('clients_users'); ?>:</strong>
                                             <span class="text-muted">
                                                 <?= $client['active_users']; ?> / <?= $client['max_users']; ?>
@@ -222,6 +227,12 @@
                             </div>
 
                             <div class="mb-3">
+                                <label for="client_code" class="form-label"><?= Localization::translate('clients_client_code_required'); ?></label>
+                                <input type="text" class="form-control" id="client_code" name="client_code" placeholder="<?= Localization::translate('clients_client_code_placeholder'); ?>" style="text-transform: uppercase;">
+                                <div class="form-text"><?= Localization::translate('clients_client_code_help'); ?></div>
+                            </div>
+
+                            <div class="mb-3">
                                 <label for="max_users" class="form-label"><?= Localization::translate('clients_maximum_users_required'); ?></label>
                                 <input type="text" class="form-control" id="max_users" name="max_users" placeholder="<?= Localization::translate('clients_maximum_users_placeholder'); ?>">
                             </div>
@@ -327,6 +338,12 @@
                             <div class="mb-3">
                                 <label for="edit_client_name" class="form-label"><?= Localization::translate('clients_client_name_required'); ?></label>
                                 <input type="text" class="form-control" id="edit_client_name" name="client_name">
+                            </div>
+
+                            <div class="mb-3">
+                                <label for="edit_client_code" class="form-label"><?= Localization::translate('clients_client_code_required'); ?></label>
+                                <input type="text" class="form-control" id="edit_client_code" name="client_code" placeholder="<?= Localization::translate('clients_client_code_placeholder'); ?>" style="text-transform: uppercase;">
+                                <div class="form-text"><?= Localization::translate('clients_client_code_help'); ?></div>
                             </div>
 
                             <div class="mb-3">
@@ -497,6 +514,18 @@ document.addEventListener('DOMContentLoaded', function() {
                 hideFieldError(clientName);
             }
 
+            // Validate client code
+            const clientCode = document.getElementById('client_code');
+            if (!clientCode.value.trim()) {
+                showFieldError(clientCode, window.translations['js.validation.client_code_required'] || 'Client code is required.');
+                isValid = false;
+            } else if (!/^[A-Z0-9_]+$/.test(clientCode.value.trim())) {
+                showFieldError(clientCode, window.translations['js.validation.client_code_format'] || 'Client code must contain only uppercase letters, numbers, and underscores.');
+                isValid = false;
+            } else {
+                hideFieldError(clientCode);
+            }
+
             // Validate max users
             const maxUsers = document.getElementById('max_users');
             if (!maxUsers.value.trim()) {
@@ -580,6 +609,16 @@ document.addEventListener('DOMContentLoaded', function() {
                 }
                 break;
 
+            case 'client_code':
+                if (!value) {
+                    showFieldError(field, window.translations['js.validation.client_code_required'] || 'Client code is required.');
+                } else if (!/^[A-Z0-9_]+$/.test(value)) {
+                    showFieldError(field, window.translations['js.validation.client_code_format'] || 'Client code must contain only uppercase letters, numbers, and underscores.');
+                } else {
+                    hideFieldError(field);
+                }
+                break;
+
             case 'max_users':
                 if (!value) {
                     showFieldError(field, window.translations['js.validation.max_users_required'] || 'Maximum users is required.');
@@ -628,6 +667,22 @@ document.addEventListener('DOMContentLoaded', function() {
         if (document.getElementById('editClientForm')) {
             window.attachClientValidation('editClientForm');
         }
+    }
+
+    // Auto-convert client code to uppercase
+    const clientCodeField = document.getElementById('client_code');
+    const editClientCodeField = document.getElementById('edit_client_code');
+
+    if (clientCodeField) {
+        clientCodeField.addEventListener('input', function() {
+            this.value = this.value.toUpperCase().replace(/[^A-Z0-9_]/g, '');
+        });
+    }
+
+    if (editClientCodeField) {
+        editClientCodeField.addEventListener('input', function() {
+            this.value = this.value.toUpperCase().replace(/[^A-Z0-9_]/g, '');
+        });
     }
 
     // Reset add form when modal closes
@@ -737,6 +792,7 @@ document.addEventListener('DOMContentLoaded', function() {
         // Populate basic information
         document.getElementById('edit_client_id').value = client.id;
         document.getElementById('edit_client_name').value = client.client_name || '';
+        document.getElementById('edit_client_code').value = client.client_code || '';
         document.getElementById('edit_max_users').value = client.max_users || '';
         document.getElementById('edit_status').value = client.status || 'active';
 

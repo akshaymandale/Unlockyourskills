@@ -10,6 +10,28 @@
     <div class="container add-user-container user-management" data-user-page="true">
         <h1 class="page-title text-purple"><?= Localization::translate('user_management_title'); ?></h1>
 
+        <?php if (isset($_GET['client_id'])): ?>
+            <?php
+            // Get client name for display
+            $clientName = 'Unknown Client';
+            if (isset($clients) && !empty($clients)) {
+                foreach ($clients as $client) {
+                    if ($client['id'] == $_GET['client_id']) {
+                        $clientName = $client['client_name'];
+                        break;
+                    }
+                }
+            }
+            ?>
+            <div class="alert alert-info mb-3">
+                <i class="fas fa-building"></i>
+                <strong>Client Management Mode:</strong> Managing users for client <strong><?= htmlspecialchars($clientName); ?></strong>
+                <a href="index.php?controller=UserManagementController" class="btn btn-sm btn-outline-secondary ms-2">
+                    <i class="fas fa-arrow-left"></i> Back to All Users
+                </a>
+            </div>
+        <?php endif; ?>
+
         <!-- ✅ Filters & Search Section -->
         <div class="filter-section">
             <div class="container-fluid">
@@ -94,7 +116,13 @@
                             // Check if user limit is reached
                             $addUserDisabled = '';
                             $addUserText = Localization::translate('buttons_add_user');
-                            $addUserOnclick = "window.location.href='index.php?controller=UserManagementController&action=addUser'";
+
+                            // Preserve client_id parameter if present (for super admin client management)
+                            $addUserUrl = 'index.php?controller=UserManagementController&action=addUser';
+                            if (isset($_GET['client_id'])) {
+                                $addUserUrl .= '&client_id=' . urlencode($_GET['client_id']);
+                            }
+                            $addUserOnclick = "window.location.href='$addUserUrl'";
                             $addUserTitle = Localization::translate('buttons_add_user_tooltip');
 
                             if ($userLimitStatus && !$userLimitStatus['canAdd']) {
@@ -104,13 +132,20 @@
                                 $addUserTitle = 'User limit reached: ' . $userLimitStatus['current'] . '/' . $userLimitStatus['limit'];
                             }
                             ?>
-                            <button type="button"
-                                    class="btn btn-sm btn-primary add-user-btn"
-                                    onclick="<?= $addUserOnclick; ?>"
-                                    title="<?= $addUserTitle; ?>"
-                                    <?= $addUserDisabled; ?>>
-                                <i class="fas fa-plus me-1"></i><?= $addUserText; ?>
-                            </button>
+                            <?php if ($addUserDisabled): ?>
+                                <button type="button"
+                                        class="btn btn-sm btn-primary add-user-btn"
+                                        title="<?= $addUserTitle; ?>"
+                                        disabled>
+                                    <i class="fas fa-plus me-1"></i><?= $addUserText; ?>
+                                </button>
+                            <?php else: ?>
+                                <a href="<?= $addUserUrl; ?>"
+                                   class="btn btn-sm btn-primary add-user-btn"
+                                   title="<?= $addUserTitle; ?>">
+                                    <i class="fas fa-plus me-1"></i><?= $addUserText; ?>
+                                </a>
+                            <?php endif; ?>
                         </div>
                         <?php if ($userLimitStatus && !$userLimitStatus['canAdd']): ?>
                             <small class="text-muted d-block mt-1 text-end">
@@ -172,7 +207,13 @@
                                 </td>
                                 <td>
                                     <!-- ✅ Edit Button -->
-                                    <a href="index.php?controller=UserManagementController&action=editUser&id=<?= $user['profile_id']; ?>"
+                                    <?php
+                                    $editUserUrl = "index.php?controller=UserManagementController&action=editUser&id=" . $user['profile_id'];
+                                    if (isset($_GET['client_id'])) {
+                                        $editUserUrl .= '&client_id=' . urlencode($_GET['client_id']);
+                                    }
+                                    ?>
+                                    <a href="<?= $editUserUrl; ?>"
                                         class="btn theme-btn-primary"
                                         title="<?= Localization::translate('user_grid_edit_user'); ?>">
                                         <i class="fas fa-edit"></i>
