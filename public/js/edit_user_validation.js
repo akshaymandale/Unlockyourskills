@@ -2,27 +2,11 @@ document.addEventListener("DOMContentLoaded", function () {
     const editUserForm = document.getElementById("editUserForm");
 
     if (editUserForm) {
-        // ✅ Remove any existing event listeners to prevent duplicates
-        editUserForm.removeEventListener("submit", userFormSubmitHandler);
-        editUserForm.addEventListener("submit", userFormSubmitHandler);
-
         // ✅ Validate on Focus Out (Blur Event)
         document.querySelectorAll("#editUserForm input, #editUserForm select").forEach(field => {
             field.removeEventListener("blur", userFieldBlurHandler);
             field.addEventListener("blur", userFieldBlurHandler);
         });
-    }
-    
-    // ✅ Form Submit Handler (like SCORM)
-    function userFormSubmitHandler(event) {
-        event.preventDefault(); // Always prevent default submission
-        
-        let isValid = validateForm();
-        
-        if (isValid) {
-            // Use the native form submit (bypasses event listeners)
-            event.target.submit();
-        }
     }
     
     // ✅ Field Blur Handler
@@ -33,14 +17,17 @@ document.addEventListener("DOMContentLoaded", function () {
     // ✅ Function to Validate Entire Form
     function validateForm() {
         let isValid = true;
-        const fields = document.querySelectorAll("#editUserForm input, #editUserForm select");
-        
+        const fields = document.querySelectorAll("#editUserForm input, #editUserForm select, #editUserForm textarea");
+
         fields.forEach(field => {
             if (!validateField(field)) {
                 isValid = false;
             }
         });
-        
+
+        // Update tab highlighting after validation
+        updateTabHighlighting();
+
         return isValid;
     }
 
@@ -135,7 +122,26 @@ document.addEventListener("DOMContentLoaded", function () {
                     }
                 }
                 break;
+
+            default:
+                // Handle custom fields (Extra Details tab)
+                if (fieldName && fieldName.startsWith("custom_field_")) {
+                    // Check if field is required by looking at the label for asterisk
+                    const fieldLabel = document.querySelector(`label[for="${field.id}"]`);
+                    const isRequired = fieldLabel && fieldLabel.innerHTML.includes('*');
+
+                    if (isRequired && value === "") {
+                        showError(field, "This field is required");
+                        isValid = false;
+                    } else {
+                        hideError(field);
+                    }
+                }
+                break;
         }
+
+        // Update tab highlighting after field validation
+        updateTabHighlighting();
 
         return isValid;
     }
@@ -186,4 +192,83 @@ document.addEventListener("DOMContentLoaded", function () {
         // Remove error styling when valid (like SCORM)
         input.classList.remove("is-invalid");
     }
+
+    // ✅ Function to Update Tab Highlighting Based on Validation Errors
+    function updateTabHighlighting() {
+        // Define tab mappings
+        const tabMappings = {
+            'basic-details': ['full_name', 'email', 'contact_number', 'gender', 'dob', 'user_role', 'profile_expiry', 'user_status', 'locked_status', 'leaderboard', 'profile_picture'],
+            'additional-details': ['country', 'state', 'city', 'timezone', 'language', 'reports_to', 'joining_date', 'retirement_date'],
+            'extra-details': [] // Will be populated with custom fields dynamically
+        };
+
+        // Get all custom fields for extra-details tab
+        const customFields = document.querySelectorAll('[name^="custom_field_"]');
+        customFields.forEach(field => {
+            tabMappings['extra-details'].push(field.getAttribute('name'));
+        });
+
+        // Check each tab for validation errors
+        Object.keys(tabMappings).forEach(tabId => {
+            const tabButton = document.querySelector(`#editUserTabs button[data-bs-target="#${tabId}"]`);
+            if (!tabButton) return;
+
+            let hasErrors = false;
+
+            // Check if any field in this tab has validation errors
+            tabMappings[tabId].forEach(fieldName => {
+                const field = document.querySelector(`[name="${fieldName}"]`);
+                if (field && field.classList.contains('is-invalid')) {
+                    hasErrors = true;
+                }
+            });
+
+            // Update tab styling
+            if (hasErrors) {
+                tabButton.classList.add('tab-error');
+                tabButton.style.borderColor = '#dc3545';
+                tabButton.style.borderWidth = '2px';
+                tabButton.style.borderStyle = 'solid';
+                tabButton.style.color = '#dc3545';
+            } else {
+                tabButton.classList.remove('tab-error');
+                tabButton.style.borderColor = '';
+                tabButton.style.borderWidth = '';
+                tabButton.style.borderStyle = '';
+                tabButton.style.color = '';
+            }
+        });
+    }
+
+    // ✅ Add validation to blur events for custom fields
+    document.querySelectorAll('[name^="custom_field_"]').forEach(field => {
+        field.removeEventListener("blur", userFieldBlurHandler);
+        field.addEventListener("blur", userFieldBlurHandler);
+    });
+
+    // ✅ Add Form Submit Event Handler
+    if (editUserForm) {
+        editUserForm.addEventListener('submit', function(e) {
+            // Validate the entire form
+            const isValid = validateForm();
+
+            if (!isValid) {
+                e.preventDefault(); // Prevent form submission
+
+                // Show alert to user
+                alert('Please fix all validation errors before submitting the form. Check tabs with red borders for errors.');
+
+                // Focus on first tab with errors
+                const firstErrorTab = document.querySelector('.nav-tabs .nav-link.tab-error');
+                if (firstErrorTab) {
+                    firstErrorTab.click();
+                }
+
+                return false;
+            }
+
+            return true;
+        });
+    }
+
 });

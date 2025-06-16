@@ -203,34 +203,69 @@ document.addEventListener("DOMContentLoaded", function () {
 
 
 
-    // Add user page script for hide and show tab
-    let addUserTabs = document.querySelectorAll("#addUserTabs a");
+    // Add user page script for hide and show tab (Bootstrap 5 compatible)
+    let addUserTabs = document.querySelectorAll("#addUserTabs button[data-bs-toggle='tab']");
+    let editUserTabs = document.querySelectorAll("#editUserTabs button[data-bs-toggle='tab']");
 
+    // Handle Add User tabs
     addUserTabs.forEach(tab => {
         tab.addEventListener("click", function (event) {
             event.preventDefault();
-            const targetId = this.getAttribute("href").substring(1);
+            const targetId = this.getAttribute("data-bs-target");
 
-            // Hide all tab panes
-            document.querySelectorAll(".tab-pane").forEach(pane => {
+            // Hide all tab panes in the add user form
+            document.querySelectorAll("#addUserTabsContent .tab-pane").forEach(pane => {
                 pane.classList.remove("show", "active");
-                pane.style.display = "none"; // Explicitly hide all
+                pane.style.display = "none";
             });
 
-            // Remove active class from all tabs
-            document.querySelectorAll("#addUserTabs a").forEach(tab => {
-                tab.classList.remove("active");
+            // Remove active class from all add user tabs
+            addUserTabs.forEach(tabEl => {
+                tabEl.classList.remove("active");
+                tabEl.setAttribute("aria-selected", "false");
             });
 
             // Show the selected tab pane
-            let targetPane = document.getElementById(targetId);
+            let targetPane = document.querySelector(targetId);
             if (targetPane) {
                 targetPane.classList.add("show", "active");
-                targetPane.style.display = "block"; // Ensure it is visible
+                targetPane.style.display = "block";
             }
 
             // Add active class to the clicked tab
             this.classList.add("active");
+            this.setAttribute("aria-selected", "true");
+        });
+    });
+
+    // Handle Edit User tabs
+    editUserTabs.forEach(tab => {
+        tab.addEventListener("click", function (event) {
+            event.preventDefault();
+            const targetId = this.getAttribute("data-bs-target");
+
+            // Hide all tab panes in the edit user form
+            document.querySelectorAll("#editUserTabsContent .tab-pane").forEach(pane => {
+                pane.classList.remove("show", "active");
+                pane.style.display = "none";
+            });
+
+            // Remove active class from all edit user tabs
+            editUserTabs.forEach(tabEl => {
+                tabEl.classList.remove("active");
+                tabEl.setAttribute("aria-selected", "false");
+            });
+
+            // Show the selected tab pane
+            let targetPane = document.querySelector(targetId);
+            if (targetPane) {
+                targetPane.classList.add("show", "active");
+                targetPane.style.display = "block";
+            }
+
+            // Add active class to the clicked tab
+            this.classList.add("active");
+            this.setAttribute("aria-selected", "true");
         });
     });
 

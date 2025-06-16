@@ -305,6 +305,38 @@ html, body {
     color: white !important;
 }
 
+/* ✅ Tab Error Styling for Validation */
+.nav-tabs .nav-link.tab-error {
+    border: 2px solid #dc3545 !important;
+    color: #dc3545 !important;
+    background-color: #fff5f5 !important;
+    position: relative;
+}
+
+.nav-tabs .nav-link.tab-error::after {
+    content: "!";
+    position: absolute;
+    top: -5px;
+    right: -5px;
+    background-color: #dc3545;
+    color: white;
+    border-radius: 50%;
+    width: 18px;
+    height: 18px;
+    font-size: 12px;
+    font-weight: bold;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 10;
+}
+
+.nav-tabs .nav-link.tab-error:hover {
+    background-color: #f8d7da !important;
+    border-color: #dc3545 !important;
+    color: #dc3545 !important;
+}
+
 /* ✅ Tab Content */
 .tab-content {
     background: white;
