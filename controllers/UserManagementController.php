@@ -116,6 +116,10 @@ class UserManagementController extends BaseController {
         // Fetch languages for dropdown
         $languages = $this->userModel->getLanguages();
 
+        // Fetch user roles from database
+        $userRoles = $this->userModel->getClientUserRoles();
+        $adminRoles = $this->userModel->getAdminUserRoles();
+
         include 'views/add_user.php';
     }
 
@@ -155,6 +159,10 @@ class UserManagementController extends BaseController {
 
         // Fetch languages for dropdown
         $languages = $this->userModel->getLanguages();
+
+        // Fetch user roles from database
+        $userRoles = $this->userModel->getClientUserRoles();
+        $adminRoles = $this->userModel->getAdminUserRoles();
 
         include 'views/edit_user.php';
     }
