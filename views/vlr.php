@@ -1,5 +1,5 @@
 <?php
-// views/vlr.php
+// views/vlr.php 
 //echo '<pre>'; print_r($_SESSION);
 
 $clientName = $_SESSION['username'] ?? 'DEFAULT';
