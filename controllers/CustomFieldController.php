@@ -141,9 +141,9 @@ class CustomFieldController {
             }
 
             // Verify field belongs to current client
-            $field = $this->customFieldModel->getCustomFieldById($fieldId);
             $currentClientId = $_SESSION['user']['client_id'] ?? null;
-            if (!$field || $field['client_id'] != $currentClientId) {
+            $field = $this->customFieldModel->getCustomFieldById($fieldId, $currentClientId);
+            if (!$field) {
                 $this->toastError(Localization::translate('validation.field_not_found'), 'index.php?controller=UserManagementController');
                 return;
             }
@@ -183,7 +183,7 @@ class CustomFieldController {
                 'is_active' => isset($_POST['is_active']) ? 1 : 0
             ];
 
-            if ($this->customFieldModel->updateCustomField($fieldId, $data)) {
+            if ($this->customFieldModel->updateCustomField($fieldId, $data, $currentClientId)) {
                 $this->toastSuccess(Localization::translate('success.custom_field_updated'), 'index.php?controller=UserManagementController');
             } else {
                 $this->toastError(Localization::translate('error.custom_field_update_failed'), 'index.php?controller=UserManagementController');
@@ -214,15 +214,15 @@ class CustomFieldController {
             }
 
             // Verify field belongs to current client
-            $field = $this->customFieldModel->getCustomFieldById($fieldId);
             $currentClientId = $_SESSION['user']['client_id'] ?? null;
-            if (!$field || $field['client_id'] != $currentClientId) {
+            $field = $this->customFieldModel->getCustomFieldById($fieldId, $currentClientId);
+            if (!$field) {
                 http_response_code(404);
                 echo json_encode(['error' => Localization::translate('validation.field_not_found')]);
                 return;
             }
 
-            if ($this->customFieldModel->deleteCustomField($fieldId)) {
+            if ($this->customFieldModel->deleteCustomField($fieldId, $currentClientId)) {
                 echo json_encode(['success' => true, 'message' => Localization::translate('success.custom_field_deleted')]);
             } else {
                 http_response_code(500);

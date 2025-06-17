@@ -14,17 +14,34 @@ class VLRController extends BaseController
 
     public function index()
     {
-        $scormPackages = $this->VLRModel->getScormPackages();
-        $nonScormPackages = $this->VLRModel->getNonScormPackages();
-        $externalContent = $this->VLRModel->getExternalContent();
-        $documents = $this->VLRModel->getAllDocuments();
-        $assessmentPackages = $this->VLRModel->getAllAssessments();
-        $surveyPackages = $this->VLRModel->getAllSurvey();
-        $feedbackPackages = $this->VLRModel->getAllFeedback();
-        $audioPackages = $this->VLRModel->getAudioPackages();
-        $videoPackages = $this->VLRModel->getVideoPackages();
-        $imagePackages = $this->VLRModel->getImagePackages();
-        $interactiveContent = $this->VLRModel->getInteractiveContent();
+        // Check if user is logged in and get client_id
+        if (!isset($_SESSION['user']['client_id'])) {
+            $this->toastError('Unauthorized access. Please log in.', 'index.php?controller=LoginController');
+            return;
+        }
+
+        $clientId = $_SESSION['user']['client_id'];
+        $currentUser = $_SESSION['user'] ?? null;
+
+        // Determine client filtering based on user role
+        $filterClientId = null;
+        if ($currentUser && $currentUser['system_role'] === 'admin') {
+            // Client admin can only see their client's content
+            $filterClientId = $clientId;
+        }
+        // Super admin can see all content (no client filtering)
+
+        $scormPackages = $this->VLRModel->getScormPackages($filterClientId);
+        $nonScormPackages = $this->VLRModel->getNonScormPackages($filterClientId);
+        $externalContent = $this->VLRModel->getExternalContent($filterClientId);
+        $documents = $this->VLRModel->getAllDocuments($filterClientId);
+        $assessmentPackages = $this->VLRModel->getAllAssessments($filterClientId);
+        $surveyPackages = $this->VLRModel->getAllSurvey($filterClientId);
+        $feedbackPackages = $this->VLRModel->getAllFeedback($filterClientId);
+        $audioPackages = $this->VLRModel->getAudioPackages($filterClientId);
+        $videoPackages = $this->VLRModel->getVideoPackages($filterClientId);
+        $imagePackages = $this->VLRModel->getImagePackages($filterClientId);
+        $interactiveContent = $this->VLRModel->getInteractiveContent($filterClientId);
         $languageList = $this->VLRModel->getLanguages();
         require 'views/vlr.php';
     }
@@ -75,10 +92,12 @@ class VLRController extends BaseController
     {
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             // Validate session (ensure user is logged in)
-            if (!isset($_SESSION['id'])) {
-                $this->toastError('Unauthorized access. Please log in.', 'index.php?controller=VLRController&tab=scorm');
+            if (!isset($_SESSION['id']) || !isset($_SESSION['user']['client_id'])) {
+                $this->toastError('Unauthorized access. Please log in.', 'index.php?controller=LoginController');
                 return;
             }
+
+            $clientId = $_SESSION['user']['client_id'];
 
             $scormId = $_POST['scorm_id'] ?? null; // Hidden ID field for edit mode
 
@@ -167,6 +186,7 @@ class VLRController extends BaseController
 
             // Prepare data
             $data = [
+                'client_id' => $clientId,
                 'title' => trim($_POST['scorm_title']),
                 'zip_file' => $zipFileName,  // Use new or existing file
                 'description' => trim($_POST['description'] ?? ''),
@@ -181,12 +201,15 @@ class VLRController extends BaseController
             ];
 
             if ($scormId) {
-                // Update existing SCORM package
-                $result = $this->VLRModel->updateScormPackage($scormId, $data);
+                // Update existing SCORM package (with client validation)
+                $currentUser = $_SESSION['user'] ?? null;
+                $filterClientId = ($currentUser && $currentUser['system_role'] === 'admin') ? $clientId : null;
+
+                $result = $this->VLRModel->updateScormPackage($scormId, $data, $filterClientId);
                 if ($result) {
                     $this->toastSuccess('SCORM package updated successfully!', 'index.php?controller=VLRController&tab=scorm');
                 } else {
-                    $this->toastError('Failed to update SCORM package.', 'index.php?controller=VLRController&tab=scorm');
+                    $this->toastError('Failed to update SCORM package or access denied.', 'index.php?controller=VLRController&tab=scorm');
                 }
             } else {
                 // Insert new SCORM package
@@ -206,24 +229,30 @@ class VLRController extends BaseController
     public function delete()
     {
         // Validate session (ensure user is logged in)
-        if (!isset($_SESSION['id'])) {
-            $this->toastError('Unauthorized access. Please log in.', 'index.php?controller=VLRController&tab=scorm');
+        if (!isset($_SESSION['id']) || !isset($_SESSION['user']['client_id'])) {
+            $this->toastError('Unauthorized access. Please log in.', 'index.php?controller=LoginController');
             return;
         }
+
+        $clientId = $_SESSION['user']['client_id'];
+        $currentUser = $_SESSION['user'] ?? null;
 
         if (isset($_GET['id'])) {
             $id = $_GET['id'];
             error_log("📦 Deleting SCORM package with ID: " . $id);
 
-            $result = $this->VLRModel->deleteScormPackage($id);
+            // Determine client filtering based on user role
+            $filterClientId = ($currentUser && $currentUser['system_role'] === 'admin') ? $clientId : null;
+
+            $result = $this->VLRModel->deleteScormPackage($id, $filterClientId);
             error_log("✅ Delete result: " . ($result ? 'SUCCESS' : 'FAILED'));
 
             if ($result) {
                 error_log("🎉 SCORM package deleted successfully!");
                 $this->toastSuccess('SCORM package deleted successfully!', 'index.php?controller=VLRController&tab=scorm');
             } else {
-                error_log("❌ Failed to delete SCORM package");
-                $this->toastError('Failed to delete SCORM package.', 'index.php?controller=VLRController&tab=scorm');
+                error_log("❌ Failed to delete SCORM package or access denied");
+                $this->toastError('Failed to delete SCORM package or access denied.', 'index.php?controller=VLRController&tab=scorm');
             }
         } else {
             error_log("❌ No ID provided in request");
@@ -236,6 +265,14 @@ class VLRController extends BaseController
     public function addOrEditExternalContent()
     {
         if ($_SERVER["REQUEST_METHOD"] === "POST") {
+            // Validate session (ensure user is logged in)
+            if (!isset($_SESSION['id']) || !isset($_SESSION['user']['client_id'])) {
+                $this->toastError('Unauthorized access. Please log in.', 'index.php?controller=LoginController');
+                return;
+            }
+
+            $clientId = $_SESSION['user']['client_id'];
+
             // Check if it's an update (edit) operation
             $isEdit = isset($_POST['id']) && !empty($_POST['id']);
             $id = $isEdit ? intval($_POST['id']) : null;
@@ -375,6 +412,7 @@ class VLRController extends BaseController
 
             // Prepare data for insert/update
             $data = [
+                'client_id' => $clientId,
                 'title' => $title,
                 'content_type' => $contentType,
                 'version_number' => $versionNumber,
@@ -401,11 +439,14 @@ class VLRController extends BaseController
 
             // Insert or update the database
             if ($isEdit) {
-                $result = $this->VLRModel->updateExternalContent($id, $data);
+                $currentUser = $_SESSION['user'] ?? null;
+                $filterClientId = ($currentUser && $currentUser['system_role'] === 'admin') ? $clientId : null;
+
+                $result = $this->VLRModel->updateExternalContent($id, $data, $filterClientId);
                 if ($result) {
                     $this->toastSuccess('External Content package updated successfully!', 'index.php?controller=VLRController&tab=external');
                 } else {
-                    $this->toastError('Failed to update External Content package.', 'index.php?controller=VLRController&tab=external');
+                    $this->toastError('Failed to update External Content package or access denied.', 'index.php?controller=VLRController&tab=external');
                 }
             } else {
                 $data['created_by'] = $modifiedBy;
@@ -422,14 +463,27 @@ class VLRController extends BaseController
     // Delete External content data
     public function deleteExternal()
     {
+        // Validate session (ensure user is logged in)
+        if (!isset($_SESSION['id']) || !isset($_SESSION['user']['client_id'])) {
+            $this->toastError('Unauthorized access. Please log in.', 'index.php?controller=LoginController');
+            return;
+        }
+
+        $clientId = $_SESSION['user']['client_id'];
+        $currentUser = $_SESSION['user'] ?? null;
+
         if (isset($_GET['id'])) {
             $id = $_GET['id'];
-            $result = $this->VLRModel->deleteExternalContent($id);
+
+            // Determine client filtering based on user role
+            $filterClientId = ($currentUser && $currentUser['system_role'] === 'admin') ? $clientId : null;
+
+            $result = $this->VLRModel->deleteExternalContent($id, $filterClientId);
 
             if ($result) {
                 $this->toastSuccess('External Content deleted successfully!', 'index.php?controller=VLRController&tab=external');
             } else {
-                $this->toastError('Failed to delete External Content package.', 'index.php?controller=VLRController&tab=external');
+                $this->toastError('Failed to delete External Content package or access denied.', 'index.php?controller=VLRController&tab=external');
             }
         } else {
             $this->toastError('Invalid request.', 'index.php?controller=VLRController&tab=external');
@@ -447,6 +501,13 @@ class VLRController extends BaseController
     public function addOrEditDocument()
     {
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            // Validate session (ensure user is logged in)
+            if (!isset($_SESSION['id']) || !isset($_SESSION['user']['client_id'])) {
+                $this->toastError('Unauthorized access. Please log in.', 'index.php?controller=LoginController');
+                return;
+            }
+
+            $clientId = $_SESSION['user']['client_id'];
             $errors = [];
 
             // Server-side validation
@@ -532,6 +593,7 @@ class VLRController extends BaseController
 
             // Prepare data for insertion/updating
             $data = [
+                'client_id' => $clientId,
                 'document_title' => $documentTitle,
                 'documentCategory' => $documentCategory,
                 'description' => $_POST['description'] ?? '',
@@ -551,8 +613,11 @@ class VLRController extends BaseController
 
             // Insert or update document
             if (!empty($_POST['documentId'])) {
-                $result = $this->VLRModel->updateDocument($data, $_POST['documentId']);
-                $message = $result['success'] ? "Document updated successfully." : "Failed to update document.";
+                $currentUser = $_SESSION['user'] ?? null;
+                $filterClientId = ($currentUser && $currentUser['system_role'] === 'admin') ? $clientId : null;
+
+                $result = $this->VLRModel->updateDocument($data, $_POST['documentId'], $filterClientId);
+                $message = $result['success'] ? "Document updated successfully." : "Failed to update document or access denied.";
             } else {
                 $result = $this->VLRModel->insertDocument($data);
                 $message = $result['success'] ? "Document added successfully." : "Failed to add document.";
@@ -573,14 +638,27 @@ class VLRController extends BaseController
      */
     public function deleteDocument()
     {
+        // Validate session (ensure user is logged in)
+        if (!isset($_SESSION['id']) || !isset($_SESSION['user']['client_id'])) {
+            $this->toastError('Unauthorized access. Please log in.', 'index.php?controller=LoginController');
+            return;
+        }
+
+        $clientId = $_SESSION['user']['client_id'];
+        $currentUser = $_SESSION['user'] ?? null;
+
         if (isset($_GET['id'])) {
             $id = $_GET['id'];
-            $result = $this->VLRModel->deleteDocument($id);
+
+            // Determine client filtering based on user role
+            $filterClientId = ($currentUser && $currentUser['system_role'] === 'admin') ? $clientId : null;
+
+            $result = $this->VLRModel->deleteDocument($id, $filterClientId);
 
             if ($result) {
                 $this->toastSuccess('Document deleted successfully!', 'index.php?controller=VLRController&tab=document');
             } else {
-                $this->toastError('Failed to delete document.', 'index.php?controller=VLRController&tab=document');
+                $this->toastError('Failed to delete document or access denied.', 'index.php?controller=VLRController&tab=document');
             }
         }
     }
@@ -604,10 +682,12 @@ class VLRController extends BaseController
             return;
         }
 
-        if (!isset($_SESSION['id'])) {
-            $this->toastError('Unauthorized access. Please log in.', 'index.php?controller=VLRController');
+        if (!isset($_SESSION['id']) || !isset($_SESSION['user']['client_id'])) {
+            $this->toastError('Unauthorized access. Please log in.', 'index.php?controller=LoginController');
             return;
         }
+
+        $clientId = $_SESSION['user']['client_id'];
 
         // Server-side validation
         $title = trim($_POST['title'] ?? '');
@@ -653,6 +733,7 @@ class VLRController extends BaseController
         // Prepare data
         $questionIds = explode(',', $selectedQuestions);
         $data = [
+            'client_id' => $clientId,
             'title' => $title,
             'tags' => $tags,
             'num_attempts' => $numAttempts,

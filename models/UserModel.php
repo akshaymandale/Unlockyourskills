@@ -308,11 +308,18 @@ class UserModel {
     }
 
     // Get user by profile ID for editing
-    public function getUserById($profile_id) {
+    public function getUserById($profile_id, $clientId = null) {
         try {
-            $stmt = $this->conn->prepare("SELECT * FROM user_profiles WHERE profile_id = :profile_id AND is_deleted = 0");
-            $stmt->bindParam(":profile_id", $profile_id, PDO::PARAM_STR);
-            $stmt->execute();
+            $sql = "SELECT * FROM user_profiles WHERE profile_id = :profile_id AND is_deleted = 0";
+            $params = [':profile_id' => $profile_id];
+
+            if ($clientId !== null) {
+                $sql .= " AND client_id = :client_id";
+                $params[':client_id'] = $clientId;
+            }
+
+            $stmt = $this->conn->prepare($sql);
+            $stmt->execute($params);
             return $stmt->fetch(PDO::FETCH_ASSOC);
         } catch (PDOException $e) {
             error_log("UserModel getUserById error: " . $e->getMessage());
