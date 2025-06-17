@@ -10,6 +10,14 @@ class QuestionController extends BaseController {
     }
 
     public function index() {
+        // Check if user is logged in and get client_id
+        if (!isset($_SESSION['user']['client_id'])) {
+            $this->toastError('Unauthorized access. Please log in.', 'index.php?controller=LoginController');
+            return;
+        }
+
+        $clientId = $_SESSION['user']['client_id'];
+
         // ✅ Don't load initial data - let JavaScript handle it via AJAX
         // This prevents duplicate data rendering issues
         $questions = []; // Empty array for initial page load
@@ -17,9 +25,9 @@ class QuestionController extends BaseController {
         $totalPages = 0;
         $page = 1;
 
-        // Get unique values for filter dropdowns
-        $uniqueQuestionTypes = $this->questionModel->getUniqueQuestionTypes();
-        $uniqueDifficultyLevels = $this->questionModel->getUniqueDifficultyLevels();
+        // Get unique values for filter dropdowns (client-specific)
+        $uniqueQuestionTypes = $this->questionModel->getUniqueQuestionTypes($clientId);
+        $uniqueDifficultyLevels = $this->questionModel->getUniqueDifficultyLevels($clientId);
 
         require 'views/add_assessment.php';
     }
@@ -27,10 +35,12 @@ class QuestionController extends BaseController {
     public function add() {
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
-            if (!isset($_SESSION['id'])) {
-                $this->toastError('Unauthorized access. Please log in.', 'index.php?controller=VLRController');
+            if (!isset($_SESSION['id']) || !isset($_SESSION['user']['client_id'])) {
+                $this->toastError('Unauthorized access. Please log in.', 'index.php?controller=LoginController');
                 return;
             }
+
+            $clientId = $_SESSION['user']['client_id'];
 
             $errors = [];
 
@@ -80,6 +90,7 @@ class QuestionController extends BaseController {
 
             if (empty($errors)) {
                 $questionId = $this->questionModel->insertQuestion([
+                    'client_id' => $clientId,
                     'question_text' => $questionText,
                     'tags' => $tags,
                     'competency_skills' => $skills,
@@ -100,6 +111,7 @@ class QuestionController extends BaseController {
 
                         if (!empty($optionText)) {
                             $this->questionModel->insertOption([
+                                'client_id' => $clientId,
                                 'question_id' => $questionId,
                                 'option_index' => $index,
                                 'option_text' => $optionText,
@@ -122,14 +134,16 @@ class QuestionController extends BaseController {
             }
         }
 
-        require 'views/add_assessment_question.php';
+        require 'views/add_assessment.php';
     }
 
     public function edit() {
-        if (!isset($_SESSION['id'])) {
-            $this->toastError('Unauthorized access. Please log in.', 'index.php?controller=VLRController');
+        if (!isset($_SESSION['id']) || !isset($_SESSION['user']['client_id'])) {
+            $this->toastError('Unauthorized access. Please log in.', 'index.php?controller=LoginController');
             return;
         }
+
+        $clientId = $_SESSION['user']['client_id'];
     
         // Handle form submission
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
@@ -198,6 +212,7 @@ class QuestionController extends BaseController {
     
                         if (!empty($optionText)) {
                             $this->questionModel->updateOption([
+                                'client_id' => $clientId,
                                 'question_id' => $questionId,
                                 'option_index' => $index,
                                 'option_text' => $optionText,
@@ -222,13 +237,13 @@ class QuestionController extends BaseController {
         // Handle initial page load (GET)
         else if (isset($_GET['id'])) {
             $questionId = intval($_GET['id']);
-            $question = $this->questionModel->getQuestionById($questionId);
-            $options = $this->questionModel->getOptionsByQuestionId($questionId);
+            $question = $this->questionModel->getQuestionById($questionId, $clientId);
+            $options = $this->questionModel->getOptionsByQuestionId($questionId, $clientId);
     
             if ($question) {
-                // Reuse add_assessment_question.php for editing
+                // Reuse add_assessment.php for editing
                 $isEdit = true;
-                require 'views/add_assessment_question.php';
+                require 'views/add_assessment.php';
             } else {
                 $this->toastError('Question not found.', 'index.php?controller=QuestionController');
                 return;
@@ -258,6 +273,17 @@ class QuestionController extends BaseController {
     public function ajaxSearch() {
         header('Content-Type: application/json');
 
+        // Check if user is logged in and get client_id
+        if (!isset($_SESSION['user']['client_id'])) {
+            echo json_encode([
+                'success' => false,
+                'message' => 'Unauthorized access. Please log in.'
+            ]);
+            exit();
+        }
+
+        $clientId = $_SESSION['user']['client_id'];
+
         try {
             $limit = 10;
             $page = isset($_POST['page']) ? (int) $_POST['page'] : 1;
@@ -279,9 +305,9 @@ class QuestionController extends BaseController {
                 $filters['tags'] = $_POST['tags'];
             }
 
-            // Get questions from database
-            $questions = $this->questionModel->getQuestions($limit, $offset, $search, $filters);
-            $totalQuestions = $this->questionModel->getTotalQuestionCount($search, $filters);
+            // Get questions from database (client-specific)
+            $questions = $this->questionModel->getQuestions($limit, $offset, $search, $filters, $clientId);
+            $totalQuestions = $this->questionModel->getTotalQuestionCount($search, $filters, $clientId);
             $totalPages = ceil($totalQuestions / $limit);
 
             $response = [
@@ -307,15 +333,30 @@ class QuestionController extends BaseController {
     }
 
     public function save() {
+        // Check if this is an AJAX request
+        $isAjax = !empty($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) == 'xmlhttprequest';
+
         if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+            if ($isAjax) {
+                header('Content-Type: application/json');
+                echo json_encode(['success' => false, 'message' => 'Invalid request method.']);
+                return;
+            }
             $this->toastError('Invalid request method.', 'index.php?controller=QuestionController');
             return;
         }
 
-        if (!isset($_SESSION['id'])) {
-            $this->toastError('Unauthorized access. Please log in.', 'index.php?controller=VLRController');
+        if (!isset($_SESSION['id']) || !isset($_SESSION['user']['client_id'])) {
+            if ($isAjax) {
+                header('Content-Type: application/json');
+                echo json_encode(['success' => false, 'message' => 'Unauthorized access. Please log in.']);
+                return;
+            }
+            $this->toastError('Unauthorized access. Please log in.', 'index.php?controller=LoginController');
             return;
         }
+
+        $clientId = $_SESSION['user']['client_id'];
 
         $errors = [];
         $questionId = $_POST['questionId'] ?? null;
@@ -395,6 +436,7 @@ class QuestionController extends BaseController {
 
         if (empty($errors)) {
             $data = [
+                'client_id' => $clientId,
                 'question_text' => $questionText,
                 'tags' => $tags,
                 'competency_skills' => $skills,
@@ -430,6 +472,7 @@ class QuestionController extends BaseController {
 
                     if (!empty($optionText)) {
                         $this->questionModel->insertOption([
+                            'client_id' => $clientId,
                             'question_id' => $finalQuestionId,
                             'option_index' => $index,
                             'option_text' => $optionText,
@@ -440,18 +483,37 @@ class QuestionController extends BaseController {
             }
 
             if ($result) {
-                if ($questionId) {
-                    $this->toastSuccess('Question updated successfully!', 'index.php?controller=QuestionController');
+                if ($isAjax) {
+                    header('Content-Type: application/json');
+                    $message = $questionId ? 'Question updated successfully!' : 'Question added successfully!';
+                    echo json_encode(['success' => true, 'message' => $message]);
+                    return;
                 } else {
-                    $this->toastSuccess('Question added successfully!', 'index.php?controller=QuestionController');
+                    if ($questionId) {
+                        $this->toastSuccess('Question updated successfully!', 'index.php?controller=QuestionController');
+                    } else {
+                        $this->toastSuccess('Question added successfully!', 'index.php?controller=QuestionController');
+                    }
                 }
             } else {
-                $this->toastError('Failed to save question.', 'index.php?controller=QuestionController');
+                if ($isAjax) {
+                    header('Content-Type: application/json');
+                    echo json_encode(['success' => false, 'message' => 'Failed to save question.']);
+                    return;
+                } else {
+                    $this->toastError('Failed to save question.', 'index.php?controller=QuestionController');
+                }
             }
             return;
         } else {
             $errorMsg = implode(', ', $errors);
-            $this->toastError("Error(s): $errorMsg", 'index.php?controller=QuestionController');
+            if ($isAjax) {
+                header('Content-Type: application/json');
+                echo json_encode(['success' => false, 'message' => "Error(s): $errorMsg"]);
+                return;
+            } else {
+                $this->toastError("Error(s): $errorMsg", 'index.php?controller=QuestionController');
+            }
             return;
         }
     }
@@ -459,6 +521,14 @@ class QuestionController extends BaseController {
     public function getQuestionById() {
         // Simple test first - just return a basic response
         header('Content-Type: application/json');
+
+        // Check if user is logged in and get client_id
+        if (!isset($_SESSION['user']['client_id'])) {
+            echo json_encode(['error' => 'Unauthorized access. Please log in.']);
+            exit;
+        }
+
+        $clientId = $_SESSION['user']['client_id'];
 
         if (!isset($_GET['id']) || !is_numeric($_GET['id'])) {
             echo json_encode(['error' => 'Invalid question ID']);
@@ -468,8 +538,8 @@ class QuestionController extends BaseController {
         $id = (int)$_GET['id'];
 
         try {
-            $question = $this->questionModel->getQuestionById($id);
-            $options = $this->questionModel->getOptionsByQuestionId($id);
+            $question = $this->questionModel->getQuestionById($id, $clientId);
+            $options = $this->questionModel->getOptionsByQuestionId($id, $clientId);
 
             if (!$question) {
                 echo json_encode(['error' => 'Question not found']);

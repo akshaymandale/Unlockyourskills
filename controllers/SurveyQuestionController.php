@@ -13,6 +13,14 @@ class SurveyQuestionController extends BaseController
 
     public function index()
     {
+        // Check if user is logged in and get client_id
+        if (!isset($_SESSION['user']['client_id'])) {
+            $this->toastError('Unauthorized access. Please log in.', 'index.php?controller=LoginController');
+            return;
+        }
+
+        $clientId = $_SESSION['user']['client_id'];
+
         // ✅ Don't load initial data - let JavaScript handle it via AJAX
         // This prevents duplicate data rendering issues
         $questions = []; // Empty array for initial page load
@@ -20,8 +28,8 @@ class SurveyQuestionController extends BaseController
         $totalPages = 0;
         $page = 1;
 
-        // Get unique values for filter dropdowns
-        $uniqueQuestionTypes = $this->surveyQuestionModel->getDistinctTypes();
+        // Get unique values for filter dropdowns (client-specific)
+        $uniqueQuestionTypes = $this->surveyQuestionModel->getDistinctTypes($clientId);
 
         require 'views/add_survey.php';
     }
@@ -30,10 +38,12 @@ class SurveyQuestionController extends BaseController
 {
     if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
-        if (!isset($_SESSION['id'])) {
-            echo "<script>alert('Unauthorized access. Please log in.'); window.location.href='index.php?controller=VLRController';</script>";
-            exit();
+        if (!isset($_SESSION['id']) || !isset($_SESSION['user']['client_id'])) {
+            $this->toastError('Unauthorized access. Please log in.', 'index.php?controller=LoginController');
+            return;
         }
+
+        $clientId = $_SESSION['user']['client_id'];
 
         $questionId = isset($_POST['surveyQuestionId']) && is_numeric($_POST['surveyQuestionId']) ? (int)$_POST['surveyQuestionId'] : null;
 
@@ -85,6 +95,7 @@ class SurveyQuestionController extends BaseController
         }
 
         $data = [
+            'client_id' => $clientId,
             'title' => $title,
             'type' => $type,
             'media_path' => $mediaNameOnly,
@@ -95,27 +106,37 @@ class SurveyQuestionController extends BaseController
         ];
 
         if ($questionId) {
-            // UPDATE
-            $this->surveyQuestionModel->updateQuestion($questionId, $data);
+            // UPDATE (with client validation)
+            $currentUser = $_SESSION['user'] ?? null;
+            $filterClientId = ($currentUser && $currentUser['system_role'] === 'admin') ? $clientId : null;
 
-            if (in_array($type, ['multi_choice', 'checkbox', 'dropdown'])) {
-                $options = $_POST['optionText'] ?? [];
-                $optionMedias = $_FILES['optionMedia'] ?? null;
-                $this->surveyQuestionModel->updateOptions($questionId, $options, $optionMedias, $createdBy, $existingOptionMedias);
+            $result = $this->surveyQuestionModel->updateQuestion($questionId, $data, $filterClientId);
+
+            if ($result) {
+                if (in_array($type, ['multi_choice', 'checkbox', 'dropdown'])) {
+                    $options = $_POST['optionText'] ?? [];
+                    $optionMedias = $_FILES['optionMedia'] ?? null;
+                    $this->surveyQuestionModel->updateOptions($questionId, $options, $optionMedias, $createdBy, $existingOptionMedias, $filterClientId);
+                }
+                $this->toastSuccess('Survey question updated successfully!', 'index.php?controller=SurveyQuestionController');
+            } else {
+                $this->toastError('Failed to update survey question or access denied.', 'index.php?controller=SurveyQuestionController');
             }
-
-            $this->toastSuccess('Survey question updated successfully!', 'index.php?controller=SurveyQuestionController');
         } else {
             // INSERT
             $questionId = $this->surveyQuestionModel->saveQuestion($data);
 
-            if (in_array($type, ['multi_choice', 'checkbox', 'dropdown'])) {
+            if ($questionId && in_array($type, ['multi_choice', 'checkbox', 'dropdown'])) {
                 $options = $_POST['optionText'] ?? [];
                 $optionMedias = $_FILES['optionMedia'] ?? null;
-                $this->surveyQuestionModel->saveOptions($questionId, $options, $optionMedias, $createdBy);
+                $this->surveyQuestionModel->saveOptions($questionId, $options, $optionMedias, $createdBy, $clientId);
             }
 
-            $this->toastSuccess('Survey question saved successfully!', 'index.php?controller=SurveyQuestionController');
+            if ($questionId) {
+                $this->toastSuccess('Survey question saved successfully!', 'index.php?controller=SurveyQuestionController');
+            } else {
+                $this->toastError('Failed to save survey question.', 'index.php?controller=SurveyQuestionController');
+            }
         }
     } else {
         echo "<script>alert('Invalid request parameters.'); window.location.href='index.php?controller=SurveyQuestionController';</script>";
@@ -148,14 +169,27 @@ class SurveyQuestionController extends BaseController
 
     public function delete()
     {
+        // Check if user is logged in and get client_id
+        if (!isset($_SESSION['user']['client_id'])) {
+            $this->toastError('Unauthorized access. Please log in.', 'index.php?controller=LoginController');
+            return;
+        }
+
+        $clientId = $_SESSION['user']['client_id'];
+        $currentUser = $_SESSION['user'] ?? null;
+
         if (isset($_GET['id']) && is_numeric($_GET['id'])) {
             $id = (int)$_GET['id'];
-            $success = $this->surveyQuestionModel->deleteQuestion($id); // Soft delete
+
+            // Determine client filtering based on user role
+            $filterClientId = ($currentUser && $currentUser['system_role'] === 'admin') ? $clientId : null;
+
+            $success = $this->surveyQuestionModel->deleteQuestion($id, $filterClientId); // Soft delete
 
             if ($success) {
                 $this->toastSuccess('Survey question deleted successfully!', 'index.php?controller=SurveyQuestionController');
             } else {
-                $this->toastError('Failed to delete survey question.', 'index.php?controller=SurveyQuestionController');
+                $this->toastError('Failed to delete survey question or access denied.', 'index.php?controller=SurveyQuestionController');
             }
         } else {
             $this->toastError('Invalid request parameters.', 'index.php?controller=SurveyQuestionController');
@@ -195,6 +229,17 @@ public function getFilterOptions()
 public function ajaxSearch() {
     header('Content-Type: application/json');
 
+    // Check if user is logged in and get client_id
+    if (!isset($_SESSION['user']['client_id'])) {
+        echo json_encode([
+            'success' => false,
+            'message' => 'Unauthorized access. Please log in.'
+        ]);
+        exit();
+    }
+
+    $clientId = $_SESSION['user']['client_id'];
+
     try {
         $limit = 10;
         $page = isset($_POST['page']) ? (int) $_POST['page'] : 1;
@@ -205,15 +250,15 @@ public function ajaxSearch() {
         $type = trim($_POST['type'] ?? '');
         $tags = trim($_POST['tags'] ?? '');
 
-        // Get questions from database
-        $questions = $this->surveyQuestionModel->getQuestions($search, $type, $limit, $offset, $tags);
+        // Get questions from database (client-specific)
+        $questions = $this->surveyQuestionModel->getQuestions($search, $type, $limit, $offset, $tags, $clientId);
 
         // Add options for each question
         foreach ($questions as &$question) {
-            $question['options'] = $this->surveyQuestionModel->getOptionsByQuestionId($question['id']);
+            $question['options'] = $this->surveyQuestionModel->getOptionsByQuestionId($question['id'], $clientId);
         }
 
-        $totalQuestions = $this->surveyQuestionModel->getTotalQuestionCount($search, $type, $tags);
+        $totalQuestions = $this->surveyQuestionModel->getTotalQuestionCount($search, $type, $tags, $clientId);
         $totalPages = ceil($totalQuestions / $limit);
 
         $response = [

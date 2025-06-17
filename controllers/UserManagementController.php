@@ -130,10 +130,20 @@ class UserManagementController extends BaseController {
         }
 
         $profile_id = $_GET['id'];
-        $user = $this->userModel->getUserById($profile_id);
+        $currentUser = $_SESSION['user'] ?? null;
+
+        // Determine client filtering based on user role
+        $clientId = null;
+        if ($currentUser && $currentUser['system_role'] === 'admin') {
+            // Client admin can only edit users from their client
+            $clientId = $currentUser['client_id'];
+        }
+        // Super admin can edit users from any client (no client filtering)
+
+        $user = $this->userModel->getUserById($profile_id, $clientId);
 
         if (!$user) {
-            $this->redirectWithToast('User not found.', 'error', 'index.php?controller=UserManagementController');
+            $this->redirectWithToast('User not found or access denied.', 'error', 'index.php?controller=UserManagementController');
             return;
         }
 
@@ -350,9 +360,18 @@ class UserManagementController extends BaseController {
         $user_role = trim($_POST['user_role'] ?? '');
 
         // Get current user data to check role change
-        $currentUser = $this->userModel->getUserById($profile_id);
+        $sessionUser = $_SESSION['user'] ?? null;
+
+        // Determine client filtering based on user role
+        $clientId = null;
+        if ($sessionUser && $sessionUser['system_role'] === 'admin') {
+            // Client admin can only update users from their client
+            $clientId = $sessionUser['client_id'];
+        }
+
+        $currentUser = $this->userModel->getUserById($profile_id, $clientId);
         if (!$currentUser) {
-            $this->redirectWithToast('User not found.', 'error', 'index.php?controller=UserManagementController');
+            $this->redirectWithToast('User not found or access denied.', 'error', 'index.php?controller=UserManagementController');
             return;
         }
 
@@ -461,6 +480,22 @@ class UserManagementController extends BaseController {
     public function deleteUser() {
         if (isset($_GET['id'])) {
             $profile_id = $_GET['id'];
+            $currentUser = $_SESSION['user'] ?? null;
+
+            // Determine client filtering based on user role
+            $clientId = null;
+            if ($currentUser && $currentUser['system_role'] === 'admin') {
+                // Client admin can only delete users from their client
+                $clientId = $currentUser['client_id'];
+            }
+
+            // Verify user exists and belongs to the correct client
+            $userToDelete = $this->userModel->getUserById($profile_id, $clientId);
+            if (!$userToDelete) {
+                $this->redirectWithToast('User not found or access denied.', 'error', 'index.php?controller=UserManagementController');
+                return;
+            }
+
             $result = $this->userModel->softDeleteUser($profile_id);
 
             if ($result) {
@@ -474,6 +509,22 @@ class UserManagementController extends BaseController {
     public function lockUser() {
         if (isset($_GET['id'])) {
             $profile_id = $_GET['id'];
+            $currentUser = $_SESSION['user'] ?? null;
+
+            // Determine client filtering based on user role
+            $clientId = null;
+            if ($currentUser && $currentUser['system_role'] === 'admin') {
+                // Client admin can only lock users from their client
+                $clientId = $currentUser['client_id'];
+            }
+
+            // Verify user exists and belongs to the correct client
+            $userToLock = $this->userModel->getUserById($profile_id, $clientId);
+            if (!$userToLock) {
+                $this->toastError('User not found or access denied.', 'index.php?controller=UserManagementController');
+                return;
+            }
+
             $result = $this->userModel->updateLockStatus($profile_id, 1); // 1 = locked
 
             if ($result) {
@@ -490,6 +541,22 @@ class UserManagementController extends BaseController {
     public function unlockUser() {
         if (isset($_GET['id'])) {
             $profile_id = $_GET['id'];
+            $currentUser = $_SESSION['user'] ?? null;
+
+            // Determine client filtering based on user role
+            $clientId = null;
+            if ($currentUser && $currentUser['system_role'] === 'admin') {
+                // Client admin can only unlock users from their client
+                $clientId = $currentUser['client_id'];
+            }
+
+            // Verify user exists and belongs to the correct client
+            $userToUnlock = $this->userModel->getUserById($profile_id, $clientId);
+            if (!$userToUnlock) {
+                $this->toastError('User not found or access denied.', 'index.php?controller=UserManagementController');
+                return;
+            }
+
             $result = $this->userModel->updateLockStatus($profile_id, 0); // 0 = unlocked
 
             if ($result) {

@@ -14,6 +14,14 @@ class FeedbackQuestionController extends BaseController
     // List with pagination & filters
     public function index()
     {
+        // Check if user is logged in and get client_id
+        if (!isset($_SESSION['user']['client_id'])) {
+            $this->toastError('Unauthorized access. Please log in.', 'index.php?controller=LoginController');
+            return;
+        }
+
+        $clientId = $_SESSION['user']['client_id'];
+
         // ✅ Don't load initial data - let JavaScript handle it via AJAX
         // This prevents duplicate data rendering issues
         $questions = []; // Empty array for initial page load
@@ -21,8 +29,8 @@ class FeedbackQuestionController extends BaseController
         $totalPages = 0;
         $page = 1;
 
-        // Get unique values for filter dropdowns
-        $uniqueQuestionTypes = $this->feedbackQuestionModel->getDistinctTypes();
+        // Get unique values for filter dropdowns (client-specific)
+        $uniqueQuestionTypes = $this->feedbackQuestionModel->getDistinctTypes($clientId);
 
         require 'views/add_feedback_question.php';
     }
@@ -35,10 +43,12 @@ class FeedbackQuestionController extends BaseController
             return;
         }
 
-        if (!isset($_SESSION['id'])) {
-            $this->toastError('Unauthorized access. Please log in.', 'index.php?controller=VLRController');
+        if (!isset($_SESSION['id']) || !isset($_SESSION['user']['client_id'])) {
+            $this->toastError('Unauthorized access. Please log in.', 'index.php?controller=LoginController');
             return;
         }
+
+        $clientId = $_SESSION['user']['client_id'];
 
         $id = $_POST['feedbackQuestionId'] ?? null;  // for update
 
@@ -69,10 +79,13 @@ class FeedbackQuestionController extends BaseController
 
         if ($id) {
             // For update: optionally keep old media if no new upload
-            $existingQuestion = $this->feedbackQuestionModel->getQuestionById($id);
+            $currentUser = $_SESSION['user'] ?? null;
+            $filterClientId = ($currentUser && $currentUser['system_role'] === 'admin') ? $clientId : null;
+
+            $existingQuestion = $this->feedbackQuestionModel->getQuestionById($id, $filterClientId);
 
             if (!$existingQuestion) {
-                $this->toastError('Feedback question not found.', 'index.php?controller=FeedbackQuestionController');
+                $this->toastError('Feedback question not found or access denied.', 'index.php?controller=FeedbackQuestionController');
                 return;
             }
             if (!$mediaFileName) {
@@ -91,6 +104,7 @@ class FeedbackQuestionController extends BaseController
         $mediaNameOnly = $mediaFileName ? basename($mediaFileName) : null;
 
         $data = [
+            'client_id' => $clientId,
             'title' => $title,
             'type' => $type,
             'media_path' => $mediaNameOnly,
@@ -101,10 +115,21 @@ class FeedbackQuestionController extends BaseController
         ];
 
         if ($id) {
-            $this->feedbackQuestionModel->updateQuestion($id, $data);
+            $currentUser = $_SESSION['user'] ?? null;
+            $filterClientId = ($currentUser && $currentUser['system_role'] === 'admin') ? $clientId : null;
+
+            $result = $this->feedbackQuestionModel->updateQuestion($id, $data, $filterClientId);
+            if (!$result) {
+                $this->toastError('Failed to update feedback question or access denied.', 'index.php?controller=FeedbackQuestionController');
+                return;
+            }
             $questionId = $id;
         } else {
             $questionId = $this->feedbackQuestionModel->saveQuestion($data);
+            if (!$questionId) {
+                $this->toastError('Failed to save feedback question.', 'index.php?controller=FeedbackQuestionController');
+                return;
+            }
         }
 
         // Save/Update options for types that have them
@@ -153,7 +178,7 @@ class FeedbackQuestionController extends BaseController
                 // For new questions, use saveOptions method
                 $options = $_POST['optionText'] ?? [];
                 $optionMedias = $_FILES['optionMedia'] ?? null;
-                $this->feedbackQuestionModel->saveOptions($questionId, $options, $optionMedias, $createdBy);
+                $this->feedbackQuestionModel->saveOptions($questionId, $options, $optionMedias, $createdBy, $clientId);
             }
         }
 
@@ -195,18 +220,31 @@ class FeedbackQuestionController extends BaseController
     // Delete question by id
     public function delete()
     {
+        // Check if user is logged in and get client_id
+        if (!isset($_SESSION['user']['client_id'])) {
+            $this->toastError('Unauthorized access. Please log in.', 'index.php?controller=LoginController');
+            return;
+        }
+
+        $clientId = $_SESSION['user']['client_id'];
+        $currentUser = $_SESSION['user'] ?? null;
+
         if (!isset($_GET['id']) || !is_numeric($_GET['id'])) {
             $this->toastError('Invalid request parameters.', 'index.php?controller=FeedbackQuestionController');
             return;
         }
 
         $id = (int)$_GET['id'];
-        $success = $this->feedbackQuestionModel->deleteQuestion($id);
+
+        // Determine client filtering based on user role
+        $filterClientId = ($currentUser && $currentUser['system_role'] === 'admin') ? $clientId : null;
+
+        $success = $this->feedbackQuestionModel->deleteQuestion($id, $filterClientId);
 
         if ($success) {
             $this->toastSuccess('Feedback question deleted successfully!', 'index.php?controller=FeedbackQuestionController');
         } else {
-            $this->toastError('Failed to delete feedback question.', 'index.php?controller=FeedbackQuestionController');
+            $this->toastError('Failed to delete feedback question or access denied.', 'index.php?controller=FeedbackQuestionController');
         }
     }
 
@@ -242,6 +280,17 @@ class FeedbackQuestionController extends BaseController
     public function ajaxSearch() {
         header('Content-Type: application/json');
 
+        // Check if user is logged in and get client_id
+        if (!isset($_SESSION['user']['client_id'])) {
+            echo json_encode([
+                'success' => false,
+                'message' => 'Unauthorized access. Please log in.'
+            ]);
+            exit();
+        }
+
+        $clientId = $_SESSION['user']['client_id'];
+
         try {
             $limit = 10;
             $page = isset($_POST['page']) ? (int) $_POST['page'] : 1;
@@ -252,9 +301,9 @@ class FeedbackQuestionController extends BaseController
             $type = trim($_POST['type'] ?? '');
             $tags = trim($_POST['tags'] ?? '');
 
-            // Get questions from database
-            $questions = $this->feedbackQuestionModel->getQuestions($search, $type, $limit, $offset, $tags);
-            $totalQuestions = $this->feedbackQuestionModel->getTotalQuestionCount($search, $type, $tags);
+            // Get questions from database (client-specific)
+            $questions = $this->feedbackQuestionModel->getQuestions($search, $type, $limit, $offset, $tags, $clientId);
+            $totalQuestions = $this->feedbackQuestionModel->getTotalQuestionCount($search, $type, $tags, $clientId);
             $totalPages = ceil($totalQuestions / $limit);
 
             $response = [

@@ -699,12 +699,14 @@ document.addEventListener('DOMContentLoaded', function () {
 
             fetch('index.php?controller=QuestionController&action=save', {
                 method: 'POST',
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest'
+                },
                 body: formData
             })
-            .then(response => response.text())
+            .then(response => response.json())
             .then(data => {
-                // Check if response contains success message
-                if (data.includes('successfully')) {
+                if (data.success) {
                     // Close modal
                     const modal = bootstrap.Modal.getInstance(assessmentModal);
                     if (modal) modal.hide();
@@ -713,12 +715,10 @@ document.addEventListener('DOMContentLoaded', function () {
                     loadQuestions(currentPage);
 
                     // Show success message
-                    const isEdit = document.getElementById('questionId').value;
-                    const message = isEdit ? 'Question updated successfully!' : 'Question added successfully!';
-                    alert(message);
+                    alert(data.message);
                 } else {
                     // Show error message
-                    alert('Error saving question. Please try again.');
+                    alert(data.message || 'Error saving question. Please try again.');
                 }
             })
             .catch(error => {

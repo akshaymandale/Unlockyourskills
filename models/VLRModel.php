@@ -15,15 +15,16 @@ class VLRModel
     public function insertScormPackage($data)
     {
         // Backend Validation: Ensure required fields are filled
-        if (empty($data['title']) || empty($data['zip_file']) || empty($data['version']) || empty($data['scorm_category']) || empty($data['mobile_support']) || empty($data['assessment'])) {
+        if (empty($data['title']) || empty($data['zip_file']) || empty($data['version']) || empty($data['scorm_category']) || empty($data['mobile_support']) || empty($data['assessment']) || empty($data['client_id'])) {
             return false;
         }
 
         $stmt = $this->conn->prepare("INSERT INTO scorm_packages
-        (title, zip_file, description, tags, version, language, scorm_category, time_limit, mobile_support, assessment, created_by, is_deleted, created_at)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, NOW())");
+        (client_id, title, zip_file, description, tags, version, language, scorm_category, time_limit, mobile_support, assessment, created_by, is_deleted, created_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, NOW())");
 
         return $stmt->execute([
+            $data['client_id'],
             $data['title'],
             $data['zip_file'],
             $data['description'],
@@ -39,18 +40,18 @@ class VLRModel
     }
 
     // ✅ Update SCORM Package
-    public function updateScormPackage($id, $data)
+    public function updateScormPackage($id, $data, $clientId = null)
     {
         // Ensure SCORM ID exists
         if (empty($id)) {
             return false;
         }
 
-        $stmt = $this->conn->prepare("UPDATE scorm_packages
+        $sql = "UPDATE scorm_packages
         SET title = ?, zip_file = ?, description = ?, tags = ?, version = ?, language = ?, scorm_category = ?, time_limit = ?, mobile_support = ?, assessment = ?, updated_at = NOW()
-        WHERE id = ?");
+        WHERE id = ?";
 
-        return $stmt->execute([
+        $params = [
             $data['title'],
             $data['zip_file'],
             $data['description'],
@@ -62,14 +63,30 @@ class VLRModel
             $data['mobile_support'],
             $data['assessment'],
             $id
-        ]);
+        ];
+
+        if ($clientId !== null) {
+            $sql .= " AND client_id = ?";
+            $params[] = $clientId;
+        }
+
+        $stmt = $this->conn->prepare($sql);
+        return $stmt->execute($params);
     }
 
     // Get data for display on VLR
-    public function getScormPackages()
+    public function getScormPackages($clientId = null)
     {
-        $stmt = $this->conn->prepare("SELECT * FROM scorm_packages WHERE is_deleted = 0");
-        $stmt->execute();
+        $sql = "SELECT * FROM scorm_packages WHERE is_deleted = 0";
+        $params = [];
+
+        if ($clientId !== null) {
+            $sql .= " AND client_id = ?";
+            $params[] = $clientId;
+        }
+
+        $stmt = $this->conn->prepare($sql);
+        $stmt->execute($params);
         $data = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
         // Debugging - Check if data is fetched
@@ -79,10 +96,18 @@ class VLRModel
     }
 
     // Delete respective SCROM
-    public function deleteScormPackage($id)
+    public function deleteScormPackage($id, $clientId = null)
     {
-        $stmt = $this->conn->prepare("UPDATE scorm_packages SET is_deleted = 1 WHERE id = ?");
-        return $stmt->execute([$id]);
+        $sql = "UPDATE scorm_packages SET is_deleted = 1 WHERE id = ?";
+        $params = [$id];
+
+        if ($clientId !== null) {
+            $sql .= " AND client_id = ?";
+            $params[] = $clientId;
+        }
+
+        $stmt = $this->conn->prepare($sql);
+        return $stmt->execute($params);
     }
 
     // Add external content package
@@ -100,11 +125,11 @@ class VLRModel
             $audioFile = isset($data['audio_file']) ? $data['audio_file'] : null;
 
             $sql = "INSERT INTO external_content (
-                title, content_type, version_number, mobile_support, language_support, time_limit,
+                client_id, title, content_type, version_number, mobile_support, language_support, time_limit,
                 description, tags, video_url, thumbnail, course_url, platform_name, article_url,
                 author, audio_source, audio_url, audio_file, speaker, created_by
             ) VALUES (
-                :title, :content_type, :version_number, :mobile_support, :language_support, :time_limit,
+                :client_id, :title, :content_type, :version_number, :mobile_support, :language_support, :time_limit,
                 :description, :tags, :video_url, :thumbnail, :course_url, :platform_name, :article_url,
                 :author, :audio_source, :audio_url, :audio_file, :speaker, :created_by
             )";
@@ -113,6 +138,7 @@ class VLRModel
 
             // Bind parameters
             $stmt->execute([
+                ':client_id' => $data['client_id'],
                 ':title' => $data['title'],
                 ':content_type' => $data['content_type'],
                 ':version_number' => $data['version_number'],
@@ -144,7 +170,7 @@ class VLRModel
 
     // Update for External Content
 
-    public function updateExternalContent($id, $data)
+    public function updateExternalContent($id, $data, $clientId = null)
     {
         try {
             // Ensure audio_file exists in data
@@ -172,10 +198,7 @@ class VLRModel
                 updated_at = NOW()
             WHERE id = :id";
 
-            $stmt = $this->conn->prepare($sql);
-
-            // Bind parameters
-            $stmt->execute([
+            $params = [
                 ':id' => $id,
                 ':title' => $data['title'],
                 ':content_type' => $data['content_type'],
@@ -195,7 +218,15 @@ class VLRModel
                 ':audio_url' => $data['audio_url'],
                 ':audio_file' => $audioFile, // Ensuring it is always set
                 ':speaker' => $data['speaker']
-            ]);
+            ];
+
+            if ($clientId !== null) {
+                $sql .= " AND client_id = :client_id";
+                $params[':client_id'] = $clientId;
+            }
+
+            $stmt = $this->conn->prepare($sql);
+            $stmt->execute($params);
 
             return true;
         } catch (PDOException $e) {
@@ -205,15 +236,23 @@ class VLRModel
     }
 
     // Get data for External Content with Language Names
-    public function getExternalContent()
+    public function getExternalContent($clientId = null)
     {
-        $stmt = $this->conn->prepare("
+        $sql = "
             SELECT e.*, l.language_name
             FROM external_content e
             LEFT JOIN languages l ON e.language_support = l.id
             WHERE e.is_deleted = 0
-        ");
-        $stmt->execute();
+        ";
+        $params = [];
+
+        if ($clientId !== null) {
+            $sql .= " AND e.client_id = ?";
+            $params[] = $clientId;
+        }
+
+        $stmt = $this->conn->prepare($sql);
+        $stmt->execute($params);
         $data = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
         // Debugging - Check if data is fetched
@@ -223,10 +262,18 @@ class VLRModel
     }
 
     // Delete respective External Content
-    public function deleteExternalContent($id)
+    public function deleteExternalContent($id, $clientId = null)
     {
-        $stmt = $this->conn->prepare("UPDATE external_content SET is_deleted = 1 WHERE id = ?");
-        return $stmt->execute([$id]);
+        $sql = "UPDATE external_content SET is_deleted = 1 WHERE id = ?";
+        $params = [$id];
+
+        if ($clientId !== null) {
+            $sql .= " AND client_id = ?";
+            $params[] = $clientId;
+        }
+
+        $stmt = $this->conn->prepare($sql);
+        return $stmt->execute($params);
     }
 
 
@@ -234,12 +281,20 @@ class VLRModel
     // Fetch all documents with language names
 
     // Get data for display on VLR
-    public function getAllDocuments()
+    public function getAllDocuments($clientId = null)
     {
-        $stmt = $this->conn->prepare("SELECT d.*, l.language_name FROM documents d
+        $sql = "SELECT d.*, l.language_name FROM documents d
                   LEFT JOIN languages l ON d.language_id = l.id
-                  WHERE d.is_deleted = 0");
-        $stmt->execute();
+                  WHERE d.is_deleted = 0";
+        $params = [];
+
+        if ($clientId !== null) {
+            $sql .= " AND d.client_id = ?";
+            $params[] = $clientId;
+        }
+
+        $stmt = $this->conn->prepare($sql);
+        $stmt->execute($params);
         $data = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
         // Debugging - Check if data is fetched
@@ -250,10 +305,18 @@ class VLRModel
 
 
     // Fetch a single document by ID
-    public function getDocumentById($id)
+    public function getDocumentById($id, $clientId = null)
     {
-        $stmt = $this->conn->prepare("SELECT * FROM documents WHERE id = ? AND is_deleted = 0");
-        $stmt->execute([$id]);
+        $sql = "SELECT * FROM documents WHERE id = ? AND is_deleted = 0";
+        $params = [$id];
+
+        if ($clientId !== null) {
+            $sql .= " AND client_id = ?";
+            $params[] = $clientId;
+        }
+
+        $stmt = $this->conn->prepare($sql);
+        $stmt->execute($params);
         return $stmt->fetch(PDO::FETCH_ASSOC);
     }
 
@@ -304,14 +367,15 @@ class VLRModel
             return ['success' => false, 'errors' => $errors];
         }
 
-        $query = "INSERT INTO documents (title, category, description, tags, language_id, mobile_support, version_number, time_limit,
+        $query = "INSERT INTO documents (client_id, title, category, description, tags, language_id, mobile_support, version_number, time_limit,
               authors, publication_date, reference_links, created_by, created_at, is_deleted, word_excel_ppt_file, ebook_manual_file, research_file)
-              VALUES (:title, :category, :description, :tags, :language_id, :mobile_support, :version_number, :time_limit,
+              VALUES (:client_id, :title, :category, :description, :tags, :language_id, :mobile_support, :version_number, :time_limit,
               :authors, :publication_date, :reference_links, :created_by, NOW(), 0, :word_excel_ppt_file, :ebook_manual_file, :research_file)";
 
         $stmt = $this->conn->prepare($query);
 
         $stmt->execute([
+            ':client_id' => $data['client_id'],
             ':title' => $data['document_title'],
             ':category' => $data['documentCategory'],
             ':description' => $data['description'],
@@ -333,7 +397,7 @@ class VLRModel
     }
 
     // Update document
-    public function updateDocument($data, $id)
+    public function updateDocument($data, $id, $clientId = null)
     {
         $errors = $this->validateDocument($data, true);
         if (!empty($errors)) {
@@ -348,8 +412,7 @@ class VLRModel
               research_file = COALESCE(:research_file, research_file)
               WHERE id = :id";
 
-        $stmt = $this->conn->prepare($query);
-        $stmt->execute([
+        $params = [
             ':title' => $data['document_title'],
             ':category' => $data['documentCategory'],
             ':description' => $data['description'],
@@ -365,16 +428,32 @@ class VLRModel
             ':ebook_manual_file' => $data['ebook_manual_file'] ?? null,
             ':research_file' => $data['research_file'] ?? null,
             ':id' => $id
-        ]);
+        ];
+
+        if ($clientId !== null) {
+            $query .= " AND client_id = :client_id";
+            $params[':client_id'] = $clientId;
+        }
+
+        $stmt = $this->conn->prepare($query);
+        $stmt->execute($params);
 
         return ['success' => true, 'message' => "Document updated successfully."];
     }
 
     // Soft delete a document
-    public function deleteDocument($id)
+    public function deleteDocument($id, $clientId = null)
     {
-        $stmt = $this->conn->prepare("UPDATE documents SET is_deleted = 1 WHERE id = ?");
-        return $stmt->execute([$id]);
+        $sql = "UPDATE documents SET is_deleted = 1 WHERE id = ?";
+        $params = [$id];
+
+        if ($clientId !== null) {
+            $sql .= " AND client_id = ?";
+            $params[] = $clientId;
+        }
+
+        $stmt = $this->conn->prepare($sql);
+        return $stmt->execute($params);
     }
 
     // Fetch all languages
@@ -397,12 +476,12 @@ class VLRModel
 
             // Insert into assessment_package
             $sql = "INSERT INTO assessment_package (
-            title, tags, num_attempts, passing_percentage, time_limit,
+            client_id, title, tags, num_attempts, passing_percentage, time_limit,
             negative_marking, negative_marking_percentage,
             assessment_type, num_questions_to_display,
             selected_question_count, created_by, created_at
         ) VALUES (
-            :title, :tags, :num_attempts, :passing_percentage, :time_limit,
+            :client_id, :title, :tags, :num_attempts, :passing_percentage, :time_limit,
             :negative_marking, :negative_marking_percentage,
             :assessment_type, :num_questions_to_display,
             :selected_question_count, :created_by, NOW()
@@ -410,6 +489,7 @@ class VLRModel
 
             $stmt = $this->conn->prepare($sql);
             $stmt->execute([
+                ':client_id' => $data['client_id'],
                 ':title' => $data['title'],
                 ':tags' => $data['tags'],
                 ':num_attempts' => $data['num_attempts'],

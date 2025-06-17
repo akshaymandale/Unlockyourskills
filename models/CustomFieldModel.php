@@ -76,16 +76,24 @@ class CustomFieldModel {
     /**
      * Get custom field by ID
      */
-    public function getCustomFieldById($fieldId) {
+    public function getCustomFieldById($fieldId, $clientId = null) {
         try {
-            $stmt = $this->conn->prepare("SELECT * FROM custom_fields WHERE id = :id");
-            $stmt->execute([':id' => $fieldId]);
-            
+            $sql = "SELECT * FROM custom_fields WHERE id = :id";
+            $params = [':id' => $fieldId];
+
+            if ($clientId !== null) {
+                $sql .= " AND client_id = :client_id";
+                $params[':client_id'] = $clientId;
+            }
+
+            $stmt = $this->conn->prepare($sql);
+            $stmt->execute($params);
+
             $field = $stmt->fetch(PDO::FETCH_ASSOC);
             if ($field && $field['field_options']) {
                 $field['field_options'] = json_decode($field['field_options'], true);
             }
-            
+
             return $field;
         } catch (PDOException $e) {
             error_log("CustomFieldModel getCustomFieldById error: " . $e->getMessage());
@@ -96,9 +104,9 @@ class CustomFieldModel {
     /**
      * Update custom field
      */
-    public function updateCustomField($fieldId, $data) {
+    public function updateCustomField($fieldId, $data, $clientId = null) {
         try {
-            $sql = "UPDATE custom_fields SET 
+            $sql = "UPDATE custom_fields SET
                     field_name = :field_name,
                     field_label = :field_label,
                     field_type = :field_type,
@@ -108,10 +116,8 @@ class CustomFieldModel {
                     is_active = :is_active,
                     updated_at = CURRENT_TIMESTAMP
                     WHERE id = :id";
-            
-            $stmt = $this->conn->prepare($sql);
-            
-            return $stmt->execute([
+
+            $params = [
                 ':id' => $fieldId,
                 ':field_name' => $data['field_name'],
                 ':field_label' => $data['field_label'],
@@ -120,7 +126,15 @@ class CustomFieldModel {
                 ':is_required' => $data['is_required'] ?? 0,
                 ':field_order' => $data['field_order'] ?? 0,
                 ':is_active' => $data['is_active'] ?? 1
-            ]);
+            ];
+
+            if ($clientId !== null) {
+                $sql .= " AND client_id = :client_id";
+                $params[':client_id'] = $clientId;
+            }
+
+            $stmt = $this->conn->prepare($sql);
+            return $stmt->execute($params);
         } catch (PDOException $e) {
             error_log("CustomFieldModel updateCustomField error: " . $e->getMessage());
             return false;
@@ -130,10 +144,18 @@ class CustomFieldModel {
     /**
      * Delete custom field (soft delete by setting is_active = 0)
      */
-    public function deleteCustomField($fieldId) {
+    public function deleteCustomField($fieldId, $clientId = null) {
         try {
-            $stmt = $this->conn->prepare("UPDATE custom_fields SET is_active = 0 WHERE id = :id");
-            return $stmt->execute([':id' => $fieldId]);
+            $sql = "UPDATE custom_fields SET is_active = 0 WHERE id = :id";
+            $params = [':id' => $fieldId];
+
+            if ($clientId !== null) {
+                $sql .= " AND client_id = :client_id";
+                $params[':client_id'] = $clientId;
+            }
+
+            $stmt = $this->conn->prepare($sql);
+            return $stmt->execute($params);
         } catch (PDOException $e) {
             error_log("CustomFieldModel deleteCustomField error: " . $e->getMessage());
             return false;

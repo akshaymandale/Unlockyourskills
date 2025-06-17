@@ -14,12 +14,13 @@ class QuestionModel {
         try {
             $sql = "
                 INSERT INTO assessment_questions
-                (question_text, tags, competency_skills, level, marks, status, question_type, answer_count, media_type, media_file, created_by)
+                (client_id, question_text, tags, competency_skills, level, marks, status, question_type, answer_count, media_type, media_file, created_by)
                 VALUES
-                (:question_text, :tags, :competency_skills, :level, :marks, :status, :question_type, :answer_count, :media_type, :media_file, :created_by)
+                (:client_id, :question_text, :tags, :competency_skills, :level, :marks, :status, :question_type, :answer_count, :media_type, :media_file, :created_by)
             ";
             $stmt = $this->conn->prepare($sql);
 
+            $stmt->bindParam(':client_id', $data['client_id']);
             $stmt->bindParam(':question_text', $data['question_text']);
             $stmt->bindParam(':tags', $data['tags']);
             $stmt->bindParam(':competency_skills', $data['competency_skills']);
@@ -54,12 +55,13 @@ class QuestionModel {
         try {
             $sql = "
                 INSERT INTO assessment_options
-                (question_id, option_index, option_text, is_correct)
+                (client_id, question_id, option_index, option_text, is_correct)
                 VALUES
-                (:question_id, :option_index, :option_text, :is_correct)
+                (:client_id, :question_id, :option_index, :option_text, :is_correct)
             ";
             $stmt = $this->conn->prepare($sql);
 
+            $stmt->bindParam(':client_id', $data['client_id']);
             $stmt->bindParam(':question_id', $data['question_id']);
             $stmt->bindParam(':option_index', $data['option_index']);
             $stmt->bindParam(':option_text', $data['option_text']);
@@ -141,9 +143,15 @@ class QuestionModel {
     }
 
     // Retrieve questions with pagination, search and filters
-    public function getQuestions($limit, $offset, $search = '', $filters = []) {
+    public function getQuestions($limit, $offset, $search = '', $filters = [], $clientId = null) {
         $whereConditions = ["is_deleted = 0"];
         $params = [];
+
+        // Add client filtering
+        if ($clientId !== null) {
+            $whereConditions[] = "client_id = :client_id";
+            $params[':client_id'] = $clientId;
+        }
 
         // Add search condition
         if (!empty($search)) {
@@ -189,9 +197,15 @@ class QuestionModel {
     }
 
     // Get the total count of questions with search and filters (for pagination)
-    public function getTotalQuestionCount($search = '', $filters = []) {
+    public function getTotalQuestionCount($search = '', $filters = [], $clientId = null) {
         $whereConditions = ["is_deleted = 0"];
         $params = [];
+
+        // Add client filtering
+        if ($clientId !== null) {
+            $whereConditions[] = "client_id = :client_id";
+            $params[':client_id'] = $clientId;
+        }
 
         // Add search condition
         if (!empty($search)) {
@@ -237,42 +251,77 @@ class QuestionModel {
     }
 
     // Get a specific question by ID
-    public function getQuestionById($id) {
-        $stmt = $this->conn->prepare("SELECT * FROM assessment_questions WHERE id = :id AND is_deleted = 0");
-        $stmt->execute([':id' => $id]);
+    public function getQuestionById($id, $clientId = null) {
+        $sql = "SELECT * FROM assessment_questions WHERE id = :id AND is_deleted = 0";
+        $params = [':id' => $id];
+
+        if ($clientId !== null) {
+            $sql .= " AND client_id = :client_id";
+            $params[':client_id'] = $clientId;
+        }
+
+        $stmt = $this->conn->prepare($sql);
+        $stmt->execute($params);
         return $stmt->fetch(PDO::FETCH_ASSOC);
     }
 
     // Get options for a specific question
-    public function getOptionsByQuestionId($questionId) {
-        $stmt = $this->conn->prepare("
+    public function getOptionsByQuestionId($questionId, $clientId = null) {
+        $sql = "
             SELECT option_index, option_text, is_correct
             FROM assessment_options
             WHERE question_id = :question_id
-            ORDER BY option_index ASC
-        ");
-        $stmt->execute([':question_id' => $questionId]);
+        ";
+        $params = [':question_id' => $questionId];
+
+        if ($clientId !== null) {
+            $sql .= " AND client_id = :client_id";
+            $params[':client_id'] = $clientId;
+        }
+
+        $sql .= " ORDER BY option_index ASC";
+
+        $stmt = $this->conn->prepare($sql);
+        $stmt->execute($params);
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
 
     // Get unique question types for filter dropdown
-    public function getUniqueQuestionTypes() {
-        $stmt = $this->conn->prepare("
+    public function getUniqueQuestionTypes($clientId = null) {
+        $sql = "
             SELECT DISTINCT question_type
             FROM assessment_questions
             WHERE is_deleted = 0 AND question_type IS NOT NULL
-            ORDER BY question_type ASC
-        ");
-        $stmt->execute();
+        ";
+        $params = [];
+
+        if ($clientId !== null) {
+            $sql .= " AND client_id = :client_id";
+            $params[':client_id'] = $clientId;
+        }
+
+        $sql .= " ORDER BY question_type ASC";
+
+        $stmt = $this->conn->prepare($sql);
+        $stmt->execute($params);
         return $stmt->fetchAll(PDO::FETCH_COLUMN);
     }
 
     // Get unique difficulty levels for filter dropdown
-    public function getUniqueDifficultyLevels() {
-        $stmt = $this->conn->prepare("
+    public function getUniqueDifficultyLevels($clientId = null) {
+        $sql = "
             SELECT DISTINCT level
             FROM assessment_questions
             WHERE is_deleted = 0 AND level IS NOT NULL
+        ";
+        $params = [];
+
+        if ($clientId !== null) {
+            $sql .= " AND client_id = :client_id";
+            $params[':client_id'] = $clientId;
+        }
+
+        $sql .= "
             ORDER BY
                 CASE level
                     WHEN 'Low' THEN 1
@@ -280,20 +329,31 @@ class QuestionModel {
                     WHEN 'Hard' THEN 3
                     ELSE 4
                 END
-        ");
-        $stmt->execute();
+        ";
+
+        $stmt = $this->conn->prepare($sql);
+        $stmt->execute($params);
         return $stmt->fetchAll(PDO::FETCH_COLUMN);
     }
 
     // Get unique tags for filter suggestions
-    public function getUniqueTags() {
-        $stmt = $this->conn->prepare("
+    public function getUniqueTags($clientId = null) {
+        $sql = "
             SELECT DISTINCT tags
             FROM assessment_questions
             WHERE is_deleted = 0 AND tags IS NOT NULL AND tags != ''
-            ORDER BY tags ASC
-        ");
-        $stmt->execute();
+        ";
+        $params = [];
+
+        if ($clientId !== null) {
+            $sql .= " AND client_id = :client_id";
+            $params[':client_id'] = $clientId;
+        }
+
+        $sql .= " ORDER BY tags ASC";
+
+        $stmt = $this->conn->prepare($sql);
+        $stmt->execute($params);
         $allTags = $stmt->fetchAll(PDO::FETCH_COLUMN);
 
         // Split comma-separated tags and get unique values
