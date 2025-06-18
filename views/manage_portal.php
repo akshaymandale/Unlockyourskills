@@ -1,5 +1,6 @@
 <?php
 // views/manage_portal.php
+require_once 'core/UrlHelper.php';
 ?>
 
 <?php include 'includes/header.php'; ?>
@@ -42,7 +43,7 @@
                 
                 <div class="row">
                     <div class="col-md-6">
-                        <div class="card user-box shadow-sm" onclick="location.href='index.php?controller=UserManagementController'">
+                        <div class="card user-box shadow-sm" onclick="location.href='<?= UrlHelper::url('users') ?>'">
                             <h5><i class="fas fa-user-cog"></i> <?= Localization::translate('user_management'); ?></h5>
                             <p><small class="text-muted"><?= Localization::translate('create_edit_remove_user'); ?></small></p>
                         </div>
@@ -97,7 +98,7 @@
                 <h3 class="text-purple mt-4"><?= Localization::translate('course_content'); ?></h3>
                 <div class="row">
                     <div class="col-md-6">
-                        <div class="card user-box shadow-sm" onclick="location.href='index.php?controller=VLRController'">
+                        <div class="card user-box shadow-sm" onclick="location.href='<?= UrlHelper::url('vlr') ?>'">
                             <h5><i class="fas fa-file-alt"></i> <?= Localization::translate('vlr'); ?></h5>
                             <p><small class="text-muted"><?= Localization::translate('manage_vlr'); ?></small></p>
                         </div>

@@ -1,23 +1,24 @@
 <?php
 // views/includes/sidebar.php
+require_once 'core/UrlHelper.php';
 ?>
 
 <aside class="sidebar" id="sidebar">
     <ul class="list-group">
         <li class="list-group-item">
-            <a href="index.php?controller=DashboardController">
+            <a href="<?= UrlHelper::url('dashboard') ?>">
                 <i class="fas fa-tachometer-alt"></i> <span><?= Localization::translate('dashboard'); ?></span>
             </a>
         </li>
         <li class="list-group-item">
-            <a href="index.php?controller=ManagePortalController&action=index">
+            <a href="<?= UrlHelper::url('manage-portal') ?>">
                 <i class="fas fa-cogs"></i> <span><?= Localization::translate('manage_portal'); ?></span>
             </a>
         </li>
 
         <?php if (isset($_SESSION['user']) && $_SESSION['user']['system_role'] === 'super_admin'): ?>
         <li class="list-group-item">
-            <a href="index.php?controller=ClientController">
+            <a href="<?= UrlHelper::url('clients') ?>">
                 <i class="fas fa-building"></i> <span>Client Management</span>
             </a>
         </li>

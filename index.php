@@ -2,6 +2,12 @@
 require_once 'config/autoload.php';
 require_once 'config/Localization.php';
 
+// Load routing infrastructure
+require_once 'core/Router.php';
+require_once 'core/Route.php';
+require_once 'core/Middleware.php';
+require_once 'core/Request.php';
+
 error_reporting(E_ALL);
 ini_set('display_errors', 1);
 
@@ -43,39 +49,76 @@ error_log("Language file loaded for: " . $lang);
 Localization::loadLanguage($lang);
 
 
-// Get the controller and action from the request (check both GET and POST)
-$controller = $_POST['controller'] ?? $_GET['controller'] ?? 'LoginController';
-$action = $_POST['action'] ?? $_GET['action'] ?? 'index';
-$controllerFile = "controllers/$controller.php";
+// ===================================
+// ROUTING SYSTEM
+// ===================================
 
-// Load the controller file if it exists
-if (file_exists($controllerFile)) {
-    require_once $controllerFile;
-} else {
-    die("Controller file '$controllerFile' not found.");
-}
+// Check if this is a legacy URL (backward compatibility)
+if (isset($_GET['controller']) || isset($_POST['controller'])) {
+    // LEGACY ROUTING SYSTEM - Maintain backward compatibility
+    $controller = $_POST['controller'] ?? $_GET['controller'] ?? 'LoginController';
+    $action = $_POST['action'] ?? $_GET['action'] ?? 'index';
+    $controllerFile = "controllers/$controller.php";
 
-// Check if the controller class exists
-if (class_exists($controller)) {
-    $controllerInstance = new $controller();
-
-    // Handle LocationController actions (for dynamic country, state, city)
-    if ($controller === 'LocationController') {
-        if ($action === 'getStatesByCountry' || $action === 'getCitiesByState') {
-            header('Content-Type: application/json');
-            $controllerInstance->$action();
-            exit;
-        }
-    }
-
-    // Execute the requested action
-    if (method_exists($controllerInstance, $action)) {
-        $controllerInstance->$action();
+    // Load the controller file if it exists
+    if (file_exists($controllerFile)) {
+        require_once $controllerFile;
     } else {
-        die("Method '$action' not found in '$controller'.");
+        die("Controller file '$controllerFile' not found.");
+    }
+
+    // Check if the controller class exists
+    if (class_exists($controller)) {
+        $controllerInstance = new $controller();
+
+        // Handle LocationController actions (for dynamic country, state, city)
+        if ($controller === 'LocationController') {
+            if ($action === 'getStatesByCountry' || $action === 'getCitiesByState') {
+                header('Content-Type: application/json');
+                $controllerInstance->$action();
+                exit;
+            }
+        }
+
+        // Execute the requested action
+        if (method_exists($controllerInstance, $action)) {
+            $controllerInstance->$action();
+        } else {
+            die("Method '$action' not found in '$controller'.");
+        }
+    } else {
+        die("Controller class '$controller' not found.");
     }
 } else {
-    die("Controller class '$controller' not found.");
+    // NEW ROUTING SYSTEM
+    try {
+        // Load routes
+        require_once 'routes/web.php';
+
+        // Initialize and dispatch router
+        $router = new Router();
+        $router->dispatch();
+
+    } catch (Exception $e) {
+        // Fallback to login page on error
+        error_log("Routing error: " . $e->getMessage());
+
+        // If it's an AJAX request, return JSON error
+        if (!empty($_SERVER['HTTP_X_REQUESTED_WITH']) &&
+            strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) === 'xmlhttprequest') {
+            header('Content-Type: application/json');
+            echo json_encode([
+                'success' => false,
+                'message' => 'Routing error occurred',
+                'redirect' => '/login'
+            ]);
+            exit();
+        }
+
+        // Regular request - redirect to login
+        header('Location: /login');
+        exit();
+    }
 }
 
 
