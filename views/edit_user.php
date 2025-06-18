@@ -3,6 +3,8 @@ if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
 
+require_once 'core/UrlHelper.php';
+
 // ✅ Get Client Name from Session
 $clientName = $_SESSION['client_code'] ?? 'DEFAULT';
 ?>
@@ -16,10 +18,10 @@ $clientName = $_SESSION['client_code'] ?? 'DEFAULT';
         <h1 class="page-title text-purple">
             <?= Localization::translate('edit_user_title'); ?>
         </h1>
-        <form action="index.php?controller=UserManagementController&action=updateUser" id="editUserForm" method="POST"
+        <form action="<?= UrlHelper::url('users/' . IdEncryption::encrypt($user['profile_id'])) ?>" id="editUserForm" method="POST"
             enctype="multipart/form-data">
-            <!-- ✅ Hidden field for profile ID -->
-            <input type="hidden" name="profile_id" value="<?= htmlspecialchars($user['profile_id']); ?>">
+            <!-- ✅ Hidden field for encrypted profile ID -->
+            <input type="hidden" name="profile_id" value="<?= IdEncryption::encrypt($user['profile_id']); ?>">
             
             <!-- ✅ Tabs Section -->
             <!-- Tabs Navigation -->
@@ -286,7 +288,7 @@ $clientName = $_SESSION['client_code'] ?? 'DEFAULT';
                             <i class="fas fa-info-circle text-muted mb-3" style="font-size: 3rem;"></i>
                             <h5 class="text-muted"><?= Localization::translate('custom_fields_no_fields'); ?></h5>
                             <p class="text-muted"><?= Localization::translate('custom_fields_no_fields_description'); ?></p>
-                            <a href="index.php?controller=UserManagementController" class="btn btn-primary">
+                            <a href="<?= UrlHelper::url('users') ?>" class="btn btn-primary">
                                 <i class="fas fa-plus me-1"></i><?= Localization::translate('custom_fields_create_button'); ?>
                             </a>
                         </div>
@@ -420,7 +422,7 @@ $clientName = $_SESSION['client_code'] ?? 'DEFAULT';
                 <div class="row mt-4">
                     <div class="col-md-12 form-actions">
                         <button type="submit" class="btn btn-primary"><?= Localization::translate('update'); ?></button>
-                        <a href="index.php?controller=UserManagementController" class="btn btn-danger"><?= Localization::translate('cancel'); ?></a>
+                        <a href="<?= UrlHelper::url('users') ?>" class="btn btn-danger"><?= Localization::translate('cancel'); ?></a>
                     </div>
                 </div>
             </div>
@@ -447,5 +449,5 @@ $clientName = $_SESSION['client_code'] ?? 'DEFAULT';
 
 
 
-<script src="public/js/edit_user_validation.js"></script>
+<script src="<?= UrlHelper::url('public/js/edit_user_validation.js') ?>"></script>
 <?php include 'includes/footer.php'; ?>

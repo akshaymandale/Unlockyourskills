@@ -45,6 +45,14 @@ class UserConfirmations {
     init() {
         // User delete confirmations
         document.addEventListener('click', (e) => {
+            // Skip if this is a modal button or inside a modal
+            if (e.target.closest('[data-bs-toggle="modal"]') ||
+                e.target.closest('.modal') ||
+                e.target.closest('.add-user-btn') ||
+                e.target.closest('.edit-user-btn')) {
+                return; // Don't interfere with modal buttons
+            }
+
             if (e.target.closest('.delete-user')) {
                 e.preventDefault();
                 e.stopPropagation();
@@ -99,9 +107,9 @@ class UserConfirmations {
 
     extractUserData(button, actionType = 'delete') {
         const actionMap = {
-            'delete': 'deleteUser',
-            'lock': 'lockUser',
-            'unlock': 'unlockUser'
+            'delete': `users/${button.dataset.id}/delete`,
+            'lock': `users/${button.dataset.id}/lock`,
+            'unlock': `users/${button.dataset.id}/unlock`
         };
 
         return {
@@ -110,7 +118,7 @@ class UserConfirmations {
             email: button.dataset.email || '',
             role: button.dataset.role || '',
             actionType: actionType,
-            action: `index.php?controller=UserManagementController&action=${actionMap[actionType]}&id=${button.dataset.id}`
+            action: getProjectUrl(actionMap[actionType])
         };
     }
 
@@ -119,14 +127,32 @@ class UserConfirmations {
 
         if (typeof confirmDelete === 'function') {
             confirmDelete(itemName, () => {
-                window.location.href = data.action;
+                this.executeUserDelete(data);
             });
         } else {
             const fallbackMessage = this.getTranslation('confirmation.delete.message', {item: itemName}) || `Are you sure you want to delete ${itemName}?`;
             if (confirm(fallbackMessage)) {
-                window.location.href = data.action;
+                this.executeUserDelete(data);
             }
         }
+    }
+
+    executeUserDelete(data) {
+        console.log('🔥 Executing user delete for:', data.id);
+
+        // Show loading state if possible
+        const deleteButton = document.querySelector(`[data-id="${data.id}"].delete-user`);
+        if (deleteButton) {
+            deleteButton.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+            deleteButton.disabled = true;
+        }
+
+        // Use the legacy controller approach for now
+        const deleteUrl = getProjectUrl('index.php') + `?controller=UserManagementController&action=deleteUser&id=${data.id}`;
+        console.log('🔥 Delete URL:', deleteUrl);
+
+        // Navigate to the delete URL
+        window.location.href = deleteUrl;
     }
 
     showUserLockConfirmation(data) {
@@ -134,15 +160,33 @@ class UserConfirmations {
 
         if (typeof confirmAction === 'function') {
             confirmAction('lock', itemName, () => {
-                window.location.href = data.action;
+                this.executeUserLock(data);
             });
         } else {
             const fallbackMessage = this.getTranslation('confirmation.lock.message', {item: itemName}) || `Are you sure you want to lock ${itemName}?`;
             const fallbackSubtext = this.getTranslation('confirmation.lock.subtext', {}) || 'This will prevent the user from logging in.';
             if (confirm(`${fallbackMessage}\n\n${fallbackSubtext}`)) {
-                window.location.href = data.action;
+                this.executeUserLock(data);
             }
         }
+    }
+
+    executeUserLock(data) {
+        console.log('🔥 Executing user lock for:', data.id);
+
+        // Show loading state if possible
+        const lockButton = document.querySelector(`[data-id="${data.id}"].lock-user`);
+        if (lockButton) {
+            lockButton.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+            lockButton.disabled = true;
+        }
+
+        // Use the legacy controller approach
+        const lockUrl = getProjectUrl('index.php') + `?controller=UserManagementController&action=lockUser&id=${data.id}`;
+        console.log('🔥 Lock URL:', lockUrl);
+
+        // Navigate to the lock URL
+        window.location.href = lockUrl;
     }
 
     showUserUnlockConfirmation(data) {
@@ -150,69 +194,138 @@ class UserConfirmations {
 
         if (typeof confirmAction === 'function') {
             confirmAction('unlock', itemName, () => {
-                window.location.href = data.action;
+                this.executeUserUnlock(data);
             });
         } else {
             const fallbackMessage = this.getTranslation('confirmation.unlock.message', {item: itemName}) || `Are you sure you want to unlock ${itemName}?`;
             const fallbackSubtext = this.getTranslation('confirmation.unlock.subtext', {}) || 'This will allow the user to log in again.';
             if (confirm(`${fallbackMessage}\n\n${fallbackSubtext}`)) {
-                window.location.href = data.action;
+                this.executeUserUnlock(data);
             }
         }
+    }
+
+    executeUserUnlock(data) {
+        console.log('🔥 Executing user unlock for:', data.id);
+
+        // Show loading state if possible
+        const unlockButton = document.querySelector(`[data-id="${data.id}"].unlock-user`);
+        if (unlockButton) {
+            unlockButton.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+            unlockButton.disabled = true;
+        }
+
+        // Use the legacy controller approach
+        const unlockUrl = getProjectUrl('index.php') + `?controller=UserManagementController&action=unlockUser&id=${data.id}`;
+        console.log('🔥 Unlock URL:', unlockUrl);
+
+        // Navigate to the unlock URL
+        window.location.href = unlockUrl;
     }
 
     // Static helper methods
     static deleteUser(id, name, email = '') {
-        const url = `index.php?controller=UserManagementController&action=deleteUser&id=${id}`;
-        const data = { name: name, email: email };
+        const data = { id: id, name: name, email: email };
         const itemName = UserConfirmations.getStaticTranslatedItemName(data);
 
         if (typeof confirmDelete === 'function') {
             confirmDelete(itemName, () => {
-                window.location.href = url;
+                UserConfirmations.executeStaticUserDelete(data);
             });
         } else {
             const fallbackMessage = UserConfirmations.getStaticTranslation('confirmation.delete.message', {item: itemName}) || `Are you sure you want to delete ${itemName}?`;
             if (confirm(fallbackMessage)) {
-                window.location.href = url;
+                UserConfirmations.executeStaticUserDelete(data);
             }
         }
     }
 
+    static executeStaticUserDelete(data) {
+        console.log('🔥 Executing static user delete for:', data.id);
+
+        // Show loading state if possible
+        const deleteButton = document.querySelector(`[data-id="${data.id}"].delete-user`);
+        if (deleteButton) {
+            deleteButton.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+            deleteButton.disabled = true;
+        }
+
+        // Use the legacy controller approach for now
+        const deleteUrl = getProjectUrl('index.php') + `?controller=UserManagementController&action=deleteUser&id=${data.id}`;
+        console.log('🔥 Static delete URL:', deleteUrl);
+
+        // Navigate to the delete URL
+        window.location.href = deleteUrl;
+    }
+
     static lockUser(id, name, email = '') {
-        const url = `index.php?controller=UserManagementController&action=lockUser&id=${id}`;
-        const data = { name: name, email: email };
+        const data = { id: id, name: name, email: email };
         const itemName = UserConfirmations.getStaticTranslatedItemName(data);
 
         if (typeof confirmAction === 'function') {
             confirmAction('lock', itemName, () => {
-                window.location.href = url;
+                UserConfirmations.executeStaticUserLock(data);
             });
         } else {
             const fallbackMessage = UserConfirmations.getStaticTranslation('confirmation.lock.message', {item: itemName}) || `Are you sure you want to lock ${itemName}?`;
             const fallbackSubtext = UserConfirmations.getStaticTranslation('confirmation.lock.subtext', {}) || 'This will prevent the user from logging in.';
             if (confirm(`${fallbackMessage}\n\n${fallbackSubtext}`)) {
-                window.location.href = url;
+                UserConfirmations.executeStaticUserLock(data);
             }
         }
     }
 
+    static executeStaticUserLock(data) {
+        console.log('🔥 Executing static user lock for:', data.id);
+
+        // Show loading state if possible
+        const lockButton = document.querySelector(`[data-id="${data.id}"].lock-user`);
+        if (lockButton) {
+            lockButton.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+            lockButton.disabled = true;
+        }
+
+        // Use the legacy controller approach
+        const lockUrl = getProjectUrl('index.php') + `?controller=UserManagementController&action=lockUser&id=${data.id}`;
+        console.log('🔥 Static lock URL:', lockUrl);
+
+        // Navigate to the lock URL
+        window.location.href = lockUrl;
+    }
+
     static unlockUser(id, name, email = '') {
-        const url = `index.php?controller=UserManagementController&action=unlockUser&id=${id}`;
-        const data = { name: name, email: email };
+        const data = { id: id, name: name, email: email };
         const itemName = UserConfirmations.getStaticTranslatedItemName(data);
 
         if (typeof confirmAction === 'function') {
             confirmAction('unlock', itemName, () => {
-                window.location.href = url;
+                UserConfirmations.executeStaticUserUnlock(data);
             });
         } else {
             const fallbackMessage = UserConfirmations.getStaticTranslation('confirmation.unlock.message', {item: itemName}) || `Are you sure you want to unlock ${itemName}?`;
             const fallbackSubtext = UserConfirmations.getStaticTranslation('confirmation.unlock.subtext', {}) || 'This will allow the user to log in again.';
             if (confirm(`${fallbackMessage}\n\n${fallbackSubtext}`)) {
-                window.location.href = url;
+                UserConfirmations.executeStaticUserUnlock(data);
             }
         }
+    }
+
+    static executeStaticUserUnlock(data) {
+        console.log('🔥 Executing static user unlock for:', data.id);
+
+        // Show loading state if possible
+        const unlockButton = document.querySelector(`[data-id="${data.id}"].unlock-user`);
+        if (unlockButton) {
+            unlockButton.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+            unlockButton.disabled = true;
+        }
+
+        // Use the legacy controller approach
+        const unlockUrl = getProjectUrl('index.php') + `?controller=UserManagementController&action=unlockUser&id=${data.id}`;
+        console.log('🔥 Static unlock URL:', unlockUrl);
+
+        // Navigate to the unlock URL
+        window.location.href = unlockUrl;
     }
 
     // Static helper methods for translations

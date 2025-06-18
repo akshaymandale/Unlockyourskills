@@ -1,6 +1,7 @@
 <?php
 
-require_once 'config/Database.php';
+// Database.php should be included by the calling script
+// require_once 'config/Database.php';
 
 class CustomFieldModel {
     private $conn;
@@ -16,9 +17,9 @@ class CustomFieldModel {
     public function createCustomField($data) {
         try {
             $sql = "INSERT INTO custom_fields
-                    (client_id, field_name, field_label, field_type, field_options, is_required, field_order, is_active)
+                    (client_id, field_name, field_label, field_type, field_options, is_required, field_order, is_active, is_deleted)
                     VALUES
-                    (:client_id, :field_name, :field_label, :field_type, :field_options, :is_required, :field_order, :is_active)";
+                    (:client_id, :field_name, :field_label, :field_type, :field_options, :is_required, :field_order, :is_active, :is_deleted)";
 
             $stmt = $this->conn->prepare($sql);
 
@@ -27,10 +28,11 @@ class CustomFieldModel {
                 ':field_name' => $data['field_name'],
                 ':field_label' => $data['field_label'],
                 ':field_type' => $data['field_type'],
-                ':field_options' => $data['field_options'] ? json_encode($data['field_options']) : null,
+                ':field_options' => (!empty($data['field_options']) && $data['field_options'] !== '') ? json_encode($data['field_options']) : null,
                 ':is_required' => $data['is_required'] ?? 0,
                 ':field_order' => $data['field_order'] ?? 0,
-                ':is_active' => $data['is_active'] ?? 1
+                ':is_active' => $data['is_active'] ?? 1,
+                ':is_deleted' => 0
             ]);
         } catch (PDOException $e) {
             error_log("CustomFieldModel createCustomField error: " . $e->getMessage());
@@ -48,7 +50,7 @@ class CustomFieldModel {
                 return [];
             }
 
-            $sql = "SELECT * FROM custom_fields WHERE client_id = :client_id";
+            $sql = "SELECT * FROM custom_fields WHERE client_id = :client_id AND is_deleted = 0";
             if ($activeOnly) {
                 $sql .= " AND is_active = 1";
             }
@@ -78,7 +80,7 @@ class CustomFieldModel {
      */
     public function getCustomFieldById($fieldId, $clientId = null) {
         try {
-            $sql = "SELECT * FROM custom_fields WHERE id = :id";
+            $sql = "SELECT * FROM custom_fields WHERE id = :id AND is_deleted = 0";
             $params = [':id' => $fieldId];
 
             if ($clientId !== null) {
@@ -168,13 +170,16 @@ class CustomFieldModel {
     public function saveCustomFieldValues($userId, $fieldValues) {
         try {
             $this->conn->beginTransaction();
-            
+            $updatedFields = []; // Track which fields were updated for usage count
+
             foreach ($fieldValues as $fieldId => $value) {
                 // Check if value already exists
                 $checkStmt = $this->conn->prepare("SELECT id FROM custom_field_values WHERE user_id = :user_id AND custom_field_id = :field_id");
                 $checkStmt->execute([':user_id' => $userId, ':field_id' => $fieldId]);
-                
-                if ($checkStmt->fetch()) {
+
+                $existingRecord = $checkStmt->fetch();
+
+                if ($existingRecord) {
                     // Update existing value
                     $updateStmt = $this->conn->prepare("UPDATE custom_field_values SET field_value = :value, updated_at = CURRENT_TIMESTAMP WHERE user_id = :user_id AND custom_field_id = :field_id");
                     $updateStmt->execute([
@@ -183,16 +188,27 @@ class CustomFieldModel {
                         ':field_id' => $fieldId
                     ]);
                 } else {
-                    // Insert new value
-                    $insertStmt = $this->conn->prepare("INSERT INTO custom_field_values (user_id, custom_field_id, field_value) VALUES (:user_id, :field_id, :value)");
-                    $insertStmt->execute([
-                        ':user_id' => $userId,
-                        ':field_id' => $fieldId,
-                        ':value' => $value
-                    ]);
+                    // Insert new value (only if value is not empty)
+                    if (!empty($value)) {
+                        $insertStmt = $this->conn->prepare("INSERT INTO custom_field_values (user_id, custom_field_id, field_value, is_deleted) VALUES (:user_id, :field_id, :value, :is_deleted)");
+                        $insertStmt->execute([
+                            ':user_id' => $userId,
+                            ':field_id' => $fieldId,
+                            ':value' => $value,
+                            ':is_deleted' => 0
+                        ]);
+                    }
                 }
+
+                // Track this field for usage count update
+                $updatedFields[] = $fieldId;
             }
-            
+
+            // Update usage count for all affected fields
+            foreach ($updatedFields as $fieldId) {
+                $this->updateFieldUsageCount($fieldId);
+            }
+
             $this->conn->commit();
             return true;
         } catch (PDOException $e) {
@@ -266,6 +282,296 @@ class CustomFieldModel {
         } catch (PDOException $e) {
             error_log("CustomFieldModel updateFieldOrder error: " . $e->getMessage());
             return false;
+        }
+    }
+
+    /**
+     * Get all custom fields across all clients (for super admin)
+     */
+    public function getAllCustomFields($activeOnly = true) {
+        try {
+            $sql = "SELECT cf.*, c.client_name
+                    FROM custom_fields cf
+                    LEFT JOIN clients c ON cf.client_id = c.id
+                    WHERE cf.is_deleted = 0";
+
+            if ($activeOnly) {
+                $sql .= " AND cf.is_active = 1";
+            }
+
+            $sql .= " ORDER BY c.client_name, cf.field_order, cf.created_at";
+
+            $stmt = $this->conn->prepare($sql);
+            $stmt->execute();
+
+            return $stmt->fetchAll(PDO::FETCH_ASSOC);
+        } catch (PDOException $e) {
+            error_log("CustomFieldModel getAllCustomFields error: " . $e->getMessage());
+            return [];
+        }
+    }
+
+    /**
+     * Get usage count for a custom field (how many users have values for this field)
+     * Now uses the usage_count column directly from custom_fields table
+     */
+    public function getFieldUsageCount($fieldId) {
+        try {
+            $stmt = $this->conn->prepare("SELECT usage_count FROM custom_fields WHERE id = :field_id AND is_deleted = 0");
+            $stmt->execute([':field_id' => $fieldId]);
+            $result = $stmt->fetch(PDO::FETCH_ASSOC);
+
+            return (int)($result['usage_count'] ?? 0);
+        } catch (PDOException $e) {
+            error_log("CustomFieldModel getFieldUsageCount error: " . $e->getMessage());
+            return 0;
+        }
+    }
+
+    /**
+     * Update usage count for a custom field
+     * Call this when custom field values are added/removed
+     */
+    public function updateFieldUsageCount($fieldId) {
+        try {
+            // Count actual usage from custom_field_values table (excluding deleted values)
+            $stmt = $this->conn->prepare("SELECT COUNT(DISTINCT user_id) as usage_count FROM custom_field_values WHERE custom_field_id = :field_id AND is_deleted = 0");
+            $stmt->execute([':field_id' => $fieldId]);
+            $result = $stmt->fetch(PDO::FETCH_ASSOC);
+            $usageCount = (int)($result['usage_count'] ?? 0);
+
+            // Update the usage_count column in custom_fields table
+            $updateStmt = $this->conn->prepare("UPDATE custom_fields SET usage_count = :usage_count WHERE id = :field_id AND is_deleted = 0");
+            $updateStmt->execute([
+                ':usage_count' => $usageCount,
+                ':field_id' => $fieldId
+            ]);
+
+            return $usageCount;
+        } catch (PDOException $e) {
+            error_log("CustomFieldModel updateFieldUsageCount error: " . $e->getMessage());
+            return 0;
+        }
+    }
+
+    /**
+     * Update custom field status (activate/deactivate)
+     */
+    public function updateCustomFieldStatus($fieldId, $isActive) {
+        try {
+            $stmt = $this->conn->prepare("UPDATE custom_fields SET is_active = :is_active, updated_at = NOW() WHERE id = :id");
+            return $stmt->execute([
+                ':is_active' => $isActive ? 1 : 0,
+                ':id' => $fieldId
+            ]);
+        } catch (PDOException $e) {
+            error_log("CustomFieldModel updateCustomFieldStatus error: " . $e->getMessage());
+            return false;
+        }
+    }
+
+    /**
+     * Soft delete custom field and all its values
+     * This marks the field and its values as deleted without removing data
+     */
+    public function softDeleteCustomField($fieldId, $deletedBy = null) {
+        try {
+            // Start transaction
+            $this->conn->beginTransaction();
+
+            // Soft delete all custom field values
+            $deleteValuesStmt = $this->conn->prepare("
+                UPDATE custom_field_values
+                SET is_deleted = 1, deleted_at = NOW(), deleted_by = :deleted_by
+                WHERE custom_field_id = :field_id AND is_deleted = 0
+            ");
+            $deleteValuesStmt->execute([
+                ':field_id' => $fieldId,
+                ':deleted_by' => $deletedBy
+            ]);
+
+            // Soft delete the custom field itself and reset usage count
+            $deleteFieldStmt = $this->conn->prepare("
+                UPDATE custom_fields
+                SET is_deleted = 1, deleted_at = NOW(), deleted_by = :deleted_by, usage_count = 0
+                WHERE id = :field_id AND is_deleted = 0
+            ");
+            $deleteFieldStmt->execute([
+                ':field_id' => $fieldId,
+                ':deleted_by' => $deletedBy
+            ]);
+
+            // Commit transaction
+            $this->conn->commit();
+
+            $result = $deleteFieldStmt->rowCount() > 0;
+
+            return $result;
+        } catch (PDOException $e) {
+            // Rollback transaction on error
+            $this->conn->rollback();
+            error_log("CustomFieldModel softDeleteCustomField error: " . $e->getMessage());
+            return false;
+        }
+    }
+
+    /**
+     * Permanently delete custom field (only for inactive unused fields)
+     */
+    public function permanentDeleteCustomField($fieldId) {
+        try {
+            // Start transaction
+            $this->conn->beginTransaction();
+
+            // First delete any associated field values (should be none for unused fields)
+            $stmt = $this->conn->prepare("DELETE FROM custom_field_values WHERE custom_field_id = :field_id");
+            $stmt->execute([':field_id' => $fieldId]);
+
+            // Then delete the custom field itself
+            $stmt = $this->conn->prepare("DELETE FROM custom_fields WHERE id = :id");
+            $result = $stmt->execute([':id' => $fieldId]);
+
+            // Commit transaction
+            $this->conn->commit();
+
+            return $result;
+        } catch (PDOException $e) {
+            // Rollback transaction on error
+            $this->conn->rollback();
+            error_log("CustomFieldModel permanentDeleteCustomField error: " . $e->getMessage());
+            return false;
+        }
+    }
+
+    /**
+     * Check if field name already exists for a client
+     */
+    public function checkFieldNameExists($fieldName, $clientId = null, $excludeId = null) {
+        try {
+            $sql = "SELECT COUNT(*) as count FROM custom_fields WHERE field_name = :field_name AND is_deleted = 0";
+            $params = [':field_name' => $fieldName];
+
+            // Filter by client if specified
+            if ($clientId !== null) {
+                $sql .= " AND client_id = :client_id";
+                $params[':client_id'] = $clientId;
+            }
+
+            // Exclude specific field ID (for updates)
+            if ($excludeId !== null) {
+                $sql .= " AND id != :exclude_id";
+                $params[':exclude_id'] = $excludeId;
+            }
+
+            $stmt = $this->conn->prepare($sql);
+            $stmt->execute($params);
+            $result = $stmt->fetch(PDO::FETCH_ASSOC);
+
+            return (int)$result['count'] > 0;
+        } catch (PDOException $e) {
+            error_log("CustomFieldModel checkFieldNameExists error: " . $e->getMessage());
+            return false;
+        }
+    }
+
+    /**
+     * Check if field label already exists for a client
+     */
+    public function checkFieldLabelExists($fieldLabel, $clientId = null, $excludeId = null) {
+        try {
+            $sql = "SELECT COUNT(*) as count FROM custom_fields WHERE field_label = :field_label AND is_deleted = 0";
+            $params = [':field_label' => $fieldLabel];
+
+            // Filter by client if specified
+            if ($clientId !== null) {
+                $sql .= " AND client_id = :client_id";
+                $params[':client_id'] = $clientId;
+            }
+
+            // Exclude specific field ID (for updates)
+            if ($excludeId !== null) {
+                $sql .= " AND id != :exclude_id";
+                $params[':exclude_id'] = $excludeId;
+            }
+
+            $stmt = $this->conn->prepare($sql);
+            $stmt->execute($params);
+            $result = $stmt->fetch(PDO::FETCH_ASSOC);
+
+            return (int)$result['count'] > 0;
+        } catch (PDOException $e) {
+            error_log("CustomFieldModel checkFieldLabelExists error: " . $e->getMessage());
+            return false;
+        }
+    }
+
+    /**
+     * Delete custom field values for a user (when user is deleted)
+     * This should be called when a user is deleted to update usage counts
+     */
+    public function deleteUserCustomFieldValues($userId) {
+        try {
+            $this->conn->beginTransaction();
+
+            // Get all custom field IDs that this user has values for
+            $getFieldsStmt = $this->conn->prepare("
+                SELECT DISTINCT custom_field_id
+                FROM custom_field_values
+                WHERE user_id = :user_id AND is_deleted = 0
+            ");
+            $getFieldsStmt->execute([':user_id' => $userId]);
+            $affectedFields = $getFieldsStmt->fetchAll(PDO::FETCH_COLUMN);
+
+            // Soft delete all custom field values for this user
+            $deleteStmt = $this->conn->prepare("
+                UPDATE custom_field_values
+                SET is_deleted = 1, deleted_at = NOW()
+                WHERE user_id = :user_id AND is_deleted = 0
+            ");
+            $deleteStmt->execute([':user_id' => $userId]);
+
+            // Update usage count for all affected fields
+            foreach ($affectedFields as $fieldId) {
+                $this->updateFieldUsageCount($fieldId);
+            }
+
+            $this->conn->commit();
+            return true;
+        } catch (PDOException $e) {
+            $this->conn->rollBack();
+            error_log("CustomFieldModel deleteUserCustomFieldValues error: " . $e->getMessage());
+            return false;
+        }
+    }
+
+    /**
+     * Recalculate usage counts for all custom fields
+     * This can be used to fix any inconsistencies in usage counts
+     */
+    public function recalculateAllUsageCounts($clientId = null) {
+        try {
+            $sql = "SELECT id FROM custom_fields WHERE is_deleted = 0";
+            $params = [];
+
+            if ($clientId !== null) {
+                $sql .= " AND client_id = :client_id";
+                $params[':client_id'] = $clientId;
+            }
+
+            $stmt = $this->conn->prepare($sql);
+            $stmt->execute($params);
+            $fields = $stmt->fetchAll(PDO::FETCH_COLUMN);
+
+            $updatedCount = 0;
+            foreach ($fields as $fieldId) {
+                $this->updateFieldUsageCount($fieldId);
+                $updatedCount++;
+            }
+
+            return $updatedCount;
+        } catch (PDOException $e) {
+            error_log("CustomFieldModel recalculateAllUsageCounts error: " . $e->getMessage());
+            return 0;
         }
     }
 }

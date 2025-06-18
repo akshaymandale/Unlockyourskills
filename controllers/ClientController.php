@@ -132,26 +132,57 @@ class ClientController extends BaseController {
             $data = [
                 'client_name' => trim($_POST['client_name']),
                 'client_code' => $clientCode,
-                'logo_path' => $logoPath,
+                'logo_path' => $logoPath ?? null,
                 'max_users' => (int)$_POST['max_users'],
                 'status' => $_POST['status'] ?? 'active',
                 'description' => trim($_POST['description'] ?? ''),
-                'reports_enabled' => (int)($_POST['reports_enabled'] ?? 1),
-                'theme_settings' => (int)($_POST['theme_settings'] ?? 1),
-                'sso_enabled' => (int)($_POST['sso_enabled'] ?? 0),
+                'reports_enabled' => isset($_POST['reports_enabled']) ? (int)$_POST['reports_enabled'] : 1,
+                'theme_settings' => isset($_POST['theme_settings']) ? (int)$_POST['theme_settings'] : 1,
+                'sso_enabled' => isset($_POST['sso_enabled']) ? (int)$_POST['sso_enabled'] : 0,
                 'admin_role_limit' => (int)$_POST['admin_role_limit'],
-                'custom_field_creation' => (int)($_POST['custom_field_creation'] ?? 1)
+                'custom_field_creation' => isset($_POST['custom_field_creation']) ? 1 : 0
             ];
 
             if ($this->clientModel->createClient($data)) {
-                $this->toastSuccess(Localization::translate('success.client_created'), 'index.php?controller=ClientController');
+                // Check if this is an AJAX request
+                if ($this->isAjaxRequest()) {
+                    header('Content-Type: application/json');
+                    echo json_encode([
+                        'success' => true,
+                        'message' => Localization::translate('success.client_created')
+                    ]);
+                    exit;
+                } else {
+                    $this->toastSuccess(Localization::translate('success.client_created'), 'index.php?controller=ClientController');
+                }
             } else {
-                $this->toastError('Failed to create client. Please try again.', 'index.php?controller=ClientController');
+                // Check if this is an AJAX request
+                if ($this->isAjaxRequest()) {
+                    header('Content-Type: application/json');
+                    echo json_encode([
+                        'success' => false,
+                        'message' => 'Failed to create client. Please try again.'
+                    ]);
+                    exit;
+                } else {
+                    $this->toastError('Failed to create client. Please try again.', 'index.php?controller=ClientController');
+                }
             }
 
         } catch (Exception $e) {
             error_log("Client creation error: " . $e->getMessage());
-            $this->toastError('An unexpected error occurred. Please try again.', 'index.php?controller=ClientController');
+
+            // Check if this is an AJAX request
+            if ($this->isAjaxRequest()) {
+                header('Content-Type: application/json');
+                echo json_encode([
+                    'success' => false,
+                    'message' => 'An unexpected error occurred. Please try again.'
+                ]);
+                exit;
+            } else {
+                $this->toastError('An unexpected error occurred. Please try again.', 'index.php?controller=ClientController');
+            }
         }
     }
 
@@ -302,22 +333,53 @@ class ClientController extends BaseController {
                 'max_users' => (int)$_POST['max_users'],
                 'status' => $_POST['status'] ?? 'active',
                 'description' => trim($_POST['description'] ?? ''),
-                'reports_enabled' => (int)($_POST['reports_enabled'] ?? 1),
-                'theme_settings' => (int)($_POST['theme_settings'] ?? 1),
-                'sso_enabled' => (int)($_POST['sso_enabled'] ?? 0),
+                'reports_enabled' => isset($_POST['reports_enabled']) ? (int)$_POST['reports_enabled'] : 0,
+                'theme_settings' => isset($_POST['theme_settings']) ? (int)$_POST['theme_settings'] : 0,
+                'sso_enabled' => isset($_POST['sso_enabled']) ? (int)$_POST['sso_enabled'] : 0,
                 'admin_role_limit' => (int)$_POST['admin_role_limit'],
-                'custom_field_creation' => (int)($_POST['custom_field_creation'] ?? 1)
+                'custom_field_creation' => isset($_POST['custom_field_creation']) ? 1 : 0
             ];
 
             if ($this->clientModel->updateClient($clientId, $data)) {
-                $this->toastSuccess(Localization::translate('success.client_updated'), 'index.php?controller=ClientController');
+                // Check if this is an AJAX request
+                if ($this->isAjaxRequest()) {
+                    header('Content-Type: application/json');
+                    echo json_encode([
+                        'success' => true,
+                        'message' => Localization::translate('success.client_updated')
+                    ]);
+                    exit;
+                } else {
+                    $this->toastSuccess(Localization::translate('success.client_updated'), 'index.php?controller=ClientController');
+                }
             } else {
-                $this->toastError('Failed to update client. Please try again.', 'index.php?controller=ClientController');
+                // Check if this is an AJAX request
+                if ($this->isAjaxRequest()) {
+                    header('Content-Type: application/json');
+                    echo json_encode([
+                        'success' => false,
+                        'message' => 'Failed to update client. Please try again.'
+                    ]);
+                    exit;
+                } else {
+                    $this->toastError('Failed to update client. Please try again.', 'index.php?controller=ClientController');
+                }
             }
 
         } catch (Exception $e) {
             error_log("Client update error: " . $e->getMessage());
-            $this->toastError(Localization::translate('error.client_update_failed'), 'index.php?controller=ClientController');
+
+            // Check if this is an AJAX request
+            if ($this->isAjaxRequest()) {
+                header('Content-Type: application/json');
+                echo json_encode([
+                    'success' => false,
+                    'message' => Localization::translate('error.client_update_failed')
+                ]);
+                exit;
+            } else {
+                $this->toastError(Localization::translate('error.client_update_failed'), 'index.php?controller=ClientController');
+            }
         }
     }
 
@@ -437,9 +499,17 @@ class ClientController extends BaseController {
      * Check if current user is super admin
      */
     private function isSuperAdmin() {
-        return isset($_SESSION['user']) && 
-               isset($_SESSION['user']['system_role']) && 
+        return isset($_SESSION['user']) &&
+               isset($_SESSION['user']['system_role']) &&
                $_SESSION['user']['system_role'] === 'super_admin';
+    }
+
+    /**
+     * Check if the current request is an AJAX request
+     */
+    private function isAjaxRequest() {
+        return !empty($_SERVER['HTTP_X_REQUESTED_WITH']) &&
+               strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) === 'xmlhttprequest';
     }
 }
 ?>

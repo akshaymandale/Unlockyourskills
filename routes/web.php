@@ -22,6 +22,7 @@ Router::get('/lang/{language}', 'LanguageController@switch');
 // Location API (for dynamic dropdowns)
 Router::post('/api/locations/states', 'LocationController@getStatesByCountry');
 Router::post('/api/locations/cities', 'LocationController@getCitiesByState');
+Router::post('/api/locations/timezones', 'LocationController@getTimezonesByCountry');
 
 // ===================================
 // AUTHENTICATED ROUTES
@@ -39,23 +40,61 @@ Router::middleware(['Auth'])->group(function() {
     // USER MANAGEMENT
     // ===================================
     
+    // Modal Content Routes (MUST come before parameterized routes)
+    Router::get('/users/modal/add', 'UserManagementController@loadAddUserModal');
+    Router::get('/users/modal/edit', 'UserManagementController@loadEditUserModal');
+    Router::post('/users/modal/add', 'UserManagementController@submitAddUserModal');
+    Router::post('/users/modal/edit', 'UserManagementController@submitEditUserModal');
+
+    // User AJAX operations
+    Router::post('/users/ajax/search', 'UserManagementController@ajaxSearch');
+    Router::post('/users/ajax/toggle-status', 'UserManagementController@toggleStatus');
+    Router::post('/users/import', 'UserManagementController@import');
+
     // User Management Routes
     Router::get('/users', 'UserManagementController@index');
     Router::get('/users/create', 'UserManagementController@add');
     Router::post('/users', 'UserManagementController@save');
     Router::get('/users/{id}/edit', 'UserManagementController@edit');
     Router::put('/users/{id}', 'UserManagementController@update');
+    Router::post('/users/{id}', 'UserManagementController@update'); // For form submissions
     Router::delete('/users/{id}', 'UserManagementController@delete');
+    Router::get('/users/{id}/delete', 'UserManagementController@delete'); // For GET delete links
+
+    // User lock/unlock operations
+    Router::post('/users/{id}/lock', 'UserManagementController@lock');
+    Router::post('/users/{id}/unlock', 'UserManagementController@unlock');
+    Router::get('/users/{id}/lock', 'UserManagementController@lock'); // For GET lock links
+    Router::get('/users/{id}/unlock', 'UserManagementController@unlock'); // For GET unlock links
     
-    // User AJAX operations
-    Router::post('/users/ajax/search', 'UserManagementController@ajaxSearch');
-    Router::post('/users/ajax/toggle-status', 'UserManagementController@toggleStatus');
-    Router::post('/users/import', 'UserManagementController@import');
-    
-    // Custom Fields for Users
+    // Custom Fields for Users (legacy routes)
     Router::get('/users/custom-fields', 'CustomFieldController@index');
     Router::post('/users/custom-fields', 'CustomFieldController@save');
     Router::delete('/users/custom-fields/{id}', 'CustomFieldController@delete');
+
+    // ===================================
+    // SETTINGS ROUTES
+    // ===================================
+
+    // Settings Main
+    Router::get('/settings', 'SettingsController@index');
+
+    // Custom Fields Management
+    Router::get('/settings/custom-fields', 'SettingsController@customFields');
+    Router::post('/settings/custom-fields', 'SettingsController@storeCustomField');
+    Router::post('/settings/custom-fields/update-modal', 'SettingsController@updateCustomFieldModal');
+    Router::post('/settings/custom-fields/activate', 'SettingsController@activateCustomFieldPost');
+    Router::post('/settings/custom-fields/deactivate', 'SettingsController@deactivateCustomFieldPost');
+    Router::post('/settings/custom-fields/delete', 'SettingsController@deleteCustomFieldPost');
+    Router::get('/settings/custom-fields/{id}/edit', 'SettingsController@editCustomField');
+    Router::put('/settings/custom-fields/{id}', 'SettingsController@updateCustomField');
+    Router::get('/settings/custom-fields/{id}/activate', 'SettingsController@activateCustomField');
+    Router::get('/settings/custom-fields/{id}/deactivate', 'SettingsController@deactivateCustomField');
+    Router::get('/settings/custom-fields/{id}/delete', 'SettingsController@deleteCustomField');
+
+    // Custom Fields API for validation
+    Router::post('/api/custom-fields/check-name', 'SettingsController@checkFieldName');
+    Router::post('/api/custom-fields/check-label', 'SettingsController@checkFieldLabel');
     
     // ===================================
     // ASSESSMENT QUESTIONS

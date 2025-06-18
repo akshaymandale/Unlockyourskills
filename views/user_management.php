@@ -1,5 +1,7 @@
 <?php
 // views/user_management.php
+require_once 'core/UrlHelper.php';
+require_once 'core/IdEncryption.php';
 ?>
 
 <?php include 'includes/header.php'; ?>
@@ -26,7 +28,7 @@
             <div class="alert alert-info mb-3">
                 <i class="fas fa-building"></i>
                 <strong>Client Management Mode:</strong> Managing users for client <strong><?= htmlspecialchars($clientName); ?></strong>
-                <a href="index.php?controller=UserManagementController" class="btn btn-sm btn-outline-secondary ms-2">
+                <a href="<?= UrlHelper::url('users') ?>" class="btn btn-sm btn-outline-secondary ms-2">
                     <i class="fas fa-arrow-left"></i> Back to All Users
                 </a>
             </div>
@@ -107,12 +109,10 @@
                                 <i class="fas fa-upload me-1"></i> Import Users
                             </button>
                             <?php if ($customFieldCreationEnabled): ?>
-                            <button type="button" class="btn btn-sm btn-primary"
-                                data-bs-toggle="modal"
-                                data-bs-target="#createCustomFieldModal"
-                                title="<?= Localization::translate('custom_fields_create_title'); ?>">
-                                <i class="fas fa-plus me-1"></i> <?= Localization::translate('custom_fields_create_button'); ?>
-                            </button>
+                            <a href="<?= UrlHelper::url('settings/custom-fields') ?>" class="btn btn-sm btn-primary"
+                                title="<?= Localization::translate('manage_custom_fields'); ?>">
+                                <i class="fas fa-cogs me-1"></i> <?= Localization::translate('manage_custom_fields'); ?>
+                            </a>
                             <?php endif; ?>
                             <?php
                             // Check if user limit is reached
@@ -120,9 +120,9 @@
                             $addUserText = Localization::translate('buttons_add_user');
 
                             // Preserve client_id parameter if present (for super admin client management)
-                            $addUserUrl = 'index.php?controller=UserManagementController&action=addUser';
+                            $addUserUrl = UrlHelper::url('users/create');
                             if (isset($_GET['client_id'])) {
-                                $addUserUrl .= '&client_id=' . urlencode($_GET['client_id']);
+                                $addUserUrl .= '?client_id=' . urlencode($_GET['client_id']);
                             }
                             $addUserOnclick = "window.location.href='$addUserUrl'";
                             $addUserTitle = Localization::translate('buttons_add_user_tooltip');
@@ -142,11 +142,14 @@
                                     <i class="fas fa-plus me-1"></i><?= $addUserText; ?>
                                 </button>
                             <?php else: ?>
-                                <a href="<?= $addUserUrl; ?>"
-                                   class="btn btn-sm btn-primary add-user-btn"
-                                   title="<?= $addUserTitle; ?>">
+                                <button type="button"
+                                        class="btn btn-sm btn-primary add-user-btn"
+                                        title="<?= $addUserTitle; ?>"
+                                        data-bs-toggle="modal"
+                                        data-bs-target="#addUserModal"
+                                        data-client-id="<?= isset($_GET['client_id']) ? htmlspecialchars($_GET['client_id']) : ''; ?>">
                                     <i class="fas fa-plus me-1"></i><?= $addUserText; ?>
-                                </a>
+                                </button>
                             <?php endif; ?>
                         </div>
                         <?php if ($userLimitStatus && !$userLimitStatus['canAdd']): ?>
@@ -210,9 +213,11 @@
                                 <td>
                                     <!-- ✅ Edit Button -->
                                     <?php
-                                    $editUserUrl = "index.php?controller=UserManagementController&action=editUser&id=" . $user['profile_id'];
+                                    // Generate encrypted URL for edit user
+                                    $encryptedId = IdEncryption::encrypt($user['profile_id']);
+                                    $editUserUrl = UrlHelper::url('users/' . $encryptedId . '/edit');
                                     if (isset($_GET['client_id'])) {
-                                        $editUserUrl .= '&client_id=' . urlencode($_GET['client_id']);
+                                        $editUserUrl .= '?client_id=' . urlencode($_GET['client_id']);
                                     }
 
                                     // Check if user is Super Admin
@@ -221,19 +226,20 @@
                                     $disabledStyle = $isSuperAdmin ? 'style="pointer-events: none; opacity: 0.5; cursor: not-allowed;"' : '';
                                     $disabledTitle = $isSuperAdmin ? Localization::translate('user_grid_edit_disabled') : Localization::translate('user_grid_edit_user');
                                     ?>
-                                    <a href="<?= $isSuperAdmin ? '#' : $editUserUrl; ?>"
-                                        class="btn theme-btn-primary <?= $disabledClass; ?>"
-                                        <?= $disabledStyle; ?>
-                                        title="<?= $disabledTitle; ?>">
+                                    <button type="button"
+                                            class="btn theme-btn-primary <?= $disabledClass; ?> <?= $isSuperAdmin ? '' : 'edit-user-btn'; ?>"
+                                            <?= $disabledStyle; ?>
+                                            title="<?= $disabledTitle; ?>"
+                                            <?= $isSuperAdmin ? 'disabled' : 'data-user-id="' . $encryptedId . '"'; ?>>
                                         <i class="fas fa-edit"></i>
-                                    </a>
+                                    </button>
 
                                     <!-- ✅ Lock/Unlock Button -->
                                     <?php if ($user['locked_status'] == 1): ?>
                                         <a href="<?= $isSuperAdmin ? '#' : '#'; ?>"
                                             class="btn theme-btn-warning <?= $isSuperAdmin ? 'disabled' : 'unlock-user'; ?>"
                                             <?= $isSuperAdmin ? $disabledStyle : ''; ?>
-                                            <?= $isSuperAdmin ? '' : 'data-id="' . $user['profile_id'] . '"'; ?>
+                                            <?= $isSuperAdmin ? '' : 'data-id="' . IdEncryption::encrypt($user['profile_id']) . '"'; ?>
                                             <?= $isSuperAdmin ? '' : 'data-name="' . htmlspecialchars($user['full_name']) . '"'; ?>
                                             <?= $isSuperAdmin ? '' : 'data-title="' . htmlspecialchars($user['full_name']) . '"'; ?>
                                             title="<?= $isSuperAdmin ? Localization::translate('user_grid_unlock_disabled') : Localization::translate('user_grid_unlock_user'); ?>">
@@ -243,7 +249,7 @@
                                         <a href="<?= $isSuperAdmin ? '#' : '#'; ?>"
                                             class="btn theme-btn-danger <?= $isSuperAdmin ? 'disabled' : 'lock-user'; ?>"
                                             <?= $isSuperAdmin ? $disabledStyle : ''; ?>
-                                            <?= $isSuperAdmin ? '' : 'data-id="' . $user['profile_id'] . '"'; ?>
+                                            <?= $isSuperAdmin ? '' : 'data-id="' . IdEncryption::encrypt($user['profile_id']) . '"'; ?>
                                             <?= $isSuperAdmin ? '' : 'data-name="' . htmlspecialchars($user['full_name']) . '"'; ?>
                                             <?= $isSuperAdmin ? '' : 'data-title="' . htmlspecialchars($user['full_name']) . '"'; ?>
                                             title="<?= $isSuperAdmin ? Localization::translate('user_grid_lock_disabled') : Localization::translate('user_grid_lock_user'); ?>">
@@ -255,7 +261,7 @@
                                     <a href="#"
                                         class="btn theme-btn-danger <?= $isSuperAdmin ? 'disabled' : 'delete-user'; ?>"
                                         <?= $isSuperAdmin ? $disabledStyle : ''; ?>
-                                        <?= $isSuperAdmin ? '' : 'data-id="' . $user['profile_id'] . '"'; ?>
+                                        <?= $isSuperAdmin ? '' : 'data-id="' . IdEncryption::encrypt($user['profile_id']) . '"'; ?>
                                         <?= $isSuperAdmin ? '' : 'data-name="' . htmlspecialchars($user['full_name']) . '"'; ?>
                                         <?= $isSuperAdmin ? '' : 'data-title="' . htmlspecialchars($user['full_name']) . '"'; ?>
                                         title="<?= $isSuperAdmin ? Localization::translate('user_grid_delete_disabled') : Localization::translate('user_grid_delete_user'); ?>">
@@ -303,131 +309,294 @@
     </div>
 </div>
 
-<!-- ✅ User Management Confirmations -->
-<script src="public/js/modules/user_confirmations.js"></script>
-<script src="public/js/user_management.js"></script>
-
-<?php if ($customFieldCreationEnabled): ?>
-<!-- Create Custom Field Modal -->
-<div class="modal fade" id="createCustomFieldModal" tabindex="-1" aria-labelledby="createCustomFieldModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-lg">
+<!-- ✅ Add User Modal -->
+<div class="modal fade" id="addUserModal" tabindex="-1" aria-labelledby="addUserModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-xl">
         <div class="modal-content">
-            <form id="createCustomFieldForm" action="index.php?controller=CustomFieldController&action=create" method="POST">
-                <div class="modal-header">
-                    <h5 class="modal-title" id="createCustomFieldModalLabel">
-                        <i class="fas fa-plus me-2"></i><?= Localization::translate('custom_fields_create_title'); ?>
-                    </h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                </div>
-
-                <div class="modal-body">
-                    <div class="row">
-                        <!-- Field Name -->
-                        <div class="col-md-6">
-                            <div class="mb-3">
-                                <label for="field_name" class="form-label"><?= Localization::translate('custom_fields_field_name_required'); ?></label>
-                                <input type="text" class="form-control" id="field_name" name="field_name"
-                                       placeholder="<?= Localization::translate('custom_fields_field_name_placeholder'); ?>" required>
-                                <div class="form-text">Used internally (no spaces, use underscores)</div>
-                            </div>
+            <div class="modal-header">
+                <h5 class="modal-title" id="addUserModalLabel">
+                    <i class="fas fa-user-plus me-2"></i><?= Localization::translate('add_user_title'); ?>
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div id="addUserModalContent">
+                    <!-- Content will be loaded dynamically -->
+                    <div class="text-center py-4">
+                        <div class="spinner-border text-primary" role="status">
+                            <span class="visually-hidden">Loading...</span>
                         </div>
-
-                        <!-- Field Label -->
-                        <div class="col-md-6">
-                            <div class="mb-3">
-                                <label for="field_label" class="form-label"><?= Localization::translate('custom_fields_field_label_required'); ?></label>
-                                <input type="text" class="form-control" id="field_label" name="field_label"
-                                       placeholder="<?= Localization::translate('custom_fields_field_label_placeholder'); ?>" required>
-                                <div class="form-text">Displayed to users</div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="row">
-                        <!-- Field Type -->
-                        <div class="col-md-6">
-                            <div class="mb-3">
-                                <label for="field_type" class="form-label"><?= Localization::translate('custom_fields_field_type_required'); ?></label>
-                                <select class="form-select" id="field_type" name="field_type" required>
-                                    <option value="">Select field type...</option>
-                                    <option value="text"><?= Localization::translate('custom_fields_field_type_text'); ?></option>
-                                    <option value="textarea"><?= Localization::translate('custom_fields_field_type_textarea'); ?></option>
-                                    <option value="select"><?= Localization::translate('custom_fields_field_type_select'); ?></option>
-                                    <option value="radio"><?= Localization::translate('custom_fields_field_type_radio'); ?></option>
-                                    <option value="checkbox"><?= Localization::translate('custom_fields_field_type_checkbox'); ?></option>
-                                    <option value="file"><?= Localization::translate('custom_fields_field_type_file'); ?></option>
-                                    <option value="date"><?= Localization::translate('custom_fields_field_type_date'); ?></option>
-                                    <option value="number"><?= Localization::translate('custom_fields_field_type_number'); ?></option>
-                                    <option value="email"><?= Localization::translate('custom_fields_field_type_email'); ?></option>
-                                    <option value="phone"><?= Localization::translate('custom_fields_field_type_phone'); ?></option>
-                                </select>
-                            </div>
-                        </div>
-
-                        <!-- Field Settings -->
-                        <div class="col-md-6">
-                            <div class="mb-3">
-                                <label class="form-label">Field Settings</label>
-                                <div class="form-check">
-                                    <input class="form-check-input" type="checkbox" id="is_required" name="is_required" value="1">
-                                    <label class="form-check-label" for="is_required">
-                                        <?= Localization::translate('custom_fields_is_required'); ?>
-                                    </label>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Field Options (for select, radio, checkbox) -->
-                    <div class="row" id="field_options_container" style="display: none;">
-                        <div class="col-12">
-                            <div class="mb-3">
-                                <label for="field_options" class="form-label"><?= Localization::translate('custom_fields_field_options'); ?></label>
-                                <textarea class="form-control" id="field_options" name="field_options" rows="4"
-                                          placeholder="<?= Localization::translate('custom_fields_field_options_placeholder'); ?>"></textarea>
-                                <div class="form-text"><?= Localization::translate('custom_fields_field_options_help'); ?></div>
-                            </div>
-                        </div>
+                        <p class="mt-2">Loading form...</p>
                     </div>
                 </div>
-
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
-                        <i class="fas fa-times me-1"></i>Cancel
-                    </button>
-                    <button type="submit" class="btn btn-primary">
-                        <i class="fas fa-plus me-1"></i><?= Localization::translate('custom_fields_create_button'); ?>
-                    </button>
-                </div>
-            </form>
+            </div>
         </div>
     </div>
 </div>
 
+<!-- ✅ Edit User Modal -->
+<div class="modal fade" id="editUserModal" tabindex="-1" aria-labelledby="editUserModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-xl">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="editUserModalLabel">
+                    <i class="fas fa-user-edit me-2"></i><?= Localization::translate('edit_user_title'); ?>
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div id="editUserModalContent">
+                    <!-- Content will be loaded dynamically -->
+                    <div class="text-center py-4">
+                        <div class="spinner-border text-primary" role="status">
+                            <span class="visually-hidden">Loading...</span>
+                        </div>
+                        <p class="mt-2">Loading form...</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ✅ Modal Initialization Script -->
 <script>
-// Show/hide field options based on field type
-document.getElementById('field_type').addEventListener('change', function() {
-    const fieldType = this.value;
-    const optionsContainer = document.getElementById('field_options_container');
-    const optionsField = document.getElementById('field_options');
+document.addEventListener('DOMContentLoaded', function() {
+    // Initialize modal functionality after DOM is loaded
+    initializeUserModals();
+});
 
-    if (['select', 'radio', 'checkbox'].includes(fieldType)) {
-        optionsContainer.style.display = 'block';
-        optionsField.required = true;
-    } else {
-        optionsContainer.style.display = 'none';
-        optionsField.required = false;
-        optionsField.value = '';
+function initializeUserModals() {
+    // Add User Modal
+    const addUserModal = document.getElementById('addUserModal');
+    if (addUserModal) {
+        addUserModal.addEventListener('show.bs.modal', function(event) {
+            const button = event.relatedTarget;
+            const clientId = button ? button.getAttribute('data-client-id') : '';
+            loadAddUserModalContent(clientId);
+        });
+
+        addUserModal.addEventListener('hidden.bs.modal', function() {
+            console.log('🔥 Add modal hidden event fired');
+
+            // Clear modal content when closed
+            const modalContent = document.getElementById('addUserModalContent');
+            if (modalContent) {
+                modalContent.innerHTML = `
+                    <div class="text-center py-4">
+                        <div class="spinner-border text-primary" role="status">
+                            <span class="visually-hidden">Loading...</span>
+                        </div>
+                        <p class="mt-2">Loading form...</p>
+                    </div>
+                `;
+            }
+
+            // Force cleanup of any remaining backdrop
+            setTimeout(() => {
+                console.log('🔥 Cleaning up add modal backdrop');
+                const backdrops = document.querySelectorAll('.modal-backdrop');
+                backdrops.forEach(backdrop => {
+                    console.log('🔥 Removing remaining backdrop');
+                    backdrop.remove();
+                });
+
+                // Ensure body classes and styles are reset
+                document.body.classList.remove('modal-open');
+                document.body.style.paddingRight = '';
+                document.body.style.overflow = '';
+            }, 100);
+        });
     }
-});
 
-// Reset form when modal closes
-document.getElementById('createCustomFieldModal').addEventListener('hidden.bs.modal', function() {
-    document.getElementById('createCustomFieldForm').reset();
-    document.getElementById('field_options_container').style.display = 'none';
-    document.getElementById('field_options').required = false;
-});
+    // Edit User Modal
+    const editUserModal = document.getElementById('editUserModal');
+    console.log('🔥 EDIT DEBUG: Edit modal element found:', editUserModal);
+
+    if (editUserModal) {
+        console.log('🔥 EDIT DEBUG: Setting up edit modal event listeners...');
+
+        // Note: We handle modal opening manually in the click handler below
+        // to avoid conflicts with Bootstrap's automatic modal handling
+
+        editUserModal.addEventListener('hidden.bs.modal', function() {
+            console.log('🔥 Edit modal hidden event fired');
+
+            // Clear modal content when closed
+            const modalContent = document.getElementById('editUserModalContent');
+            if (modalContent) {
+                modalContent.innerHTML = `
+                    <div class="text-center py-4">
+                        <div class="spinner-border text-primary" role="status">
+                            <span class="visually-hidden">Loading...</span>
+                        </div>
+                        <p class="mt-2">Loading form...</p>
+                    </div>
+                `;
+            }
+
+            // Force cleanup of any remaining backdrop
+            setTimeout(() => {
+                console.log('🔥 Cleaning up edit modal backdrop');
+                const backdrops = document.querySelectorAll('.modal-backdrop');
+                backdrops.forEach(backdrop => {
+                    console.log('🔥 Removing remaining backdrop');
+                    backdrop.remove();
+                });
+
+                // Ensure body classes and styles are reset
+                document.body.classList.remove('modal-open');
+                document.body.style.paddingRight = '';
+                document.body.style.overflow = '';
+            }, 100);
+        });
+    }
+
+    // Handle edit button clicks in AJAX-generated content
+    document.addEventListener('click', function(e) {
+        console.log('🔥 EDIT DEBUG: Click event detected on:', e.target);
+        console.log('🔥 EDIT DEBUG: Target classes:', e.target.className);
+        console.log('🔥 EDIT DEBUG: Target closest edit-user-btn:', e.target.closest('.edit-user-btn'));
+
+        if (e.target.closest('.edit-user-btn')) {
+            e.preventDefault();
+
+            const button = e.target.closest('.edit-user-btn');
+            const userId = button.getAttribute('data-user-id');
+
+            // Check if modal already exists and is open
+            const existingModal = bootstrap.Modal.getInstance(editUserModal);
+            if (existingModal) {
+                existingModal.dispose();
+            }
+
+            // Clear any existing modal backdrops
+            const existingBackdrops = document.querySelectorAll('.modal-backdrop');
+            existingBackdrops.forEach(backdrop => backdrop.remove());
+
+            // Remove modal-open class from body
+            document.body.classList.remove('modal-open');
+            document.body.style.paddingRight = '';
+            document.body.style.overflow = '';
+
+            // Show modal and load content
+            if (editUserModal && typeof bootstrap !== 'undefined') {
+                const modal = new bootstrap.Modal(editUserModal);
+                modal.show();
+                loadEditUserModalContent(userId);
+            }
+        }
+    });
+}
+
+function loadAddUserModalContent(clientId = '') {
+    const modalContent = document.getElementById('addUserModalContent');
+    if (!modalContent) return;
+
+    // Show loading state
+    modalContent.innerHTML = `
+        <div class="text-center py-4">
+            <div class="spinner-border text-primary" role="status">
+                <span class="visually-hidden">Loading...</span>
+            </div>
+            <p class="mt-2">Loading form...</p>
+        </div>
+    `;
+
+    // Build URL with client_id if provided
+    let url = getProjectUrl('users/modal/add');
+    if (clientId) {
+        url += '?client_id=' + encodeURIComponent(clientId);
+    }
+
+    fetch(url)
+        .then(response => response.text())
+        .then(html => {
+            modalContent.innerHTML = html;
+
+            // Initialize form functionality
+            if (typeof initializeAddUserForm === 'function') {
+                initializeAddUserForm();
+            }
+
+            // Initialize location dropdowns for modal (with modal_ prefix)
+            // This now includes timezone initialization as well
+            if (typeof initializeLocationDropdowns === 'function') {
+                initializeLocationDropdowns('modal_');
+            }
+        })
+        .catch(error => {
+            console.error('Error loading add user form:', error);
+            modalContent.innerHTML = `
+                <div class="alert alert-danger">
+                    <i class="fas fa-exclamation-triangle"></i>
+                    Error loading form. Please try again.
+                </div>
+            `;
+        });
+}
+
+function loadEditUserModalContent(userId) {
+    const modalContent = document.getElementById('editUserModalContent');
+    if (!modalContent) return;
+
+    // Show loading state
+    modalContent.innerHTML = `
+        <div class="text-center py-4">
+            <div class="spinner-border text-primary" role="status">
+                <span class="visually-hidden">Loading...</span>
+            </div>
+            <p class="mt-2">Loading form...</p>
+        </div>
+    `;
+
+    const url = getProjectUrl('users/modal/edit') + '?user_id=' + encodeURIComponent(userId);
+
+    fetch(url)
+        .then(response => response.text())
+        .then(html => {
+            modalContent.innerHTML = html;
+
+            // Check if the content looks like a form
+            const hasForm = html.includes('<form') && html.includes('editUserModalForm');
+            const hasError = html.includes('alert-danger') || html.includes('Error');
+
+            if (hasError) {
+                console.error('Error in modal content');
+            } else if (hasForm) {
+                // Wait for DOM to update, then initialize form
+                setTimeout(() => {
+                    const form = document.getElementById('editUserModalForm');
+                    if (form && typeof initializeEditUserForm === 'function') {
+                        initializeEditUserForm();
+                    }
+                }, 200);
+            }
+        })
+        .catch(error => {
+            console.error('Error loading edit user form:', error);
+            modalContent.innerHTML = `
+                <div class="alert alert-danger">
+                    <i class="fas fa-exclamation-triangle"></i>
+                    Error loading form. Please try again.
+                    <br><small>Error: ${error.message}</small>
+                </div>
+            `;
+        });
+}
+
+function getProjectUrl(path) {
+    const baseUrl = window.location.origin + '/Unlockyourskills/';
+    return baseUrl + path.replace(/^\//, '');
+}
 </script>
-<?php endif; ?>
+
+<!-- Custom Field Modal removed - now managed in Settings -->
 
 <?php include 'includes/footer.php'; ?>
+
+<!-- ✅ Load JavaScript files AFTER Bootstrap is loaded -->
+<script src="<?= UrlHelper::url('public/js/modules/user_confirmations.js') ?>"></script>
+<script src="<?= UrlHelper::url('public/js/user_management.js') ?>"></script>
+<script src="<?= UrlHelper::url('public/js/add_user_validation.js') ?>"></script>
+<script src="<?= UrlHelper::url('public/js/edit_user_validation.js') ?>"></script>

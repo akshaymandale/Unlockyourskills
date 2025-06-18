@@ -1,17 +1,24 @@
 // Helper function to get project-relative URLs
 function getProjectUrl(path) {
-    const scriptPath = window.location.pathname;
-    const projectPath = scriptPath.substring(0, scriptPath.lastIndexOf('/') + 1);
-    const basePath = projectPath.replace(/\/[^\/]*$/, '');
+    const protocol = window.location.protocol;
+    const host = window.location.host;
+    const pathname = window.location.pathname;
 
-    // Clean up path
-    path = path.replace(/^\/+/, '');
+    // Extract the project base path - for Unlockyourskills, it's always /Unlockyourskills
+    let basePath = '';
 
-    if (basePath === '' || basePath === '/') {
-        return '/' + path;
+    // Find the project root by looking for the first path segment
+    const pathParts = pathname.split('/').filter(part => part !== '');
+    if (pathParts.length > 0) {
+        basePath = '/' + pathParts[0]; // /Unlockyourskills
     }
 
-    return basePath + '/' + path;
+    // Clean up input path
+    path = path.replace(/^\/+/, '');
+
+    const fullUrl = `${protocol}//${host}${basePath}/${path}`;
+
+    return fullUrl;
 }
 
 // Helper function to get API URLs
@@ -214,11 +221,16 @@ document.addEventListener("DOMContentLoaded", function () {
         });
     }
 
+    // Add user button functionality - check if it's a modal button or regular link
     let addUserBtn = document.querySelector(".add-user-btn");
     if (addUserBtn) {
-        addUserBtn.addEventListener("click", function () {
-            window.location.href = getProjectUrl("users/create");
-        });
+        // Only add redirect behavior if it's NOT a modal button
+        if (!addUserBtn.hasAttribute('data-bs-toggle')) {
+            addUserBtn.addEventListener("click", function () {
+                window.location.href = getProjectUrl("users/create");
+            });
+        }
+        // If it has data-bs-toggle="modal", let Bootstrap handle it
     }
 
 
@@ -674,20 +686,24 @@ document.addEventListener("DOMContentLoaded", function () {
     let profileIdInput = document.getElementById("profile_id");
 
     // ✅ Fetch Client Name from Session (Injected via PHP)
-    let clientName = document.getElementById("clientName").value; // Hidden input in add_user.php
+    let clientNameElement = document.getElementById("clientName");
 
-    if (clientName) {
-        // ✅ Extract First 3 Letters of Client Name
-        let clientPrefix = clientName.substring(0, 3).toUpperCase();
+    if (clientNameElement && profileIdInput) {
+        let clientName = clientNameElement.value; // Hidden input in add_user.php
 
-        // ✅ Generate a Unique 7-Digit Number
-        let randomNumber = Math.floor(1000000 + Math.random() * 9000000);
+        if (clientName) {
+            // ✅ Extract First 3 Letters of Client Name
+            let clientPrefix = clientName.substring(0, 3).toUpperCase();
 
-        // ✅ Final Profile ID (Example: "DEE1234567")
-        let generatedProfileId = clientPrefix + randomNumber;
+            // ✅ Generate a Unique 7-Digit Number
+            let randomNumber = Math.floor(1000000 + Math.random() * 9000000);
 
-        // ✅ Auto-Fill Profile ID Field (Read-Only)
-        profileIdInput.value = generatedProfileId;
+            // ✅ Final Profile ID (Example: "DEE1234567")
+            let generatedProfileId = clientPrefix + randomNumber;
+
+            // ✅ Auto-Fill Profile ID Field (Read-Only)
+            profileIdInput.value = generatedProfileId;
+        }
     }
 
 });

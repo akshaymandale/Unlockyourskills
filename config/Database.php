@@ -1,6 +1,9 @@
 <?php
-error_reporting(E_ALL);
-ini_set('display_errors', 1);
+// Only enable error reporting if not in API context
+if (!isset($_SERVER['REQUEST_URI']) || strpos($_SERVER['REQUEST_URI'], '/api/') === false) {
+    error_reporting(E_ALL);
+    ini_set('display_errors', 1);
+}
 
 // ✅ Prevent multiple declarations using class_exists
 if (!class_exists('Database')) {

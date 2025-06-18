@@ -1,4 +1,6 @@
-<?php include 'includes/header.php'; ?>
+<?php
+require_once 'core/UrlHelper.php';
+include 'includes/header.php'; ?>
 <?php include 'includes/navbar.php'; ?>
 <?php include 'includes/sidebar.php'; ?>
 
@@ -163,7 +165,7 @@
                                                 title="<?= Localization::translate('clients_edit_title'); ?>">
                                             <i class="fas fa-edit"></i>
                                         </button>
-                                        <a href="index.php?controller=UserManagementController&client_id=<?= $client['id']; ?>"
+                                        <a href="<?= UrlHelper::url('clients/' . $client['id'] . '/users') ?>"
                                            class="btn btn-sm btn-outline-primary" title="<?= Localization::translate('clients_manage_users_title'); ?>">
                                             <i class="fas fa-users"></i>
                                         </a>
@@ -456,11 +458,11 @@
 </div>
 
 <!-- Include Toast Notification JavaScript -->
-<script src="public/js/toast_notifications.js"></script>
+<script src="<?= UrlHelper::url('public/js/toast_notifications.js') ?>"></script>
 <!-- Include Confirmation Modal JavaScript -->
-<script src="public/js/confirmation_modal.js"></script>
+<script src="<?= UrlHelper::url('public/js/confirmation_modal.js') ?>"></script>
 <!-- Include Translation System -->
-<script src="public/js/translations.js"></script>
+<script src="<?= UrlHelper::url('public/js/translations.js') ?>"></script>
 <script>
 // Load translations for JavaScript validation
 window.translations = <?= json_encode([
@@ -482,9 +484,9 @@ window.translations = <?= json_encode([
 ]); ?>;
 </script>
 <!-- Include Client Form Validation JavaScript -->
-<script src="public/js/client_form_validation.js"></script>
+<script src="<?= UrlHelper::url('public/js/client_form_validation.js') ?>"></script>
 <!-- Include Client Management JavaScript -->
-<script src="public/js/client_management.js"></script>
+<script src="<?= UrlHelper::url('public/js/client_management.js') ?>"></script>
 
 
 
