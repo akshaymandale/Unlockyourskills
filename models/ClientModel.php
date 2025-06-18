@@ -69,15 +69,15 @@ class ClientModel {
         return $stmt->execute([
             $data['client_name'],
             $data['client_code'],
-            $data['logo_path'] ?? null,
-            $data['max_users'] ?? 10,
-            $data['status'] ?? 'active',
-            $data['description'] ?? '',
-            $data['reports_enabled'] ?? 1,
-            $data['theme_settings'] ?? 1,
-            $data['sso_enabled'] ?? 0,
-            $data['admin_role_limit'] ?? 5,
-            $data['custom_field_creation'] ?? 1
+            $data['logo_path'],
+            $data['max_users'],
+            $data['status'],
+            $data['description'],
+            $data['reports_enabled'],
+            $data['theme_settings'],
+            $data['sso_enabled'],
+            $data['admin_role_limit'],
+            $data['custom_field_creation']
         ]);
     }
 
@@ -107,12 +107,12 @@ class ClientModel {
             $data['logo_path'],
             $data['max_users'],
             $data['status'],
-            $data['description'] ?? '',
-            $data['reports_enabled'] ?? 1,
-            $data['theme_settings'] ?? 1,
-            $data['sso_enabled'] ?? 0,
-            $data['admin_role_limit'] ?? 1,
-            $data['custom_field_creation'] ?? 1,
+            $data['description'],
+            $data['reports_enabled'],
+            $data['theme_settings'],
+            $data['sso_enabled'],
+            $data['admin_role_limit'],
+            $data['custom_field_creation'],
             $id
         ]);
     }

@@ -2,6 +2,7 @@
 
 require_once 'models/CustomFieldModel.php';
 require_once 'config/Localization.php';
+require_once 'core/UrlHelper.php';
 
 class CustomFieldController {
     private $customFieldModel;
@@ -30,46 +31,100 @@ class CustomFieldController {
      * Create a new custom field
      */
     public function create() {
+        header('Content-Type: application/json');
+
         if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
-            $this->toastError('Invalid request method.', 'index.php?controller=UserManagementController');
-            return;
+            echo json_encode([
+                'success' => false,
+                'message' => 'Invalid request method.'
+            ]);
+            exit();
         }
 
         try {
             $clientId = $_SESSION['user']['client_id'] ?? null;
 
             if (!$clientId) {
-                $this->toastError('Client ID not found in session.', 'index.php?controller=UserManagementController');
-                return;
+                echo json_encode([
+                    'success' => false,
+                    'message' => 'Client ID not found in session.'
+                ]);
+                exit();
             }
 
+            $fieldErrors = [];
             $errors = [];
 
-            // Validate input
+            // Validate field name
             if (empty($_POST['field_name']) || trim($_POST['field_name']) === '') {
+                $fieldErrors['field_name'] = Localization::translate('validation.field_name_required');
                 $errors[] = Localization::translate('validation.field_name_required');
+            } else {
+                // Validate field name format (no spaces, use underscores)
+                $fieldName = trim($_POST['field_name']);
+                if (!preg_match('/^[a-zA-Z][a-zA-Z0-9_]*$/', $fieldName)) {
+                    $fieldErrors['field_name'] = 'Field name must start with a letter and contain only letters, numbers, and underscores';
+                    $errors[] = 'Field name must start with a letter and contain only letters, numbers, and underscores';
+                }
             }
 
+            // Validate field label
             if (empty($_POST['field_label']) || trim($_POST['field_label']) === '') {
+                $fieldErrors['field_label'] = Localization::translate('validation.field_label_required');
                 $errors[] = Localization::translate('validation.field_label_required');
             }
 
+            // Validate field type
             if (empty($_POST['field_type']) || trim($_POST['field_type']) === '') {
+                $fieldErrors['field_type'] = Localization::translate('validation.field_type_required');
                 $errors[] = Localization::translate('validation.field_type_required');
             }
 
-            // Validate field name uniqueness
-            $existingFields = $this->customFieldModel->getCustomFieldsByClient($clientId, false);
-            foreach ($existingFields as $field) {
-                if (strtolower($field['field_name']) === strtolower(trim($_POST['field_name']))) {
-                    $errors[] = Localization::translate('validation.field_name_exists');
-                    break;
+            // Validate field options for select, radio, checkbox
+            if (!empty($_POST['field_type']) && in_array($_POST['field_type'], ['select', 'radio', 'checkbox'])) {
+                if (empty($_POST['field_options']) || trim($_POST['field_options']) === '') {
+                    $fieldErrors['field_options'] = 'Field options are required for this field type';
+                    $errors[] = 'Field options are required for this field type';
+                } else {
+                    $options = array_filter(array_map('trim', explode("\n", $_POST['field_options'])));
+                    if (count($options) < 2) {
+                        $fieldErrors['field_options'] = 'At least two options are required';
+                        $errors[] = 'At least two options are required';
+                    }
+                }
+            }
+
+            // Check field name uniqueness
+            if (!isset($fieldErrors['field_name'])) {
+                $existingFields = $this->customFieldModel->getCustomFieldsByClient($clientId, false);
+                foreach ($existingFields as $field) {
+                    if (strtolower($field['field_name']) === strtolower(trim($_POST['field_name']))) {
+                        $fieldErrors['field_name'] = Localization::translate('validation.field_name_exists');
+                        $errors[] = Localization::translate('validation.field_name_exists');
+                        break;
+                    }
+                }
+            }
+
+            // Check field label uniqueness
+            if (!isset($fieldErrors['field_label'])) {
+                $existingFields = $this->customFieldModel->getCustomFieldsByClient($clientId, false);
+                foreach ($existingFields as $field) {
+                    if (strtolower($field['field_label']) === strtolower(trim($_POST['field_label']))) {
+                        $fieldErrors['field_label'] = 'A field with this label already exists';
+                        $errors[] = 'A field with this label already exists';
+                        break;
+                    }
                 }
             }
 
             if (!empty($errors)) {
-                $this->toastError(implode('<br>', $errors), 'index.php?controller=UserManagementController');
-                return;
+                echo json_encode([
+                    'success' => false,
+                    'message' => implode('<br>', $errors),
+                    'field_errors' => $fieldErrors
+                ]);
+                exit();
             }
 
             // Prepare field options for select, radio, checkbox
@@ -96,15 +151,25 @@ class CustomFieldController {
             ];
 
             if ($this->customFieldModel->createCustomField($data)) {
-                $this->toastSuccess(Localization::translate('success.custom_field_created'), 'index.php?controller=UserManagementController');
+                echo json_encode([
+                    'success' => true,
+                    'message' => Localization::translate('success.custom_field_created')
+                ]);
             } else {
-                $this->toastError(Localization::translate('error.custom_field_create_failed'), 'index.php?controller=UserManagementController');
+                echo json_encode([
+                    'success' => false,
+                    'message' => Localization::translate('error.custom_field_create_failed')
+                ]);
             }
 
         } catch (Exception $e) {
             error_log("CustomFieldController create error: " . $e->getMessage());
-            $this->toastError(Localization::translate('error.unexpected_error'), 'index.php?controller=UserManagementController');
+            echo json_encode([
+                'success' => false,
+                'message' => Localization::translate('error.unexpected_error')
+            ]);
         }
+        exit();
     }
 
     /**
@@ -129,14 +194,14 @@ class CustomFieldController {
      */
     public function update() {
         if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
-            $this->toastError('Invalid request method.', 'index.php?controller=UserManagementController');
+            $this->toastError(Localization::translate('error.invalid_request_method'), UrlHelper::url('users'));
             return;
         }
 
         try {
             $fieldId = $_POST['field_id'] ?? null;
             if (!$fieldId) {
-                $this->toastError(Localization::translate('validation.field_id_required'), 'index.php?controller=UserManagementController');
+                $this->toastError(Localization::translate('validation.field_id_required'), UrlHelper::url('users'));
                 return;
             }
 
@@ -144,7 +209,7 @@ class CustomFieldController {
             $currentClientId = $_SESSION['user']['client_id'] ?? null;
             $field = $this->customFieldModel->getCustomFieldById($fieldId, $currentClientId);
             if (!$field) {
-                $this->toastError(Localization::translate('validation.field_not_found'), 'index.php?controller=UserManagementController');
+                $this->toastError(Localization::translate('validation.field_not_found'), UrlHelper::url('users'));
                 return;
             }
 
@@ -160,7 +225,7 @@ class CustomFieldController {
             }
 
             if (!empty($errors)) {
-                $this->toastError(implode('<br>', $errors), 'index.php?controller=UserManagementController');
+                $this->toastError(implode('<br>', $errors), UrlHelper::url('users'));
                 return;
             }
 
@@ -184,14 +249,14 @@ class CustomFieldController {
             ];
 
             if ($this->customFieldModel->updateCustomField($fieldId, $data, $currentClientId)) {
-                $this->toastSuccess(Localization::translate('success.custom_field_updated'), 'index.php?controller=UserManagementController');
+                $this->toastSuccess(Localization::translate('success.custom_field_updated'), UrlHelper::url('users'));
             } else {
-                $this->toastError(Localization::translate('error.custom_field_update_failed'), 'index.php?controller=UserManagementController');
+                $this->toastError(Localization::translate('error.custom_field_update_failed'), UrlHelper::url('users'));
             }
 
         } catch (Exception $e) {
             error_log("CustomFieldController update error: " . $e->getMessage());
-            $this->toastError(Localization::translate('error.unexpected_error'), 'index.php?controller=UserManagementController');
+            $this->toastError(Localization::translate('error.unexpected_error'), UrlHelper::url('users'));
         }
     }
 
@@ -241,7 +306,8 @@ class CustomFieldController {
      */
     private function toastSuccess($message, $redirectUrl) {
         $encodedMessage = urlencode($message);
-        header("Location: {$redirectUrl}&message={$encodedMessage}&type=success");
+        $separator = strpos($redirectUrl, '?') !== false ? '&' : '?';
+        header("Location: {$redirectUrl}{$separator}message={$encodedMessage}&type=success");
         exit;
     }
 
@@ -250,7 +316,20 @@ class CustomFieldController {
      */
     private function toastError($message, $redirectUrl) {
         $encodedMessage = urlencode($message);
-        header("Location: {$redirectUrl}&message={$encodedMessage}&type=error");
+        $separator = strpos($redirectUrl, '?') !== false ? '&' : '?';
+        header("Location: {$redirectUrl}{$separator}message={$encodedMessage}&type=error");
         exit;
+    }
+
+    // ===================================
+    // ROUTING-COMPATIBLE METHODS
+    // ===================================
+
+    /**
+     * Save custom field - routing compatible method
+     * Maps to: POST /users/custom-fields
+     */
+    public function save() {
+        return $this->create();
     }
 }

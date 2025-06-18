@@ -217,7 +217,8 @@
 }
 </style>
 
+<?php require_once __DIR__ . '/../core/UrlHelper.php'; ?>
 <!-- Organization Delete Confirmations -->
-<script src="public/js/modules/organization_confirmations.js"></script>
+<script src="<?= UrlHelper::url('public/js/modules/organization_confirmations.js') ?>"></script>
 
 <?php include 'includes/footer.php'; ?>

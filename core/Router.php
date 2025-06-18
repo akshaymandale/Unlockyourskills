@@ -261,8 +261,9 @@ class Router
             $pattern = preg_quote($uri, '#');
 
             // Replace escaped parameter patterns with regex groups
-            // Use a simpler character class that doesn't include /
-            $pattern = preg_replace('/\\\{[^}]+\\\}/', '([^#/]+)', $pattern);
+            // Allow alphanumeric, hyphens, underscores, equals, plus signs for encrypted IDs
+            // This covers base64 and URL-encoded characters
+            $pattern = preg_replace('/\\\{[^}]+\\\}/', '([a-zA-Z0-9\-_=+%]+)', $pattern);
 
             $finalPattern = '#^' . $pattern . '$#';
 

@@ -3,6 +3,8 @@ if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
 
+require_once 'core/UrlHelper.php';
+
 // ✅ Determine target client for user creation
 $currentUser = $_SESSION['user'] ?? null;
 $targetClientId = null;
@@ -71,7 +73,7 @@ $countries = $stmt->fetchAll(PDO::FETCH_ASSOC);
             </div>
         <?php endif; ?>
 
-        <form action="index.php?controller=UserManagementController&action=storeUser" id="addUserForm" method="POST"
+        <form action="<?= UrlHelper::url('users') ?>" id="addUserForm" method="POST"
             enctype="multipart/form-data">
             <!-- ✅ Tabs Section -->
             <!-- Tabs Navigation -->
@@ -341,7 +343,7 @@ $countries = $stmt->fetchAll(PDO::FETCH_ASSOC);
                             <i class="fas fa-info-circle text-muted mb-3" style="font-size: 3rem;"></i>
                             <h5 class="text-muted"><?= Localization::translate('custom_fields_no_fields'); ?></h5>
                             <p class="text-muted"><?= Localization::translate('custom_fields_no_fields_description'); ?></p>
-                            <a href="index.php?controller=UserManagementController" class="btn btn-primary">
+                            <a href="<?= UrlHelper::url('users') ?>" class="btn btn-primary">
                                 <i class="fas fa-plus me-1"></i><?= Localization::translate('custom_fields_create_button'); ?>
                             </a>
                         </div>
@@ -520,5 +522,5 @@ $countries = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
 
 
-<script src="public/js/add_user_validation.js"></script>
+<script src="<?= UrlHelper::url('public/js/add_user_validation.js') ?>"></script>
 <?php include 'includes/footer.php'; ?>

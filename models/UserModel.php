@@ -162,11 +162,25 @@ class UserModel {
      // ✅ Soft Delete Function
      public function softDeleteUser($profile_id) {
         try {
+            // Get user ID first
+            $getUserStmt = $this->conn->prepare("SELECT id FROM user_profiles WHERE profile_id = :profile_id");
+            $getUserStmt->execute([':profile_id' => $profile_id]);
+            $user = $getUserStmt->fetch(PDO::FETCH_ASSOC);
+
+            if ($user) {
+                // Delete custom field values and update usage counts
+                require_once 'models/CustomFieldModel.php';
+                $customFieldModel = new CustomFieldModel();
+                $customFieldModel->deleteUserCustomFieldValues($user['id']);
+            }
+
+            // Soft delete the user
             $query = "UPDATE user_profiles SET is_deleted = 1 WHERE profile_id = :profile_id";
             $stmt = $this->conn->prepare($query);
             $stmt->bindParam(":profile_id", $profile_id);
             return $stmt->execute();
         } catch (PDOException $e) {
+            error_log("UserModel softDeleteUser error: " . $e->getMessage());
             return false;
         }
     }

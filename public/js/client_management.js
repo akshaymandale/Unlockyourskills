@@ -182,12 +182,20 @@ document.addEventListener('DOMContentLoaded', function() {
         document.getElementById('edit_max_users').value = client.max_users || '';
         document.getElementById('edit_status').value = client.status || 'active';
 
-        // Populate configuration settings
-        document.getElementById('edit_reports_enabled').value = client.reports_enabled || '1';
-        document.getElementById('edit_theme_settings').value = client.theme_settings || '1';
-        document.getElementById('edit_sso_enabled').value = client.sso_enabled || '0';
+        // Populate configuration settings - ensure proper type conversion
+        const reportsEnabled = client.reports_enabled;
+        const themeSettings = client.theme_settings;
+        const ssoEnabled = client.sso_enabled;
+        const customFieldCreation = client.custom_field_creation;
+
+        // Set select values (convert to string for proper matching)
+        document.getElementById('edit_reports_enabled').value = (reportsEnabled == 1 || reportsEnabled === '1' || reportsEnabled === true) ? '1' : '0';
+        document.getElementById('edit_theme_settings').value = (themeSettings == 1 || themeSettings === '1' || themeSettings === true) ? '1' : '0';
+        document.getElementById('edit_sso_enabled').value = (ssoEnabled == 1 || ssoEnabled === '1' || ssoEnabled === true) ? '1' : '0';
         document.getElementById('edit_admin_role_limit').value = client.admin_role_limit || '1';
-        document.getElementById('edit_custom_field_creation').checked = client.custom_field_creation == '1' || client.custom_field_creation === true;
+
+        // Set checkbox value
+        document.getElementById('edit_custom_field_creation').checked = (customFieldCreation == 1 || customFieldCreation === '1' || customFieldCreation === true);
 
         // Populate description
         document.getElementById('edit_description').value = client.description || '';
@@ -319,4 +327,21 @@ document.addEventListener('DOMContentLoaded', function() {
             alert(message);
         }
     }
+
+    // Function to refresh client cards after update
+    function refreshClientCards() {
+        // Reload the page to refresh all client cards
+        // This is the simplest approach that ensures all data is current
+        window.location.reload();
+    }
+
+    // Function to show toast notifications (enhanced version)
+    function showToast(type, message) {
+        // Use the existing toast system
+        showToastOrAlert(message, type);
+    }
+
+    // Make functions available globally for form validation
+    window.refreshClientCards = refreshClientCards;
+    window.showToast = showToast;
 });

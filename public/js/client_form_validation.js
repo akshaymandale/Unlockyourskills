@@ -49,9 +49,41 @@ document.addEventListener('DOMContentLoaded', function() {
             if (validateClientForm(this)) {
                 // Show loading state
                 const submitBtn = this.querySelector('button[type="submit"]');
+                const originalText = submitBtn.innerHTML;
                 submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Creating...';
                 submitBtn.disabled = true;
-                this.submit();
+
+                // Submit form via AJAX
+                const formData = new FormData(this);
+
+                fetch(this.action, {
+                    method: 'POST',
+                    body: formData,
+                    headers: {
+                        'X-Requested-With': 'XMLHttpRequest'
+                    }
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        // Success - refresh the client cards
+                        refreshClientCards();
+                        $('#addClientModal').modal('hide');
+                        showToast('success', data.message || 'Client created successfully!');
+                    } else {
+                        // Error - show error message
+                        showToast('error', data.message || 'Failed to create client. Please try again.');
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    showToast('error', 'Failed to create client. Please try again.');
+                })
+                .finally(() => {
+                    // Reset button state
+                    submitBtn.innerHTML = originalText;
+                    submitBtn.disabled = false;
+                });
             }
         });
 
@@ -75,9 +107,41 @@ document.addEventListener('DOMContentLoaded', function() {
             if (validateClientForm(this)) {
                 // Show loading state
                 const submitBtn = this.querySelector('button[type="submit"]');
+                const originalText = submitBtn.innerHTML;
                 submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Updating...';
                 submitBtn.disabled = true;
-                this.submit();
+
+                // Submit form via AJAX
+                const formData = new FormData(this);
+
+                fetch(this.action, {
+                    method: 'POST',
+                    body: formData,
+                    headers: {
+                        'X-Requested-With': 'XMLHttpRequest'
+                    }
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        // Success - refresh the client cards
+                        refreshClientCards();
+                        $('#editClientModal').modal('hide');
+                        showToast('success', data.message || 'Client updated successfully!');
+                    } else {
+                        // Error - show error message
+                        showToast('error', data.message || 'Failed to update client. Please try again.');
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    showToast('error', 'Failed to update client. Please try again.');
+                })
+                .finally(() => {
+                    // Reset button state
+                    submitBtn.innerHTML = originalText;
+                    submitBtn.disabled = false;
+                });
             }
         });
 

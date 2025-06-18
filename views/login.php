@@ -76,7 +76,8 @@
     </div>
 </div>
 
-<script src="public/js/login.js"></script>
+<?php require_once __DIR__ . '/../core/UrlHelper.php'; ?>
+<script src="<?= UrlHelper::url('public/js/login.js') ?>"></script>
 
 </body>
 </html>

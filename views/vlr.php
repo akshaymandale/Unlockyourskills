@@ -3547,37 +3547,38 @@ $languageList = $vlrController->getLanguages();
 
 
 
-<script src="public/js/scorm_validation.js"></script>
-<script src="public/js/scorm_package.js"></script>
-<script src="public/js/assessment_validation.js"></script>
-<script src="public/js/assessment_package.js"></script>
-<script src="public/js/audio_validation.js"></script>
-<script src="public/js/audio_package.js"></script>
-<script src="public/js/video_validation.js"></script>
-<script src="public/js/video_package.js"></script>
-<script src="public/js/add_question_on_assessment.js"></script>
-<script src="public/js/document_validation.js"></script>
-<script src="public/js/document_package.js"></script>
-<script src="public/js/image_validation.js"></script>
-<script src="public/js/image_package.js"></script>
-<script src="public/js/external_content_validation.js"></script>
-<script src="public/js/external_package.js"></script>
-<script src="public/js/content_preview.js"></script>
-<script src="public/js/survey_validation.js"></script>
-<script src="public/js/survey_package.js"></script>
-<script src="public/js/add_survey_question_on_survey.js"></script>
-<script src="public/js/feedback_validation.js"></script>
-<script src="public/js/feedback_package.js"></script>
-<script src="public/js/add_feedback_question_on_feedback.js"></script>
-<script src="public/js/interactive_validation.js"></script>
-<script src="public/js/interactive_package.js"></script>
-<script src="public/js/non_scorm_validation.js"></script>
-<script src="public/js/non_scorm_package.js"></script>
+<?php require_once __DIR__ . '/../core/UrlHelper.php'; ?>
+<script src="<?= UrlHelper::url('public/js/scorm_validation.js') ?>"></script>
+<script src="<?= UrlHelper::url('public/js/scorm_package.js') ?>"></script>
+<script src="<?= UrlHelper::url('public/js/assessment_validation.js') ?>"></script>
+<script src="<?= UrlHelper::url('public/js/assessment_package.js') ?>"></script>
+<script src="<?= UrlHelper::url('public/js/audio_validation.js') ?>"></script>
+<script src="<?= UrlHelper::url('public/js/audio_package.js') ?>"></script>
+<script src="<?= UrlHelper::url('public/js/video_validation.js') ?>"></script>
+<script src="<?= UrlHelper::url('public/js/video_package.js') ?>"></script>
+<script src="<?= UrlHelper::url('public/js/add_question_on_assessment.js') ?>"></script>
+<script src="<?= UrlHelper::url('public/js/document_validation.js') ?>"></script>
+<script src="<?= UrlHelper::url('public/js/document_package.js') ?>"></script>
+<script src="<?= UrlHelper::url('public/js/image_validation.js') ?>"></script>
+<script src="<?= UrlHelper::url('public/js/image_package.js') ?>"></script>
+<script src="<?= UrlHelper::url('public/js/external_content_validation.js') ?>"></script>
+<script src="<?= UrlHelper::url('public/js/external_package.js') ?>"></script>
+<script src="<?= UrlHelper::url('public/js/content_preview.js') ?>"></script>
+<script src="<?= UrlHelper::url('public/js/survey_validation.js') ?>"></script>
+<script src="<?= UrlHelper::url('public/js/survey_package.js') ?>"></script>
+<script src="<?= UrlHelper::url('public/js/add_survey_question_on_survey.js') ?>"></script>
+<script src="<?= UrlHelper::url('public/js/feedback_validation.js') ?>"></script>
+<script src="<?= UrlHelper::url('public/js/feedback_package.js') ?>"></script>
+<script src="<?= UrlHelper::url('public/js/add_feedback_question_on_feedback.js') ?>"></script>
+<script src="<?= UrlHelper::url('public/js/interactive_validation.js') ?>"></script>
+<script src="<?= UrlHelper::url('public/js/interactive_package.js') ?>"></script>
+<script src="<?= UrlHelper::url('public/js/non_scorm_validation.js') ?>"></script>
+<script src="<?= UrlHelper::url('public/js/non_scorm_package.js') ?>"></script>
 
 <!-- ✅ VLR Tab Management System -->
-<script src="public/js/vlr_tabs.js"></script>
+<script src="<?= UrlHelper::url('public/js/vlr_tabs.js') ?>"></script>
 <!-- ✅ VLR Delete Confirmations -->
-<script src="public/js/modules/vlr_confirmations.js"></script>
+<script src="<?= UrlHelper::url('public/js/modules/vlr_confirmations.js') ?>"></script>
 
 <!-- ✅ Universal Preview Modal -->
 <div class="modal fade" id="previewModal" tabindex="-1" aria-labelledby="previewModalLabel" aria-hidden="true">

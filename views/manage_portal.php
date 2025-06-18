@@ -115,7 +115,42 @@ require_once 'core/UrlHelper.php';
             <!-- ✅ Settings Tab -->
             <div class="tab-pane fade card shadow-lg p-4" id="settings">
                 <h3 class="text-purple"><?= Localization::translate('settings'); ?></h3>
-                <p><?= Localization::translate('settings_coming_soon'); ?></p>
+
+                <!-- ✅ User Configuration Section -->
+                <h4 class="text-purple mt-4"><?= Localization::translate('user_configuration'); ?></h4>
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="card user-box shadow-sm" onclick="location.href='<?= UrlHelper::url('settings/custom-fields') ?>'">
+                            <h5><i class="fas fa-cogs"></i> <?= Localization::translate('custom_fields_management'); ?></h5>
+                            <p><small class="text-muted"><?= Localization::translate('create_edit_delete_custom_fields'); ?></small></p>
+                        </div>
+                    </div>
+
+                    <div class="col-md-6">
+                        <div class="card user-box shadow-sm" onclick="location.href='index.php?controller=UserSettingsController'">
+                            <h5><i class="fas fa-user-shield"></i> <?= Localization::translate('user_roles_permissions'); ?></h5>
+                            <p><small class="text-muted"><?= Localization::translate('manage_user_roles_permissions'); ?></small></p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ✅ System Configuration Section -->
+                <h4 class="text-purple mt-4"><?= Localization::translate('system_configuration'); ?></h4>
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="card user-box shadow-sm" onclick="alert('General Settings - Coming Soon')">
+                            <h5><i class="fas fa-sliders-h"></i> <?= Localization::translate('general_settings'); ?></h5>
+                            <p><small class="text-muted"><?= Localization::translate('system_wide_settings'); ?></small></p>
+                        </div>
+                    </div>
+
+                    <div class="col-md-6">
+                        <div class="card user-box shadow-sm" onclick="alert('Security Settings - Coming Soon')">
+                            <h5><i class="fas fa-shield-alt"></i> <?= Localization::translate('security_settings'); ?></h5>
+                            <p><small class="text-muted"><?= Localization::translate('security_configuration'); ?></small></p>
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
     </div>

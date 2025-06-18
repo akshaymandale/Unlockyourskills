@@ -3058,5 +3058,128 @@ body select:focus,
     }
 }
 
+/* ===================================
+   USER MANAGEMENT MODAL STYLES
+   =================================== */
+.modal-xl {
+    max-width: 90%;
+}
+
+.modal-body {
+    max-height: 70vh;
+    overflow-y: auto;
+}
+
+.modal .nav-tabs {
+    border-bottom: 1px solid #dee2e6;
+    margin-bottom: 1rem;
+}
+
+.modal .nav-tabs .nav-link {
+    border: 1px solid transparent;
+    border-top-left-radius: 0.375rem;
+    border-top-right-radius: 0.375rem;
+    color: #6a0dad;
+    font-weight: 500;
+}
+
+.modal .nav-tabs .nav-link:hover {
+    border-color: #e9ecef #e9ecef #dee2e6;
+    background-color: #f8f9fa;
+}
+
+.modal .nav-tabs .nav-link.active {
+    color: #495057;
+    background-color: #fff;
+    border-color: #dee2e6 #dee2e6 #fff;
+}
+
+.modal .form-group {
+    margin-bottom: 1rem;
+}
+
+.modal .form-group label {
+    font-weight: 600;
+    color: #333;
+    margin-bottom: 0.5rem;
+}
+
+.modal .form-control {
+    border: 1px solid #ced4da;
+    border-radius: 0.375rem;
+    padding: 0.5rem 0.75rem;
+    font-size: 0.875rem;
+}
+
+.modal .form-control:focus {
+    border-color: #6a0dad;
+    box-shadow: 0 0 0 0.2rem rgba(106, 13, 173, 0.25);
+}
+
+.modal .form-check-input:checked {
+    background-color: #6a0dad;
+    border-color: #6a0dad;
+}
+
+.modal .btn-primary {
+    background-color: #6a0dad;
+    border-color: #6a0dad;
+}
+
+.modal .btn-primary:hover {
+    background-color: #5a0b8a;
+    border-color: #5a0b8a;
+}
+
+.modal .text-danger {
+    color: #dc3545 !important;
+}
+
+.modal .alert {
+    border-radius: 0.375rem;
+    padding: 0.75rem 1rem;
+    margin-bottom: 1rem;
+}
+
+.modal .spinner-border {
+    width: 2rem;
+    height: 2rem;
+}
+
+/* Modal form validation styles */
+.modal .is-invalid {
+    border-color: #dc3545;
+}
+
+.modal .invalid-feedback {
+    display: block;
+    width: 100%;
+    margin-top: 0.25rem;
+    font-size: 0.875em;
+    color: #dc3545;
+}
+
+/* Modal responsive adjustments */
+@media (max-width: 768px) {
+    .modal-xl {
+        max-width: 95%;
+        margin: 0.5rem;
+    }
+
+    .modal-body {
+        max-height: 60vh;
+        padding: 1rem;
+    }
+
+    .modal .row {
+        margin: 0;
+    }
+
+    .modal .col-lg-6,
+    .modal .col-md-6 {
+        padding: 0 0.5rem;
+    }
+}
+
 
 

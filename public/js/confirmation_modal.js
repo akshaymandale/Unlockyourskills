@@ -324,14 +324,14 @@ function getTranslation(key, replacements = {}) {
 }
 
 // General confirmation function for different actions with internationalization
-window.confirmAction = function(actionType, itemName, onConfirm, customMessage = null) {
+window.confirmAction = function(actionType, itemName, onConfirm, customMessage = null, customSubtext = null) {
     const actionConfig = {
         'delete': {
             title: getTranslation('confirmation.delete.title', {}) || 'Delete Confirmation',
             icon: 'fas fa-exclamation-triangle',
             iconColor: '#ffc107',
             message: customMessage || getTranslation('confirmation.delete.message', {item: itemName}) || `Are you sure you want to delete this ${itemName}?`,
-            subtext: getTranslation('confirmation.delete.subtext', {}) || 'This action is not reversible.',
+            subtext: customSubtext || getTranslation('confirmation.delete.subtext', {}) || 'This action is not reversible.',
             confirmText: getTranslation('confirmation.delete.button', {}) || 'Delete',
             confirmClass: 'theme-btn-primary'
         },
@@ -340,7 +340,7 @@ window.confirmAction = function(actionType, itemName, onConfirm, customMessage =
             icon: 'fas fa-lock',
             iconColor: '#dc3545',
             message: customMessage || getTranslation('confirmation.lock.message', {item: itemName}) || `Are you sure you want to lock this ${itemName}?`,
-            subtext: getTranslation('confirmation.lock.subtext', {}) || 'This will prevent the user from logging in.',
+            subtext: customSubtext || getTranslation('confirmation.lock.subtext', {}) || 'This will prevent the user from logging in.',
             confirmText: getTranslation('confirmation.lock.button', {}) || 'Lock',
             confirmClass: 'theme-btn-danger'
         },
@@ -349,8 +349,26 @@ window.confirmAction = function(actionType, itemName, onConfirm, customMessage =
             icon: 'fas fa-lock-open',
             iconColor: '#28a745',
             message: customMessage || getTranslation('confirmation.unlock.message', {item: itemName}) || `Are you sure you want to unlock this ${itemName}?`,
-            subtext: getTranslation('confirmation.unlock.subtext', {}) || 'This will allow the user to log in again.',
+            subtext: customSubtext || getTranslation('confirmation.unlock.subtext', {}) || 'This will allow the user to log in again.',
             confirmText: getTranslation('confirmation.unlock.button', {}) || 'Unlock',
+            confirmClass: 'theme-btn-warning'
+        },
+        'activate': {
+            title: getTranslation('confirmation.activate.title', {}) || 'Activate Confirmation',
+            icon: 'fas fa-eye',
+            iconColor: '#28a745',
+            message: customMessage || getTranslation('confirmation.activate.message', {item: itemName}) || `Are you sure you want to activate this ${itemName}?`,
+            subtext: customSubtext || getTranslation('confirmation.activate.subtext', {}) || 'This will make the field visible in forms again.',
+            confirmText: getTranslation('confirmation.activate.button', {}) || 'Activate',
+            confirmClass: 'theme-btn-success'
+        },
+        'deactivate': {
+            title: getTranslation('confirmation.deactivate.title', {}) || 'Deactivate Confirmation',
+            icon: 'fas fa-eye-slash',
+            iconColor: '#ffc107',
+            message: customMessage || getTranslation('confirmation.deactivate.message', {item: itemName}) || `Are you sure you want to deactivate this ${itemName}?`,
+            subtext: customSubtext || getTranslation('confirmation.deactivate.subtext', {}) || 'This will hide the field from forms but preserve existing data.',
+            confirmText: getTranslation('confirmation.deactivate.button', {}) || 'Deactivate',
             confirmClass: 'theme-btn-warning'
         }
     };
