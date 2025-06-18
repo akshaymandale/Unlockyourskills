@@ -6,6 +6,7 @@ require_once 'models/UserModel.php';
 require_once 'models/AuthenticationModel.php';
 require_once 'models/SSOModel.php';
 require_once 'controllers/BaseController.php';
+require_once 'core/UrlHelper.php';
 
 class LoginController extends BaseController {
     private $authModel;
@@ -63,7 +64,7 @@ class LoginController extends BaseController {
         $this->setUserSession($user);
 
         $this->returnJsonSuccess('Login successful', [
-            'redirect' => 'index.php?controller=DashboardController&action=index'
+            'redirect' => UrlHelper::url('dashboard')
         ]);
     }
 
@@ -126,8 +127,7 @@ class LoginController extends BaseController {
 
     public function logout() {
         session_destroy();
-        header('Location: index.php');
-        exit();
+        UrlHelper::redirect('login');
     }
 }
 ?>

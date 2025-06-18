@@ -1,3 +1,24 @@
+// Helper function to get project-relative URLs
+function getProjectUrl(path) {
+    const scriptPath = window.location.pathname;
+    const projectPath = scriptPath.substring(0, scriptPath.lastIndexOf('/') + 1);
+    const basePath = projectPath.replace(/\/[^\/]*$/, '');
+
+    // Clean up path
+    path = path.replace(/^\/+/, '');
+
+    if (basePath === '' || basePath === '/') {
+        return '/' + path;
+    }
+
+    return basePath + '/' + path;
+}
+
+// Helper function to get API URLs
+function getApiUrl(path) {
+    return getProjectUrl('api/' + path.replace(/^\/+/, ''));
+}
+
 document.addEventListener("DOMContentLoaded", function () {
     let profileToggle = document.getElementById("profileToggle");
     const profileMenu = document.querySelector(".profile-menu");
@@ -189,14 +210,14 @@ document.addEventListener("DOMContentLoaded", function () {
     let userManagementBtn = document.querySelector(".user-box[onclick]");
     if (userManagementBtn) {
         userManagementBtn.addEventListener("click", function () {
-            window.location.href = "index.php?controller=UserManagementController";
+            window.location.href = getProjectUrl("users");
         });
     }
 
     let addUserBtn = document.querySelector(".add-user-btn");
     if (addUserBtn) {
         addUserBtn.addEventListener("click", function () {
-            window.location.href = "index.php?controller=UserManagementController&action=addUser";
+            window.location.href = getProjectUrl("users/create");
         });
     }
 
@@ -560,7 +581,7 @@ document.addEventListener("DOMContentLoaded", function () {
 
         if (countryId) {
             // ✅ Fetch States
-            fetch(`index.php?controller=LocationController&action=getStatesByCountry`, {
+            fetch(getApiUrl('locations/states'), {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
                 body: `country_id=${countryId}`,
@@ -610,7 +631,7 @@ document.addEventListener("DOMContentLoaded", function () {
             const stateId = this.value;
             citySelect.innerHTML = '<option value="">Select City</option>';
             if (stateId) {
-                fetch(`index.php?controller=LocationController&action=getCitiesByState`, {
+                fetch(getApiUrl('locations/cities'), {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
                     body: `state_id=${stateId}`,
@@ -681,7 +702,7 @@ document.addEventListener('click', function(e) {
         const title = link.dataset.title;
 
         confirmDelete('SCORM package "' + title + '"', function() {
-            window.location.href = 'index.php?controller=VLRController&action=delete&id=' + id;
+            window.location.href = getProjectUrl('vlr/scorm/' + id);
         });
     }
 
@@ -693,7 +714,7 @@ document.addEventListener('click', function(e) {
         const title = link.dataset.title;
 
         confirmDelete('document "' + title + '"', function() {
-            window.location.href = 'index.php?controller=VLRController&action=deleteDocument&id=' + id;
+            window.location.href = getProjectUrl('vlr/documents/' + id);
         });
     }
 
@@ -705,7 +726,7 @@ document.addEventListener('click', function(e) {
         const title = link.dataset.title;
 
         confirmDelete('external content "' + title + '"', function() {
-            window.location.href = 'index.php?controller=VLRController&action=deleteExternal&id=' + id;
+            window.location.href = getProjectUrl('vlr/external/' + id);
         });
     }
 
@@ -717,7 +738,7 @@ document.addEventListener('click', function(e) {
         const title = link.dataset.title;
 
         confirmDelete('survey "' + title + '"', function() {
-            window.location.href = 'index.php?controller=VLRController&action=deleteSurvey&id=' + id;
+            window.location.href = getProjectUrl('surveys/' + id);
         });
     }
 
@@ -729,7 +750,7 @@ document.addEventListener('click', function(e) {
         const title = link.dataset.title;
 
         confirmDelete('interactive content "' + title + '"', function() {
-            window.location.href = 'index.php?controller=VLRController&action=deleteInteractiveContent&id=' + id;
+            window.location.href = getProjectUrl('vlr/interactive/' + id);
         });
     }
 });

@@ -1,6 +1,7 @@
 <?php
 // ✅ Load Navbar Data
 require_once 'controllers/NavbarController.php';
+require_once 'core/UrlHelper.php';
 $navbarController = new NavbarController();
 $navbarData = $navbarController->getNavbarData();
 
@@ -73,7 +74,7 @@ foreach ($languages as $lang) {
             </button>
             <div class="dropdown-menu" id="profileDropdown">
                 <a class="dropdown-item" href="#"><i class="fas fa-user-circle"></i> <?= Localization::translate('profile'); ?></a>
-                <a class="dropdown-item" href="index.php?controller=LoginController&action=logout">
+                <a class="dropdown-item" href="<?= UrlHelper::url('logout') ?>">
                     <i class="fas fa-sign-out-alt"></i> <?= Localization::translate('logout'); ?>
                 </a>
             </div>
