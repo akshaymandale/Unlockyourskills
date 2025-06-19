@@ -3211,5 +3211,163 @@ body select:focus,
     }
 }
 
+/* ✅ Opinion Poll Management Styles */
+.poll-card {
+    transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
+    border: 1px solid #e0e0e0;
+}
 
+.poll-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
 
+.poll-card .card-header {
+    background-color: #f8f9fa;
+    border-bottom: 1px solid #e0e0e0;
+    padding: 1rem;
+}
+
+.poll-card .card-body {
+    padding: 1rem;
+}
+
+.poll-card .card-footer {
+    background-color: #f8f9fa;
+    border-top: 1px solid #e0e0e0;
+    padding: 0.75rem 1rem;
+}
+
+.poll-card .btn-group .btn {
+    flex: 1;
+    border-radius: 0;
+    font-size: 0.875rem;
+}
+
+.poll-card .btn-group .btn:first-child {
+    border-top-left-radius: 0.375rem;
+    border-bottom-left-radius: 0.375rem;
+}
+
+.poll-card .btn-group .btn:last-child {
+    border-top-right-radius: 0.375rem;
+    border-bottom-right-radius: 0.375rem;
+}
+
+.poll-info .info-item {
+    font-size: 0.875rem;
+}
+
+.poll-info .info-item strong {
+    color: #495057;
+    font-weight: 600;
+}
+
+/* Question and Option Styling in Create Poll Modal */
+.question-item {
+    background-color: #f8f9fa;
+    border: 1px solid #dee2e6 !important;
+}
+
+.question-item .remove-question-btn {
+    border: none;
+    background: none;
+    color: #dc3545;
+    padding: 0.25rem 0.5rem;
+}
+
+.question-item .remove-question-btn:hover {
+    background-color: #dc3545;
+    color: white;
+    border-radius: 0.25rem;
+}
+
+.options-container .input-group {
+    margin-bottom: 0.5rem;
+}
+
+.options-container .input-group-text {
+    background-color: #6a0dad;
+    color: white;
+    border-color: #6a0dad;
+    font-weight: 600;
+    min-width: 40px;
+    justify-content: center;
+}
+
+.options-container .remove-option-btn {
+    border-color: #dc3545;
+    color: #dc3545;
+}
+
+.options-container .remove-option-btn:hover {
+    background-color: #dc3545;
+    color: white;
+}
+
+/* Ensure proper poll grid layout */
+#pollsGrid {
+    display: flex;
+    flex-wrap: wrap;
+    margin: 0 -15px;
+}
+
+#pollsGrid .col-md-6,
+#pollsGrid .col-lg-4 {
+    padding: 0 15px;
+    margin-bottom: 1.5rem;
+}
+
+/* Loading indicator for polls */
+.loading-indicator {
+    padding: 2rem;
+    color: #6c757d;
+}
+
+.loading-indicator .spinner-border {
+    width: 3rem;
+    height: 3rem;
+}
+
+/* Search results info styling */
+.search-results-info {
+    background-color: #e7f3ff;
+    border: 1px solid #b8daff;
+    border-radius: 0.375rem;
+    padding: 0.75rem 1rem;
+    margin-bottom: 1rem;
+    color: #004085;
+    font-size: 0.875rem;
+}
+
+.search-results-info i {
+    color: #0066cc;
+    margin-right: 0.5rem;
+}
+
+/* Opinion Poll Validation Styles */
+.error-message {
+    color: #dc3545 !important;
+    font-size: 0.875rem !important;
+    margin-top: 0.25rem !important;
+    display: block !important;
+}
+
+.is-invalid {
+    border-color: #dc3545 !important;
+    box-shadow: 0 0 0 0.2rem rgba(220, 53, 69, 0.25) !important;
+}
+
+.question-error {
+    font-size: 0.875rem;
+    margin-top: 0.5rem;
+}
+
+.alert-sm {
+    padding: 0.5rem 0.75rem;
+    font-size: 0.875rem;
+}
+
+#generalErrorContainer {
+    margin-bottom: 1rem;
+}

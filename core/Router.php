@@ -148,15 +148,15 @@ class Router
     {
         $requestUri = $this->getRequestUri();
         $requestMethod = $_SERVER['REQUEST_METHOD'];
-        
+
         // Handle method override for forms
         if ($requestMethod === 'POST' && isset($_POST['_method'])) {
             $requestMethod = strtoupper($_POST['_method']);
         }
-        
+
         // Find matching route
         $matchedRoute = $this->findRoute($requestMethod, $requestUri);
-        
+
         if (!$matchedRoute) {
             $this->handleNotFound();
             return;
