@@ -5,7 +5,7 @@
 
 document.addEventListener('DOMContentLoaded', function() {
     // Initialize client management functionality
-    initializeSearch();
+    // initializeSearch(); // Disabled - now using client-side filtering
     initializeModals();
     initializeClientCodeFormatting();
     initializeDeleteConfirmation();
@@ -43,6 +43,8 @@ document.addEventListener('DOMContentLoaded', function() {
         clearFiltersBtn.addEventListener('click', function() {
             searchInput.value = '';
             statusFilter.value = '';
+            const clientFilter = document.getElementById('clientFilter');
+            if (clientFilter) clientFilter.value = '';
             window.location.href = 'index.php?controller=ClientController';
         });
     }
@@ -50,15 +52,18 @@ document.addEventListener('DOMContentLoaded', function() {
     function performSearch() {
         const searchInput = document.getElementById('searchInput');
         const statusFilter = document.getElementById('statusFilter');
-        
+        const clientFilter = document.getElementById('clientFilter');
+
         const search = searchInput.value.trim();
         const status = statusFilter.value;
+        const clientId = clientFilter ? clientFilter.value : '';
 
         let url = 'index.php?controller=ClientController';
         const params = [];
 
         if (search) params.push('search=' + encodeURIComponent(search));
         if (status) params.push('status=' + encodeURIComponent(status));
+        if (clientId) params.push('client_id=' + encodeURIComponent(clientId));
 
         if (params.length > 0) {
             url += '&' + params.join('&');
@@ -75,6 +80,14 @@ document.addEventListener('DOMContentLoaded', function() {
             $(addModal).on('hidden.bs.modal', function() {
                 resetForm('addClientForm', window.translations?.['clients_create_client'] || 'Create Client');
             });
+
+            // Reinitialize validation when modal is shown
+            $(addModal).on('shown.bs.modal', function() {
+                // Reinitialize form validation for dynamically loaded content
+                if (typeof window.initializeAddFormValidation === 'function') {
+                    window.initializeAddFormValidation();
+                }
+            });
         }
 
         // Reset edit form when modal closes
@@ -82,6 +95,14 @@ document.addEventListener('DOMContentLoaded', function() {
         if (editModal) {
             $(editModal).on('hidden.bs.modal', function() {
                 resetEditForm();
+            });
+
+            // Reinitialize validation when modal is shown
+            $(editModal).on('shown.bs.modal', function() {
+                // Reinitialize form validation for dynamically loaded content
+                if (typeof window.initializeEditFormValidation === 'function') {
+                    window.initializeEditFormValidation();
+                }
             });
         }
 
@@ -114,6 +135,9 @@ document.addEventListener('DOMContentLoaded', function() {
             submitBtn.innerHTML = submitButtonText;
             submitBtn.disabled = false;
         }
+
+        // Clear validation initialization flag so it can be reinitialized
+        form.removeAttribute('data-validation-initialized');
     }
 
     function resetEditForm() {
@@ -121,7 +145,7 @@ document.addEventListener('DOMContentLoaded', function() {
         if (!form) return;
 
         form.reset();
-        
+
         // Hide logo preview
         const logoPreview = document.getElementById('current_logo_preview');
         if (logoPreview) {
@@ -143,6 +167,9 @@ document.addEventListener('DOMContentLoaded', function() {
             submitBtn.innerHTML = window.translations?.['clients_update_client'] || 'Update Client';
             submitBtn.disabled = false;
         }
+
+        // Clear validation initialization flag so it can be reinitialized
+        form.removeAttribute('data-validation-initialized');
     }
 
     function handleEditClient(button) {
@@ -341,7 +368,14 @@ document.addEventListener('DOMContentLoaded', function() {
         showToastOrAlert(message, type);
     }
 
+    // Alternative function signature for compatibility
+    function showToastMessage(message, type) {
+        showToastOrAlert(message, type);
+    }
+
     // Make functions available globally for form validation
     window.refreshClientCards = refreshClientCards;
     window.showToast = showToast;
+    window.showToastMessage = showToastMessage;
+    window.showToastOrAlert = showToastOrAlert;
 });
