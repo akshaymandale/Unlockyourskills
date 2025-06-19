@@ -186,7 +186,7 @@ Router::middleware(['Auth'])->group(function() {
     // ===================================
     // FEEDBACK QUESTIONS
     // ===================================
-    
+
     // Feedback Questions
     Router::get('/feedback', 'FeedbackQuestionController@index');
     Router::get('/feedback/create', 'FeedbackQuestionController@add');
@@ -194,11 +194,55 @@ Router::middleware(['Auth'])->group(function() {
     Router::get('/feedback/{id}/edit', 'FeedbackQuestionController@edit');
     Router::put('/feedback/{id}', 'FeedbackQuestionController@update');
     Router::delete('/feedback/{id}', 'FeedbackQuestionController@delete');
-    
+
     // Feedback AJAX operations
     Router::post('/feedback/ajax/search', 'FeedbackQuestionController@ajaxSearch');
     Router::post('/feedback/import', 'FeedbackQuestionController@import');
-    
+
+    // ===================================
+    // OPINION POLLS
+    // ===================================
+
+    // Opinion Poll Management
+    Router::get('/opinion-polls', 'OpinionPollController@index');
+    Router::post('/opinion-polls', 'OpinionPollController@create');
+    Router::get('/opinion-polls/{id}/edit', 'OpinionPollController@edit');
+    Router::put('/opinion-polls/{id}', 'OpinionPollController@update');
+    Router::delete('/opinion-polls/{id}', 'OpinionPollController@delete');
+
+    // Opinion Poll AJAX operations
+    Router::post('/opinion-polls/ajax/search', 'OpinionPollController@ajaxSearch');
+    Router::post('/opinion-polls/status', 'OpinionPollController@updateStatus');
+    Router::get('/opinion-polls/{id}/results', 'OpinionPollController@getResults');
+
+    // Opinion Poll Voting (for learners)
+    Router::get('/polls', 'OpinionPollController@viewPolls');
+    Router::post('/polls/{id}/vote', 'OpinionPollController@submitVote');
+    Router::get('/polls/{id}/results', 'OpinionPollController@viewResults');
+
+    // ===================================
+    // ANNOUNCEMENTS
+    // ===================================
+
+    // Announcement Management
+    Router::get('/announcements', 'AnnouncementController@index');
+    Router::post('/announcements', 'AnnouncementController@create');
+    Router::get('/announcements/{id}/edit', 'AnnouncementController@edit');
+    Router::put('/announcements/{id}', 'AnnouncementController@update');
+    Router::delete('/announcements/{id}', 'AnnouncementController@delete');
+
+    // Announcement AJAX operations
+    Router::get('/announcements/ajax/list', 'AnnouncementController@getAnnouncements');
+    Router::post('/announcements/status', 'AnnouncementController@updateStatus');
+    Router::get('/announcements/{id}/stats', 'AnnouncementController@getStats');
+    Router::get('/announcements/{id}/acknowledgments', 'AnnouncementController@getAcknowledgments');
+    Router::post('/announcements/{id}/acknowledge', 'AnnouncementController@acknowledge');
+
+    // Announcement Viewing (for learners)
+    Router::get('/my-announcements', 'AnnouncementController@viewAnnouncements');
+    Router::get('/announcements/{id}/view', 'AnnouncementController@viewAnnouncement');
+    Router::post('/announcements/{id}/mark-read', 'AnnouncementController@markAsRead');
+
 });
 
 // ===================================

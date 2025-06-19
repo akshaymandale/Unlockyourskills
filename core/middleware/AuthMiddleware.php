@@ -26,7 +26,7 @@ class AuthMiddleware extends Middleware
             $this->redirect(UrlHelper::url('login'));
             return false;
         }
-        
+
         return true;
     }
     

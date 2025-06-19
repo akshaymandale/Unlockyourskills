@@ -370,6 +370,42 @@ window.confirmAction = function(actionType, itemName, onConfirm, customMessage =
             subtext: customSubtext || getTranslation('confirmation.deactivate.subtext', {}) || 'This will hide the field from forms but preserve existing data.',
             confirmText: getTranslation('confirmation.deactivate.button', {}) || 'Deactivate',
             confirmClass: 'theme-btn-warning'
+        },
+        'pause': {
+            title: getTranslation('confirmation.pause.title', {}) || 'Pause Confirmation',
+            icon: 'fas fa-pause-circle',
+            iconColor: '#ffc107',
+            message: customMessage || getTranslation('confirmation.pause.message', {item: itemName}) || `Are you sure you want to pause this ${itemName}?`,
+            subtext: customSubtext || getTranslation('confirmation.pause.subtext', {}) || 'This will temporarily stop the current activity.',
+            confirmText: getTranslation('confirmation.pause.button', {}) || 'Pause',
+            confirmClass: 'theme-btn-warning'
+        },
+        'resume': {
+            title: getTranslation('confirmation.resume.title', {}) || 'Resume Confirmation',
+            icon: 'fas fa-play-circle',
+            iconColor: '#28a745',
+            message: customMessage || getTranslation('confirmation.resume.message', {item: itemName}) || `Are you sure you want to resume this ${itemName}?`,
+            subtext: customSubtext || getTranslation('confirmation.resume.subtext', {}) || 'This will restart the activity.',
+            confirmText: getTranslation('confirmation.resume.button', {}) || 'Resume',
+            confirmClass: 'theme-btn-success'
+        },
+        'activate': {
+            title: getTranslation('confirmation.activate.title', {}) || 'Activate Confirmation',
+            icon: 'fas fa-play-circle',
+            iconColor: '#28a745',
+            message: customMessage || getTranslation('confirmation.activate.message', {item: itemName}) || `Are you sure you want to activate this ${itemName}?`,
+            subtext: customSubtext || getTranslation('confirmation.activate.subtext', {}) || 'This will make the item available and active.',
+            confirmText: getTranslation('confirmation.activate.button', {}) || 'Activate',
+            confirmClass: 'theme-btn-success'
+        },
+        'archive': {
+            title: getTranslation('confirmation.archive.title', {}) || 'Archive Confirmation',
+            icon: 'fas fa-archive',
+            iconColor: '#6c757d',
+            message: customMessage || getTranslation('confirmation.archive.message', {item: itemName}) || `Are you sure you want to archive this ${itemName}?`,
+            subtext: customSubtext || getTranslation('confirmation.archive.subtext', {}) || 'This will permanently close the item and preserve its data.',
+            confirmText: getTranslation('confirmation.archive.button', {}) || 'Archive',
+            confirmClass: 'theme-btn-secondary'
         }
     };
 

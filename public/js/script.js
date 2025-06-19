@@ -76,85 +76,103 @@ document.addEventListener("DOMContentLoaded", function () {
     }
 
     // ✅ Toggle Profile Dropdown
-    profileToggle.addEventListener("click", function (event) {
-        event.stopPropagation();
-        profileMenu.classList.toggle("active");
-        languageMenu.classList.remove("active");
-    });
+    if (profileToggle && profileMenu) {
+        profileToggle.addEventListener("click", function (event) {
+            event.stopPropagation();
+            profileMenu.classList.toggle("active");
+            if (languageMenu) languageMenu.classList.remove("active");
+        });
+    }
 
     // ✅ Toggle Language Dropdown
-    languageToggle.addEventListener("click", function (event) {
-        event.stopPropagation();
-        languageMenu.classList.toggle("active");
-        profileMenu.classList.remove("active");
-        languageDropdown.classList.toggle("active");
+    if (languageToggle && languageMenu && languageDropdown && languageSearch) {
+        languageToggle.addEventListener("click", function (event) {
+            event.stopPropagation();
+            languageMenu.classList.toggle("active");
+            if (profileMenu) profileMenu.classList.remove("active");
+            languageDropdown.classList.toggle("active");
 
-        // ✅ Clear search box and show all languages again
-        languageSearch.value = "";
-        languageItems.forEach(item => item.style.display = "block");
+            // ✅ Clear search box and show all languages again
+            languageSearch.value = "";
+            languageItems.forEach(item => item.style.display = "block");
 
-        // ✅ Ensure the currently selected language is highlighted
-        highlightSelectedLanguage();
-    });
+            // ✅ Ensure the currently selected language is highlighted
+            highlightSelectedLanguage();
+        });
+    }
 
     // ✅ Prevent dropdown from closing when clicking inside
-    languageDropdown.addEventListener("click", function (event) {
-        event.stopPropagation();
-    });
+    if (languageDropdown) {
+        languageDropdown.addEventListener("click", function (event) {
+            event.stopPropagation();
+        });
+    }
 
     // ✅ Keep dropdown open when clicking inside the search box
-    languageSearch.addEventListener("click", function (event) {
-        event.stopPropagation();
-    });
+    if (languageSearch) {
+        languageSearch.addEventListener("click", function (event) {
+            event.stopPropagation();
+        });
+    }
 
     // ✅ Close dropdown when clicking outside
     document.addEventListener("click", function () {
-        profileMenu.classList.remove("active");
-        languageMenu.classList.remove("active");
+        if (profileMenu) profileMenu.classList.remove("active");
+        if (languageMenu) languageMenu.classList.remove("active");
     });
 
     // ✅ Filter languages in real-time
-    languageSearch.addEventListener("input", function () {
-        const searchValue = this.value.toLowerCase();
+    if (languageSearch && languageItems.length > 0) {
+        languageSearch.addEventListener("input", function () {
+            const searchValue = this.value.toLowerCase();
 
-        languageItems.forEach(function (item) {
-            const text = item.textContent.toLowerCase();
-            item.style.display = text.includes(searchValue) ? "block" : "none";
+            languageItems.forEach(function (item) {
+                const text = item.textContent.toLowerCase();
+                item.style.display = text.includes(searchValue) ? "block" : "none";
+            });
         });
-    });
+    }
 
     // ✅ Language selection without full-page reload
-    languageItems.forEach(item => {
-        item.addEventListener("click", function (event) {
-            event.preventDefault();
-            let selectedLang = this.getAttribute("data-lang");
+    if (languageItems.length > 0) {
+        languageItems.forEach(item => {
+            item.addEventListener("click", function (event) {
+                event.preventDefault();
+                let selectedLang = this.getAttribute("data-lang");
 
-            // ✅ Update URL without reloading the page
-            let url = new URL(window.location.href);
-            url.searchParams.set("lang", selectedLang);
+                // ✅ Update URL without reloading the page
+                let url = new URL(window.location.href);
+                url.searchParams.set("lang", selectedLang);
 
-            fetch(url.href)
-                .then(() => {
-                    // ✅ Update Navbar Language
-                    document.getElementById("selectedLanguage").textContent = selectedLang.toUpperCase();
-                    document.querySelector(".language-btn i").className = "fas fa-language";
+                fetch(url.href)
+                    .then(() => {
+                        // ✅ Update Navbar Language
+                        const selectedLanguageEl = document.getElementById("selectedLanguage");
+                        const languageBtnIcon = document.querySelector(".language-btn i");
 
-                    // ✅ Mark selected language in the dropdown
-                    highlightSelectedLanguage(selectedLang);
+                        if (selectedLanguageEl) selectedLanguageEl.textContent = selectedLang.toUpperCase();
+                        if (languageBtnIcon) languageBtnIcon.className = "fas fa-language";
 
-                    // ✅ Close the dropdown
-                    languageDropdown.classList.remove("active");
-                    languageMenu.classList.remove("active");
-                    // ✅ FORCE PAGE RELOAD TO APPLY LOCALIZATION
-                    location.reload();
-                })
-                .catch(err => console.error("Language switch error:", err));
+                        // ✅ Mark selected language in the dropdown
+                        highlightSelectedLanguage(selectedLang);
+
+                        // ✅ Close the dropdown
+                        if (languageDropdown) languageDropdown.classList.remove("active");
+                        if (languageMenu) languageMenu.classList.remove("active");
+                        // ✅ FORCE PAGE RELOAD TO APPLY LOCALIZATION
+                        location.reload();
+                    })
+                    .catch(err => console.error("Language switch error:", err));
+            });
         });
-    });
+    }
 
     // ✅ Function to highlight the selected language in the dropdown
     function highlightSelectedLanguage(selectedLang = null) {
-        let currentLang = selectedLang || document.getElementById("selectedLanguage").textContent.toLowerCase();
+        const selectedLanguageEl = document.getElementById("selectedLanguage");
+        if (!selectedLanguageEl || languageItems.length === 0) return;
+
+        let currentLang = selectedLang || selectedLanguageEl.textContent.toLowerCase();
 
         languageItems.forEach(langItem => {
             langItem.classList.remove("selected");
@@ -165,7 +183,9 @@ document.addEventListener("DOMContentLoaded", function () {
     }
 
     // ✅ Ensure selected language is highlighted on page load
-    highlightSelectedLanguage();
+    if (languageItems.length > 0) {
+        highlightSelectedLanguage();
+    }
 
 
     document.querySelectorAll(".tab-pane").forEach(pane => {

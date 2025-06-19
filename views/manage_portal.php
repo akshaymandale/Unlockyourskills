@@ -109,7 +109,66 @@ require_once 'core/UrlHelper.php';
             <!-- ✅ Social Tab -->
             <div class="tab-pane fade card shadow-lg p-4" id="social">
                 <h3 class="text-purple"><?= Localization::translate('social'); ?></h3>
-                <p><?= Localization::translate('social_coming_soon'); ?></p>
+                <p class="text-muted mb-4">Manage social features and engagement tools for your learners</p>
+
+                <div class="row">
+                    <!-- Opinion Poll Management -->
+                    <div class="col-md-6">
+                        <div class="card user-box shadow-sm" onclick="window.location.href='<?= UrlHelper::url('opinion-polls') ?>'">
+                            <h5><i class="fas fa-poll text-purple"></i> Opinion Poll Management</h5>
+                            <p><small class="text-muted">Create and manage opinion polls for learner engagement</small></p>
+                            <div class="mt-2">
+                                <span class="badge bg-success">Active</span>
+                                <span class="badge bg-light text-dark">New Feature</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Announcement Management -->
+                    <div class="col-md-6">
+                        <div class="card user-box shadow-sm" onclick="window.location.href='<?= UrlHelper::url('announcements') ?>'">
+                            <h5><i class="fas fa-bullhorn text-purple"></i> Announcement Management</h5>
+                            <p><small class="text-muted">Create and manage announcements for your organization</small></p>
+                            <div class="mt-2">
+                                <span class="badge bg-success">Active</span>
+                                <span class="badge bg-light text-dark">New Feature</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Discussion Forums (Coming Soon) -->
+                    <div class="col-md-6">
+                        <div class="card user-box shadow-sm" onclick="alert('Discussion Forums - Coming Soon')">
+                            <h5><i class="fas fa-comments text-muted"></i> Discussion Forums</h5>
+                            <p><small class="text-muted">Enable course discussions and Q&A forums</small></p>
+                            <div class="mt-2">
+                                <span class="badge bg-secondary">Coming Soon</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Social Learning (Coming Soon) -->
+                    <div class="col-md-6">
+                        <div class="card user-box shadow-sm" onclick="alert('Social Learning - Coming Soon')">
+                            <h5><i class="fas fa-users text-muted"></i> Social Learning</h5>
+                            <p><small class="text-muted">Peer-to-peer learning and collaboration tools</small></p>
+                            <div class="mt-2">
+                                <span class="badge bg-secondary">Coming Soon</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Leaderboards (Coming Soon) -->
+                    <div class="col-md-6">
+                        <div class="card user-box shadow-sm" onclick="alert('Leaderboards - Coming Soon')">
+                            <h5><i class="fas fa-trophy text-muted"></i> Leaderboards</h5>
+                            <p><small class="text-muted">Gamification and achievement tracking</small></p>
+                            <div class="mt-2">
+                                <span class="badge bg-secondary">Coming Soon</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
             </div>
 
             <!-- ✅ Settings Tab -->
