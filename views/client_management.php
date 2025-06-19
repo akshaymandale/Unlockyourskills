@@ -16,21 +16,10 @@ include 'includes/header.php'; ?>
                 <!-- Single Row: All Controls -->
                 <div class="row justify-content-between align-items-center g-3">
 
-                    <!-- Status Filter -->
-                    <div class="col-auto">
-                        <select class="form-select form-select-sm" id="statusFilter">
-                            <option value=""><?= Localization::translate('clients_all_statuses'); ?></option>
-                            <option value="active" <?= ($filters['status'] === 'active') ? 'selected' : ''; ?>><?= Localization::translate('clients_active'); ?></option>
-                            <option value="inactive" <?= ($filters['status'] === 'inactive') ? 'selected' : ''; ?>><?= Localization::translate('clients_inactive'); ?></option>
-                            <option value="suspended" <?= ($filters['status'] === 'suspended') ? 'selected' : ''; ?>><?= Localization::translate('clients_suspended'); ?></option>
-                        </select>
-                    </div>
-
                     <!-- Search Bar -->
                     <div class="col-auto">
                         <div class="input-group input-group-sm">
                             <input type="text" id="searchInput" class="form-control"
-                                value="<?= htmlspecialchars($search); ?>"
                                 placeholder="<?= Localization::translate('clients_search_placeholder'); ?>"
                                 title="<?= Localization::translate('clients_search_title'); ?>">
                             <button type="button" id="searchButton" class="btn btn-outline-secondary"
@@ -40,9 +29,33 @@ include 'includes/header.php'; ?>
                         </div>
                     </div>
 
+                    <!-- Client Filter (for super admin) -->
+                    <?php if (isset($_SESSION['user']) && $_SESSION['user']['system_role'] === 'super_admin'): ?>
+                    <div class="col-auto">
+                        <select id="clientFilter" class="form-select form-select-sm compact-filter">
+                            <option value=""><?= Localization::translate('all_clients'); ?></option>
+                            <?php foreach ($allClientsForFilter as $clientOption): ?>
+                                <option value="<?= $clientOption['id'] ?>">
+                                    <?= htmlspecialchars($clientOption['client_name']) ?>
+                                </option>
+                            <?php endforeach; ?>
+                        </select>
+                    </div>
+                    <?php endif; ?>
+
+                    <!-- Status Filter -->
+                    <div class="col-auto">
+                        <select id="statusFilter" class="form-select form-select-sm compact-filter">
+                            <option value=""><?= Localization::translate('clients_all_statuses'); ?></option>
+                            <option value="active"><?= Localization::translate('clients_active'); ?></option>
+                            <option value="inactive"><?= Localization::translate('clients_inactive'); ?></option>
+                            <option value="suspended"><?= Localization::translate('clients_suspended'); ?></option>
+                        </select>
+                    </div>
+
                     <!-- Clear Filters Button -->
                     <div class="col-auto">
-                        <button type="button" class="btn btn-sm btn-clear-filters" id="clearFiltersBtn"
+                        <button type="button" id="clearFiltersBtn" class="btn btn-sm btn-clear-filters"
                             title="<?= Localization::translate('clients_clear_filters_title'); ?>">
                             <i class="fas fa-times me-1"></i> <?= Localization::translate('clients_clear_filters'); ?>
                         </button>
@@ -63,146 +76,31 @@ include 'includes/header.php'; ?>
         </div>
 
         <!-- Search Results Info -->
-        <div id="searchResultsInfo" class="search-results-info">
+        <div id="searchResultsInfo" class="search-results-info" style="display: none;">
             <i class="fas fa-info-circle"></i>
             <span id="resultsText"></span>
         </div>
 
         <!-- Loading Indicator -->
-        <div id="loadingIndicator" class="text-center loading-indicator">
+        <div id="loadingIndicator" class="text-center loading-indicator" style="display: none;">
             <div class="spinner-border text-primary" role="status">
                 <span class="visually-hidden">Loading...</span>
             </div>
             <p class="mt-2"><?= Localization::translate('clients_loading'); ?></p>
         </div>
 
+        <!-- Clients Container -->
+        <div id="clientsContainer">
             <!-- Clients Grid -->
-            <div class="row">
-                <?php if (empty($clients)): ?>
-                    <div class="col-12">
-                        <div class="alert alert-info text-center">
-                            <i class="fas fa-info-circle me-2"></i>
-                            <?= Localization::translate('clients_no_clients_found'); ?>
-                        </div>
-                    </div>
-                <?php else: ?>
-                    <?php foreach ($clients as $client): ?>
-                        <div class="col-md-6 col-lg-4 mb-4">
-                            <div class="card h-100 client-card">
-                                <div class="card-header d-flex justify-content-between align-items-center">
-                                    <div class="d-flex align-items-center">
-                                        <?php if (!empty($client['logo_path'])): ?>
-                                            <img src="<?= htmlspecialchars($client['logo_path']); ?>" 
-                                                 alt="<?= htmlspecialchars($client['client_name']); ?>" 
-                                                 class="client-logo me-2">
-                                        <?php else: ?>
-                                            <div class="client-logo-placeholder me-2">
-                                                <i class="fas fa-building"></i>
-                                            </div>
-                                        <?php endif; ?>
-                                        <h6 class="mb-0"><?= htmlspecialchars($client['client_name']); ?></h6>
-                                    </div>
-                                    <span class="badge bg-<?= $client['status'] === 'active' ? 'success' : ($client['status'] === 'suspended' ? 'danger' : 'secondary'); ?>">
-                                        <?= ucfirst($client['status']); ?>
-                                    </span>
-                                </div>
-                                
-                                <div class="card-body">
-                                    <div class="client-info">
-                                        <div class="info-item">
-                                            <strong><?= Localization::translate('clients_client_id'); ?>:</strong>
-                                            <span class="text-muted"><?= $client['id']; ?></span>
-                                        </div>
-
-                                        <div class="info-item">
-                                            <strong><?= Localization::translate('clients_client_code'); ?>:</strong>
-                                            <span class="text-muted"><code><?= htmlspecialchars($client['client_code']); ?></code></span>
-                                        </div>
-
-                                        <div class="info-item">
-                                            <strong><?= Localization::translate('clients_users'); ?>:</strong>
-                                            <span class="text-muted">
-                                                <?= $client['active_users']; ?> / <?= $client['max_users']; ?>
-                                            </span>
-                                            <div class="progress mt-1 progress-bar-thin">
-                                                <div class="progress-bar" role="progressbar"
-                                                     style="width: <?= $client['max_users'] > 0 ? ($client['active_users'] / $client['max_users'] * 100) : 0; ?>%">
-                                                </div>
-                                            </div>
-                                        </div>
-
-                                        <div class="info-item">
-                                            <strong><?= Localization::translate('clients_admin_limit'); ?>:</strong>
-                                            <span class="text-muted"><?= $client['admin_role_limit'] ?? 5; ?> <?= Localization::translate('clients_roles'); ?></span>
-                                        </div>
-
-                                        <div class="info-item">
-                                            <strong><?= Localization::translate('clients_features'); ?>:</strong>
-                                            <div class="feature-badges mt-1">
-                                                <?php if (($client['reports_enabled'] ?? 1) == 1): ?>
-                                                    <span class="badge bg-success me-1"><?= Localization::translate('clients_reports'); ?></span>
-                                                <?php endif; ?>
-                                                <?php if (($client['theme_settings'] ?? 1) == 1): ?>
-                                                    <span class="badge bg-info me-1"><?= Localization::translate('clients_themes'); ?></span>
-                                                <?php endif; ?>
-                                                <?php if (($client['sso_enabled'] ?? 0) == 1): ?>
-                                                    <span class="badge bg-warning me-1"><?= Localization::translate('clients_sso'); ?></span>
-                                                <?php endif; ?>
-                                            </div>
-                                        </div>
-
-                                        <div class="info-item">
-                                            <strong><?= Localization::translate('clients_created'); ?>:</strong>
-                                            <span class="text-muted"><?= date('M j, Y', strtotime($client['created_at'])); ?></span>
-                                        </div>
-                                    </div>
-                                </div>
-                                
-                                <div class="card-footer">
-                                    <div class="btn-group w-100" role="group">
-                                        <button type="button" class="btn btn-sm theme-btn-secondary edit-client-btn"
-                                                data-client-id="<?= $client['id']; ?>"
-                                                title="<?= Localization::translate('clients_edit_title'); ?>">
-                                            <i class="fas fa-edit"></i>
-                                        </button>
-                                        <a href="<?= UrlHelper::url('clients/' . $client['id'] . '/users') ?>"
-                                           class="btn btn-sm btn-outline-primary" title="<?= Localization::translate('clients_manage_users_title'); ?>">
-                                            <i class="fas fa-users"></i>
-                                        </a>
-                                        <a href="index.php?controller=ClientController&action=stats&id=<?= $client['id']; ?>"
-                                           class="btn btn-sm btn-outline-info" title="<?= Localization::translate('clients_statistics_title'); ?>">
-                                            <i class="fas fa-chart-bar"></i>
-                                        </a>
-                                        <?php if ($client['id'] != 1): // Don't show delete for Super Admin client ?>
-                                            <a href="#" class="btn btn-sm theme-btn-danger delete-client"
-                                               data-id="<?= $client['id']; ?>"
-                                               data-name="<?= htmlspecialchars($client['client_name']); ?>"
-                                               title="<?= Localization::translate('clients_delete_title'); ?>">
-                                                <i class="fas fa-trash-alt"></i>
-                                            </a>
-                                        <?php endif; ?>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    <?php endforeach; ?>
-                <?php endif; ?>
+            <div id="clientsGrid" class="row">
+                <!-- Clients will be loaded dynamically via AJAX -->
             </div>
+        </div>
 
-            <!-- Pagination -->
-            <?php if ($totalPages > 1): ?>
-                <nav aria-label="<?= Localization::translate('clients_pagination_label'); ?>">
-                    <ul class="pagination justify-content-center">
-                        <?php for ($i = 1; $i <= $totalPages; $i++): ?>
-                            <li class="page-item <?= ($i === $page) ? 'active' : ''; ?>">
-                                <a class="page-link" href="index.php?controller=ClientController&page=<?= $i; ?>&search=<?= urlencode($search); ?>&status=<?= urlencode($filters['status']); ?>">
-                                    <?= $i; ?>
-                                </a>
-                            </li>
-                        <?php endfor; ?>
-                    </ul>
-                </nav>
-            <?php endif; ?>
+        <!-- Pagination Container -->
+        <div id="paginationContainer" style="display: none;">
+            <!-- Pagination will be generated dynamically -->
+        </div>
     </div>
 </div>
 
@@ -224,18 +122,18 @@ include 'includes/header.php'; ?>
                             <h6 class="text-purple mb-3"><?= Localization::translate('clients_basic_information'); ?></h6>
 
                             <div class="mb-3">
-                                <label for="client_name" class="form-label"><?= Localization::translate('clients_client_name_required'); ?></label>
+                                <label for="client_name" class="form-label"><?= Localization::translate('clients_client_name_required'); ?> <span class="text-danger">*</span></label>
                                 <input type="text" class="form-control" id="client_name" name="client_name">
                             </div>
 
                             <div class="mb-3">
-                                <label for="client_code" class="form-label"><?= Localization::translate('clients_client_code_required'); ?></label>
+                                <label for="client_code" class="form-label"><?= Localization::translate('clients_client_code_required'); ?> <span class="text-danger">*</span></label>
                                 <input type="text" class="form-control client-code-input" id="client_code" name="client_code" placeholder="<?= Localization::translate('clients_client_code_placeholder'); ?>">
                                 <div class="form-text"><?= Localization::translate('clients_client_code_help'); ?></div>
                             </div>
 
                             <div class="mb-3">
-                                <label for="max_users" class="form-label"><?= Localization::translate('clients_maximum_users_required'); ?></label>
+                                <label for="max_users" class="form-label"><?= Localization::translate('clients_maximum_users_required'); ?> <span class="text-danger">*</span></label>
                                 <input type="text" class="form-control" id="max_users" name="max_users" placeholder="<?= Localization::translate('clients_maximum_users_placeholder'); ?>">
                             </div>
 
@@ -278,7 +176,7 @@ include 'includes/header.php'; ?>
                             </div>
 
                             <div class="mb-3">
-                                <label for="admin_role_limit" class="form-label"><?= Localization::translate('clients_admin_role_limit_required'); ?></label>
+                                <label for="admin_role_limit" class="form-label"><?= Localization::translate('clients_admin_role_limit_required'); ?> <span class="text-danger">*</span></label>
                                 <input type="text" class="form-control" id="admin_role_limit" name="admin_role_limit"
                                        value="1" placeholder="<?= Localization::translate('clients_admin_role_limit_placeholder'); ?>">
                                 <div class="form-text"><?= Localization::translate('clients_admin_role_limit_help'); ?></div>
@@ -301,7 +199,7 @@ include 'includes/header.php'; ?>
                             <div class="row">
                                 <div class="col-md-6">
                                     <div class="mb-3">
-                                        <label for="logo" class="form-label"><?= Localization::translate('clients_client_logo_required'); ?></label>
+                                        <label for="logo" class="form-label"><?= Localization::translate('clients_client_logo_required'); ?> <span class="text-danger">*</span></label>
                                         <input type="file" class="form-control" id="logo" name="logo" accept="image/png,image/jpeg,image/gif">
                                         <div class="form-text"><?= Localization::translate('clients_logo_help'); ?></div>
                                     </div>
@@ -457,12 +355,7 @@ include 'includes/header.php'; ?>
     </div>
 </div>
 
-<!-- Include Toast Notification JavaScript -->
-<script src="<?= UrlHelper::url('public/js/toast_notifications.js') ?>"></script>
-<!-- Include Confirmation Modal JavaScript -->
-<script src="<?= UrlHelper::url('public/js/confirmation_modal.js') ?>"></script>
-<!-- Include Translation System -->
-<script src="<?= UrlHelper::url('public/js/translations.js') ?>"></script>
+<!-- Toast, Confirmation, and Translation scripts are already loaded in header.php -->
 <script>
 // Load translations for JavaScript validation
 window.translations = <?= json_encode([
@@ -487,6 +380,433 @@ window.translations = <?= json_encode([
 <script src="<?= UrlHelper::url('public/js/client_form_validation.js') ?>"></script>
 <!-- Include Client Management JavaScript -->
 <script src="<?= UrlHelper::url('public/js/client_management.js') ?>"></script>
+
+<script>
+// Dynamic client management with AJAX (like assessment questions)
+let currentPage = 1;
+let currentSearch = '';
+let currentFilters = {
+    status: '',
+    client_id: ''
+};
+
+document.addEventListener('DOMContentLoaded', function() {
+    // Initialize search and filter functionality
+    initializeClientManagement();
+
+    // Load initial clients
+    if (document.getElementById('clientsGrid')) {
+        loadClients(1);
+    }
+});
+
+function initializeClientManagement() {
+    // Search functionality
+    const searchInput = document.getElementById('searchInput');
+    const searchButton = document.getElementById('searchButton');
+
+    if (searchInput && searchButton) {
+        searchButton.addEventListener('click', performSearch);
+        searchInput.addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                performSearch();
+            }
+        });
+
+        // Add debounced search on input
+        const debouncedSearch = debounce(performSearch, 500);
+        searchInput.addEventListener('input', debouncedSearch);
+    }
+
+    // Filter functionality
+    const statusFilter = document.getElementById('statusFilter');
+    const clientFilter = document.getElementById('clientFilter');
+
+    if (statusFilter) {
+        statusFilter.addEventListener('change', applyFilters);
+    }
+
+    if (clientFilter) {
+        clientFilter.addEventListener('change', applyFilters);
+    }
+
+    // Clear filters functionality
+    const clearFiltersBtn = document.getElementById('clearFiltersBtn');
+    if (clearFiltersBtn) {
+        clearFiltersBtn.addEventListener('click', clearAllFilters);
+    }
+
+    // Pagination functionality
+    document.addEventListener('click', function(e) {
+        if (e.target.matches('.page-link[data-page]')) {
+            e.preventDefault();
+            const page = parseInt(e.target.getAttribute('data-page'));
+            loadClients(page);
+        }
+    });
+}
+
+function performSearch() {
+    const searchInput = document.getElementById('searchInput');
+    if (searchInput) {
+        currentSearch = searchInput.value.trim();
+        currentPage = 1; // Reset to first page
+        loadClients();
+    }
+}
+
+function applyFilters() {
+    const statusFilter = document.getElementById('statusFilter');
+    const clientFilter = document.getElementById('clientFilter');
+
+    currentFilters.status = statusFilter ? statusFilter.value : '';
+    currentFilters.client_id = clientFilter ? clientFilter.value : '';
+    currentPage = 1; // Reset to first page
+    loadClients();
+}
+
+function clearAllFilters() {
+    // Clear search
+    const searchInput = document.getElementById('searchInput');
+    if (searchInput) {
+        searchInput.value = '';
+        currentSearch = '';
+    }
+
+    // Clear filters
+    const statusFilter = document.getElementById('statusFilter');
+    const clientFilter = document.getElementById('clientFilter');
+
+    if (statusFilter) statusFilter.value = '';
+    if (clientFilter) clientFilter.value = '';
+
+    currentFilters = {
+        status: '',
+        client_id: ''
+    };
+
+    currentPage = 1;
+    loadClients();
+}
+
+function loadClients(page = currentPage) {
+    currentPage = page;
+
+    // Show loading indicator
+    const loadingIndicator = document.getElementById('loadingIndicator');
+    const clientsContainer = document.getElementById('clientsContainer');
+    const paginationContainer = document.getElementById('paginationContainer');
+
+    if (loadingIndicator) loadingIndicator.style.display = 'block';
+    if (clientsContainer) clientsContainer.style.display = 'none';
+    if (paginationContainer) paginationContainer.style.display = 'none';
+
+    // Prepare data for AJAX request
+    const formData = new FormData();
+    formData.append('controller', 'ClientController');
+    formData.append('action', 'ajaxSearch');
+    formData.append('page', currentPage);
+    formData.append('search', currentSearch);
+    formData.append('status', currentFilters.status);
+    formData.append('client_id', currentFilters.client_id);
+
+    // Make AJAX request
+    fetch('index.php', {
+        method: 'POST',
+        body: formData
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            updateClientsGrid(data.clients);
+            updatePagination(data.pagination);
+            updateSearchInfo(data.totalClients);
+        } else {
+            console.error('Error loading clients:', data.message);
+            // Show user-friendly message
+            const grid = document.getElementById('clientsGrid');
+            if (grid) {
+                grid.innerHTML = `
+                    <div class="col-12">
+                        <div class="alert alert-danger text-center">
+                            <i class="fas fa-exclamation-triangle me-2"></i>
+                            <div>
+                                <h5>Error Loading Clients</h5>
+                                <p>${data.message || 'Unknown error occurred'}</p>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }
+        }
+    })
+    .catch(error => {
+        console.error('AJAX Error:', error);
+        // Show user-friendly message
+        const grid = document.getElementById('clientsGrid');
+        if (grid) {
+            grid.innerHTML = `
+                <div class="col-12">
+                    <div class="alert alert-danger text-center">
+                        <i class="fas fa-exclamation-triangle me-2"></i>
+                        <div>
+                            <h5>Network Error</h5>
+                            <p>Unable to load clients. Please check your connection and try again.</p>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+    })
+    .finally(() => {
+        // Hide loading indicator
+        if (loadingIndicator) loadingIndicator.style.display = 'none';
+        if (clientsContainer) clientsContainer.style.display = 'block';
+        if (paginationContainer) paginationContainer.style.display = 'block';
+    });
+}
+
+function updateClientsGrid(clients) {
+    const grid = document.getElementById('clientsGrid');
+    if (!grid) return;
+
+    grid.innerHTML = '';
+
+    if (clients.length === 0) {
+        grid.innerHTML = `
+            <div class="col-12">
+                <div class="alert alert-info text-center">
+                    <i class="fas fa-search me-2"></i>
+                    <div>
+                        <h5>No clients found</h5>
+                        <p>Try adjusting your search terms or filters</p>
+                    </div>
+                </div>
+            </div>
+        `;
+        return;
+    }
+
+    clients.forEach(client => {
+        const clientCard = createClientCard(client);
+        grid.appendChild(clientCard);
+    });
+}
+
+function createClientCard(client) {
+    const col = document.createElement('div');
+    col.className = 'col-md-6 col-lg-4 mb-4';
+
+    const statusBadgeClass = client.status === 'active' ? 'success' : (client.status === 'suspended' ? 'danger' : 'secondary');
+    const progressWidth = client.max_users > 0 ? (client.active_users / client.max_users * 100) : 0;
+
+    // Build features badges
+    let featureBadges = '';
+    if ((client.reports_enabled ?? 1) == 1) {
+        featureBadges += '<span class="badge bg-success me-1">Reports</span>';
+    }
+    if ((client.theme_settings ?? 1) == 1) {
+        featureBadges += '<span class="badge bg-info me-1">Themes</span>';
+    }
+    if ((client.sso_enabled ?? 0) == 1) {
+        featureBadges += '<span class="badge bg-warning me-1">SSO</span>';
+    }
+
+    // Logo or placeholder
+    const logoHtml = client.logo_path
+        ? `<img src="${escapeHtml(client.logo_path)}" alt="${escapeHtml(client.client_name)}" class="client-logo me-2">`
+        : `<div class="client-logo-placeholder me-2"><i class="fas fa-building"></i></div>`;
+
+    // Delete button (only if not Super Admin client)
+    const deleteButton = client.id != 1
+        ? `<a href="#" class="btn btn-sm theme-btn-danger delete-client"
+               data-id="${client.id}"
+               data-name="${escapeHtml(client.client_name)}"
+               title="Delete Client">
+                <i class="fas fa-trash-alt"></i>
+            </a>`
+        : '';
+
+    col.innerHTML = `
+        <div class="card h-100 client-card"
+             data-client-name="${escapeHtml(client.client_name)}"
+             data-client-code="${escapeHtml(client.client_code)}"
+             data-status="${escapeHtml(client.status)}"
+             data-client-id="${client.id}">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <div class="d-flex align-items-center">
+                    ${logoHtml}
+                    <h6 class="mb-0">${escapeHtml(client.client_name)}</h6>
+                </div>
+                <span class="badge bg-${statusBadgeClass}">
+                    ${client.status.charAt(0).toUpperCase() + client.status.slice(1)}
+                </span>
+            </div>
+
+            <div class="card-body">
+                <div class="client-info">
+                    <div class="info-item mb-2">
+                        <strong>Client ID:</strong> <span class="text-muted">${client.id}</span>
+                    </div>
+
+                    <div class="info-item mb-2">
+                        <strong>Client Code:</strong> <span class="text-muted"><code>${escapeHtml(client.client_code)}</code></span>
+                    </div>
+
+                    <div class="info-item mb-2">
+                        <strong>Users:</strong> <span class="text-muted">${client.active_users} / ${client.max_users}</span>
+                        <div class="progress mt-1 progress-bar-thin">
+                            <div class="progress-bar" role="progressbar" style="width: ${progressWidth}%"></div>
+                        </div>
+                    </div>
+
+                    <div class="info-item mb-2">
+                        <strong>Admin Limit:</strong> <span class="text-muted">${client.admin_role_limit ?? 5} Roles</span>
+                    </div>
+
+                    <div class="info-item mb-2">
+                        <strong>Features:</strong>
+                        <div class="feature-badges mt-1">
+                            ${featureBadges}
+                        </div>
+                    </div>
+
+                    <div class="info-item mb-2">
+                        <strong>Created:</strong> <span class="text-muted">${formatDate(client.created_at)}</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card-footer">
+                <div class="btn-group w-100" role="group">
+                    <button type="button" class="btn btn-sm theme-btn-secondary edit-client-btn"
+                            data-client-id="${client.id}"
+                            title="Edit Client">
+                        <i class="fas fa-edit"></i>
+                    </button>
+                    <a href="index.php?controller=UserManagementController&client_id=${client.id}"
+                       class="btn btn-sm btn-outline-primary" title="Manage Users">
+                        <i class="fas fa-users"></i>
+                    </a>
+                    <a href="index.php?controller=ClientController&action=stats&id=${client.id}"
+                       class="btn btn-sm btn-outline-info" title="Statistics">
+                        <i class="fas fa-chart-bar"></i>
+                    </a>
+                    ${deleteButton}
+                </div>
+            </div>
+        </div>
+    `;
+
+    return col;
+}
+
+function updatePagination(pagination) {
+    const container = document.getElementById('paginationContainer');
+    if (!container) return;
+
+    // Hide pagination if no clients found
+    if (pagination.totalClients === 0) {
+        container.style.display = 'none';
+        return;
+    }
+
+    // Only show pagination if there are more than 10 total clients
+    if (pagination.totalClients <= 10) {
+        // Show total count when no pagination needed
+        const plural = pagination.totalClients !== 1 ? 's' : '';
+        container.innerHTML = `
+            <div class="text-center text-muted small">
+                Showing all ${pagination.totalClients} client${plural}
+            </div>
+        `;
+        container.style.display = 'block';
+        return;
+    }
+
+    // Generate pagination HTML
+    let paginationHtml = '<nav aria-label="Client pagination"><ul class="pagination justify-content-center">';
+
+    // Previous button
+    if (pagination.currentPage > 1) {
+        paginationHtml += `<li class="page-item">
+            <a class="page-link" href="#" data-page="${pagination.currentPage - 1}">Previous</a>
+        </li>`;
+    }
+
+    // Page numbers
+    for (let i = 1; i <= pagination.totalPages; i++) {
+        const isActive = i === pagination.currentPage ? 'active' : '';
+        paginationHtml += `<li class="page-item ${isActive}">
+            <a class="page-link" href="#" data-page="${i}">${i}</a>
+        </li>`;
+    }
+
+    // Next button
+    if (pagination.currentPage < pagination.totalPages) {
+        paginationHtml += `<li class="page-item">
+            <a class="page-link" href="#" data-page="${pagination.currentPage + 1}">Next</a>
+        </li>`;
+    }
+
+    paginationHtml += '</ul></nav>';
+    container.innerHTML = paginationHtml;
+    container.style.display = 'block';
+}
+
+function updateSearchInfo(totalClients) {
+    const searchInfo = document.getElementById('searchResultsInfo');
+    const resultsText = document.getElementById('resultsText');
+
+    if (!searchInfo || !resultsText) return;
+
+    if (currentSearch || currentFilters.status || currentFilters.client_id) {
+        let infoText = `Showing ${totalClients} result${totalClients !== 1 ? 's' : ''}`;
+
+        if (currentSearch) {
+            infoText += ` for search: "<strong>${escapeHtml(currentSearch)}</strong>"`;
+        }
+
+        if (currentFilters.status || currentFilters.client_id) {
+            infoText += ' with filters applied';
+        }
+
+        resultsText.innerHTML = infoText;
+        searchInfo.style.display = 'block';
+    } else {
+        searchInfo.style.display = 'none';
+    }
+}
+
+// Helper functions
+function escapeHtml(text) {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+}
+
+function formatDate(dateString) {
+    const date = new Date(dateString);
+    return date.toLocaleDateString('en-US', {
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric'
+    });
+}
+
+// Debounce function
+function debounce(func, wait) {
+    let timeout;
+    return function executedFunction(...args) {
+        const later = () => {
+            clearTimeout(timeout);
+            func(...args);
+        };
+        clearTimeout(timeout);
+        timeout = setTimeout(later, wait);
+    };
+}
+</script>
 
 
 

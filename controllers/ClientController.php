@@ -27,18 +27,86 @@ class ClientController extends BaseController {
         $offset = ($page - 1) * $limit;
         $search = $_GET['search'] ?? '';
         $filters = [
-            'status' => $_GET['status'] ?? ''
+            'status' => $_GET['status'] ?? '',
+            'client_id' => $_GET['client_id'] ?? ''
         ];
 
         $clients = $this->clientModel->getAllClients($limit, $offset, $search, $filters);
         $totalClients = count($this->clientModel->getAllClients(999999, 0, $search, $filters));
         $totalPages = ceil($totalClients / $limit);
 
+        // Get all clients for filter dropdown (for super admin)
+        $allClientsForFilter = [];
+        if (isset($_SESSION['user']) && $_SESSION['user']['system_role'] === 'super_admin') {
+            $allClientsForFilter = $this->clientModel->getAllClients(999999, 0, '', []);
+        }
+
         // Make sure all variables are available to the view
         $currentPage = $page;
 
         include 'views/client_management.php';
     }
+
+    /**
+     * AJAX search for dynamic client loading
+     */
+    public function ajaxSearch() {
+        header('Content-Type: application/json');
+
+        // Check if user is logged in
+        if (!isset($_SESSION['user'])) {
+            echo json_encode([
+                'success' => false,
+                'message' => 'Unauthorized access. Please log in.'
+            ]);
+            exit();
+        }
+
+        try {
+            $limit = 10;
+            $page = isset($_POST['page']) ? (int) $_POST['page'] : 1;
+            $offset = ($page - 1) * $limit;
+
+            // Get search and filter parameters
+            $search = trim($_POST['search'] ?? '');
+            $filters = [];
+
+            if (!empty($_POST['status'])) {
+                $filters['status'] = $_POST['status'];
+            }
+
+            if (!empty($_POST['client_id'])) {
+                $filters['client_id'] = $_POST['client_id'];
+            }
+
+            // Get clients from database
+            $clients = $this->clientModel->getAllClients($limit, $offset, $search, $filters);
+            $totalClients = count($this->clientModel->getAllClients(999999, 0, $search, $filters));
+            $totalPages = ceil($totalClients / $limit);
+
+            $response = [
+                'success' => true,
+                'clients' => $clients,
+                'totalClients' => $totalClients,
+                'pagination' => [
+                    'currentPage' => $page,
+                    'totalPages' => $totalPages,
+                    'totalClients' => $totalClients
+                ]
+            ];
+
+            echo json_encode($response);
+
+        } catch (Exception $e) {
+            echo json_encode([
+                'success' => false,
+                'message' => 'Error loading clients: ' . $e->getMessage()
+            ]);
+        }
+        exit();
+    }
+
+
 
     /**
      * Show create client form (handled by modal in main view)
@@ -85,10 +153,11 @@ class ClientController extends BaseController {
                 $errors[] = Localization::translate('validation.admin_role_limit_minimum');
             }
 
-            // Validate logo upload
-            if (empty($_FILES['logo']['name']) || $_FILES['logo']['error'] === UPLOAD_ERR_NO_FILE) {
+            // Validate logo upload (optional for now - can be made required later)
+            $logoRequired = false; // Set to true if logo should be required
+            if ($logoRequired && (empty($_FILES['logo']['name']) || $_FILES['logo']['error'] === UPLOAD_ERR_NO_FILE)) {
                 $errors[] = 'Client logo is required.';
-            } else {
+            } elseif (!empty($_FILES['logo']['name']) && $_FILES['logo']['error'] !== UPLOAD_ERR_NO_FILE) {
                 // Validate file type
                 $allowedTypes = ['image/png', 'image/jpeg', 'image/gif'];
                 $fileType = $_FILES['logo']['type'];
@@ -108,25 +177,59 @@ class ClientController extends BaseController {
                 }
             }
 
-            // If there are validation errors, show toast error
+            // If there are validation errors, handle appropriately
             if (!empty($errors)) {
                 $errorMessage = implode(' ', $errors);
-                $this->toastError($errorMessage, 'index.php?controller=ClientController');
-                return;
+
+                // Check if this is an AJAX request
+                if ($this->isAjaxRequest()) {
+                    header('Content-Type: application/json');
+                    echo json_encode([
+                        'success' => false,
+                        'message' => $errorMessage
+                    ]);
+                    exit;
+                } else {
+                    $this->toastError($errorMessage, 'index.php?controller=ClientController');
+                    return;
+                }
             }
 
             // Handle logo upload
-            $logoPath = $this->handleLogoUpload($_FILES['logo']);
-            if (!$logoPath) {
-                $this->toastError(Localization::translate('validation.logo_upload_failed'), 'index.php?controller=ClientController');
-                return;
+            $logoPath = null;
+            if (!empty($_FILES['logo']['name']) && $_FILES['logo']['error'] !== UPLOAD_ERR_NO_FILE) {
+                $logoPath = $this->handleLogoUpload($_FILES['logo']);
+                if (!$logoPath) {
+                    // Check if this is an AJAX request
+                    if ($this->isAjaxRequest()) {
+                        header('Content-Type: application/json');
+                        echo json_encode([
+                            'success' => false,
+                            'message' => Localization::translate('validation.logo_upload_failed')
+                        ]);
+                        exit;
+                    } else {
+                        $this->toastError(Localization::translate('validation.logo_upload_failed'), 'index.php?controller=ClientController');
+                        return;
+                    }
+                }
             }
 
             // Validate client code uniqueness
             $clientCode = trim($_POST['client_code']);
             if (!$this->clientModel->isClientCodeUnique($clientCode)) {
-                $this->toastError(Localization::translate('validation.client_code_unique'), 'index.php?controller=ClientController');
-                return;
+                // Check if this is an AJAX request
+                if ($this->isAjaxRequest()) {
+                    header('Content-Type: application/json');
+                    echo json_encode([
+                        'success' => false,
+                        'message' => Localization::translate('validation.client_code_unique')
+                    ]);
+                    exit;
+                } else {
+                    $this->toastError(Localization::translate('validation.client_code_unique'), 'index.php?controller=ClientController');
+                    return;
+                }
             }
 
             $data = [
@@ -239,15 +342,35 @@ class ClientController extends BaseController {
         try {
             $clientId = $_POST['client_id'] ?? null;
             if (!$clientId) {
-                $this->toastError(Localization::translate('validation.client_id_required'), 'index.php?controller=ClientController');
-                return;
+                // Check if this is an AJAX request
+                if ($this->isAjaxRequest()) {
+                    header('Content-Type: application/json');
+                    echo json_encode([
+                        'success' => false,
+                        'message' => Localization::translate('validation.client_id_required')
+                    ]);
+                    exit;
+                } else {
+                    $this->toastError(Localization::translate('validation.client_id_required'), 'index.php?controller=ClientController');
+                    return;
+                }
             }
 
             // Get existing client
             $existingClient = $this->clientModel->getClientById($clientId);
             if (!$existingClient) {
-                $this->toastError(Localization::translate('validation.client_not_found'), 'index.php?controller=ClientController');
-                return;
+                // Check if this is an AJAX request
+                if ($this->isAjaxRequest()) {
+                    header('Content-Type: application/json');
+                    echo json_encode([
+                        'success' => false,
+                        'message' => Localization::translate('validation.client_not_found')
+                    ]);
+                    exit;
+                } else {
+                    $this->toastError(Localization::translate('validation.client_not_found'), 'index.php?controller=ClientController');
+                    return;
+                }
             }
 
             // ✅ Server-side validation (similar to store method but for update)
@@ -312,18 +435,39 @@ class ClientController extends BaseController {
                 }
             }
 
-            // If there are validation errors, show toast error
+            // If there are validation errors, handle appropriately
             if (!empty($errors)) {
                 $errorMessage = implode(' ', $errors);
-                $this->toastError($errorMessage, 'index.php?controller=ClientController');
-                return;
+
+                // Check if this is an AJAX request
+                if ($this->isAjaxRequest()) {
+                    header('Content-Type: application/json');
+                    echo json_encode([
+                        'success' => false,
+                        'message' => $errorMessage
+                    ]);
+                    exit;
+                } else {
+                    $this->toastError($errorMessage, 'index.php?controller=ClientController');
+                    return;
+                }
             }
 
             // Validate client code uniqueness (excluding current client)
             $clientCode = trim($_POST['client_code']);
             if (!$this->clientModel->isClientCodeUnique($clientCode, $clientId)) {
-                $this->toastError(Localization::translate('validation.client_code_unique'), 'index.php?controller=ClientController');
-                return;
+                // Check if this is an AJAX request
+                if ($this->isAjaxRequest()) {
+                    header('Content-Type: application/json');
+                    echo json_encode([
+                        'success' => false,
+                        'message' => Localization::translate('validation.client_code_unique')
+                    ]);
+                    exit;
+                } else {
+                    $this->toastError(Localization::translate('validation.client_code_unique'), 'index.php?controller=ClientController');
+                    return;
+                }
             }
 
             $data = [

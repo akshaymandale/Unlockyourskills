@@ -29,6 +29,11 @@ class ClientModel {
             $sql .= " AND c.status = ?";
             $params[] = $filters['status'];
         }
+
+        if (!empty($filters['client_id'])) {
+            $sql .= " AND c.id = ?";
+            $params[] = (int)$filters['client_id'];
+        }
         
         $sql .= " ORDER BY c.id DESC LIMIT ? OFFSET ?";
         $params[] = (int)$limit;

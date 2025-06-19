@@ -172,6 +172,18 @@ class SettingsController {
             $targetClientId = $_POST['client_id'] ?? null;
             if ($targetClientId) {
                 $clientId = $targetClientId;
+            } else {
+                // For super admin, client_id is required
+                if ($this->isAjaxRequest()) {
+                    header('Content-Type: application/json');
+                    echo json_encode([
+                        'success' => false,
+                        'message' => 'Please select a client'
+                    ]);
+                    exit;
+                }
+                $this->redirectWithToast('Please select a client.', 'error', UrlHelper::url('settings/custom-fields'));
+                return;
             }
         }
 
@@ -180,6 +192,18 @@ class SettingsController {
 
         if (!empty($errors)) {
             $errorMessage = implode(', ', $errors);
+
+            // Check if this is an AJAX request
+            if ($this->isAjaxRequest()) {
+                header('Content-Type: application/json');
+                echo json_encode([
+                    'success' => false,
+                    'message' => $errorMessage
+                ]);
+                exit;
+            }
+
+            // Regular form submission - redirect with toast
             $this->redirectWithToast($errorMessage, 'error', UrlHelper::url('settings/custom-fields'));
             return;
         }
@@ -198,6 +222,24 @@ class SettingsController {
         // Create the custom field
         $result = $this->customFieldModel->createCustomField($fieldData);
 
+        // Check if this is an AJAX request
+        if ($this->isAjaxRequest()) {
+            header('Content-Type: application/json');
+            if ($result) {
+                echo json_encode([
+                    'success' => true,
+                    'message' => 'Custom field created successfully!'
+                ]);
+            } else {
+                echo json_encode([
+                    'success' => false,
+                    'message' => 'Failed to create custom field.'
+                ]);
+            }
+            exit;
+        }
+
+        // Regular form submission - redirect with toast
         if ($result) {
             $this->redirectWithToast('Custom field created successfully!', 'success', UrlHelper::url('settings/custom-fields'));
         } else {
@@ -778,5 +820,13 @@ class SettingsController {
         $separator = strpos($url, '?') !== false ? '&' : '?';
         header("Location: {$url}{$separator}message={$encodedMessage}&type={$type}");
         exit();
+    }
+
+    /**
+     * Check if the current request is an AJAX request
+     */
+    private function isAjaxRequest() {
+        return !empty($_SERVER['HTTP_X_REQUESTED_WITH']) &&
+               strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) === 'xmlhttprequest';
     }
 }

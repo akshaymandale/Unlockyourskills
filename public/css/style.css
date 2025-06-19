@@ -2950,6 +2950,19 @@ body select:focus,
     border-color: #6A0DAD;
 }
 
+/* Ensure proper card grid layout */
+#clientsGrid {
+    display: flex;
+    flex-wrap: wrap;
+    margin: 0 -15px;
+}
+
+#clientsGrid .col-md-6,
+#clientsGrid .col-lg-4 {
+    padding: 0 15px;
+    margin-bottom: 1.5rem;
+}
+
 .client-card .card-header {
     background-color: #f8f9fa;
     border-bottom: 1px solid #e0e0e0;
@@ -2975,11 +2988,28 @@ body select:focus,
 }
 
 .client-info .info-item {
-    margin-bottom: 8px;
+    margin-bottom: 6px;
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
 }
 
 .client-info .info-item:last-child {
     margin-bottom: 0;
+}
+
+.client-info .info-item strong {
+    margin-right: 8px;
+    min-width: fit-content;
+}
+
+.client-info .info-item .text-muted {
+    flex: 1;
+}
+
+/* Compact filter styling */
+.compact-filter {
+    min-width: 120px;
 }
 
 .text-purple {

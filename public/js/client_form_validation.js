@@ -40,10 +40,16 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Add form validation
     function initializeAddFormValidation() {
-        const addForm = document.getElementById('addClientForm');
-        if (!addForm) return;
+        const form = document.getElementById('addClientForm');
+        if (!form) return;
 
-        addForm.addEventListener('submit', function(e) {
+        // Check if already initialized to prevent duplicates
+        if (form.hasAttribute('data-validation-initialized')) {
+            return;
+        }
+        form.setAttribute('data-validation-initialized', 'true');
+
+        form.addEventListener('submit', function(e) {
             e.preventDefault();
 
             if (validateClientForm(this)) {
@@ -66,18 +72,34 @@ document.addEventListener('DOMContentLoaded', function() {
                 .then(response => response.json())
                 .then(data => {
                     if (data.success) {
-                        // Success - refresh the client cards
-                        refreshClientCards();
+                        // Success - hide modal and redirect with toast message
                         $('#addClientModal').modal('hide');
-                        showToast('success', data.message || 'Client created successfully!');
+
+                        // Use URL-based toast system for reliable display
+                        const message = encodeURIComponent(data.message || 'Client created successfully!');
+                        const currentUrl = window.location.href.split('?')[0];
+                        const separator = currentUrl.includes('?') ? '&' : '?';
+                        window.location.href = `${currentUrl}${separator}message=${message}&type=success`;
                     } else {
                         // Error - show error message
-                        showToast('error', data.message || 'Failed to create client. Please try again.');
+                        if (typeof window.showToastOrAlert === 'function') {
+                            window.showToastOrAlert(data.message || 'Failed to create client. Please try again.', 'error');
+                        } else if (typeof window.showSimpleToast === 'function') {
+                            window.showSimpleToast(data.message || 'Failed to create client. Please try again.', 'error');
+                        } else {
+                            alert(data.message || 'Failed to create client. Please try again.');
+                        }
                     }
                 })
                 .catch(error => {
                     console.error('Error:', error);
-                    showToast('error', 'Failed to create client. Please try again.');
+                    if (typeof window.showToastOrAlert === 'function') {
+                        window.showToastOrAlert('Failed to create client. Please try again.', 'error');
+                    } else if (typeof window.showSimpleToast === 'function') {
+                        window.showSimpleToast('Failed to create client. Please try again.', 'error');
+                    } else {
+                        alert('Failed to create client. Please try again.');
+                    }
                 })
                 .finally(() => {
                     // Reset button state
@@ -88,20 +110,33 @@ document.addEventListener('DOMContentLoaded', function() {
         });
 
         // Add blur validation for real-time feedback
-        const fields = addForm.querySelectorAll('input, select, textarea');
+        const fields = form.querySelectorAll('input, select, textarea');
         fields.forEach(field => {
-            field.addEventListener('blur', function() {
-                validateSingleField(this);
-            });
+            if (field.type === 'file') {
+                // File inputs use 'change' event instead of 'blur'
+                field.addEventListener('change', function() {
+                    validateSingleField(this);
+                });
+            } else {
+                field.addEventListener('blur', function() {
+                    validateSingleField(this);
+                });
+            }
         });
     }
 
     // Edit form validation
     function initializeEditFormValidation() {
-        const editForm = document.getElementById('editClientForm');
-        if (!editForm) return;
+        const form = document.getElementById('editClientForm');
+        if (!form) return;
 
-        editForm.addEventListener('submit', function(e) {
+        // Check if already initialized to prevent duplicates
+        if (form.hasAttribute('data-validation-initialized')) {
+            return;
+        }
+        form.setAttribute('data-validation-initialized', 'true');
+
+        form.addEventListener('submit', function(e) {
             e.preventDefault();
 
             if (validateClientForm(this)) {
@@ -124,18 +159,34 @@ document.addEventListener('DOMContentLoaded', function() {
                 .then(response => response.json())
                 .then(data => {
                     if (data.success) {
-                        // Success - refresh the client cards
-                        refreshClientCards();
+                        // Success - hide modal and redirect with toast message
                         $('#editClientModal').modal('hide');
-                        showToast('success', data.message || 'Client updated successfully!');
+
+                        // Use URL-based toast system for reliable display
+                        const message = encodeURIComponent(data.message || 'Client updated successfully!');
+                        const currentUrl = window.location.href.split('?')[0];
+                        const separator = currentUrl.includes('?') ? '&' : '?';
+                        window.location.href = `${currentUrl}${separator}message=${message}&type=success`;
                     } else {
                         // Error - show error message
-                        showToast('error', data.message || 'Failed to update client. Please try again.');
+                        if (typeof window.showToastOrAlert === 'function') {
+                            window.showToastOrAlert(data.message || 'Failed to update client. Please try again.', 'error');
+                        } else if (typeof window.showSimpleToast === 'function') {
+                            window.showSimpleToast(data.message || 'Failed to update client. Please try again.', 'error');
+                        } else {
+                            alert(data.message || 'Failed to update client. Please try again.');
+                        }
                     }
                 })
                 .catch(error => {
                     console.error('Error:', error);
-                    showToast('error', 'Failed to update client. Please try again.');
+                    if (typeof window.showToastOrAlert === 'function') {
+                        window.showToastOrAlert('Failed to update client. Please try again.', 'error');
+                    } else if (typeof window.showSimpleToast === 'function') {
+                        window.showSimpleToast('Failed to update client. Please try again.', 'error');
+                    } else {
+                        alert('Failed to update client. Please try again.');
+                    }
                 })
                 .finally(() => {
                     // Reset button state
@@ -146,11 +197,18 @@ document.addEventListener('DOMContentLoaded', function() {
         });
 
         // Add blur validation for real-time feedback
-        const fields = editForm.querySelectorAll('input, select, textarea');
+        const fields = form.querySelectorAll('input, select, textarea');
         fields.forEach(field => {
-            field.addEventListener('blur', function() {
-                validateSingleField(this);
-            });
+            if (field.type === 'file') {
+                // File inputs use 'change' event instead of 'blur'
+                field.addEventListener('change', function() {
+                    validateSingleField(this);
+                });
+            } else {
+                field.addEventListener('blur', function() {
+                    validateSingleField(this);
+                });
+            }
         });
     }
 
@@ -215,18 +273,28 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         }
 
-        // Validate logo (only for add form)
+        // Validate logo (required for add form, optional for edit form)
         const logo = form.querySelector('[name="logo"]');
-        if (logo && form.id === 'addClientForm') {
-            if (logo.files.length === 0) {
+        const isAddForm = form.id === 'addClientForm';
+
+        if (logo) {
+            if (isAddForm && logo.files.length === 0) {
+                // Logo is required for add form
                 showFieldError(logo, getTranslation('js.validation.client_logo_required', 'Client logo is required.'));
                 isValid = false;
-            } else {
+            } else if (logo.files.length > 0) {
+                // Validate file if selected
                 const file = logo.files[0];
-                const allowedTypes = ['image/png', 'image/jpeg', 'image/gif'];
+                const allowedTypes = ['image/png', 'image/jpeg', 'image/gif', 'image/jpg'];
+                const allowedExtensions = ['.png', '.jpg', '.jpeg', '.gif'];
                 const maxSize = 5 * 1024 * 1024; // 5MB
 
-                if (!allowedTypes.includes(file.type)) {
+                // Check both MIME type and file extension for better compatibility
+                const fileName = file.name.toLowerCase();
+                const hasValidExtension = allowedExtensions.some(ext => fileName.endsWith(ext));
+                const hasValidMimeType = allowedTypes.includes(file.type);
+
+                if (!hasValidMimeType && !hasValidExtension) {
                     showFieldError(logo, getTranslation('js.validation.logo_format_invalid', 'Logo must be PNG, JPG, or GIF format.'));
                     isValid = false;
                 } else if (file.size > maxSize) {
@@ -235,20 +303,8 @@ document.addEventListener('DOMContentLoaded', function() {
                 } else {
                     hideFieldError(logo);
                 }
-            }
-        } else if (logo && form.id === 'editClientForm' && logo.files.length > 0) {
-            // For edit form, validate logo only if a new file is selected
-            const file = logo.files[0];
-            const allowedTypes = ['image/png', 'image/jpeg', 'image/gif'];
-            const maxSize = 5 * 1024 * 1024; // 5MB
-
-            if (!allowedTypes.includes(file.type)) {
-                showFieldError(logo, getTranslation('js.validation.logo_format_invalid', 'Logo must be PNG, JPG, or GIF format.'));
-                isValid = false;
-            } else if (file.size > maxSize) {
-                showFieldError(logo, getTranslation('js.validation.logo_size_exceeded', 'Logo file size must be less than 5MB.'));
-                isValid = false;
             } else {
+                // Clear any previous errors if no file is selected (edit form only)
                 hideFieldError(logo);
             }
         }
@@ -259,7 +315,7 @@ document.addEventListener('DOMContentLoaded', function() {
     // Single field validation function
     function validateSingleField(field) {
         const fieldName = field.name || field.id;
-        const value = field.value.trim();
+        const value = field.type === 'file' ? '' : field.value.trim();
 
         switch (fieldName) {
             case 'client_name':
@@ -305,18 +361,33 @@ document.addEventListener('DOMContentLoaded', function() {
                 break;
 
             case 'logo':
-                if (field.files && field.files.length > 0) {
+                const isAddForm = field.closest('form').id === 'addClientForm';
+
+                if (isAddForm && field.files.length === 0) {
+                    // Logo is required for add form
+                    showFieldError(field, getTranslation('js.validation.client_logo_required', 'Client logo is required.'));
+                } else if (field.files && field.files.length > 0) {
+                    // Validate file if selected
                     const file = field.files[0];
-                    const allowedTypes = ['image/png', 'image/jpeg', 'image/gif'];
+                    const allowedTypes = ['image/png', 'image/jpeg', 'image/gif', 'image/jpg'];
+                    const allowedExtensions = ['.png', '.jpg', '.jpeg', '.gif'];
                     const maxSize = 5 * 1024 * 1024; // 5MB
 
-                    if (!allowedTypes.includes(file.type)) {
+                    // Check both MIME type and file extension for better compatibility
+                    const fileName = file.name.toLowerCase();
+                    const hasValidExtension = allowedExtensions.some(ext => fileName.endsWith(ext));
+                    const hasValidMimeType = allowedTypes.includes(file.type);
+
+                    if (!hasValidMimeType && !hasValidExtension) {
                         showFieldError(field, getTranslation('js.validation.logo_format_invalid', 'Logo must be PNG, JPG, or GIF format.'));
                     } else if (file.size > maxSize) {
                         showFieldError(field, getTranslation('js.validation.logo_size_exceeded', 'Logo file size must be less than 5MB.'));
                     } else {
                         hideFieldError(field);
                     }
+                } else {
+                    // Clear any previous errors if no file is selected (edit form only)
+                    hideFieldError(field);
                 }
                 break;
         }
@@ -326,4 +397,10 @@ document.addEventListener('DOMContentLoaded', function() {
     function getTranslation(key, fallback) {
         return (window.translations && window.translations[key]) ? window.translations[key] : fallback;
     }
+
+    // Make validation functions available globally for modal reinitialization
+    window.initializeAddFormValidation = initializeAddFormValidation;
+    window.initializeEditFormValidation = initializeEditFormValidation;
+    window.validateClientForm = validateClientForm;
+    window.validateSingleField = validateSingleField;
 });

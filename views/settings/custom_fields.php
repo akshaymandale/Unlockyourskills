@@ -327,6 +327,27 @@ require_once 'core/IdEncryption.php';
                 </div>
 
                 <div class="modal-body">
+                    <!-- Client Selection for Super Admin -->
+                    <?php if ($currentUser['system_role'] === 'super_admin'): ?>
+                    <div class="row">
+                        <div class="col-12">
+                            <div class="mb-3">
+                                <label for="client_id" class="form-label">Client <span class="text-danger">*</span></label>
+                                <select class="form-select" id="client_id" name="client_id" required>
+                                    <option value="">Select a client...</option>
+                                    <?php foreach ($clients as $clientOption): ?>
+                                        <option value="<?= $clientOption['id'] ?>" <?= (isset($_GET['client_id']) && $_GET['client_id'] && IdEncryption::getId($_GET['client_id']) == $clientOption['id']) ? 'selected' : '' ?>>
+                                            <?= htmlspecialchars($clientOption['client_name']) ?>
+                                        </option>
+                                    <?php endforeach; ?>
+                                </select>
+                                <div class="form-text">Select the client this custom field will belong to</div>
+                                <div class="invalid-feedback"></div>
+                            </div>
+                        </div>
+                    </div>
+                    <?php endif; ?>
+
                     <div class="row">
                         <!-- Field Name -->
                         <div class="col-md-6">

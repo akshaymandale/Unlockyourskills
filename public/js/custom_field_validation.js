@@ -139,6 +139,14 @@ function validateCustomField(field) {
     field.removeAttribute('data-validation-error');
     
     switch (fieldName) {
+        case "client_id":
+            // Only validate for super admin users (field only exists for them)
+            if (field && value === "") {
+                showCustomFieldError(field, 'Please select a client');
+                isValid = false;
+            }
+            break;
+
         case "field_name":
             // Required validation
             if (value === "") {
@@ -364,7 +372,10 @@ function submitCustomFieldForm() {
     
     fetch(submitUrl, {
         method: 'POST',
-        body: formData
+        body: formData,
+        headers: {
+            'X-Requested-With': 'XMLHttpRequest'
+        }
     })
     .then(response => {
         console.log('🔥 Custom field response status:', response.status);
