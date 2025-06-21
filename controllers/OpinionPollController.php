@@ -67,12 +67,16 @@ class OpinionPollController extends BaseController {
                 $filters['type'] = $_POST['type'];
             }
 
-            if (!empty($_POST['target_audience'])) {
-                $filters['target_audience'] = $_POST['target_audience'];
+            if (!empty($_POST['audience'])) {
+                $filters['target_audience'] = $_POST['audience'];
             }
 
-            if (!empty($_POST['date_range'])) {
-                $filters['date_range'] = $_POST['date_range'];
+            if (!empty($_POST['date_from'])) {
+                $filters['date_from'] = $_POST['date_from'];
+            }
+
+            if (!empty($_POST['date_to'])) {
+                $filters['date_to'] = $_POST['date_to'];
             }
 
             // Get polls from database

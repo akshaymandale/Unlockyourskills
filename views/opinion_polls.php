@@ -5,7 +5,12 @@ if (!isset($_SESSION['user'])) {
     exit();
 }
 
+require_once 'core/UrlHelper.php';
+
 $currentUser = $_SESSION['user'];
+$systemRole = $_SESSION['user']['system_role'] ?? '';
+$canCreateGlobal = in_array($systemRole, ['super_admin', 'admin']);
+$canManageAll = in_array($systemRole, ['super_admin', 'admin']);
 ?>
 
 <?php include 'includes/header.php'; ?>
@@ -14,28 +19,68 @@ $currentUser = $_SESSION['user'];
 
 <div class="main-content" data-opinion-poll-page="true">
     <div class="container add-question-container">
-
+        <!-- Back Arrow and Title -->
         <div class="back-arrow-container">
-            <a href="index.php?controller=ManagePortalController#social" class="back-link">
+            <a href="<?= UrlHelper::url('manage-portal') ?>#social" class="back-link">
                 <i class="fas fa-arrow-left"></i>
             </a>
             <span class="divider-line"></span>
             <h1 class="page-title text-purple">
-                <i class="fas fa-poll me-2"></i>Opinion Poll Management
+                <i class="fas fa-poll me-2"></i>
+                <?= Localization::translate('opinion_poll_management'); ?>
             </h1>
         </div>
-        <!-- ✅ Filters & Search Section -->
-        <div class="filter-section">
-            <div class="container-fluid mb-3">
-                <!-- First Row: Main Controls -->
-                <div class="row justify-content-between align-items-center g-3 mb-2">
 
-                    <!-- Filter Dropdowns on the left -->
-                    <div class="col-md-auto">
-                        <div class="row g-2">
-                            <div class="col-auto">
-                                <select class="form-select form-select-sm" id="statusFilter">
-                                    <option value="">All Statuses</option>
+        <!-- Breadcrumb Navigation -->
+        <nav aria-label="breadcrumb" class="mb-3">
+            <ol class="breadcrumb">
+                <li class="breadcrumb-item">
+                    <a href="<?= UrlHelper::url('dashboard') ?>"><?= Localization::translate('dashboard'); ?></a>
+                </li>
+                <li class="breadcrumb-item">
+                    <a href="<?= UrlHelper::url('manage-portal') ?>"><?= Localization::translate('manage_portal'); ?></a>
+                </li>
+                <li class="breadcrumb-item">
+                    <a href="<?= UrlHelper::url('manage-portal') ?>#social"><?= Localization::translate('social'); ?></a>
+                </li>
+                <li class="breadcrumb-item active" aria-current="page"><?= Localization::translate('opinion_polls'); ?></li>
+            </ol>
+        </nav>
+
+        <!-- Page Description -->
+        <div class="row mb-4">
+            <div class="col-12">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <p class="text-muted mb-0">Create and manage opinion polls for your organization</p>
+                    </div>
+                    <button type="button" class="btn theme-btn-primary" data-bs-toggle="modal" data-bs-target="#createPollModal">
+                        <i class="fas fa-plus me-2"></i>Create Opinion Poll
+                    </button>
+                </div>
+            </div>
+        </div>
+        <!-- Filters and Search -->
+        <div class="row mb-4">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-body">
+                        <div class="row g-3">
+                            <!-- Search -->
+                            <div class="col-md-3">
+                                <div class="input-group">
+                                    <span class="input-group-text">
+                                        <i class="fas fa-search"></i>
+                                    </span>
+                                    <input type="text" class="form-control" id="searchInput"
+                                           placeholder="Search opinion polls...">
+                                </div>
+                            </div>
+
+                            <!-- Status Filter -->
+                            <div class="col-md-2">
+                                <select class="form-select" id="statusFilter">
+                                    <option value="">All Status</option>
                                     <option value="draft">Draft</option>
                                     <option value="active">Active</option>
                                     <option value="paused">Paused</option>
@@ -43,103 +88,115 @@ $currentUser = $_SESSION['user'];
                                     <option value="archived">Archived</option>
                                 </select>
                             </div>
-                            <div class="col-auto">
-                                <select class="form-select form-select-sm" id="typeFilter">
+
+                            <!-- Type Filter -->
+                            <div class="col-md-2">
+                                <select class="form-select" id="typeFilter">
                                     <option value="">All Types</option>
                                     <option value="single_choice">Single Choice</option>
                                     <option value="multiple_choice">Multiple Choice</option>
                                 </select>
                             </div>
-                            <div class="col-auto">
-                                <select class="form-select form-select-sm" id="audienceFilter">
-                                    <option value="">All Audiences</option>
+
+                            <!-- Audience Filter -->
+                            <div class="col-md-2">
+                                <select class="form-select" id="audienceFilter">
+                                    <option value="">All Audience</option>
                                     <option value="global">Global</option>
                                     <option value="course_specific">Course Specific</option>
                                     <option value="group_specific">Group Specific</option>
                                 </select>
                             </div>
-                            <div class="col-auto">
-                                <select class="form-select form-select-sm" id="dateRangeFilter">
-                                    <option value="">All Dates</option>
-                                    <option value="active">Currently Active</option>
-                                    <option value="upcoming">Upcoming</option>
-                                    <option value="ended">Ended</option>
-                                </select>
+
+                            <!-- Date Range -->
+                            <div class="col-md-2">
+                                <button type="button" class="btn btn-outline-secondary w-100" id="dateRangeBtn">
+                                    <i class="fas fa-calendar me-2"></i>Date Range
+                                </button>
+                            </div>
+
+                            <!-- Clear All Filters -->
+                            <div class="col-md-1">
+                                <button type="button" class="btn btn-outline-danger w-100" id="clearAllFiltersBtn" title="Clear all filters">
+                                    <i class="fas fa-times"></i>
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Date Range Inputs (Hidden by default) -->
+                        <div class="row mt-3 d-none" id="dateRangeInputs">
+                            <div class="col-md-3">
+                                <label class="form-label">From Date</label>
+                                <input type="date" class="form-control" id="dateFrom">
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label">To Date</label>
+                                <input type="date" class="form-control" id="dateTo">
+                            </div>
+                            <div class="col-md-2">
+                                <label class="form-label">&nbsp;</label>
+                                <button type="button" class="btn theme-btn-secondary d-block" id="applyDateFilter">
+                                    Apply
+                                </button>
+                            </div>
+                            <div class="col-md-2">
+                                <label class="form-label">&nbsp;</label>
+                                <button type="button" class="btn btn-outline-secondary d-block" id="clearDateFilter">
+                                    Clear Date
+                                </button>
                             </div>
                         </div>
                     </div>
-
-                    <!-- Search Bar in the middle -->
-                    <div class="col-md-auto">
-                        <div class="input-group input-group-sm">
-                            <input type="text" id="searchInput" class="form-control"
-                                placeholder="Search by title or description..."
-                                title="Search polls by title or description">
-                            <button type="button" id="searchButton" class="btn btn-outline-secondary"
-                                title="Search polls">
-                                <i class="fas fa-search"></i>
-                            </button>
-                        </div>
-                    </div>
-
-                    <!-- Create Poll Button on the right -->
-                    <div class="col-md-auto">
-                        <button type="button" class="btn btn-sm theme-btn-primary" data-bs-toggle="modal" data-bs-target="#createPollModal"
-                            title="Create New Opinion Poll">
-                            <i class="fas fa-plus me-1"></i>Create New Poll
-                        </button>
-                    </div>
-
-                </div>
-
-                <!-- Second Row: Secondary Controls -->
-                <div class="row justify-content-between align-items-center g-3">
-
-                    <!-- Clear Filters Button under filters -->
-                    <div class="col-md-auto">
-                        <button type="button" class="btn btn-sm btn-clear-filters" id="clearFiltersBtn"
-                            title="Clear all filters">
-                            <i class="fas fa-times me-1"></i> Clear Filters
-                        </button>
-                    </div>
-
-                    <!-- Empty middle space -->
-                    <div class="col-md-auto">
-                    </div>
-
-                    <!-- Empty space for consistency -->
-                    <div class="col-md-auto">
-                    </div>
-
                 </div>
             </div>
         </div>
 
-                <!-- Search Results Info -->
-                <div id="searchResultsInfo" class="search-results-info" style="display: none;">
+        <!-- Results Info -->
+        <div class="row mb-3">
+            <div class="col-12">
+                <div class="search-results-info">
                     <i class="fas fa-info-circle"></i>
-                    <span id="resultsText"></span>
+                    <span id="resultsInfo">Loading opinion polls...</span>
                 </div>
-
-                <!-- Loading Indicator -->
-                <div id="loadingIndicator" class="text-center loading-indicator" style="display: none;">
-                    <div class="spinner-border text-primary" role="status">
-                        <span class="visually-hidden">Loading...</span>
-                    </div>
-                    <p class="mt-2">Loading polls...</p>
-                </div>
-
-        <!-- Polls Container -->
-        <div id="pollsContainer" class="fade-transition">
-            <!-- Polls Grid -->
-            <div id="pollsGrid" class="row">
-                <!-- Polls will be loaded dynamically via AJAX -->
             </div>
         </div>
 
-        <!-- ✅ Pagination -->
-        <div id="paginationContainer" class="pagination-container" style="display: none;">
-            <!-- Pagination will be generated dynamically -->
+        <!-- Opinion Polls Grid -->
+        <div class="row" id="pollsGrid">
+            <!-- Opinion polls will be loaded here via AJAX -->
+        </div>
+
+        <!-- Pagination -->
+        <div class="row mt-4">
+            <div class="col-12">
+                <nav aria-label="Opinion polls pagination">
+                    <ul class="pagination justify-content-center" id="paginationContainer">
+                        <!-- Pagination will be generated here -->
+                    </ul>
+                </nav>
+            </div>
+        </div>
+
+        <!-- Loading Spinner -->
+        <div class="row" id="loadingSpinner" style="display: none;">
+            <div class="col-12 text-center py-5">
+                <div class="spinner-border text-primary" role="status">
+                    <span class="visually-hidden">Loading...</span>
+                </div>
+                <p class="mt-2 text-muted">Loading opinion polls...</p>
+            </div>
+        </div>
+
+        <!-- No Results -->
+        <div class="row" id="noResults" style="display: none;">
+            <div class="col-12 text-center py-5">
+                <i class="fas fa-poll fa-3x text-muted mb-3"></i>
+                <h5 class="text-muted">No opinion polls found</h5>
+                <p class="text-muted">Try adjusting your search criteria or create a new opinion poll.</p>
+                <button type="button" class="btn theme-btn-primary" data-bs-toggle="modal" data-bs-target="#createPollModal">
+                    <i class="fas fa-plus me-2"></i>Create First Opinion Poll
+                </button>
+            </div>
         </div>
     </div>
 </div>
@@ -260,7 +317,7 @@ $currentUser = $_SESSION['user'];
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
                     <button type="submit" class="btn theme-btn-primary">
-                        <i class="fas fa-save me-2"></i>Create Poll
+                        <i class="fas fa-poll me-2"></i>Create Opinion Poll
                     </button>
                 </div>
             </form>
@@ -402,8 +459,9 @@ let currentSearch = '';
 let currentFilters = {
     status: '',
     type: '',
-    target_audience: '',
-    date_range: ''
+    audience: '',
+    date_from: '',
+    date_to: ''
 };
 
 document.addEventListener('DOMContentLoaded', function() {
@@ -420,39 +478,14 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 
 function initializePollManagement() {
-    // Search functionality
-    const searchInput = document.getElementById('searchInput');
-    const searchButton = document.getElementById('searchButton');
+    // Initialize filters and search
+    initializeFilters();
 
-    if (searchInput && searchButton) {
-        searchButton.addEventListener('click', performSearch);
-        searchInput.addEventListener('keypress', function(e) {
-            if (e.key === 'Enter') {
-                performSearch();
-            }
-        });
+    // Initialize character counting
+    initializeCharacterCounting();
 
-        // Add debounced search on input
-        const debouncedSearch = debounce(performSearch, 500);
-        searchInput.addEventListener('input', debouncedSearch);
-    }
-
-    // Filter functionality
-    const statusFilter = document.getElementById('statusFilter');
-    const typeFilter = document.getElementById('typeFilter');
-    const audienceFilter = document.getElementById('audienceFilter');
-    const dateRangeFilter = document.getElementById('dateRangeFilter');
-
-    if (statusFilter) statusFilter.addEventListener('change', applyFilters);
-    if (typeFilter) typeFilter.addEventListener('change', applyFilters);
-    if (audienceFilter) audienceFilter.addEventListener('change', applyFilters);
-    if (dateRangeFilter) dateRangeFilter.addEventListener('change', applyFilters);
-
-    // Clear filters functionality
-    const clearFiltersBtn = document.getElementById('clearFiltersBtn');
-    if (clearFiltersBtn) {
-        clearFiltersBtn.addEventListener('click', clearAllFilters);
-    }
+    // Initialize modals
+    initializeModals();
 
     // Pagination functionality
     document.addEventListener('click', function(e) {
@@ -479,6 +512,150 @@ function initializePollManagement() {
 
         // Note: Delete and status change buttons are handled by opinion_poll_confirmations.js
     });
+}
+
+// Initialize filters and search functionality
+function initializeFilters() {
+    const searchInput = document.getElementById('searchInput');
+    const statusFilter = document.getElementById('statusFilter');
+    const typeFilter = document.getElementById('typeFilter');
+    const audienceFilter = document.getElementById('audienceFilter');
+    const dateRangeBtn = document.getElementById('dateRangeBtn');
+    const applyDateFilter = document.getElementById('applyDateFilter');
+    const clearDateFilter = document.getElementById('clearDateFilter');
+    const clearAllFiltersBtn = document.getElementById('clearAllFiltersBtn');
+
+    // Search with debounce
+    if (searchInput) {
+        const debouncedSearch = debounce((searchValue) => {
+            currentSearch = searchValue;
+            loadPolls(1);
+        }, 500);
+
+        searchInput.addEventListener('input', function() {
+            debouncedSearch(this.value.trim());
+        });
+    }
+
+    // Filter dropdowns
+    if (statusFilter) {
+        statusFilter.addEventListener('change', function() {
+            currentFilters.status = this.value;
+            loadPolls(1);
+        });
+    }
+
+    if (typeFilter) {
+        typeFilter.addEventListener('change', function() {
+            currentFilters.type = this.value;
+            loadPolls(1);
+        });
+    }
+
+    if (audienceFilter) {
+        audienceFilter.addEventListener('change', function() {
+            currentFilters.audience = this.value;
+            loadPolls(1);
+        });
+    }
+
+    // Date range toggle
+    if (dateRangeBtn) {
+        dateRangeBtn.addEventListener('click', function() {
+            const dateRangeInputs = document.getElementById('dateRangeInputs');
+            dateRangeInputs.classList.toggle('d-none');
+        });
+    }
+
+    // Apply date filter
+    if (applyDateFilter) {
+        applyDateFilter.addEventListener('click', function() {
+            const dateFrom = document.getElementById('dateFrom').value;
+            const dateTo = document.getElementById('dateTo').value;
+
+            if (dateFrom) currentFilters.date_from = dateFrom;
+            if (dateTo) currentFilters.date_to = dateTo;
+
+            loadPolls(1);
+        });
+    }
+
+    // Clear date filter
+    if (clearDateFilter) {
+        clearDateFilter.addEventListener('click', function() {
+            document.getElementById('dateFrom').value = '';
+            document.getElementById('dateTo').value = '';
+            delete currentFilters.date_from;
+            delete currentFilters.date_to;
+            loadPolls(1);
+        });
+    }
+
+    // Clear all filters
+    if (clearAllFiltersBtn) {
+        clearAllFiltersBtn.addEventListener('click', function() {
+            // Clear search
+            if (searchInput) {
+                searchInput.value = '';
+                currentSearch = '';
+            }
+
+            // Clear filter dropdowns
+            if (statusFilter) statusFilter.value = '';
+            if (typeFilter) typeFilter.value = '';
+            if (audienceFilter) audienceFilter.value = '';
+
+            // Clear date inputs
+            const dateFromInput = document.getElementById('dateFrom');
+            const dateToInput = document.getElementById('dateTo');
+            if (dateFromInput) dateFromInput.value = '';
+            if (dateToInput) dateToInput.value = '';
+
+            // Hide date range inputs
+            const dateRangeInputs = document.getElementById('dateRangeInputs');
+            if (dateRangeInputs) dateRangeInputs.classList.add('d-none');
+
+            // Reset filter object
+            currentFilters = {
+                status: '',
+                type: '',
+                audience: '',
+                date_from: '',
+                date_to: ''
+            };
+
+            // Reload polls
+            loadPolls(1);
+        });
+    }
+}
+
+// Initialize character counting
+function initializeCharacterCounting() {
+    // Character counting for title
+    const titleInput = document.getElementById('pollTitle');
+    const titleCharCount = document.getElementById('titleCharCount');
+
+    if (titleInput && titleCharCount) {
+        titleInput.addEventListener('input', function() {
+            titleCharCount.textContent = this.value.length;
+        });
+    }
+
+    // Character counting for description
+    const descriptionInput = document.getElementById('pollDescription');
+    const descriptionCharCount = document.getElementById('descriptionCharCount');
+
+    if (descriptionInput && descriptionCharCount) {
+        descriptionInput.addEventListener('input', function() {
+            descriptionCharCount.textContent = this.value.length;
+        });
+    }
+}
+
+// Initialize modals
+function initializeModals() {
+    // Modal initialization code can go here
 }
 
 function performSearch() {
@@ -539,24 +716,26 @@ function loadPolls(page = currentPage) {
     currentPage = page;
 
     // Show loading indicator
-    const loadingIndicator = document.getElementById('loadingIndicator');
-    const pollsContainer = document.getElementById('pollsContainer');
+    const loadingSpinner = document.getElementById('loadingSpinner');
+    const pollsGrid = document.getElementById('pollsGrid');
     const paginationContainer = document.getElementById('paginationContainer');
+    const noResults = document.getElementById('noResults');
 
-    if (loadingIndicator) loadingIndicator.style.display = 'block';
-    if (pollsContainer) pollsContainer.style.display = 'none';
-    if (paginationContainer) paginationContainer.style.display = 'none';
+    if (loadingSpinner) loadingSpinner.style.display = 'block';
+    if (pollsGrid) pollsGrid.innerHTML = '';
+    if (noResults) noResults.style.display = 'none';
 
     // Prepare data for AJAX request
     const formData = new FormData();
     formData.append('controller', 'OpinionPollController');
     formData.append('action', 'ajaxSearch');
     formData.append('page', currentPage);
-    formData.append('search', currentSearch);
-    formData.append('status', currentFilters.status);
-    formData.append('type', currentFilters.type);
-    formData.append('target_audience', currentFilters.target_audience);
-    formData.append('date_range', currentFilters.date_range);
+    formData.append('search', currentSearch || '');
+    formData.append('status', currentFilters.status || '');
+    formData.append('type', currentFilters.type || '');
+    formData.append('audience', currentFilters.audience || '');
+    if (currentFilters.date_from) formData.append('date_from', currentFilters.date_from);
+    if (currentFilters.date_to) formData.append('date_to', currentFilters.date_to);
 
     // Make AJAX request
     fetch('index.php', {
@@ -566,79 +745,101 @@ function loadPolls(page = currentPage) {
     .then(response => response.json())
     .then(data => {
         if (data.success) {
-            updatePollsGrid(data.polls);
+            displayPolls(data.polls);
             updatePagination(data.pagination);
-            updateSearchInfo(data.totalPolls);
+            updateResultsInfo(data.pagination);
         } else {
-            console.error('Error loading polls:', data.message);
-            // Show user-friendly message
-            const grid = document.getElementById('pollsGrid');
-            if (grid) {
-                grid.innerHTML = `
-                    <div class="col-12">
-                        <div class="alert alert-danger text-center">
-                            <i class="fas fa-exclamation-triangle me-2"></i>
-                            <div>
-                                <h5>Error Loading Polls</h5>
-                                <p>${data.message || 'Unknown error occurred'}</p>
-                            </div>
-                        </div>
-                    </div>
-                `;
-            }
+            console.error('Error loading polls:', data.error || data.message || 'Unknown error');
+            showError(data.error || data.message || 'Failed to load opinion polls. Please try again.');
         }
     })
     .catch(error => {
-        console.error('AJAX Error:', error);
-        // Show user-friendly message
-        const grid = document.getElementById('pollsGrid');
-        if (grid) {
-            grid.innerHTML = `
-                <div class="col-12">
-                    <div class="alert alert-danger text-center">
-                        <i class="fas fa-exclamation-triangle me-2"></i>
-                        <div>
-                            <h5>Network Error</h5>
-                            <p>Unable to load polls. Please check your connection and try again.</p>
-                        </div>
-                    </div>
-                </div>
-            `;
-        }
+        console.error('Network error:', error);
+        showError('Network error. Please check your connection and try again.');
     })
     .finally(() => {
         // Hide loading indicator
-        if (loadingIndicator) loadingIndicator.style.display = 'none';
-        if (pollsContainer) pollsContainer.style.display = 'block';
-        if (paginationContainer) paginationContainer.style.display = 'block';
+        if (loadingSpinner) loadingSpinner.style.display = 'none';
     });
 }
 
-function updatePollsGrid(polls) {
-    const grid = document.getElementById('pollsGrid');
-    if (!grid) return;
+// Display polls in the grid
+function displayPolls(polls) {
+    const pollsGrid = document.getElementById('pollsGrid');
+    const noResults = document.getElementById('noResults');
 
-    grid.innerHTML = '';
+    if (!pollsGrid) return;
+
+    pollsGrid.innerHTML = '';
 
     if (polls.length === 0) {
-        grid.innerHTML = `
+        noResults.style.display = 'block';
+        return;
+    }
+
+    noResults.style.display = 'none';
+
+    polls.forEach(poll => {
+        const pollCard = createPollCard(poll);
+        pollsGrid.appendChild(pollCard);
+    });
+}
+
+// Update results info
+function updateResultsInfo(pagination) {
+    const resultsInfo = document.getElementById('resultsInfo');
+    if (!resultsInfo) return;
+
+    const { current_page, total_pages, total_count, per_page } = pagination;
+    const start = ((current_page - 1) * per_page) + 1;
+    const end = Math.min(current_page * per_page, total_count);
+
+    if (total_count === 0) {
+        resultsInfo.textContent = 'No opinion polls found';
+    } else if (total_count === 1) {
+        resultsInfo.textContent = 'Showing 1 opinion poll';
+    } else if (total_pages === 1) {
+        resultsInfo.textContent = `Showing all ${total_count} opinion polls`;
+    } else {
+        resultsInfo.textContent = `Showing ${start}-${end} of ${total_count} opinion polls`;
+    }
+}
+
+// Show error message
+function showError(message) {
+    const pollsGrid = document.getElementById('pollsGrid');
+    const noResults = document.getElementById('noResults');
+
+    if (pollsGrid) {
+        pollsGrid.innerHTML = `
             <div class="col-12">
-                <div class="alert alert-info text-center">
-                    <i class="fas fa-poll me-2"></i>
+                <div class="alert alert-danger text-center">
+                    <i class="fas fa-exclamation-triangle me-2"></i>
                     <div>
-                        <h5>No polls found</h5>
-                        <p>Try adjusting your search terms or filters, or create a new poll</p>
+                        <h5>Error</h5>
+                        <p>${message}</p>
                     </div>
                 </div>
             </div>
         `;
-        return;
     }
 
-    polls.forEach(poll => {
-        const pollCard = createPollCard(poll);
-        grid.appendChild(pollCard);
-    });
+    if (noResults) {
+        noResults.style.display = 'none';
+    }
+}
+
+// Debounce function
+function debounce(func, wait) {
+    let timeout;
+    return function executedFunction(...args) {
+        const later = () => {
+            clearTimeout(timeout);
+            func(...args);
+        };
+        clearTimeout(timeout);
+        timeout = setTimeout(later, wait);
+    };
 }
 
 function createPollCard(poll) {
@@ -1488,19 +1689,6 @@ function initializeEditCharacterCounting() {
             }
         });
     }
-}
-
-// Debounce function
-function debounce(func, wait) {
-    let timeout;
-    return function executedFunction(...args) {
-        const later = () => {
-            clearTimeout(timeout);
-            func(...args);
-        };
-        clearTimeout(timeout);
-        timeout = setTimeout(later, wait);
-    };
 }
 </script>
 
