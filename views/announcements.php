@@ -67,12 +67,12 @@ include 'includes/sidebar.php';
                     <div class="card-body">
                         <div class="row g-3">
                             <!-- Search -->
-                            <div class="col-md-4">
+                            <div class="col-md-3">
                                 <div class="input-group">
                                     <span class="input-group-text">
                                         <i class="fas fa-search"></i>
                                     </span>
-                                    <input type="text" class="form-control" id="searchInput" 
+                                    <input type="text" class="form-control" id="searchInput"
                                            placeholder="Search announcements...">
                                 </div>
                             </div>
@@ -115,6 +115,13 @@ include 'includes/sidebar.php';
                                     <i class="fas fa-calendar me-2"></i>Date Range
                                 </button>
                             </div>
+
+                            <!-- Clear All Filters -->
+                            <div class="col-md-1">
+                                <button type="button" class="btn btn-outline-danger w-100" id="clearAllFiltersBtn" title="Clear all filters">
+                                    <i class="fas fa-times"></i>
+                                </button>
+                            </div>
                         </div>
 
                         <!-- Date Range Inputs (Hidden by default) -->
@@ -136,7 +143,7 @@ include 'includes/sidebar.php';
                             <div class="col-md-2">
                                 <label class="form-label">&nbsp;</label>
                                 <button type="button" class="btn btn-outline-secondary d-block" id="clearDateFilter">
-                                    Clear
+                                    Clear Date
                                 </button>
                             </div>
                         </div>
@@ -480,25 +487,41 @@ function initializeFilters() {
     const dateRangeBtn = document.getElementById('dateRangeBtn');
     const applyDateFilter = document.getElementById('applyDateFilter');
     const clearDateFilter = document.getElementById('clearDateFilter');
+    const clearAllFiltersBtn = document.getElementById('clearAllFiltersBtn');
 
     // Search with debounce
     if (searchInput) {
-        searchInput.addEventListener('input', debounce(function() {
-            currentFilters.search = this.value.trim();
+        const debouncedSearch = debounce((searchValue) => {
+            currentFilters.search = searchValue;
             loadAnnouncements(1);
-        }, 500));
+        }, 500);
+
+        searchInput.addEventListener('input', function() {
+            debouncedSearch(this.value.trim());
+        });
     }
 
     // Filter dropdowns
-    [statusFilter, audienceFilter, urgencyFilter].forEach(filter => {
-        if (filter) {
-            filter.addEventListener('change', function() {
-                const filterName = this.id.replace('Filter', '').replace(/([A-Z])/g, '_$1').toLowerCase();
-                currentFilters[filterName] = this.value;
-                loadAnnouncements(1);
-            });
-        }
-    });
+    if (statusFilter) {
+        statusFilter.addEventListener('change', function() {
+            currentFilters.status = this.value;
+            loadAnnouncements(1);
+        });
+    }
+
+    if (audienceFilter) {
+        audienceFilter.addEventListener('change', function() {
+            currentFilters.audience_type = this.value;
+            loadAnnouncements(1);
+        });
+    }
+
+    if (urgencyFilter) {
+        urgencyFilter.addEventListener('change', function() {
+            currentFilters.urgency = this.value;
+            loadAnnouncements(1);
+        });
+    }
 
     // Date range toggle
     if (dateRangeBtn) {
@@ -528,6 +551,37 @@ function initializeFilters() {
             document.getElementById('dateTo').value = '';
             delete currentFilters.date_from;
             delete currentFilters.date_to;
+            loadAnnouncements(1);
+        });
+    }
+
+    // Clear all filters
+    if (clearAllFiltersBtn) {
+        clearAllFiltersBtn.addEventListener('click', function() {
+            // Clear search
+            if (searchInput) {
+                searchInput.value = '';
+            }
+
+            // Clear filter dropdowns
+            if (statusFilter) statusFilter.value = '';
+            if (audienceFilter) audienceFilter.value = '';
+            if (urgencyFilter) urgencyFilter.value = '';
+
+            // Clear date inputs
+            const dateFromInput = document.getElementById('dateFrom');
+            const dateToInput = document.getElementById('dateTo');
+            if (dateFromInput) dateFromInput.value = '';
+            if (dateToInput) dateToInput.value = '';
+
+            // Hide date range inputs
+            const dateRangeInputs = document.getElementById('dateRangeInputs');
+            if (dateRangeInputs) dateRangeInputs.classList.add('d-none');
+
+            // Reset filter object
+            currentFilters = {};
+
+            // Reload announcements
             loadAnnouncements(1);
         });
     }
@@ -670,7 +724,7 @@ function loadAnnouncements(page = 1) {
         ...currentFilters
     });
 
-    fetch(`/Unlockyourskills/announcements/ajax/list?${params}`, {
+    fetch(`index.php?controller=AnnouncementController&action=getAnnouncements&${params}`, {
         method: 'GET',
         headers: {
             'X-Requested-With': 'XMLHttpRequest'

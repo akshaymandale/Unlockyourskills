@@ -49,6 +49,18 @@ class PollModel {
             $params[] = $filters['target_audience'];
         }
 
+        // Date range filters
+        if (!empty($filters['date_from'])) {
+            $sql .= " AND DATE(p.created_at) >= ?";
+            $params[] = $filters['date_from'];
+        }
+
+        if (!empty($filters['date_to'])) {
+            $sql .= " AND DATE(p.created_at) <= ?";
+            $params[] = $filters['date_to'];
+        }
+
+        // Legacy date_range filter (for backward compatibility)
         if (!empty($filters['date_range'])) {
             switch ($filters['date_range']) {
                 case 'active':
