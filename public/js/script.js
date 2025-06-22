@@ -202,35 +202,59 @@ document.addEventListener("DOMContentLoaded", function () {
     }
 
     // Manage Portal tab change hide and show
-
-
     let managePortalTabs = document.querySelectorAll("#managePortalTabs a");
+
+    // Function to activate a specific tab
+    function activateManagePortalTab(tabId) {
+        // Hide all tab panes
+        document.querySelectorAll(".tab-pane").forEach(pane => {
+            pane.classList.remove("show", "active");
+            pane.style.display = "none"; // Explicitly hide all
+        });
+
+        // Remove active class from all tabs
+        document.querySelectorAll("#managePortalTabs a").forEach(tab => {
+            tab.classList.remove("active");
+        });
+
+        // Show the selected tab pane
+        let targetPane = document.getElementById(tabId);
+        if (targetPane) {
+            targetPane.classList.add("show", "active");
+            targetPane.style.display = "block"; // Ensure it is visible
+        }
+
+        // Add active class to the corresponding tab
+        let targetTab = document.querySelector(`#managePortalTabs a[href="#${tabId}"]`);
+        if (targetTab) {
+            targetTab.classList.add("active");
+        }
+    }
+
+    // Check URL hash on page load and activate corresponding tab
+    function checkUrlHashForTabs() {
+        const hash = window.location.hash.substring(1); // Remove the # symbol
+        if (hash && ['user-details', 'course-details', 'social', 'settings'].includes(hash)) {
+            activateManagePortalTab(hash);
+        }
+    }
+
+    // Run on page load
+    checkUrlHashForTabs();
+
+    // Listen for hash changes
+    window.addEventListener('hashchange', checkUrlHashForTabs);
 
     managePortalTabs.forEach(tab => {
         tab.addEventListener("click", function (event) {
             event.preventDefault();
             const targetId = this.getAttribute("href").substring(1);
 
-            // Hide all tab panes
-            document.querySelectorAll(".tab-pane").forEach(pane => {
-                pane.classList.remove("show", "active");
-                pane.style.display = "none"; // Explicitly hide all
-            });
+            // Update URL hash
+            window.location.hash = targetId;
 
-            // Remove active class from all tabs
-            document.querySelectorAll("#managePortalTabs a").forEach(tab => {
-                tab.classList.remove("active");
-            });
-
-            // Show the selected tab pane
-            let targetPane = document.getElementById(targetId);
-            if (targetPane) {
-                targetPane.classList.add("show", "active");
-                targetPane.style.display = "block"; // Ensure it is visible
-            }
-
-            // Add active class to the clicked tab
-            this.classList.add("active");
+            // Activate the tab
+            activateManagePortalTab(targetId);
         });
     });
 

@@ -278,6 +278,8 @@ Router::middleware(['Auth'])->group(function() {
     Router::post('/feed/reaction', 'SocialFeedController@reaction');
     Router::post('/feed/report', 'SocialFeedController@report');
     Router::post('/feed/pin', 'SocialFeedController@pin');
+    Router::post('/feed/status', 'SocialFeedController@updateStatus');
+    Router::get('/feed/statistics', 'SocialFeedController@statistics');
     Router::post('/feed/poll-vote', 'SocialFeedController@pollVote');
     Router::get('/feed/notifications', 'SocialFeedController@notifications');
 

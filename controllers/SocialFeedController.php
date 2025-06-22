@@ -50,6 +50,7 @@ class SocialFeedController extends BaseController {
                 'post_type' => $_GET['post_type'] ?? '',
                 'visibility' => $_GET['visibility'] ?? '',
                 'status' => $_GET['status'] ?? '',
+                'is_pinned' => $_GET['is_pinned'] ?? '',
                 'date_from' => $_GET['date_from'] ?? '',
                 'date_to' => $_GET['date_to'] ?? '',
                 'search' => $_GET['search'] ?? '',
@@ -114,6 +115,7 @@ class SocialFeedController extends BaseController {
 
             // Debug logging
             error_log('SocialFeedController::create - POST data received: ' . print_r($_POST, true));
+            error_log('SocialFeedController::create - FILES data received: ' . print_r($_FILES, true));
 
             // Check if user is logged in
             if (!isset($_SESSION['user']['client_id'])) {
@@ -129,24 +131,15 @@ class SocialFeedController extends BaseController {
                 $errors[] = 'Post title cannot exceed 150 characters.';
             }
 
-            // Validate required fields
+            // Get form data without validation (client-side validation handles this)
             $content = trim($_POST['content'] ?? '');
-            if (empty($content)) {
-                $errors[] = 'Post content is required.';
-            } elseif (strlen($content) > 2000) {
-                $errors[] = 'Post content cannot exceed 2000 characters.';
-            }
-
             $category = trim($_POST['post_type'] ?? '');
-            if (empty($category)) {
-                $errors[] = 'Category is required.';
-            } elseif (!in_array($category, ['text', 'media', 'poll', 'link'])) {
-                $errors[] = 'Invalid category selected.';
-            }
-
             $visibility = $_POST['visibility'] ?? 'global';
-            if (!in_array($visibility, ['global', 'course_specific', 'group_specific'])) {
-                $errors[] = 'Invalid visibility setting.';
+
+            // Validate and set default post_type
+            $validPostTypes = ['text', 'media', 'poll', 'link'];
+            if (empty($category) || !in_array($category, $validPostTypes)) {
+                $category = 'text'; // Default to text if invalid or empty
             }
 
             // Validate tags (optional)
@@ -178,11 +171,21 @@ class SocialFeedController extends BaseController {
             // Validate media files
             $mediaFiles = [];
             if (isset($_FILES['media']) && !empty($_FILES['media']['name'][0])) {
+                error_log('SocialFeedController::create - Media files detected, validating...');
                 $mediaValidation = $this->validateMediaFiles($_FILES['media']);
                 if (!$mediaValidation['valid']) {
+                    error_log('SocialFeedController::create - Media validation failed: ' . $mediaValidation['message']);
                     $errors[] = $mediaValidation['message'];
                 } else {
+                    error_log('SocialFeedController::create - Media validation passed, handling uploads...');
                     $mediaFiles = $this->handleMediaUploads($_FILES['media']);
+                    error_log('SocialFeedController::create - Media uploads completed: ' . print_r($mediaFiles, true));
+                }
+            } else {
+                error_log('SocialFeedController::create - No media files detected in request');
+                // If post_type is media, media files are required
+                if ($category === 'media') {
+                    $errors[] = 'Please upload at least one media file.';
                 }
             }
 
@@ -194,6 +197,26 @@ class SocialFeedController extends BaseController {
                     $errors[] = $pollValidation['message'];
                 } else {
                     $pollData = $pollValidation['data'];
+                }
+            }
+
+            // Validate and prepare link data
+            $linkData = null;
+            if ($category === 'link') {
+                $linkUrl = trim($_POST['link_url'] ?? '');
+                $linkTitle = trim($_POST['link_title'] ?? '');
+                $linkDescription = trim($_POST['link_description'] ?? '');
+                
+                if (empty($linkUrl)) {
+                    $errors[] = 'URL is required for link posts.';
+                } elseif (!filter_var($linkUrl, FILTER_VALIDATE_URL)) {
+                    $errors[] = 'Please enter a valid URL including http:// or https://';
+                } else {
+                    $linkData = [
+                        'url' => $linkUrl,
+                        'title' => $linkTitle,
+                        'description' => $linkDescription
+                    ];
                 }
             }
 
@@ -220,7 +243,7 @@ class SocialFeedController extends BaseController {
             ];
 
             // Create the post
-            $result = $this->socialFeedModel->createPost($postData, $mediaFiles, $pollData);
+            $result = $this->socialFeedModel->createPost($postData, $mediaFiles, $pollData, $linkData);
             
             if ($result['success']) {
                 $this->jsonResponse([
@@ -308,24 +331,15 @@ class SocialFeedController extends BaseController {
                 $errors[] = 'Post title cannot exceed 150 characters.';
             }
 
-            // Validate required fields
+            // Get form data without validation (client-side validation handles this)
             $content = trim($_POST['content'] ?? '');
-            if (empty($content)) {
-                $errors[] = 'Post content is required.';
-            } elseif (strlen($content) > 2000) {
-                $errors[] = 'Post content cannot exceed 2000 characters.';
-            }
-
             $category = trim($_POST['post_type'] ?? '');
-            if (empty($category)) {
-                $errors[] = 'Category is required.';
-            } elseif (!in_array($category, ['text', 'media', 'poll', 'link'])) {
-                $errors[] = 'Invalid category selected.';
-            }
-
             $visibility = $_POST['visibility'] ?? 'global';
-            if (!in_array($visibility, ['global', 'course_specific', 'group_specific'])) {
-                $errors[] = 'Invalid visibility setting.';
+
+            // Validate and set default post_type
+            $validPostTypes = ['text', 'media', 'poll', 'link'];
+            if (empty($category) || !in_array($category, $validPostTypes)) {
+                $category = 'text'; // Default to text if invalid or empty
             }
 
             // Validate tags (optional)
@@ -340,6 +354,45 @@ class SocialFeedController extends BaseController {
                         $errors[] = 'Individual tags cannot exceed 50 characters.';
                         break;
                     }
+                }
+            }
+
+            // Handle media uploads
+            $mediaFiles = [];
+            if (isset($_FILES['media']) && !empty($_FILES['media']['name'][0])) {
+                // Pass raw $_FILES['media'] to updatePost instead of processing here
+                $mediaFiles = $_FILES['media'];
+            }
+
+            // Handle files to delete
+            $filesToDelete = [];
+            if (isset($_POST['files_to_delete']) && is_array($_POST['files_to_delete'])) {
+                $filesToDelete = $_POST['files_to_delete'];
+            }
+
+            // Handle poll data if included
+            $pollData = null;
+            if (isset($_POST['include_poll']) && $_POST['include_poll'] == '1') {
+                $pollData = $this->validatePollData($_POST);
+            }
+
+            // Validate and prepare link data
+            $linkData = null;
+            if ($category === 'link') {
+                $linkUrl = trim($_POST['link_url'] ?? '');
+                $linkTitle = trim($_POST['link_title'] ?? '');
+                $linkDescription = trim($_POST['link_description'] ?? '');
+                
+                if (empty($linkUrl)) {
+                    $errors[] = 'URL is required for link posts.';
+                } elseif (!filter_var($linkUrl, FILTER_VALIDATE_URL)) {
+                    $errors[] = 'Please enter a valid URL including http:// or https://';
+                } else {
+                    $linkData = [
+                        'url' => $linkUrl,
+                        'title' => $linkTitle,
+                        'description' => $linkDescription
+                    ];
                 }
             }
 
@@ -365,8 +418,12 @@ class SocialFeedController extends BaseController {
                 'client_id' => $_SESSION['user']['client_id'] ?? null
             ];
 
+            // Debug logging
+            error_log('EDIT: $_FILES = ' . print_r($_FILES, true));
+            error_log('EDIT: $mediaFiles = ' . print_r($mediaFiles, true));
+
             // Update the post
-            $result = $this->socialFeedModel->updatePost($postData);
+            $result = $this->socialFeedModel->updatePost($postData, $mediaFiles, $filesToDelete, $pollData, $linkData);
             
             if ($result['success']) {
                 $this->jsonResponse([
@@ -876,37 +933,53 @@ class SocialFeedController extends BaseController {
     }
 
     private function handleMediaUploads($files) {
+        error_log('SocialFeedController::handleMediaUploads - Starting media upload handling');
+        error_log('SocialFeedController::handleMediaUploads - Files array: ' . print_r($files, true));
+        
         $uploadedFiles = [];
         $uploadDir = 'uploads/social_feed/';
         
         // Create directory if it doesn't exist
         if (!is_dir($uploadDir)) {
             mkdir($uploadDir, 0777, true);
+            error_log('SocialFeedController::handleMediaUploads - Created upload directory: ' . $uploadDir);
         }
 
         for ($i = 0; $i < count($files['name']); $i++) {
+            error_log("SocialFeedController::handleMediaUploads - Processing file {$i}: " . $files['name'][$i]);
+            
             if ($files['error'][$i] === UPLOAD_ERR_OK) {
                 $fileName = $files['name'][$i];
                 $fileTmpName = $files['tmp_name'][$i];
                 $fileSize = $files['size'][$i];
                 $fileType = $files['type'][$i];
                 
+                error_log("SocialFeedController::handleMediaUploads - File details: name={$fileName}, tmp_name={$fileTmpName}, size={$fileSize}, type={$fileType}");
+                
                 // Generate unique filename
                 $fileExtension = pathinfo($fileName, PATHINFO_EXTENSION);
                 $uniqueFileName = uniqid() . '_' . time() . '.' . $fileExtension;
                 $filePath = $uploadDir . $uniqueFileName;
                 
+                error_log("SocialFeedController::handleMediaUploads - Attempting to move file to: {$filePath}");
+                
                 if (move_uploaded_file($fileTmpName, $filePath)) {
+                    error_log("SocialFeedController::handleMediaUploads - Successfully moved file to: {$filePath}");
                     $uploadedFiles[] = [
                         'filename' => $fileName,
                         'filepath' => $filePath,
                         'filesize' => $fileSize,
                         'filetype' => $fileType
                     ];
+                } else {
+                    error_log("SocialFeedController::handleMediaUploads - Failed to move file: {$fileTmpName} to {$filePath}");
                 }
+            } else {
+                error_log("SocialFeedController::handleMediaUploads - File upload error: " . $files['error'][$i]);
             }
         }
         
+        error_log('SocialFeedController::handleMediaUploads - Final uploaded files: ' . print_r($uploadedFiles, true));
         return $uploadedFiles;
     }
 
@@ -967,7 +1040,8 @@ class SocialFeedController extends BaseController {
      * Validate poll data
      */
     private function validatePollData($postData) {
-        $pollOptions = json_decode($postData['poll_options'], true);
+        // poll_options is already an array from form submission, no need to json_decode
+        $pollOptions = $postData['poll_options'] ?? [];
         
         if (!is_array($pollOptions)) {
             return [

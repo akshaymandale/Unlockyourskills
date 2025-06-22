@@ -24,7 +24,7 @@ class SocialFeedModel {
     public function getPosts($page = 1, $limit = 10, $filters = []) {
         try {
             $offset = ($page - 1) * $limit;
-            $whereConditions = ["p.status IN ('active', 'reported')"];
+            $whereConditions = ["p.status IN ('active', 'reported', 'archived')"];
             $params = [];
 
             // Add filters
@@ -49,6 +49,11 @@ class SocialFeedModel {
             if (isset($filters['status']) && !empty($filters['status'])) {
                 $whereConditions[] = 'p.status = ?';
                 $params[] = $filters['status'];
+            }
+
+            if (isset($filters['is_pinned']) && $filters['is_pinned'] !== '') {
+                $whereConditions[] = 'p.is_pinned = ?';
+                $params[] = $filters['is_pinned'];
             }
 
             if (isset($filters['date_from']) && !empty($filters['date_from'])) {
@@ -139,6 +144,11 @@ class SocialFeedModel {
                     $post['poll'] = $this->getPostPoll($post['id']);
                 }
 
+                // Get link data if exists
+                if ($post['post_type'] === 'link' && !empty($post['link_preview'])) {
+                    $post['link'] = json_decode($post['link_preview'], true);
+                }
+
                 // Get reactions
                 $post['reactions'] = $this->getPostReactions($post['id']);
             }
@@ -170,16 +180,22 @@ class SocialFeedModel {
     /**
      * Create a new post
      */
-    public function createPost($postData, $mediaFiles = [], $pollData = null) {
+    public function createPost($postData, $mediaFiles = [], $pollData = null, $linkData = null) {
         try {
+            error_log('SocialFeedModel::createPost - Starting post creation');
+            error_log('SocialFeedModel::createPost - Post data: ' . print_r($postData, true));
+            error_log('SocialFeedModel::createPost - Media files: ' . print_r($mediaFiles, true));
+            error_log('SocialFeedModel::createPost - Poll data: ' . print_r($pollData, true));
+            error_log('SocialFeedModel::createPost - Link data: ' . print_r($linkData, true));
+            
             $this->conn->beginTransaction();
 
             // Insert post
             $query = "
                 INSERT INTO {$this->table_posts} (
                     user_id, client_id, title, body, tags, post_type, visibility, 
-                    media_files, poll_data, is_pinned, status, created_at, updated_at
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'active', NOW(), NOW())
+                    media_files, link_preview, poll_data, is_pinned, status, created_at, updated_at
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'active', NOW(), NOW())
             ";
 
             $stmt = $this->conn->prepare($query);
@@ -192,6 +208,7 @@ class SocialFeedModel {
                 $postData['post_type'],
                 $postData['visibility'],
                 !empty($mediaFiles) ? json_encode($mediaFiles) : null,
+                $linkData ? json_encode($linkData) : null,
                 $pollData ? json_encode($pollData) : null,
                 $postData['is_pinned']
             ]);
@@ -200,15 +217,17 @@ class SocialFeedModel {
 
             // Handle media files
             if (!empty($mediaFiles)) {
+                error_log('SocialFeedModel::createPost - Inserting ' . count($mediaFiles) . ' media files');
                 foreach ($mediaFiles as $media) {
+                    error_log('SocialFeedModel::createPost - Inserting media file: ' . print_r($media, true));
                     $mediaQuery = "
-                        INSERT INTO {$this->table_media} (
+                        INSERT INTO feed_media_files (
                             post_id, client_id, file_name, file_path, file_type, 
                             file_size, mime_type, created_at
                         ) VALUES (?, ?, ?, ?, ?, ?, ?, NOW())
                     ";
                     $mediaStmt = $this->conn->prepare($mediaQuery);
-                    $mediaStmt->execute([
+                    $result = $mediaStmt->execute([
                         $postId,
                         $postData['client_id'],
                         $media['filename'],
@@ -217,7 +236,16 @@ class SocialFeedModel {
                         $media['filesize'],
                         $media['filetype']
                     ]);
+                    
+                    if ($result) {
+                        error_log('SocialFeedModel::createPost - Successfully inserted media file: ' . $media['filename']);
+                    } else {
+                        error_log('SocialFeedModel::createPost - Failed to insert media file: ' . $media['filename']);
+                        error_log('SocialFeedModel::createPost - PDO error: ' . print_r($mediaStmt->errorInfo(), true));
+                    }
                 }
+            } else {
+                error_log('SocialFeedModel::createPost - No media files to insert');
             }
 
             $this->conn->commit();
@@ -315,6 +343,12 @@ class SocialFeedModel {
             // Enhance post with additional data
             $post['media'] = $this->getPostMedia($postId);
             $post['poll'] = $this->getPostPoll($postId);
+            
+            // Get link data if exists
+            if ($post['post_type'] === 'link' && !empty($post['link_preview'])) {
+                $post['link'] = json_decode($post['link_preview'], true);
+            }
+            
             $post['reactions'] = $this->getPostReactions($postId);
             $post['comments'] = $this->getComments($postId, $clientId)['comments'] ?? [];
             $post['reports'] = $this->getPostReports($postId);
@@ -805,7 +839,7 @@ class SocialFeedModel {
     /**
      * Update an existing post
      */
-    public function updatePost($postData) {
+    public function updatePost($postData, $mediaFiles = [], $filesToDelete = [], $pollData = null, $linkData = null) {
         try {
             $this->conn->beginTransaction();
 
@@ -813,7 +847,7 @@ class SocialFeedModel {
             $query = "
                 UPDATE {$this->table_posts} 
                 SET title = ?, body = ?, tags = ?, post_type = ?, visibility = ?, 
-                    is_pinned = ?, updated_at = NOW()
+                    link_preview = ?, is_pinned = ?, updated_at = NOW()
                 WHERE id = ? AND user_id = ? AND client_id = ?
             ";
 
@@ -824,6 +858,7 @@ class SocialFeedModel {
                 $postData['tags'] ?? null,
                 $postData['post_type'],
                 $postData['visibility'],
+                $linkData ? json_encode($linkData) : null,
                 $postData['is_pinned'],
                 $postData['id'],
                 $postData['author_id'],
@@ -832,6 +867,123 @@ class SocialFeedModel {
 
             if ($stmt->rowCount() === 0) {
                 throw new Exception('Post not found or you do not have permission to edit it');
+            }
+
+            // Delete specified media files
+            if (!empty($filesToDelete)) {
+                foreach ($filesToDelete as $filename) {
+                    // Get file info from database
+                    $fileQuery = "SELECT * FROM feed_media_files WHERE post_id = ? AND file_name = ?";
+                    $fileStmt = $this->conn->prepare($fileQuery);
+                    $fileStmt->execute([$postData['id'], $filename]);
+                    $fileInfo = $fileStmt->fetch(PDO::FETCH_ASSOC);
+                    
+                    if ($fileInfo) {
+                        // Delete physical file
+                        $filePath = $fileInfo['file_path'];
+                        if (file_exists($filePath)) {
+                            unlink($filePath);
+                        }
+                        
+                        // Delete from database
+                        $deleteQuery = "DELETE FROM feed_media_files WHERE id = ?";
+                        $deleteStmt = $this->conn->prepare($deleteQuery);
+                        $deleteStmt->execute([$fileInfo['id']]);
+                    }
+                }
+            }
+
+            // Add new media files
+            if (!empty($mediaFiles)) {
+                // Handle $_FILES format (array with name, type, tmp_name, error, size keys)
+                for ($i = 0; $i < count($mediaFiles['name']); $i++) {
+                    error_log('MODEL: Processing mediaFile index ' . $i . ': ' . print_r([
+                        'name' => $mediaFiles['name'][$i],
+                        'type' => $mediaFiles['type'][$i],
+                        'tmp_name' => $mediaFiles['tmp_name'][$i],
+                        'size' => $mediaFiles['size'][$i],
+                        'error' => $mediaFiles['error'][$i]
+                    ], true));
+                    
+                    if ($mediaFiles['error'][$i] === UPLOAD_ERR_OK) {
+                        $uploadDir = 'uploads/social_feed/';
+                        if (!is_dir($uploadDir)) {
+                            mkdir($uploadDir, 0755, true);
+                        }
+
+                        $filename = time() . '_' . $mediaFiles['name'][$i];
+                        $filePath = $uploadDir . $filename;
+                        $fileType = $this->getFileType($mediaFiles['type'][$i]);
+                        
+                        error_log('MODEL: About to move_uploaded_file from ' . $mediaFiles['tmp_name'][$i] . ' to ' . $filePath);
+                        
+                        if (move_uploaded_file($mediaFiles['tmp_name'][$i], $filePath)) {
+                            error_log('MODEL: move_uploaded_file succeeded');
+                            $mediaQuery = "
+                                INSERT INTO feed_media_files (
+                                    post_id, client_id, file_name, file_path, file_type, 
+                                    file_size, mime_type, created_at
+                                ) VALUES (?, ?, ?, ?, ?, ?, ?, NOW())
+                            ";
+                            $mediaStmt = $this->conn->prepare($mediaQuery);
+                            $mediaStmt->execute([
+                                $postData['id'],
+                                $postData['client_id'],
+                                $filename,
+                                $filePath,
+                                $fileType,
+                                $mediaFiles['size'][$i],
+                                $mediaFiles['type'][$i]
+                            ]);
+                        } else {
+                            error_log('MODEL: move_uploaded_file FAILED');
+                        }
+                    } else {
+                        error_log('MODEL: File upload error: ' . $mediaFiles['error'][$i]);
+                    }
+                }
+            }
+
+            // Update the media_files column in feed_posts table to match feed_media_files
+            $this->updatePostMediaFilesColumn($postData['id']);
+
+            // Handle poll data
+            if ($pollData) {
+                // Delete existing poll if any
+                $deletePollQuery = "DELETE FROM feed_poll_options WHERE poll_id IN (SELECT id FROM feed_polls WHERE post_id = ?)";
+                $deletePollStmt = $this->conn->prepare($deletePollQuery);
+                $deletePollStmt->execute([$postData['id']]);
+
+                $deletePollQuery = "DELETE FROM feed_polls WHERE post_id = ?";
+                $deletePollStmt = $this->conn->prepare($deletePollQuery);
+                $deletePollStmt->execute([$postData['id']]);
+
+                // Insert new poll
+                $pollQuery = "
+                    INSERT INTO feed_polls (
+                        post_id, question, allow_multiple_votes, client_id, created_at
+                    ) VALUES (?, ?, ?, ?, NOW())
+                ";
+                $pollStmt = $this->conn->prepare($pollQuery);
+                $pollStmt->execute([
+                    $postData['id'],
+                    $pollData['question'],
+                    $pollData['allow_multiple_votes'],
+                    $postData['client_id']
+                ]);
+
+                $pollId = $this->conn->lastInsertId();
+
+                // Insert poll options
+                foreach ($pollData['options'] as $option) {
+                    $optionQuery = "
+                        INSERT INTO feed_poll_options (
+                            poll_id, text, votes, created_at
+                        ) VALUES (?, ?, 0, NOW())
+                    ";
+                    $optionStmt = $this->conn->prepare($optionQuery);
+                    $optionStmt->execute([$pollId, $option]);
+                }
             }
 
             $this->conn->commit();
@@ -846,6 +998,42 @@ class SocialFeedModel {
                 'success' => false,
                 'message' => 'Failed to update post: ' . $e->getMessage()
             ];
+        }
+    }
+
+    /**
+     * Update the media_files column in feed_posts to match feed_media_files table
+     */
+    private function updatePostMediaFilesColumn($postId) {
+        try {
+            // Get all media files for this post from feed_media_files table
+            $query = "SELECT file_name, file_path, file_size, mime_type FROM feed_media_files WHERE post_id = ? ORDER BY created_at ASC";
+            $stmt = $this->conn->prepare($query);
+            $stmt->execute([$postId]);
+            $mediaFiles = $stmt->fetchAll(PDO::FETCH_ASSOC);
+            
+            // Transform to match the JSON format used in media_files column
+            $mediaData = [];
+            foreach ($mediaFiles as $file) {
+                $mediaData[] = [
+                    'filename' => $file['file_name'],
+                    'filepath' => $file['file_path'],
+                    'filesize' => $file['file_size'],
+                    'filetype' => $file['mime_type']
+                ];
+            }
+            
+            // Update the media_files column in feed_posts table
+            $updateQuery = "UPDATE feed_posts SET media_files = ? WHERE id = ?";
+            $updateStmt = $this->conn->prepare($updateQuery);
+            $updateStmt->execute([
+                !empty($mediaData) ? json_encode($mediaData) : null,
+                $postId
+            ]);
+            
+            error_log("SocialFeedModel::updatePostMediaFilesColumn - Updated media_files column for post {$postId} with " . count($mediaData) . " files");
+        } catch (Exception $e) {
+            error_log("SocialFeedModel::updatePostMediaFilesColumn - Error: " . $e->getMessage());
         }
     }
 
@@ -869,11 +1057,23 @@ class SocialFeedModel {
      */
     private function getPostMedia($postId) {
         try {
-            $query = "SELECT * FROM feed_media WHERE post_id = ? ORDER BY created_at ASC";
+            error_log("SocialFeedModel::getPostMedia - Getting media files for post ID: {$postId}");
+            $query = "SELECT * FROM feed_media_files WHERE post_id = ? ORDER BY created_at ASC";
             $stmt = $this->conn->prepare($query);
             $stmt->execute([$postId]);
-            return $stmt->fetchAll(PDO::FETCH_ASSOC);
+            $media = $stmt->fetchAll(PDO::FETCH_ASSOC);
+            
+            // Transform the data to include url field for display
+            foreach ($media as &$item) {
+                $item['url'] = $item['file_path'];
+                $item['type'] = $item['mime_type'];
+                $item['filename'] = $item['file_name'];
+            }
+            
+            error_log("SocialFeedModel::getPostMedia - Found " . count($media) . " media files: " . print_r($media, true));
+            return $media;
         } catch (Exception $e) {
+            error_log("SocialFeedModel::getPostMedia - Error: " . $e->getMessage());
             return [];
         }
     }
