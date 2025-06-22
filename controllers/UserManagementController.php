@@ -32,12 +32,18 @@ class UserManagementController extends BaseController {
             $_SESSION['client_management_timestamp'] = time();
         }
 
+        // Clear client management mode if not coming from client management
+        if (!isset($_GET['client_id'])) {
+            unset($_SESSION['client_management_mode']);
+        }
+
         // Determine user scope based on role
         if ($currentUser && $currentUser['system_role'] === 'super_admin') {
             // Super admin can see all users or filter by client
             if ($clientId) {
-                $users = $this->userModel->getUsersByClient($clientId, $limit, $offset);
-                $totalUsers = count($this->userModel->getUsersByClient($clientId, 999999, 0));
+                // When coming from client management, show only Admin users for that client
+                $users = $this->userModel->getAdminUsersByClient($clientId, $limit, $offset);
+                $totalUsers = count($this->userModel->getAdminUsersByClient($clientId, 999999, 0));
                 $client = $this->clientModel->getClientById($clientId);
             } else {
                 $users = $this->userModel->getAllUsersPaginated($limit, $offset);
@@ -69,11 +75,13 @@ class UserManagementController extends BaseController {
         $uniqueGenders = $this->userModel->getDistinctGenders();
 
         // Get current user's client ID for user limit check
-        $clientId = $_SESSION['user']['client_id'] ?? null;
+        $currentUserClientId = $_SESSION['user']['client_id'] ?? null;
         $userLimitStatus = null;
 
-        if ($clientId) {
-            $userLimitStatus = $this->userModel->getUserLimitStatus($clientId);
+        // Use target client ID for user limit check if filtering by specific client
+        $targetClientIdForLimit = $clientId ?: $currentUserClientId;
+        if ($targetClientIdForLimit) {
+            $userLimitStatus = $this->userModel->getUserLimitStatus($targetClientIdForLimit);
         }
 
         // Get custom field creation setting for current client
@@ -649,9 +657,37 @@ class UserManagementController extends BaseController {
                 $filters['gender'] = $_POST['gender'];
             }
 
-            // Get users from database
-            $users = $this->userModel->getAllUsersPaginated($limit, $offset, $search, $filters);
-            $totalUsers = $this->userModel->getTotalUserCount($search, $filters);
+            // Handle client filtering for super admin
+            $clientId = null;
+            $currentUser = $_SESSION['user'] ?? null;
+            
+            if ($currentUser && $currentUser['system_role'] === 'super_admin') {
+                // Super admin can filter by client
+                if (!empty($_POST['client_id'])) {
+                    $clientId = $_POST['client_id'];
+                }
+            } elseif ($currentUser && $currentUser['system_role'] === 'admin') {
+                // Client admin can only see users from their client
+                $clientId = $currentUser['client_id'];
+            }
+
+            // Get users from database based on client context
+            if ($clientId) {
+                if (!empty($_SESSION['client_management_mode'])) {
+                    // In client management mode, show only Admin users for that client
+                    $users = $this->userModel->getAdminUsersByClient($clientId, $limit, $offset, $search, $filters);
+                    $totalUsers = count($this->userModel->getAdminUsersByClient($clientId, 999999, 0, $search, $filters));
+                } else {
+                    // Otherwise, show all users for the client
+                    $users = $this->userModel->getUsersByClient($clientId, $limit, $offset, $search, $filters);
+                    $totalUsers = count($this->userModel->getUsersByClient($clientId, 999999, 0, $search, $filters));
+                }
+            } else {
+                // Get all users (super admin viewing all)
+                $users = $this->userModel->getAllUsersPaginated($limit, $offset, $search, $filters);
+                $totalUsers = $this->userModel->getTotalUserCount($search, $filters);
+            }
+            
             $totalPages = ceil($totalUsers / $limit);
 
             // Add encrypted IDs to users for secure URL generation
@@ -775,6 +811,7 @@ class UserManagementController extends BaseController {
     public function clientUsers($clientId = null) {
         if ($clientId) {
             $_GET['client_id'] = $clientId;
+            $_SESSION['client_management_mode'] = true;
         }
         return $this->index();
     }

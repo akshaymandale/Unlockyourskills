@@ -1,105 +1,150 @@
 <?php
+// Check if user is logged in
+if (!isset($_SESSION['user']['client_id'])) {
+    header('Location: index.php?controller=LoginController');
+    exit;
+}
+
 require_once 'core/UrlHelper.php';
-include 'includes/header.php'; ?>
-<?php include 'includes/navbar.php'; ?>
-<?php include 'includes/sidebar.php'; ?>
+require_once 'config/Localization.php';
+
+$systemRole = $_SESSION['user']['system_role'] ?? '';
+$canManageAll = in_array($systemRole, ['super_admin', 'admin']);
+
+include 'includes/header.php';
+include 'includes/navbar.php';
+include 'includes/sidebar.php';
+?>
 
 <div class="main-content">
     <div class="container mt-4 client-management">
+        <!-- Back Arrow and Title -->
+        <div class="back-arrow-container">
+            <a href="<?= UrlHelper::url('manage-portal') ?>" class="back-link">
+                <i class="fas fa-arrow-left"></i>
+            </a>
+            <span class="divider-line"></span>
+            <h1 class="page-title text-purple">
+                <i class="fas fa-building me-2"></i>
+                Client Management
+            </h1>
+        </div>
 
-        <!-- Page Header -->
-        <h1 class="page-title text-purple"><?= Localization::translate('client_management_title'); ?></h1>
+        <!-- Breadcrumb Navigation -->
+        <nav aria-label="breadcrumb" class="mb-3">
+            <ol class="breadcrumb">
+                <li class="breadcrumb-item">
+                    <a href="<?= UrlHelper::url('dashboard') ?>"><?= Localization::translate('dashboard'); ?></a>
+                </li>
+                <li class="breadcrumb-item">
+                    <a href="<?= UrlHelper::url('manage-portal') ?>"><?= Localization::translate('manage_portal'); ?></a>
+                </li>
+                <li class="breadcrumb-item active" aria-current="page">Client Management</li>
+            </ol>
+        </nav>
 
-        <!-- ✅ Filters & Search Section -->
-        <div class="filter-section">
-            <div class="container-fluid mb-3">
-                <!-- Single Row: All Controls -->
-                <div class="row justify-content-between align-items-center g-3">
-
-                    <!-- Search Bar -->
-                    <div class="col-auto">
-                        <div class="input-group input-group-sm">
-                            <input type="text" id="searchInput" class="form-control"
-                                placeholder="<?= Localization::translate('clients_search_placeholder'); ?>"
-                                title="<?= Localization::translate('clients_search_title'); ?>">
-                            <button type="button" id="searchButton" class="btn btn-outline-secondary"
-                                title="<?= Localization::translate('clients_search_title'); ?>">
-                                <i class="fas fa-search"></i>
-                            </button>
-                        </div>
+        <!-- Page Description -->
+        <div class="row mb-4">
+            <div class="col-12">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <p class="text-muted mb-0">Manage client organizations, settings, and configurations</p>
                     </div>
-
-                    <!-- Client Filter (for super admin) -->
-                    <?php if (isset($_SESSION['user']) && $_SESSION['user']['system_role'] === 'super_admin'): ?>
-                    <div class="col-auto">
-                        <select id="clientFilter" class="form-select form-select-sm compact-filter">
-                            <option value=""><?= Localization::translate('all_clients'); ?></option>
-                            <?php foreach ($allClientsForFilter as $clientOption): ?>
-                                <option value="<?= $clientOption['id'] ?>">
-                                    <?= htmlspecialchars($clientOption['client_name']) ?>
-                                </option>
-                            <?php endforeach; ?>
-                        </select>
-                    </div>
-                    <?php endif; ?>
-
-                    <!-- Status Filter -->
-                    <div class="col-auto">
-                        <select id="statusFilter" class="form-select form-select-sm compact-filter">
-                            <option value=""><?= Localization::translate('clients_all_statuses'); ?></option>
-                            <option value="active"><?= Localization::translate('clients_active'); ?></option>
-                            <option value="inactive"><?= Localization::translate('clients_inactive'); ?></option>
-                            <option value="suspended"><?= Localization::translate('clients_suspended'); ?></option>
-                        </select>
-                    </div>
-
-                    <!-- Clear Filters Button -->
-                    <div class="col-auto">
-                        <button type="button" id="clearFiltersBtn" class="btn btn-sm btn-clear-filters"
-                            title="<?= Localization::translate('clients_clear_filters_title'); ?>">
-                            <i class="fas fa-times me-1"></i> <?= Localization::translate('clients_clear_filters'); ?>
-                        </button>
-                    </div>
-
-                    <!-- Add Client Button -->
-                    <div class="col-auto">
-                        <button type="button" class="btn btn-sm btn-primary"
-                            data-bs-toggle="modal"
-                            data-bs-target="#addClientModal"
-                            title="<?= Localization::translate('clients_add_client_title'); ?>">
-                            <i class="fas fa-plus me-1"></i> <?= Localization::translate('clients_add_client'); ?>
-                        </button>
-                    </div>
-
+                    <button type="button" class="btn theme-btn-primary" data-bs-toggle="modal" data-bs-target="#addClientModal">
+                        <i class="fas fa-plus me-2"></i>Add Client
+                    </button>
                 </div>
             </div>
         </div>
 
-        <!-- Search Results Info -->
-        <div id="searchResultsInfo" class="search-results-info" style="display: none;">
-            <i class="fas fa-info-circle"></i>
-            <span id="resultsText"></span>
-        </div>
+        <!-- Filters and Search -->
+        <div class="row mb-4">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-body">
+                        <div class="row g-3">
+                            <!-- Search -->
+                            <div class="col-md-4">
+                                <div class="input-group">
+                                    <span class="input-group-text">
+                                        <i class="fas fa-search"></i>
+                                    </span>
+                                    <input type="text" id="searchInput" class="form-control"
+                                        placeholder="<?= Localization::translate('clients_search_placeholder'); ?>"
+                                        title="<?= Localization::translate('clients_search_title'); ?>">
+                                </div>
+                            </div>
 
-        <!-- Loading Indicator -->
-        <div id="loadingIndicator" class="text-center loading-indicator" style="display: none;">
-            <div class="spinner-border text-primary" role="status">
-                <span class="visually-hidden">Loading...</span>
+                            <!-- Client Filter (for super admin) -->
+                            <?php if (isset($_SESSION['user']) && $_SESSION['user']['system_role'] === 'super_admin'): ?>
+                            <div class="col-md-3">
+                                <select id="clientFilter" class="form-select">
+                                    <option value=""><?= Localization::translate('all_clients'); ?></option>
+                                    <?php foreach ($allClientsForFilter as $clientOption): ?>
+                                        <option value="<?= $clientOption['id'] ?>">
+                                            <?= htmlspecialchars($clientOption['client_name']) ?>
+                                        </option>
+                                    <?php endforeach; ?>
+                                </select>
+                            </div>
+                            <?php endif; ?>
+
+                            <!-- Status Filter -->
+                            <div class="col-md-3">
+                                <select id="statusFilter" class="form-select">
+                                    <option value=""><?= Localization::translate('clients_all_statuses'); ?></option>
+                                    <option value="active"><?= Localization::translate('clients_active'); ?></option>
+                                    <option value="inactive"><?= Localization::translate('clients_inactive'); ?></option>
+                                    <option value="suspended"><?= Localization::translate('clients_suspended'); ?></option>
+                                </select>
+                            </div>
+
+                            <!-- Clear All Filters -->
+                            <div class="col-md-2">
+                                <button type="button" class="btn btn-outline-danger w-100" id="clearFiltersBtn" title="<?= Localization::translate('clients_clear_filters_title'); ?>">
+                                    <i class="fas fa-times me-1"></i>Clear
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
             </div>
-            <p class="mt-2"><?= Localization::translate('clients_loading'); ?></p>
         </div>
 
-        <!-- Clients Container -->
+        <!-- Results Info -->
+        <div class="row mb-3">
+            <div class="col-12">
+                <div class="search-results-info">
+                    <i class="fas fa-info-circle"></i>
+                    <span id="resultsInfo">Loading clients...</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Clients Grid -->
         <div id="clientsContainer">
-            <!-- Clients Grid -->
             <div id="clientsGrid" class="row">
-                <!-- Clients will be loaded dynamically via AJAX -->
+                <!-- Clients will be loaded here via AJAX -->
             </div>
         </div>
 
-        <!-- Pagination Container -->
-        <div id="paginationContainer" style="display: none;">
-            <!-- Pagination will be generated dynamically -->
+        <!-- Pagination -->
+        <div class="row">
+            <div class="col-12">
+                <div id="paginationContainer">
+                    <!-- Pagination will be loaded here -->
+                </div>
+            </div>
+        </div>
+
+        <!-- Loading Spinner -->
+        <div class="row" id="loadingIndicator" style="display: none;">
+            <div class="col-12 text-center py-5">
+                <div class="spinner-border text-primary" role="status">
+                    <span class="visually-hidden">Loading...</span>
+                </div>
+                <p class="mt-2 text-muted">Loading clients...</p>
+            </div>
         </div>
     </div>
 </div>
@@ -114,7 +159,7 @@ include 'includes/header.php'; ?>
                 </h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="<?= Localization::translate('clients_close'); ?>"></button>
             </div>
-            <form id="addClientForm" method="POST" action="index.php?controller=ClientController&action=store" enctype="multipart/form-data">
+            <form id="addClientForm" method="POST" action="/clients" enctype="multipart/form-data">
                 <div class="modal-body">
                     <div class="row">
                         <!-- Basic Information -->
@@ -237,7 +282,7 @@ include 'includes/header.php'; ?>
                 </h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="<?= Localization::translate('clients_close'); ?>"></button>
             </div>
-            <form id="editClientForm" method="POST" action="index.php?controller=ClientController&action=update" enctype="multipart/form-data">
+            <form id="editClientForm" method="POST" action="" enctype="multipart/form-data">
                 <input type="hidden" id="edit_client_id" name="client_id">
                 <div class="modal-body">
                     <div class="row">
@@ -382,7 +427,7 @@ window.translations = <?= json_encode([
 <script src="<?= UrlHelper::url('public/js/client_management.js') ?>"></script>
 
 <script>
-// Dynamic client management with AJAX (like assessment questions)
+// Dynamic client management with AJAX (like social feed)
 let currentPage = 1;
 let currentSearch = '';
 let currentFilters = {
@@ -401,20 +446,15 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 
 function initializeClientManagement() {
-    // Search functionality
+    // Search functionality with debounce
     const searchInput = document.getElementById('searchInput');
-    const searchButton = document.getElementById('searchButton');
-
-    if (searchInput && searchButton) {
-        searchButton.addEventListener('click', performSearch);
-        searchInput.addEventListener('keypress', function(e) {
-            if (e.key === 'Enter') {
-                performSearch();
-            }
-        });
-
-        // Add debounced search on input
-        const debouncedSearch = debounce(performSearch, 500);
+    if (searchInput) {
+        const debouncedSearch = debounce(() => {
+            currentSearch = searchInput.value.trim();
+            currentPage = 1;
+            loadClients();
+        }, 500);
+        
         searchInput.addEventListener('input', debouncedSearch);
     }
 
@@ -423,11 +463,19 @@ function initializeClientManagement() {
     const clientFilter = document.getElementById('clientFilter');
 
     if (statusFilter) {
-        statusFilter.addEventListener('change', applyFilters);
+        statusFilter.addEventListener('change', () => {
+            currentFilters.status = statusFilter.value;
+            currentPage = 1;
+            loadClients();
+        });
     }
 
     if (clientFilter) {
-        clientFilter.addEventListener('change', applyFilters);
+        clientFilter.addEventListener('change', () => {
+            currentFilters.client_id = clientFilter.value;
+            currentPage = 1;
+            loadClients();
+        });
     }
 
     // Clear filters functionality
@@ -446,25 +494,6 @@ function initializeClientManagement() {
     });
 }
 
-function performSearch() {
-    const searchInput = document.getElementById('searchInput');
-    if (searchInput) {
-        currentSearch = searchInput.value.trim();
-        currentPage = 1; // Reset to first page
-        loadClients();
-    }
-}
-
-function applyFilters() {
-    const statusFilter = document.getElementById('statusFilter');
-    const clientFilter = document.getElementById('clientFilter');
-
-    currentFilters.status = statusFilter ? statusFilter.value : '';
-    currentFilters.client_id = clientFilter ? clientFilter.value : '';
-    currentPage = 1; // Reset to first page
-    loadClients();
-}
-
 function clearAllFilters() {
     // Clear search
     const searchInput = document.getElementById('searchInput');
@@ -473,7 +502,7 @@ function clearAllFilters() {
         currentSearch = '';
     }
 
-    // Clear filters
+    // Clear all filters
     const statusFilter = document.getElementById('statusFilter');
     const clientFilter = document.getElementById('clientFilter');
 
@@ -531,7 +560,7 @@ function loadClients(page = currentPage) {
                         <i class="fas fa-building fa-3x text-muted mb-3"></i>
                         <h5 class="text-muted">No clients found</h5>
                         <p class="text-muted">Try adjusting your search criteria or create a new client.</p>
-                        <button type="button" class="btn theme-btn-primary" data-bs-toggle="modal" data-bs-target="#createClientModal">
+                        <button type="button" class="btn theme-btn-primary" data-bs-toggle="modal" data-bs-target="#addClientModal">
                             <i class="fas fa-plus me-2"></i>Create First Client
                         </button>
                     </div>
@@ -558,10 +587,9 @@ function loadClients(page = currentPage) {
         }
     })
     .finally(() => {
-        // Hide loading indicator
+        // Hide loading indicator and show clients container
         if (loadingIndicator) loadingIndicator.style.display = 'none';
         if (clientsContainer) clientsContainer.style.display = 'block';
-        if (paginationContainer) paginationContainer.style.display = 'block';
     });
 }
 
@@ -577,7 +605,7 @@ function updateClientsGrid(clients) {
                 <i class="fas fa-building fa-3x text-muted mb-3"></i>
                 <h5 class="text-muted">No clients found</h5>
                 <p class="text-muted">Try adjusting your search criteria or create a new client.</p>
-                <button type="button" class="btn theme-btn-primary" data-bs-toggle="modal" data-bs-target="#createClientModal">
+                <button type="button" class="btn theme-btn-primary" data-bs-toggle="modal" data-bs-target="#addClientModal">
                     <i class="fas fa-plus me-2"></i>Create First Client
                 </button>
             </div>
@@ -621,8 +649,8 @@ function createClientCard(client) {
                data-id="${client.id}"
                data-name="${escapeHtml(client.client_name)}"
                title="Delete Client">
-                <i class="fas fa-trash-alt"></i>
-            </a>`
+             <i class="fas fa-trash-alt"></i>
+         </a>`
         : '';
 
     col.innerHTML = `
@@ -682,13 +710,9 @@ function createClientCard(client) {
                             title="Edit Client">
                         <i class="fas fa-edit"></i>
                     </button>
-                    <a href="index.php?controller=UserManagementController&client_id=${client.id}"
+                    <a href="${getProjectUrl('clients/' + client.id + '/users')}"
                        class="btn btn-sm btn-outline-primary" title="Manage Users">
                         <i class="fas fa-users"></i>
-                    </a>
-                    <a href="index.php?controller=ClientController&action=stats&id=${client.id}"
-                       class="btn btn-sm btn-outline-info" title="Statistics">
-                        <i class="fas fa-chart-bar"></i>
                     </a>
                     ${deleteButton}
                 </div>
@@ -753,26 +777,32 @@ function updatePagination(pagination) {
 }
 
 function updateSearchInfo(totalClients) {
-    const searchInfo = document.getElementById('searchResultsInfo');
-    const resultsText = document.getElementById('resultsText');
+    const resultsInfo = document.getElementById('resultsInfo');
+    if (!resultsInfo) return;
 
-    if (!searchInfo || !resultsText) return;
+    // Check if any filters are applied
+    const hasFilters = currentSearch || 
+                      currentFilters.status || 
+                      currentFilters.client_id;
 
-    if (currentSearch || currentFilters.status || currentFilters.client_id) {
+    if (hasFilters) {
         let infoText = `Showing ${totalClients} result${totalClients !== 1 ? 's' : ''}`;
 
         if (currentSearch) {
             infoText += ` for search: "<strong>${escapeHtml(currentSearch)}</strong>"`;
         }
 
-        if (currentFilters.status || currentFilters.client_id) {
-            infoText += ' with filters applied';
+        const appliedFilters = [];
+        if (currentFilters.status) appliedFilters.push(`Status: ${currentFilters.status}`);
+        if (currentFilters.client_id) appliedFilters.push(`Client: ${currentFilters.client_id}`);
+
+        if (appliedFilters.length > 0) {
+            infoText += ` with filters: ${appliedFilters.join(', ')}`;
         }
 
-        resultsText.innerHTML = infoText;
-        searchInfo.style.display = 'block';
+        resultsInfo.innerHTML = infoText;
     } else {
-        searchInfo.style.display = 'none';
+        resultsInfo.innerHTML = `Showing ${totalClients} client${totalClients !== 1 ? 's' : ''}`;
     }
 }
 
@@ -804,12 +834,13 @@ function debounce(func, wait) {
         timeout = setTimeout(later, wait);
     };
 }
+
+// Project URL helper function
+function getProjectUrl(path) {
+    const baseUrl = window.location.origin + '/Unlockyourskills/';
+    return baseUrl + path.replace(/^\//, '');
+}
 </script>
 
-
-
-
-
-
-
 <?php include 'includes/footer.php'; ?>
+

@@ -180,7 +180,7 @@ document.addEventListener('DOMContentLoaded', function() {
         button.disabled = true;
 
         // Fetch client data
-        fetch(`index.php?controller=ClientController&action=edit&id=${clientId}&ajax=1`)
+        fetch(getProjectUrl(`clients/${clientId}/edit?ajax=1`))
             .then(response => response.json())
             .then(data => {
                 if (data.success) {
@@ -202,6 +202,12 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     function populateEditModal(client) {
+        // Set form action
+        const editForm = document.getElementById('editClientForm');
+        if (editForm) {
+            editForm.action = `/clients/${client.id}/update`;
+        }
+
         // Populate basic information
         document.getElementById('edit_client_id').value = client.id;
         document.getElementById('edit_client_name').value = client.client_name || '';
@@ -275,7 +281,7 @@ document.addEventListener('DOMContentLoaded', function() {
         element.disabled = true;
 
         // First check if client can be deleted
-        fetch(`index.php?controller=ClientController&action=canDelete&id=${id}`)
+        fetch(getProjectUrl(`clients/${id}/can-delete`))
             .then(response => response.json())
             .then(data => {
                 if (data.error) {
@@ -286,12 +292,12 @@ document.addEventListener('DOMContentLoaded', function() {
                     // Client can be deleted, show confirmation modal
                     if (typeof window.confirmDelete === 'function') {
                         window.confirmDelete(`client "${name}"`, function() {
-                            window.location.href = `index.php?controller=ClientController&action=delete&id=${id}`;
+                            window.location.href = getProjectUrl(`clients/${id}/delete`);
                         });
                     } else {
                         // Fallback to browser confirm if modal system not available
                         if (confirm(`Are you sure you want to delete client "${name}"? This action is not reversible.`)) {
-                            window.location.href = `index.php?controller=ClientController&action=delete&id=${id}`;
+                            window.location.href = getProjectUrl(`clients/${id}/delete`);
                         }
                     }
                 }
@@ -379,3 +385,9 @@ document.addEventListener('DOMContentLoaded', function() {
     window.showToastMessage = showToastMessage;
     window.showToastOrAlert = showToastOrAlert;
 });
+
+// Project URL helper function
+function getProjectUrl(path) {
+    const baseUrl = window.location.origin + '/Unlockyourskills/';
+    return baseUrl + path.replace(/^\//, '');
+}
