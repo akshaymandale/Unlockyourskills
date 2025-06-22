@@ -550,8 +550,7 @@ include 'includes/sidebar.php';
                             <option value="spam">Spam</option>
                             <option value="inappropriate">Inappropriate Content</option>
                             <option value="harassment">Harassment</option>
-                            <option value="misinformation">Misinformation</option>
-                            <option value="copyright">Copyright Violation</option>
+                            <option value="fake_news">Fake News/Misinformation</option>
                             <option value="other">Other</option>
                         </select>
                     </div>
@@ -755,6 +754,192 @@ include 'includes/sidebar.php';
     .grid-view .post-card {
         width: 100%;
     }
+}
+
+/* Post Detail Modal Styles */
+.post-detail {
+    max-width: 100%;
+}
+
+.post-detail .post-header {
+    background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+    border-radius: 8px;
+    padding: 1.5rem;
+    margin-bottom: 2rem;
+}
+
+.post-detail .avatar img {
+    border: 3px solid #fff;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.post-detail .post-content {
+    background: #fff;
+    border-radius: 8px;
+    padding: 1.5rem;
+    margin-bottom: 2rem;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+}
+
+.post-detail .post-body {
+    line-height: 1.6;
+    color: #333;
+}
+
+.post-detail .post-stats {
+    background: #f8f9fa;
+    border-radius: 8px;
+    padding: 1.5rem;
+    margin-bottom: 2rem;
+}
+
+.post-detail .stat-item {
+    padding: 1rem;
+    border-radius: 6px;
+    background: #fff;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    transition: transform 0.2s ease;
+}
+
+.post-detail .stat-item:hover {
+    transform: translateY(-2px);
+}
+
+.post-detail .stat-item i {
+    font-size: 1.5rem;
+    margin-bottom: 0.5rem;
+}
+
+.post-detail .comments-section {
+    background: #fff;
+    border-radius: 8px;
+    padding: 1.5rem;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+}
+
+.post-detail .comments-list {
+    max-height: 400px;
+    overflow-y: auto;
+}
+
+.post-detail .comment-item {
+    background: #f8f9fa;
+    border-radius: 6px;
+    padding: 1rem;
+    margin-bottom: 1rem;
+    border: 1px solid #e9ecef;
+}
+
+.post-detail .comment-item:last-child {
+    margin-bottom: 0;
+}
+
+.post-detail .comment-item img {
+    border: 2px solid #fff;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+}
+
+/* Modal size adjustments */
+#postDetailModal .modal-dialog {
+    max-width: 800px;
+}
+
+#postDetailModal .modal-body {
+    max-height: 80vh;
+    overflow-y: auto;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    .post-detail .post-header {
+        padding: 1rem;
+    }
+    
+    .post-detail .post-content {
+        padding: 1rem;
+    }
+    
+    .post-detail .post-stats {
+        padding: 1rem;
+    }
+    
+    .post-detail .comments-section {
+        padding: 1rem;
+    }
+    
+    #postDetailModal .modal-dialog {
+        margin: 0.5rem;
+        max-width: calc(100% - 1rem);
+    }
+}
+
+/* Report Details Styling */
+.reports-section {
+    border-top: 2px solid #dc3545;
+    padding-top: 1rem;
+}
+
+.report-item {
+    background-color: #fff5f5 !important;
+    border-left: 4px solid #dc3545 !important;
+}
+
+.report-item .badge {
+    font-size: 0.75rem;
+}
+
+.report-details {
+    background-color: #f8f9fa;
+    padding: 0.75rem;
+    border-radius: 4px;
+    border-left: 3px solid #6c757d;
+}
+
+.moderator-notes {
+    background-color: #e3f2fd;
+    padding: 0.75rem;
+    border-radius: 4px;
+    border-left: 3px solid #007bff;
+}
+
+.post-detail .reports-section h6 {
+    color: #dc3545;
+    font-weight: 600;
+}
+
+.post-detail .report-item strong {
+    color: #dc3545;
+}
+
+.post-detail .moderator-notes strong {
+    color: #007bff;
+}
+
+/* Reported Post Styling */
+.post-card.reported {
+    border-left: 4px solid #dc3545;
+    background-color: #fff5f5;
+}
+
+.post-card.reported .post-header {
+    background-color: #f8f9fa;
+    border-bottom: 1px solid #dc3545;
+}
+
+.post-card.reported .reported-badge {
+    background-color: #dc3545;
+    color: white;
+    padding: 0.25rem 0.5rem;
+    border-radius: 4px;
+    font-size: 0.75rem;
+    font-weight: 500;
+    animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+    0% { opacity: 1; }
+    50% { opacity: 0.7; }
+    100% { opacity: 1; }
 }
 </style>
 

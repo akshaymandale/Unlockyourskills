@@ -576,10 +576,23 @@ class SocialFeedController extends BaseController {
                 throw new Exception('Invalid request method');
             }
 
-            // Check if user is logged in
-            if (!isset($_SESSION['user']['client_id'])) {
+            // Check if user is logged in and has required session data
+            if (!isset($_SESSION['user'])) {
                 throw new Exception('Unauthorized access. Please log in.');
             }
+
+            if (!isset($_SESSION['user']['id'])) {
+                throw new Exception('User ID not found in session. Please log in again.');
+            }
+
+            if (!isset($_SESSION['user']['client_id'])) {
+                throw new Exception('Client ID not found in session. Please log in again.');
+            }
+
+            // Debug logging
+            error_log('Report submission - User ID: ' . $_SESSION['user']['id']);
+            error_log('Report submission - Client ID: ' . $_SESSION['user']['client_id']);
+            error_log('Report submission - POST data: ' . print_r($_POST, true));
 
             // Server-side validation
             $errors = [];
@@ -592,15 +605,13 @@ class SocialFeedController extends BaseController {
             $reason = trim($_POST['reason'] ?? '');
             if (empty($reason)) {
                 $errors[] = 'Report reason is required.';
-            } elseif (!in_array($reason, ['spam', 'inappropriate', 'harassment', 'violence', 'copyright', 'other'])) {
+            } elseif (!in_array($reason, ['spam', 'inappropriate', 'harassment', 'fake_news', 'other'])) {
                 $errors[] = 'Invalid report reason.';
             }
 
-            $description = trim($_POST['description'] ?? '');
-            if (empty($description)) {
-                $errors[] = 'Report description is required.';
-            } elseif (strlen($description) > 500) {
-                $errors[] = 'Report description cannot exceed 500 characters.';
+            $details = trim($_POST['details'] ?? '');
+            if (!empty($details) && strlen($details) > 500) {
+                $errors[] = 'Report details cannot exceed 500 characters.';
             }
 
             // Check for validation errors
@@ -615,10 +626,12 @@ class SocialFeedController extends BaseController {
             $reportData = [
                 'post_id' => $postId,
                 'reason' => $reason,
-                'description' => $description,
+                'description' => $details,
                 'reported_by_user_id' => $_SESSION['user']['id'],
-                'client_id' => $_SESSION['user']['client_id'] ?? null
+                'client_id' => $_SESSION['user']['client_id']
             ];
+
+            error_log('Report data being sent to model: ' . print_r($reportData, true));
 
             $result = $this->socialFeedModel->reportPost($reportData);
             
@@ -634,6 +647,7 @@ class SocialFeedController extends BaseController {
                 ]);
             }
         } catch (Exception $e) {
+            error_log('Report submission error: ' . $e->getMessage());
             $this->jsonResponse([
                 'success' => false,
                 'message' => 'Failed to submit report: ' . $e->getMessage()

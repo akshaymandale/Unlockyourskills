@@ -24,7 +24,7 @@ class SocialFeedModel {
     public function getPosts($page = 1, $limit = 10, $filters = []) {
         try {
             $offset = ($page - 1) * $limit;
-            $whereConditions = ["p.status = 'active'"];
+            $whereConditions = ["p.status IN ('active', 'reported')"];
             $params = [];
 
             // Add filters
@@ -97,7 +97,8 @@ class SocialFeedModel {
                         ELSE 0 
                     END as can_delete,
                     (SELECT COUNT(*) FROM feed_comments WHERE post_id = p.id) as comment_count,
-                    (SELECT COUNT(*) FROM feed_reactions WHERE post_id = p.id) as reaction_count
+                    (SELECT COUNT(*) FROM feed_reactions WHERE post_id = p.id) as reaction_count,
+                    (SELECT COUNT(*) FROM feed_reports WHERE post_id = p.id AND status != 'dismissed') as report_count
                 FROM {$this->table_posts} p
                 LEFT JOIN user_profiles up ON p.user_id = up.id
                 WHERE {$whereClause}
@@ -236,7 +237,44 @@ class SocialFeedModel {
     }
 
     /**
-     * Get post by ID
+     * Get report details for a post
+     */
+    private function getPostReports($postId)
+    {
+        try {
+            $query = "
+                SELECT 
+                    r.*,
+                    up.full_name as reporter_name,
+                    up.profile_picture as reporter_avatar
+                FROM {$this->table_reports} r
+                LEFT JOIN user_profiles up ON r.reported_by_user_id = up.id
+                WHERE r.post_id = ? AND r.status != 'dismissed'
+                ORDER BY r.created_at DESC
+            ";
+
+            $stmt = $this->conn->prepare($query);
+            $stmt->execute([$postId]);
+            $reports = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+            // Enhance reports with reporter data
+            foreach ($reports as &$report) {
+                $report['reporter'] = [
+                    'id' => $report['reported_by_user_id'],
+                    'name' => $report['reporter_name'],
+                    'avatar' => $report['reporter_avatar']
+                ];
+            }
+
+            return $reports;
+        } catch (Exception $e) {
+            error_log('Error getting post reports: ' . $e->getMessage());
+            return [];
+        }
+    }
+
+    /**
+     * Get post by ID with all related data
      */
     public function getPostById($postId, $clientId = null)
     {
@@ -279,6 +317,8 @@ class SocialFeedModel {
             $post['poll'] = $this->getPostPoll($postId);
             $post['reactions'] = $this->getPostReactions($postId);
             $post['comments'] = $this->getComments($postId, $clientId)['comments'] ?? [];
+            $post['reports'] = $this->getPostReports($postId);
+            $post['report_count'] = count($post['reports']);
             $post['author'] = [
                 'id' => $post['user_id'],
                 'name' => $post['full_name'],
@@ -519,7 +559,7 @@ class SocialFeedModel {
             $checkStmt = $this->conn->prepare($checkQuery);
             $checkStmt->execute([
                 $reportData['post_id'],
-                $reportData['reporter_id']
+                $reportData['reported_by_user_id']
             ]);
 
             if ($checkStmt->fetch(PDO::FETCH_ASSOC)) {
@@ -540,7 +580,7 @@ class SocialFeedModel {
             $reportStmt = $this->conn->prepare($reportQuery);
             $reportStmt->execute([
                 $reportData['post_id'],
-                $reportData['reporter_id'],
+                $reportData['reported_by_user_id'],
                 $reportData['reason'],
                 $reportData['description'],
                 $reportData['client_id']
