@@ -136,6 +136,18 @@ require_once 'core/UrlHelper.php';
                         </div>
                     </div>
 
+                    <!-- Event Management -->
+                    <div class="col-md-6">
+                        <div class="card user-box shadow-sm" onclick="window.location.href='<?= UrlHelper::url('events') ?>'">
+                            <h5><i class="fas fa-calendar-alt text-purple"></i> Event Management</h5>
+                            <p><small class="text-muted">Create and manage events, webinars, and live sessions</small></p>
+                            <div class="mt-2">
+                                <span class="badge bg-success">Active</span>
+                                <span class="badge bg-light text-dark">New Feature</span>
+                            </div>
+                        </div>
+                    </div>
+
                     <!-- Discussion Forums (Coming Soon) -->
                     <div class="col-md-6">
                         <div class="card user-box shadow-sm" onclick="alert('Discussion Forums - Coming Soon')">
@@ -165,6 +177,18 @@ require_once 'core/UrlHelper.php';
                             <p><small class="text-muted">Gamification and achievement tracking</small></p>
                             <div class="mt-2">
                                 <span class="badge bg-secondary">Coming Soon</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Social Feed (News Wall) -->
+                    <div class="col-md-6">
+                        <div class="card user-box shadow-sm" onclick="window.location.href='<?= UrlHelper::url('feed') ?>'">
+                            <h5><i class="fas fa-rss text-purple"></i> Social Feed (News Wall)</h5>
+                            <p><small class="text-muted">Share updates, media, and discussions in a community feed</small></p>
+                            <div class="mt-2">
+                                <span class="badge bg-success">Active</span>
+                                <span class="badge bg-light text-dark">New Feature</span>
                             </div>
                         </div>
                     </div>
