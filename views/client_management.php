@@ -527,14 +527,13 @@ function loadClients(page = currentPage) {
             const grid = document.getElementById('clientsGrid');
             if (grid) {
                 grid.innerHTML = `
-                    <div class="col-12">
-                        <div class="alert alert-danger text-center">
-                            <i class="fas fa-exclamation-triangle me-2"></i>
-                            <div>
-                                <h5>Error Loading Clients</h5>
-                                <p>${data.message || 'Unknown error occurred'}</p>
-                            </div>
-                        </div>
+                    <div class="col-12 text-center py-5">
+                        <i class="fas fa-building fa-3x text-muted mb-3"></i>
+                        <h5 class="text-muted">No clients found</h5>
+                        <p class="text-muted">Try adjusting your search criteria or create a new client.</p>
+                        <button type="button" class="btn theme-btn-primary" data-bs-toggle="modal" data-bs-target="#createClientModal">
+                            <i class="fas fa-plus me-2"></i>Create First Client
+                        </button>
                     </div>
                 `;
             }
@@ -574,14 +573,13 @@ function updateClientsGrid(clients) {
 
     if (clients.length === 0) {
         grid.innerHTML = `
-            <div class="col-12">
-                <div class="alert alert-info text-center">
-                    <i class="fas fa-search me-2"></i>
-                    <div>
-                        <h5>No clients found</h5>
-                        <p>Try adjusting your search terms or filters</p>
-                    </div>
-                </div>
+            <div class="col-12 text-center py-5">
+                <i class="fas fa-building fa-3x text-muted mb-3"></i>
+                <h5 class="text-muted">No clients found</h5>
+                <p class="text-muted">Try adjusting your search criteria or create a new client.</p>
+                <button type="button" class="btn theme-btn-primary" data-bs-toggle="modal" data-bs-target="#createClientModal">
+                    <i class="fas fa-plus me-2"></i>Create First Client
+                </button>
             </div>
         `;
         return;

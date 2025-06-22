@@ -43,19 +43,19 @@ document.addEventListener("DOMContentLoaded", function () {
     adjustContainerWidth();
 
     function adjustContainerWidth() {
-        if (sidebar.classList.contains("collapsed")) {
+        if (container && sidebar.classList.contains("collapsed")) {
             container.style.marginLeft = "80px";
             container.style.maxWidth = "calc(100% - 80px)";
-        } else {
+        } else if (container) {
             container.style.marginLeft = "250px";
             container.style.maxWidth = "calc(100% - 250px)";
         }
     }
 
     // ✅ Ensure correct container margin based on sidebar state
-    if (sidebar.classList.contains("collapsed")) {
+    if (container && sidebar.classList.contains("collapsed")) {
         container.style.marginLeft = "80px"; // Sidebar is collapsed
-    } else {
+    } else if (container) {
         container.style.marginLeft = "250px"; // Sidebar is expanded
     }
 
@@ -65,9 +65,9 @@ document.addEventListener("DOMContentLoaded", function () {
         sidebarToggle.addEventListener("click", function () {
             sidebar.classList.toggle("collapsed");
 
-            if (sidebar.classList.contains("collapsed")) {
+            if (container && sidebar.classList.contains("collapsed")) {
                 container.style.marginLeft = "80px"; // Adjust for collapsed sidebar
-            } else {
+            } else if (container) {
                 container.style.marginLeft = "250px"; // Adjust for expanded sidebar
             }
 

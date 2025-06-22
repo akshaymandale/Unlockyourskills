@@ -243,6 +243,44 @@ Router::middleware(['Auth'])->group(function() {
     Router::get('/announcements/{id}/view', 'AnnouncementController@viewAnnouncement');
     Router::post('/announcements/{id}/mark-read', 'AnnouncementController@markAsRead');
 
+    // ===================================
+    // EVENTS
+    // ===================================
+
+    // Event Management
+    Router::get('/events', 'EventController@index');
+    Router::post('/events', 'EventController@create');
+    Router::get('/events/{id}/edit', 'EventController@edit');
+    Router::put('/events/{id}', 'EventController@update');
+    Router::delete('/events/{id}', 'EventController@delete');
+
+    // Event AJAX operations
+    Router::get('/events/ajax/list', 'EventController@getEvents');
+    Router::post('/events/status', 'EventController@updateStatus');
+    Router::get('/events/{id}/attendees', 'EventController@attendees');
+    Router::post('/events/{id}/rsvp', 'EventController@rsvp');
+
+    // Event Viewing (for learners)
+    Router::get('/my-events', 'EventController@viewEvents');
+    Router::get('/events/{id}/view', 'EventController@viewEvent');
+
+    // ===================================
+    // SOCIAL FEED (NEWS WALL)
+    // ===================================
+    Router::get('/feed', 'SocialFeedController@index');
+    Router::get('/feed/list', 'SocialFeedController@list');
+    Router::post('/feed', 'SocialFeedController@create');
+    Router::get('/feed/{id}', 'SocialFeedController@show');
+    Router::post('/feed/edit', 'SocialFeedController@edit');
+    Router::post('/feed/delete', 'SocialFeedController@delete');
+    Router::get('/feed/comment', 'SocialFeedController@comments');
+    Router::post('/feed/comment', 'SocialFeedController@comment');
+    Router::post('/feed/reaction', 'SocialFeedController@reaction');
+    Router::post('/feed/report', 'SocialFeedController@report');
+    Router::post('/feed/pin', 'SocialFeedController@pin');
+    Router::post('/feed/poll-vote', 'SocialFeedController@pollVote');
+    Router::get('/feed/notifications', 'SocialFeedController@notifications');
+
 });
 
 // ===================================
