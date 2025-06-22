@@ -96,6 +96,25 @@ document.addEventListener("DOMContentLoaded", function () {
             mediaFiles.removeEventListener("change", validateMediaFiles);
             mediaFiles.addEventListener("change", validateMediaFiles);
         }
+
+        // Add validation for link fields
+        const linkUrl = document.getElementById("linkUrl");
+        if (linkUrl) {
+            linkUrl.removeEventListener("blur", validateLinkUrl);
+            linkUrl.addEventListener("blur", validateLinkUrl);
+        }
+
+        const linkTitle = document.getElementById("linkTitle");
+        if (linkTitle) {
+            linkTitle.removeEventListener("blur", validateLinkTitle);
+            linkTitle.addEventListener("blur", validateLinkTitle);
+        }
+
+        const linkDescription = document.getElementById("linkDescription");
+        if (linkDescription) {
+            linkDescription.removeEventListener("blur", validateLinkDescription);
+            linkDescription.addEventListener("blur", validateLinkDescription);
+        }
     }
 
     /**
@@ -126,6 +145,25 @@ document.addEventListener("DOMContentLoaded", function () {
         if (editPostContent) {
             editPostContent.removeEventListener("input", validateEditPostContentLength);
             editPostContent.addEventListener("input", validateEditPostContentLength);
+        }
+
+        // Add validation for edit link fields
+        const editLinkUrl = document.getElementById("editLinkUrl");
+        if (editLinkUrl) {
+            editLinkUrl.removeEventListener("blur", validateEditLinkUrl);
+            editLinkUrl.addEventListener("blur", validateEditLinkUrl);
+        }
+
+        const editLinkTitle = document.getElementById("editLinkTitle");
+        if (editLinkTitle) {
+            editLinkTitle.removeEventListener("blur", validateEditLinkTitle);
+            editLinkTitle.addEventListener("blur", validateEditLinkTitle);
+        }
+
+        const editLinkDescription = document.getElementById("editLinkDescription");
+        if (editLinkDescription) {
+            editLinkDescription.removeEventListener("blur", validateEditLinkDescription);
+            editLinkDescription.addEventListener("blur", validateEditLinkDescription);
         }
     }
 
@@ -267,6 +305,14 @@ document.addEventListener("DOMContentLoaded", function () {
             isValid = false;
         }
 
+        // Validate link fields if post type is 'link'
+        const postType = document.getElementById("post_type");
+        if (postType && postType.value === 'link') {
+            if (!validateLinkFields()) {
+                isValid = false;
+            }
+        }
+
         return isValid;
     }
 
@@ -311,6 +357,14 @@ document.addEventListener("DOMContentLoaded", function () {
         // Validate media files
         if (!validateMediaFiles()) {
             isValid = false;
+        }
+
+        // Validate link fields if post type is 'link'
+        const postType = document.getElementById("editPostType");
+        if (postType && postType.value === 'link') {
+            if (!validateEditLinkFields()) {
+                isValid = false;
+            }
         }
 
         return isValid;
@@ -707,6 +761,260 @@ document.addEventListener("DOMContentLoaded", function () {
 
         hideError(tagInput);
         return true;
+    }
+
+    /**
+     * Validate link fields for create form
+     */
+    function validateLinkFields() {
+        let isValid = true;
+        
+        const linkUrl = document.getElementById("linkUrl");
+        const linkTitle = document.getElementById("linkTitle");
+        const linkDescription = document.getElementById("linkDescription");
+        
+        // Validate URL (required)
+        if (linkUrl) {
+            const urlValue = linkUrl.value.trim();
+            if (urlValue === "") {
+                showError(linkUrl, translate('js.validation.link_url_required') || 'URL is required for link posts.');
+                isValid = false;
+            } else if (!isValidUrl(urlValue)) {
+                showError(linkUrl, translate('js.validation.invalid_url') || 'Please enter a valid URL including http:// or https://');
+                isValid = false;
+            } else {
+                hideError(linkUrl);
+            }
+        }
+        
+        // Validate title (optional but if provided, check length)
+        if (linkTitle && linkTitle.value.trim() !== "") {
+            const titleValue = linkTitle.value.trim();
+            if (titleValue.length > 200) {
+                showError(linkTitle, translate('js.validation.link_title_too_long') || 'Link title cannot exceed 200 characters.');
+                isValid = false;
+            } else {
+                hideError(linkTitle);
+            }
+        }
+        
+        // Validate description (optional but if provided, check length)
+        if (linkDescription && linkDescription.value.trim() !== "") {
+            const descValue = linkDescription.value.trim();
+            if (descValue.length > 500) {
+                showError(linkDescription, translate('js.validation.link_description_too_long') || 'Link description cannot exceed 500 characters.');
+                isValid = false;
+            } else {
+                hideError(linkDescription);
+            }
+        }
+        
+        return isValid;
+    }
+
+    /**
+     * Validate link fields for edit form
+     */
+    function validateEditLinkFields() {
+        let isValid = true;
+        
+        const linkUrl = document.getElementById("editLinkUrl");
+        const linkTitle = document.getElementById("editLinkTitle");
+        const linkDescription = document.getElementById("editLinkDescription");
+        
+        // Validate URL (required)
+        if (linkUrl) {
+            const urlValue = linkUrl.value.trim();
+            if (urlValue === "") {
+                showError(linkUrl, translate('js.validation.link_url_required') || 'URL is required for link posts.');
+                isValid = false;
+            } else if (!isValidUrl(urlValue)) {
+                showError(linkUrl, translate('js.validation.invalid_url') || 'Please enter a valid URL including http:// or https://');
+                isValid = false;
+            } else {
+                hideError(linkUrl);
+            }
+        }
+        
+        // Validate title (optional but if provided, check length)
+        if (linkTitle && linkTitle.value.trim() !== "") {
+            const titleValue = linkTitle.value.trim();
+            if (titleValue.length > 200) {
+                showError(linkTitle, translate('js.validation.link_title_too_long') || 'Link title cannot exceed 200 characters.');
+                isValid = false;
+            } else {
+                hideError(linkTitle);
+            }
+        }
+        
+        // Validate description (optional but if provided, check length)
+        if (linkDescription && linkDescription.value.trim() !== "") {
+            const descValue = linkDescription.value.trim();
+            if (descValue.length > 500) {
+                showError(linkDescription, translate('js.validation.link_description_too_long') || 'Link description cannot exceed 500 characters.');
+                isValid = false;
+            } else {
+                hideError(linkDescription);
+            }
+        }
+        
+        return isValid;
+    }
+
+    /**
+     * Validate URL format
+     */
+    function isValidUrl(string) {
+        try {
+            const url = new URL(string);
+            return url.protocol === 'http:' || url.protocol === 'https:';
+        } catch (_) {
+            return false;
+        }
+    }
+
+    /**
+     * Validate link URL field
+     */
+    function validateLinkUrl(e) {
+        const field = e.target;
+        const value = field.value.trim();
+        
+        // Only validate if post type is 'link'
+        const postType = document.getElementById("post_type");
+        if (!postType || postType.value !== 'link') {
+            hideError(field);
+            return true;
+        }
+        
+        if (value === "") {
+            showError(field, translate('js.validation.link_url_required') || 'URL is required for link posts.');
+            return false;
+        } else if (!isValidUrl(value)) {
+            showError(field, translate('js.validation.invalid_url') || 'Please enter a valid URL including http:// or https://');
+            return false;
+        } else {
+            hideError(field);
+            return true;
+        }
+    }
+
+    /**
+     * Validate link title field
+     */
+    function validateLinkTitle(e) {
+        const field = e.target;
+        const value = field.value.trim();
+        
+        // Only validate if post type is 'link' and value is provided
+        const postType = document.getElementById("post_type");
+        if (!postType || postType.value !== 'link' || value === "") {
+            hideError(field);
+            return true;
+        }
+        
+        if (value.length > 200) {
+            showError(field, translate('js.validation.link_title_too_long') || 'Link title cannot exceed 200 characters.');
+            return false;
+        } else {
+            hideError(field);
+            return true;
+        }
+    }
+
+    /**
+     * Validate link description field
+     */
+    function validateLinkDescription(e) {
+        const field = e.target;
+        const value = field.value.trim();
+        
+        // Only validate if post type is 'link' and value is provided
+        const postType = document.getElementById("post_type");
+        if (!postType || postType.value !== 'link' || value === "") {
+            hideError(field);
+            return true;
+        }
+        
+        if (value.length > 500) {
+            showError(field, translate('js.validation.link_description_too_long') || 'Link description cannot exceed 500 characters.');
+            return false;
+        } else {
+            hideError(field);
+            return true;
+        }
+    }
+
+    /**
+     * Validate edit link URL field
+     */
+    function validateEditLinkUrl(e) {
+        const field = e.target;
+        const value = field.value.trim();
+        
+        // Only validate if post type is 'link'
+        const postType = document.getElementById("editPostType");
+        if (!postType || postType.value !== 'link') {
+            hideError(field);
+            return true;
+        }
+        
+        if (value === "") {
+            showError(field, translate('js.validation.link_url_required') || 'URL is required for link posts.');
+            return false;
+        } else if (!isValidUrl(value)) {
+            showError(field, translate('js.validation.invalid_url') || 'Please enter a valid URL including http:// or https://');
+            return false;
+        } else {
+            hideError(field);
+            return true;
+        }
+    }
+
+    /**
+     * Validate edit link title field
+     */
+    function validateEditLinkTitle(e) {
+        const field = e.target;
+        const value = field.value.trim();
+        
+        // Only validate if post type is 'link' and value is provided
+        const postType = document.getElementById("editPostType");
+        if (!postType || postType.value !== 'link' || value === "") {
+            hideError(field);
+            return true;
+        }
+        
+        if (value.length > 200) {
+            showError(field, translate('js.validation.link_title_too_long') || 'Link title cannot exceed 200 characters.');
+            return false;
+        } else {
+            hideError(field);
+            return true;
+        }
+    }
+
+    /**
+     * Validate edit link description field
+     */
+    function validateEditLinkDescription(e) {
+        const field = e.target;
+        const value = field.value.trim();
+        
+        // Only validate if post type is 'link' and value is provided
+        const postType = document.getElementById("editPostType");
+        if (!postType || postType.value !== 'link' || value === "") {
+            hideError(field);
+            return true;
+        }
+        
+        if (value.length > 500) {
+            showError(field, translate('js.validation.link_description_too_long') || 'Link description cannot exceed 500 characters.');
+            return false;
+        } else {
+            hideError(field);
+            return true;
+        }
     }
 
     /**

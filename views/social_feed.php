@@ -104,8 +104,20 @@ include 'includes/sidebar.php';
                                 <select class="form-select" id="statusFilter">
                                     <option value="">All Status</option>
                                     <option value="active">Active</option>
-                                    <option value="pinned">Pinned</option>
+                                    <option value="scheduled">Scheduled</option>
+                                    <option value="draft">Draft</option>
+                                    <option value="expired">Expired</option>
+                                    <option value="archived">Archived</option>
                                     <option value="reported">Reported</option>
+                                </select>
+                            </div>
+
+                            <!-- Pinned Filter -->
+                            <div class="col-md-2">
+                                <select class="form-select" id="pinnedFilter">
+                                    <option value="">All Posts</option>
+                                    <option value="1">Pinned Only</option>
+                                    <option value="0">Unpinned Only</option>
                                 </select>
                             </div>
 
@@ -208,7 +220,7 @@ include 'includes/sidebar.php';
                 <h5 class="modal-title" id="createPostModalLabel">Create New Post</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
-            <form id="createPostForm">
+            <form id="createPostForm" enctype="multipart/form-data">
                 <div class="modal-body">
                     <div class="row">
                         <div class="col-md-8">
@@ -236,7 +248,7 @@ include 'includes/sidebar.php';
                             </div>
 
                             <!-- Media Upload -->
-                            <div class="mb-3">
+                            <div class="mb-3" id="createMediaSection" style="display: none;">
                                 <label class="form-label">Media Files</label>
                                 <div class="drop-zone" id="mediaDropZone">
                                     <div class="drop-zone-text">
@@ -268,6 +280,29 @@ include 'includes/sidebar.php';
                                     <label class="form-check-label" for="allowMultipleVotes">
                                         Allow multiple votes
                                     </label>
+                                </div>
+                            </div>
+
+                            <!-- Link Creation -->
+                            <div class="mb-3" id="linkSection" style="display: none;">
+                                <label class="form-label">Link Details</label>
+                                <div class="mb-3">
+                                    <label for="linkUrl" class="form-label">URL *</label>
+                                    <input type="url" class="form-control" id="linkUrl" name="link_url" 
+                                        placeholder="https://example.com">
+                                    <div class="form-text">Enter the full URL including http:// or https://</div>
+                                </div>
+                                <div class="mb-3">
+                                    <label for="linkTitle" class="form-label">Link Title</label>
+                                    <input type="text" class="form-control" id="linkTitle" name="link_title" 
+                                        placeholder="Enter link title (optional)">
+                                    <div class="form-text">Leave empty to use the page title from the URL</div>
+                                </div>
+                                <div class="mb-3">
+                                    <label for="linkDescription" class="form-label">Link Description</label>
+                                    <textarea class="form-control" id="linkDescription" name="link_description" 
+                                        rows="3" placeholder="Enter link description (optional)"></textarea>
+                                    <div class="form-text">Brief description of the link content</div>
                                 </div>
                             </div>
                         </div>
@@ -371,7 +406,7 @@ include 'includes/sidebar.php';
                 <h5 class="modal-title" id="editPostModalLabel">Edit Post</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
-            <form id="editPostForm">
+            <form id="editPostForm" enctype="multipart/form-data">
                 <div class="modal-body">
                     <input type="hidden" id="editPostId" name="post_id">
                     <div class="row">
@@ -400,7 +435,7 @@ include 'includes/sidebar.php';
                             </div>
 
                             <!-- Media Upload -->
-                            <div class="mb-3">
+                            <div class="mb-3" id="editMediaSection" style="display: none;">
                                 <label class="form-label">Media Files</label>
                                 <div class="drop-zone" id="editMediaDropZone">
                                     <div class="drop-zone-text">
@@ -432,6 +467,29 @@ include 'includes/sidebar.php';
                                     <label class="form-check-label" for="editAllowMultipleVotes">
                                         Allow multiple votes
                                     </label>
+                                </div>
+                            </div>
+
+                            <!-- Link Creation -->
+                            <div class="mb-3" id="editLinkSection" style="display: none;">
+                                <label class="form-label">Link Details</label>
+                                <div class="mb-3">
+                                    <label for="editLinkUrl" class="form-label">URL *</label>
+                                    <input type="url" class="form-control" id="editLinkUrl" name="link_url" 
+                                        placeholder="https://example.com">
+                                    <div class="form-text">Enter the full URL including http:// or https://</div>
+                                </div>
+                                <div class="mb-3">
+                                    <label for="editLinkTitle" class="form-label">Link Title</label>
+                                    <input type="text" class="form-control" id="editLinkTitle" name="link_title" 
+                                        placeholder="Enter link title (optional)">
+                                    <div class="form-text">Leave empty to use the page title from the URL</div>
+                                </div>
+                                <div class="mb-3">
+                                    <label for="editLinkDescription" class="form-label">Link Description</label>
+                                    <textarea class="form-control" id="editLinkDescription" name="link_description" 
+                                        rows="3" placeholder="Enter link description (optional)"></textarea>
+                                    <div class="form-text">Brief description of the link content</div>
                                 </div>
                             </div>
                         </div>
@@ -523,8 +581,98 @@ include 'includes/sidebar.php';
                 <h5 class="modal-title" id="postDetailModalLabel">Post Details</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
-            <div class="modal-body" id="postDetailContent">
-                <!-- Post details will be loaded here -->
+            <div class="modal-body">
+                <div class="row">
+                    <div class="col-md-8">
+                        <!-- Post Content -->
+                        <div class="mb-4">
+                            <div class="post-content"></div>
+                        </div>
+
+                        <!-- Media Files -->
+                        <div class="mb-4">
+                            <h6><i class="fas fa-images me-2"></i>Media Files</h6>
+                            <div class="post-media"></div>
+                        </div>
+
+                        <!-- Poll Data -->
+                        <div class="mb-4">
+                            <h6><i class="fas fa-poll me-2"></i>Poll</h6>
+                            <div class="post-poll"></div>
+                        </div>
+                    </div>
+
+                    <div class="col-md-4">
+                        <!-- Post Meta Information -->
+                        <div class="card mb-3">
+                            <div class="card-header">
+                                <h6 class="mb-0"><i class="fas fa-info-circle me-2"></i>Post Information</h6>
+                            </div>
+                            <div class="card-body">
+                                <div class="mb-2">
+                                    <strong>Author:</strong>
+                                    <span class="post-author"></span>
+                                </div>
+                                <div class="mb-2">
+                                    <strong>Date:</strong>
+                                    <span class="post-date"></span>
+                                </div>
+                                <div class="mb-2">
+                                    <strong>Type:</strong>
+                                    <span class="post-type"></span>
+                                </div>
+                                <div class="mb-2">
+                                    <strong>Status & Visibility:</strong>
+                                    <div class="post-status"></div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Tags -->
+                        <div class="card mb-3">
+                            <div class="card-header">
+                                <h6 class="mb-0"><i class="fas fa-tags me-2"></i>Tags</h6>
+                            </div>
+                            <div class="card-body">
+                                <div class="post-tags"></div>
+                            </div>
+                        </div>
+
+                        <!-- Statistics -->
+                        <div class="card mb-3">
+                            <div class="card-header">
+                                <h6 class="mb-0"><i class="fas fa-chart-bar me-2"></i>Statistics</h6>
+                            </div>
+                            <div class="card-body">
+                                <div class="mb-2">
+                                    <strong>Views:</strong>
+                                    <span class="post-views"></span>
+                                </div>
+                                <div class="mb-2">
+                                    <strong>Reactions:</strong>
+                                    <span class="post-reactions"></span>
+                                </div>
+                                <div class="mb-2">
+                                    <strong>Comments:</strong>
+                                    <span class="post-comments"></span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Reports -->
+                        <div class="card mb-3">
+                            <div class="card-header">
+                                <h6 class="mb-0"><i class="fas fa-flag me-2"></i>Reports</h6>
+                            </div>
+                            <div class="card-body">
+                                <div class="post-reports"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
             </div>
         </div>
     </div>
@@ -577,371 +725,6 @@ include 'includes/sidebar.php';
 <div class="toast-container position-fixed bottom-0 end-0 p-3" id="toastContainer">
     <!-- Toast notifications will be added here -->
 </div>
-
-<!-- Custom CSS for Social Feed -->
-<style>
-.drop-zone {
-    border: 2px dashed #dee2e6;
-    border-radius: 8px;
-    padding: 2rem;
-    text-align: center;
-    cursor: pointer;
-    transition: all 0.3s ease;
-}
-
-.drop-zone:hover {
-    border-color: #007bff;
-    background-color: #f8f9fa;
-}
-
-.drop-zone.dragover {
-    border-color: #007bff;
-    background-color: #e3f2fd;
-}
-
-.drop-zone-text {
-    color: #6c757d;
-}
-
-.media-preview-item {
-    position: relative;
-    display: inline-block;
-    margin: 5px;
-}
-
-.media-preview-item img,
-.media-preview-item video {
-    max-width: 100px;
-    max-height: 100px;
-    border-radius: 4px;
-}
-
-.media-preview-remove {
-    position: absolute;
-    top: -5px;
-    right: -5px;
-    background: #dc3545;
-    color: white;
-    border: none;
-    border-radius: 50%;
-    width: 20px;
-    height: 20px;
-    font-size: 10px;
-    cursor: pointer;
-}
-
-.post-card {
-    border: 1px solid #dee2e6;
-    border-radius: 8px;
-    margin-bottom: 1rem;
-    transition: all 0.3s ease;
-}
-
-.post-card:hover {
-    box-shadow: 0 4px 8px rgba(0,0,0,0.1);
-}
-
-.post-header {
-    padding: 1rem;
-    border-bottom: 1px solid #dee2e6;
-}
-
-.post-content {
-    padding: 1rem;
-}
-
-.post-actions {
-    padding: 0.75rem 1rem;
-    border-top: 1px solid #dee2e6;
-    background-color: #f8f9fa;
-}
-
-.post-media {
-    margin: 1rem 0;
-}
-
-.post-media img,
-.post-media video {
-    max-width: 100%;
-    border-radius: 8px;
-}
-
-.poll-option {
-    border: 1px solid #dee2e6;
-    border-radius: 4px;
-    padding: 0.5rem;
-    margin: 0.25rem 0;
-    cursor: pointer;
-    transition: background-color 0.2s ease;
-}
-
-.poll-option:hover {
-    background-color: #f8f9fa;
-}
-
-.poll-option.selected {
-    background-color: #e3f2fd;
-    border-color: #007bff;
-}
-
-.poll-progress {
-    height: 8px;
-    border-radius: 4px;
-    background-color: #e9ecef;
-    overflow: hidden;
-}
-
-.poll-progress-bar {
-    height: 100%;
-    background-color: #007bff;
-    transition: width 0.3s ease;
-}
-
-.comment-section {
-    max-height: 300px;
-    overflow-y: auto;
-}
-
-.comment-item {
-    padding: 0.5rem 0;
-    border-bottom: 1px solid #f1f3f4;
-}
-
-.comment-item:last-child {
-    border-bottom: none;
-}
-
-.pinned-badge {
-    background-color: #ffc107;
-    color: #212529;
-    padding: 0.25rem 0.5rem;
-    border-radius: 4px;
-    font-size: 0.75rem;
-    font-weight: 500;
-}
-
-.reported-badge {
-    background-color: #dc3545;
-    color: white;
-    padding: 0.25rem 0.5rem;
-    border-radius: 4px;
-    font-size: 0.75rem;
-    font-weight: 500;
-}
-
-.mention {
-    background-color: #e3f2fd;
-    color: #1976d2;
-    padding: 0.1rem 0.3rem;
-    border-radius: 3px;
-    font-weight: 500;
-}
-
-.hashtag {
-    background-color: #f3e5f5;
-    color: #7b1fa2;
-    padding: 0.1rem 0.3rem;
-    border-radius: 3px;
-    font-weight: 500;
-}
-
-.grid-view .post-card {
-    width: calc(50% - 1rem);
-    margin: 0.5rem;
-}
-
-@media (max-width: 768px) {
-    .grid-view .post-card {
-        width: 100%;
-    }
-}
-
-/* Post Detail Modal Styles */
-.post-detail {
-    max-width: 100%;
-}
-
-.post-detail .post-header {
-    background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
-    border-radius: 8px;
-    padding: 1.5rem;
-    margin-bottom: 2rem;
-}
-
-.post-detail .avatar img {
-    border: 3px solid #fff;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-}
-
-.post-detail .post-content {
-    background: #fff;
-    border-radius: 8px;
-    padding: 1.5rem;
-    margin-bottom: 2rem;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
-}
-
-.post-detail .post-body {
-    line-height: 1.6;
-    color: #333;
-}
-
-.post-detail .post-stats {
-    background: #f8f9fa;
-    border-radius: 8px;
-    padding: 1.5rem;
-    margin-bottom: 2rem;
-}
-
-.post-detail .stat-item {
-    padding: 1rem;
-    border-radius: 6px;
-    background: #fff;
-    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-    transition: transform 0.2s ease;
-}
-
-.post-detail .stat-item:hover {
-    transform: translateY(-2px);
-}
-
-.post-detail .stat-item i {
-    font-size: 1.5rem;
-    margin-bottom: 0.5rem;
-}
-
-.post-detail .comments-section {
-    background: #fff;
-    border-radius: 8px;
-    padding: 1.5rem;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
-}
-
-.post-detail .comments-list {
-    max-height: 400px;
-    overflow-y: auto;
-}
-
-.post-detail .comment-item {
-    background: #f8f9fa;
-    border-radius: 6px;
-    padding: 1rem;
-    margin-bottom: 1rem;
-    border: 1px solid #e9ecef;
-}
-
-.post-detail .comment-item:last-child {
-    margin-bottom: 0;
-}
-
-.post-detail .comment-item img {
-    border: 2px solid #fff;
-    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-}
-
-/* Modal size adjustments */
-#postDetailModal .modal-dialog {
-    max-width: 800px;
-}
-
-#postDetailModal .modal-body {
-    max-height: 80vh;
-    overflow-y: auto;
-}
-
-/* Responsive adjustments */
-@media (max-width: 768px) {
-    .post-detail .post-header {
-        padding: 1rem;
-    }
-    
-    .post-detail .post-content {
-        padding: 1rem;
-    }
-    
-    .post-detail .post-stats {
-        padding: 1rem;
-    }
-    
-    .post-detail .comments-section {
-        padding: 1rem;
-    }
-    
-    #postDetailModal .modal-dialog {
-        margin: 0.5rem;
-        max-width: calc(100% - 1rem);
-    }
-}
-
-/* Report Details Styling */
-.reports-section {
-    border-top: 2px solid #dc3545;
-    padding-top: 1rem;
-}
-
-.report-item {
-    background-color: #fff5f5 !important;
-    border-left: 4px solid #dc3545 !important;
-}
-
-.report-item .badge {
-    font-size: 0.75rem;
-}
-
-.report-details {
-    background-color: #f8f9fa;
-    padding: 0.75rem;
-    border-radius: 4px;
-    border-left: 3px solid #6c757d;
-}
-
-.moderator-notes {
-    background-color: #e3f2fd;
-    padding: 0.75rem;
-    border-radius: 4px;
-    border-left: 3px solid #007bff;
-}
-
-.post-detail .reports-section h6 {
-    color: #dc3545;
-    font-weight: 600;
-}
-
-.post-detail .report-item strong {
-    color: #dc3545;
-}
-
-.post-detail .moderator-notes strong {
-    color: #007bff;
-}
-
-/* Reported Post Styling */
-.post-card.reported {
-    border-left: 4px solid #dc3545;
-    background-color: #fff5f5;
-}
-
-.post-card.reported .post-header {
-    background-color: #f8f9fa;
-    border-bottom: 1px solid #dc3545;
-}
-
-.post-card.reported .reported-badge {
-    background-color: #dc3545;
-    color: white;
-    padding: 0.25rem 0.5rem;
-    border-radius: 4px;
-    font-size: 0.75rem;
-    font-weight: 500;
-    animation: pulse 2s infinite;
-}
-
-@keyframes pulse {
-    0% { opacity: 1; }
-    50% { opacity: 0.7; }
-    100% { opacity: 1; }
-}
-</style>
 
 <?php require_once 'includes/footer.php'; ?>
 
