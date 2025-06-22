@@ -647,8 +647,11 @@ class SocialFeed {
         const badgesHTML = this.renderPostBadges(post);
         const tagsHTML = this.renderPostTags(post.tags);
         
+        // Add reported class if post has been reported
+        const reportedClass = post.report_count > 0 ? ' reported' : '';
+        
         return `
-            <div class="post-card" data-post-id="${post.id}">
+            <div class="post-card${reportedClass}" data-post-id="${post.id}">
                 <div class="post-header">
                     <div class="d-flex justify-content-between align-items-start">
                         <div class="d-flex align-items-center">
@@ -663,29 +666,6 @@ class SocialFeed {
                                     ${post.visibility !== 'public' ? ` • ${post.visibility}` : ''}
                                 </small>
                             </div>
-                        </div>
-                        <div class="dropdown">
-                            <button class="btn btn-sm btn-outline-secondary" type="button" data-bs-toggle="dropdown">
-                                <i class="fas fa-ellipsis-v"></i>
-                            </button>
-                            <ul class="dropdown-menu">
-                                <li><a class="dropdown-item" href="#" onclick="socialFeed.viewPostDetails(${post.id})">
-                                    <i class="fas fa-eye me-2"></i>View Details
-                                </a></li>
-                                ${post.can_edit ? `
-                                    <li><a class="dropdown-item" href="#" onclick="socialFeed.editPost(${post.id})">
-                                        <i class="fas fa-edit me-2"></i>Edit
-                                    </a></li>
-                                ` : ''}
-                                ${post.can_delete ? `
-                                    <li><a class="dropdown-item text-danger" href="#" onclick="socialFeed.deletePost(${post.id})">
-                                        <i class="fas fa-trash me-2"></i>Delete
-                                    </a></li>
-                                ` : ''}
-                                <li><a class="dropdown-item" href="#" onclick="socialFeed.reportPost(${post.id})">
-                                    <i class="fas fa-flag me-2"></i>Report
-                                </a></li>
-                            </ul>
                         </div>
                     </div>
                     ${badgesHTML}
@@ -727,8 +707,20 @@ class SocialFeed {
                 
                 <div class="card-footer">
                     <div class="btn-group w-100" role="group">
+                        <button type="button" class="btn btn-sm btn-outline-primary view-details-btn me-1"
+                                data-post-id="${post.id}"
+                                onclick="socialFeed.viewPostDetails(${post.id})"
+                                title="View Details">
+                            <i class="fas fa-eye"></i>
+                        </button>
+                        <button type="button" class="btn btn-sm btn-outline-danger report-post-btn me-1"
+                                data-post-id="${post.id}"
+                                onclick="socialFeed.reportPost(${post.id})"
+                                title="Report Post">
+                            <i class="fas fa-flag"></i>
+                        </button>
                         ${this.getEditButton(post)}
-                        <button type="button" class="btn btn-sm btn-outline-info view-statistics-btn"
+                        <button type="button" class="btn btn-sm btn-outline-info view-statistics-btn me-1"
                                 data-post-id="${post.id}"
                                 onclick="socialFeed.viewPostStatistics(${post.id})"
                                 title="View Statistics">
@@ -1208,10 +1200,43 @@ class SocialFeed {
     }
 
     async deletePost(postId) {
-        if (!confirm('Are you sure you want to delete this post? This action cannot be undone.')) {
-            return;
-        }
+        console.log('🗑️ Delete post called for ID:', postId);
         
+        // Get post title for confirmation message
+        const postElement = document.querySelector(`[data-post-id="${postId}"]`);
+        const postTitle = postElement ? 
+            (postElement.querySelector('.post-title')?.textContent || 
+             postElement.querySelector('.post-text')?.textContent?.substring(0, 50) + '...') : 
+            'this post';
+        
+        console.log('📝 Post title for confirmation:', postTitle);
+        console.log('🔍 confirmAction available:', typeof window.confirmAction === 'function');
+        console.log('🔍 confirmDelete available:', typeof window.confirmDelete === 'function');
+        
+        // Use the confirmation modal system with proper delete styling
+        if (typeof window.confirmAction === 'function') {
+            console.log('✅ Using confirmAction for delete confirmation');
+            window.confirmAction('delete', `post "${postTitle}"`, () => {
+                console.log('✅ Delete confirmed, executing delete...');
+                this.executeDeletePost(postId);
+            });
+        } else if (typeof window.confirmDelete === 'function') {
+            console.log('✅ Using confirmDelete for delete confirmation');
+            window.confirmDelete(`post "${postTitle}"`, () => {
+                console.log('✅ Delete confirmed, executing delete...');
+                this.executeDeletePost(postId);
+            });
+        } else {
+            console.log('⚠️ Using fallback browser confirm');
+            // Fallback to browser confirm
+            if (confirm(`Are you sure you want to delete ${postTitle}? This action cannot be undone.`)) {
+                console.log('✅ Delete confirmed, executing delete...');
+                this.executeDeletePost(postId);
+            }
+        }
+    }
+
+    async executeDeletePost(postId) {
         try {
             const response = await fetch('index.php?controller=SocialFeedController&action=delete', {
                 method: 'POST',
@@ -1266,7 +1291,7 @@ class SocialFeed {
         const formData = new FormData(e.target);
         
         try {
-            const response = await fetch('feed/report', {
+            const response = await fetch('index.php?controller=SocialFeedController&action=report', {
                 method: 'POST',
                 body: formData
             });
@@ -1320,6 +1345,69 @@ class SocialFeed {
         const pollHTML = post.poll ? this.renderPoll(post.poll) : '';
         const tagsHTML = this.renderPostTags(post.tags);
         
+        // Calculate counts from actual data
+        const reactionCount = post.reactions ? Object.values(post.reactions).reduce((sum, count) => sum + (count || 0), 0) : 0;
+        const commentCount = post.comments ? post.comments.length : 0;
+        const shareCount = post.share_count || 0; // Default to 0 if not provided
+        
+        // Format creation date
+        const createdDate = new Date(post.created_at).toLocaleDateString('en-US', {
+            year: 'numeric',
+            month: 'long',
+            day: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit'
+        });
+        
+        // Get post status and visibility info
+        const statusInfo = [];
+        if (post.status) statusInfo.push(post.status);
+        if (post.visibility && post.visibility !== 'global') statusInfo.push(post.visibility);
+        if (post.is_pinned) statusInfo.push('Pinned');
+        if (post.report_count > 0) statusInfo.push(`Reported (${post.report_count})`);
+        
+        // Generate reports section if post has reports
+        const reportsHTML = post.reports && post.reports.length > 0 ? `
+            <div class="reports-section mb-4">
+                <h6 class="mb-3 text-danger">
+                    <i class="fas fa-flag me-2"></i>Reports (${post.reports.length})
+                </h6>
+                <div class="reports-list">
+                    ${post.reports.map(report => `
+                        <div class="report-item mb-3 p-3 border border-danger rounded bg-light">
+                            <div class="d-flex justify-content-between align-items-start mb-2">
+                                <div class="d-flex align-items-center">
+                                    <img src="${report.reporter?.avatar || 'public/images/UYSlogo.png'}" 
+                                         alt="${report.reporter?.name || 'Unknown'}" 
+                                         class="rounded-circle me-2" width="24" height="24">
+                                    <strong class="text-danger">${report.reporter?.name || 'Unknown User'}</strong>
+                                </div>
+                                <div class="text-muted small">
+                                    ${this.formatDate(report.created_at)}
+                                </div>
+                            </div>
+                            <div class="mb-2">
+                                <span class="badge bg-danger me-2">${this.formatReportReason(report.report_reason)}</span>
+                                <span class="badge bg-secondary">${report.status}</span>
+                            </div>
+                            ${report.report_details ? `
+                                <div class="report-details mt-2">
+                                    <strong>Details:</strong>
+                                    <p class="mb-0 mt-1">${this.escapeHtml(report.report_details)}</p>
+                                </div>
+                            ` : ''}
+                            ${report.moderator_notes ? `
+                                <div class="moderator-notes mt-2">
+                                    <strong class="text-primary">Moderator Notes:</strong>
+                                    <p class="mb-0 mt-1">${this.escapeHtml(report.moderator_notes)}</p>
+                                </div>
+                            ` : ''}
+                        </div>
+                    `).join('')}
+                </div>
+            </div>
+        ` : '';
+        
         modalContent.innerHTML = `
             <div class="post-detail">
                 <div class="post-header mb-4">
@@ -1328,47 +1416,99 @@ class SocialFeed {
                             <img src="${post.author.avatar || 'public/images/UYSlogo.png'}" 
                                  alt="${post.author.name}" class="rounded-circle" width="60" height="60">
                         </div>
-                        <div>
-                            <h5 class="mb-1">${post.author.name}</h5>
+                        <div class="flex-grow-1">
+                            <h5 class="mb-1">${post.author.name || 'Unknown User'}</h5>
+                            <p class="text-muted mb-1">
+                                <i class="fas fa-calendar-alt me-1"></i>${createdDate}
+                            </p>
                             <p class="text-muted mb-0">
-                                ${this.formatDate(post.created_at)} • ${post.post_type}
+                                <i class="fas fa-tag me-1"></i>${post.post_type || 'General'}
+                                ${statusInfo.length > 0 ? ` • ${statusInfo.join(', ')}` : ''}
                             </p>
                         </div>
                     </div>
                 </div>
                 
                 <div class="post-content mb-4">
-                    ${post.title ? `<h4 class="mb-3">${this.escapeHtml(post.title)}</h4>` : ''}
-                    <div class="post-body">${this.formatPostContent(post.body)}</div>
+                    ${post.title ? `<h4 class="mb-3 text-primary">${this.escapeHtml(post.title)}</h4>` : ''}
+                    <div class="post-body mb-3">
+                        <p class="mb-0">${this.formatPostContent(post.body || post.content || '')}</p>
+                    </div>
                     ${mediaHTML}
                     ${pollHTML}
                     ${tagsHTML}
                 </div>
                 
-                <div class="post-stats">
+                ${reportsHTML}
+                
+                <div class="post-stats mb-4">
                     <div class="row text-center">
                         <div class="col">
                             <div class="stat-item">
                                 <i class="fas fa-heart text-danger"></i>
-                                <span class="ms-1">${post.reaction_count || 0}</span>
+                                <span class="ms-1 fw-bold">${reactionCount}</span>
+                                <div class="text-muted small">Reactions</div>
                             </div>
                         </div>
                         <div class="col">
                             <div class="stat-item">
                                 <i class="fas fa-comment text-primary"></i>
-                                <span class="ms-1">${post.comment_count || 0}</span>
+                                <span class="ms-1 fw-bold">${commentCount}</span>
+                                <div class="text-muted small">Comments</div>
                             </div>
                         </div>
                         <div class="col">
                             <div class="stat-item">
                                 <i class="fas fa-share text-success"></i>
-                                <span class="ms-1">${post.share_count || 0}</span>
+                                <span class="ms-1 fw-bold">${shareCount}</span>
+                                <div class="text-muted small">Shares</div>
                             </div>
                         </div>
                     </div>
                 </div>
+                
+                ${post.comments && post.comments.length > 0 ? `
+                    <div class="comments-section">
+                        <h6 class="mb-3">
+                            <i class="fas fa-comments me-2"></i>Comments (${commentCount})
+                        </h6>
+                        <div class="comments-list">
+                            ${post.comments.map(comment => `
+                                <div class="comment-item mb-3 p-3 border rounded">
+                                    <div class="d-flex">
+                                        <img src="${comment.author.avatar || 'public/images/UYSlogo.png'}" 
+                                             alt="${comment.author.name}" class="rounded-circle me-2" width="32" height="32">
+                                        <div class="flex-grow-1">
+                                            <div class="d-flex justify-content-between align-items-start">
+                                                <strong>${comment.author.name || 'Unknown User'}</strong>
+                                                <small class="text-muted">${this.formatDate(comment.created_at)}</small>
+                                            </div>
+                                            <p class="mb-0 mt-1">${this.escapeHtml(comment.body || comment.content || '')}</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>
+                ` : `
+                    <div class="text-center text-muted py-4">
+                        <i class="fas fa-comments fa-2x mb-2"></i>
+                        <p>No comments yet</p>
+                    </div>
+                `}
             </div>
         `;
+    }
+
+    formatReportReason(reason) {
+        const reasonMap = {
+            'spam': 'Spam',
+            'inappropriate': 'Inappropriate Content',
+            'harassment': 'Harassment',
+            'fake_news': 'Fake News/Misinformation',
+            'other': 'Other'
+        };
+        return reasonMap[reason] || reason;
     }
 
     sharePost(postId) {
@@ -1882,7 +2022,7 @@ class SocialFeed {
     getEditButton(post) {
         if (post.can_edit) {
             return `
-                <button type="button" class="btn btn-sm theme-btn-secondary edit-post-btn"
+                <button type="button" class="btn btn-sm btn-outline-secondary edit-post-btn me-1"
                         data-post-id="${post.id}"
                         onclick="socialFeed.editPost(${post.id})"
                         title="Edit Post">
@@ -1891,7 +2031,7 @@ class SocialFeed {
             `;
         } else {
             return `
-                <button type="button" class="btn btn-sm btn-secondary"
+                <button type="button" class="btn btn-sm btn-secondary me-1"
                         disabled
                         title="You cannot edit this post">
                     <i class="fas fa-edit"></i>
@@ -1904,7 +2044,7 @@ class SocialFeed {
     getDeleteButton(post) {
         if (post.can_delete) {
             return `
-                <button type="button" class="btn btn-sm theme-btn-danger delete-post-btn"
+                <button type="button" class="btn btn-sm btn-outline-danger delete-post-btn me-1"
                         data-post-id="${post.id}"
                         data-post-title="${this.escapeHtml(post.body.substring(0, 50))}${post.body.length > 50 ? '...' : ''}"
                         onclick="socialFeed.deletePost(${post.id})"
@@ -1914,7 +2054,7 @@ class SocialFeed {
             `;
         } else {
             return `
-                <button type="button" class="btn btn-sm btn-secondary"
+                <button type="button" class="btn btn-sm btn-secondary me-1"
                         disabled
                         title="You cannot delete this post">
                     <i class="fas fa-trash-alt"></i>

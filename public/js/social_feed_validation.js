@@ -322,12 +322,12 @@ document.addEventListener("DOMContentLoaded", function () {
     function validateReportForm() {
         let isValid = true;
 
-        const fields = [
-            "reportReason",
-            "reportDescription"
+        // Only validate required fields
+        const requiredFields = [
+            "reportReason"
         ];
 
-        fields.forEach(id => {
+        requiredFields.forEach(id => {
             const field = document.getElementById(id);
             if (field && !validateReportField(field)) {
                 isValid = false;
@@ -477,12 +477,10 @@ document.addEventListener("DOMContentLoaded", function () {
                 }
                 break;
 
-            case "reportDescription":
-                if (value === "") {
-                    showError(field, translate('js.validation.report_description_required') || 'Report description is required.');
-                    isValid = false;
-                } else if (value.length > 500) {
-                    showError(field, translate('js.validation.report_description_too_long') || 'Report description cannot exceed 500 characters.');
+            case "reportDetails":
+                // Report details is optional (Additional Details)
+                if (value.length > 500) {
+                    showError(field, translate('js.validation.report_details_too_long') || 'Report details cannot exceed 500 characters.');
                     isValid = false;
                 } else {
                     hideError(field);
