@@ -12,6 +12,24 @@ require_once 'config/Localization.php';
 
 $systemRole = $_SESSION['user']['system_role'] ?? '';
 $canManageAll = in_array($systemRole, ['super_admin', 'admin']);
+
+// Set default client name from session (current user's client)
+$clientName = $_SESSION['user']['client_name'] ?? 'DEFAULT';
+
+// If in client management mode, override with the managed client's name
+if (isset($_GET['client_id'])) {
+    $clientName = 'Unknown Client';
+    if (isset($client) && $client) {
+        $clientName = $client['client_name'];
+    } elseif (isset($clients) && !empty($clients)) {
+        foreach ($clients as $clientItem) {
+            if ($clientItem['id'] == $_GET['client_id']) {
+                $clientName = $clientItem['client_name'];
+                break;
+            }
+        }
+    }
+}
 ?>
 
 <?php include 'includes/header.php'; ?>
@@ -46,20 +64,6 @@ $canManageAll = in_array($systemRole, ['super_admin', 'admin']);
         </nav>
 
         <?php if (isset($_GET['client_id'])): ?>
-            <?php
-            // Get client name for display - use $client if available, otherwise search in $clients array
-            $clientName = 'Unknown Client';
-            if (isset($client) && $client) {
-                $clientName = $client['client_name'];
-            } elseif (isset($clients) && !empty($clients)) {
-                foreach ($clients as $clientItem) {
-                    if ($clientItem['id'] == $_GET['client_id']) {
-                        $clientName = $clientItem['client_name'];
-                        break;
-                    }
-                }
-            }
-            ?>
             <div class="alert alert-info mb-3">
                 <i class="fas fa-building"></i>
                 <strong>Client Management Mode:</strong> Managing users for client <strong><?= htmlspecialchars($clientName); ?></strong>
@@ -76,51 +80,51 @@ $canManageAll = in_array($systemRole, ['super_admin', 'admin']);
                     <div>
                         <p class="text-muted mb-0">Manage user accounts, roles, and permissions</p>
                     </div>
-                    <div class="d-flex gap-2 align-items-center">
+                        <div class="d-flex gap-2 align-items-center">
                         <button type="button" class="btn btn-outline-primary" id="importUserBtn" title="Import Users">
                             <i class="fas fa-upload me-2"></i>Import Users
-                        </button>
-                        <?php if ($customFieldCreationEnabled): ?>
+                            </button>
+                            <?php if ($customFieldCreationEnabled): ?>
                         <a href="<?= UrlHelper::url('settings/custom-fields') ?>" class="btn btn-outline-secondary" title="<?= Localization::translate('manage_custom_fields'); ?>">
                             <i class="fas fa-cogs me-2"></i><?= Localization::translate('manage_custom_fields'); ?>
-                        </a>
-                        <?php endif; ?>
-                        <?php
-                        // Check if user limit is reached
-                        $addUserDisabled = '';
-                        $addUserText = Localization::translate('buttons_add_user');
+                            </a>
+                            <?php endif; ?>
+                            <?php
+                            // Check if user limit is reached
+                            $addUserDisabled = '';
+                            $addUserText = Localization::translate('buttons_add_user');
 
-                        // Preserve client_id parameter if present (for super admin client management)
-                        $addUserUrl = UrlHelper::url('users/create');
-                        if (isset($_GET['client_id'])) {
-                            $addUserUrl .= '?client_id=' . urlencode($_GET['client_id']);
-                        }
-                        $addUserOnclick = "window.location.href='$addUserUrl'";
-                        $addUserTitle = Localization::translate('buttons_add_user_tooltip');
+                            // Preserve client_id parameter if present (for super admin client management)
+                            $addUserUrl = UrlHelper::url('users/create');
+                            if (isset($_GET['client_id'])) {
+                                $addUserUrl .= '?client_id=' . urlencode($_GET['client_id']);
+                            }
+                            $addUserOnclick = "window.location.href='$addUserUrl'";
+                            $addUserTitle = Localization::translate('buttons_add_user_tooltip');
 
-                        if ($userLimitStatus && !$userLimitStatus['canAdd']) {
-                            $addUserDisabled = 'disabled';
-                            $addUserText .= ' (Limit Reached)';
-                            $addUserOnclick = '';
-                            $addUserTitle = 'User limit reached: ' . $userLimitStatus['current'] . '/' . $userLimitStatus['limit'];
-                        }
-                        ?>
-                        <?php if ($addUserDisabled): ?>
+                            if ($userLimitStatus && !$userLimitStatus['canAdd']) {
+                                $addUserDisabled = 'disabled';
+                                $addUserText .= ' (Limit Reached)';
+                                $addUserOnclick = '';
+                                $addUserTitle = 'User limit reached: ' . $userLimitStatus['current'] . '/' . $userLimitStatus['limit'];
+                            }
+                            ?>
+                            <?php if ($addUserDisabled): ?>
                             <button type="button" class="btn theme-btn-primary" title="<?= $addUserTitle; ?>" disabled>
                                 <i class="fas fa-plus me-2"></i><?= $addUserText; ?>
-                            </button>
-                        <?php else: ?>
+                                </button>
+                            <?php else: ?>
                             <button type="button" class="btn theme-btn-primary" title="<?= $addUserTitle; ?>" data-bs-toggle="modal" data-bs-target="#addUserModal" data-client-id="<?= isset($_GET['client_id']) ? htmlspecialchars($_GET['client_id']) : ''; ?>">
                                 <i class="fas fa-plus me-2"></i><?= $addUserText; ?>
-                            </button>
-                        <?php endif; ?>
+                                </button>
+                            <?php endif; ?>
                     </div>
-                </div>
-                <?php if ($userLimitStatus && !$userLimitStatus['canAdd']): ?>
+                        </div>
+                        <?php if ($userLimitStatus && !$userLimitStatus['canAdd']): ?>
                     <small class="text-muted mt-2 d-block">
-                        Users: <?= $userLimitStatus['current']; ?>/<?= $userLimitStatus['limit']; ?>
-                    </small>
-                <?php endif; ?>
+                                Users: <?= $userLimitStatus['current']; ?>/<?= $userLimitStatus['limit']; ?>
+                            </small>
+                        <?php endif; ?>
             </div>
         </div>
 
@@ -204,9 +208,9 @@ $canManageAll = in_array($systemRole, ['super_admin', 'admin']);
         <div class="row mb-3">
             <div class="col-12">
                 <div class="search-results-info">
-                    <i class="fas fa-info-circle"></i>
+            <i class="fas fa-info-circle"></i>
                     <span id="resultsInfo">Loading users...</span>
-                </div>
+        </div>
             </div>
         </div>
 
@@ -303,7 +307,10 @@ $canManageAll = in_array($systemRole, ['super_admin', 'admin']);
 
 <!-- ✅ Modal Initialization Script -->
 <script>
-// Dynamic user management with AJAX (like social feed)
+// Pass backend data to JavaScript
+const currentUserRole = '<?= $_SESSION['user']['system_role'] ?? 'guest'; ?>';
+
+// Dynamic client management with AJAX (like social feed)
 let currentPage = 1;
 let currentSearch = '';
 let currentFilters = {
@@ -576,31 +583,18 @@ function updateUsersTable(users) {
 function createUserRow(user) {
     const row = document.createElement('tr');
     
-    // Generate encrypted URL for edit user
-    const encryptedId = user.encrypted_id || user.profile_id;
-    const editUserUrl = getProjectUrl('users/' + encryptedId + '/edit');
+    // Only use encrypted_id for all actions
+    const encryptedId = user.encrypted_id;
     
     // Check if user is Super Admin
     const isSuperAdmin = (user.system_role === 'super_admin' || user.user_role === 'Super Admin');
     const disabledClass = isSuperAdmin ? 'disabled' : '';
     const disabledStyle = isSuperAdmin ? 'style="pointer-events: none; opacity: 0.5; cursor: not-allowed;"' : '';
     
-    row.innerHTML = `
-        <td>${escapeHtml(user.profile_id)}</td>
-        <td>${escapeHtml(user.full_name)}</td>
-        <td>${escapeHtml(user.email)}</td>
-        <td>${escapeHtml(user.contact_number)}</td>
-        <td>
-            ${(user.user_status == 'Active') ?
-                '<span class="badge bg-success">Active</span>' :
-                '<span class="badge bg-danger">Inactive</span>'}
-        </td>
-        <td>
-            ${(user.locked_status == '1') ?
-                '<span class="badge bg-warning">Locked</span>' :
-                '<span class="badge bg-primary">Unlocked</span>'}
-        </td>
-        <td>
+    // Only render action buttons if encryptedId is present
+    let actionButtons = '';
+    if (encryptedId) {
+        actionButtons = `
             <button type="button"
                     class="btn theme-btn-primary ${disabledClass} edit-user-btn"
                     ${disabledStyle}
@@ -621,6 +615,28 @@ function createUserRow(user) {
             <a href="#" class="btn theme-btn-danger ${isSuperAdmin ? 'disabled' : 'delete-user'}" ${isSuperAdmin ? disabledStyle : ''} ${isSuperAdmin ? '' : `data-id="${encryptedId}" data-name="${escapeHtml(user.full_name)}"`} title="${isSuperAdmin ? 'Delete disabled for Super Admin' : 'Delete User'}">
                 <i class="fas fa-trash-alt"></i>
             </a>
+        `;
+    } else {
+        actionButtons = `<span class="text-danger small">Missing ID</span>`;
+    }
+
+    row.innerHTML = `
+        <td>${escapeHtml(user.profile_id)}</td>
+        <td>${escapeHtml(user.full_name)}</td>
+        <td>${escapeHtml(user.email)}</td>
+        <td>${escapeHtml(user.contact_number)}</td>
+        <td>
+            ${(user.user_status == 'Active') ?
+                '<span class="badge bg-success">Active</span>' :
+                '<span class="badge bg-danger">Inactive</span>'}
+        </td>
+        <td>
+            ${(user.locked_status == '1') ?
+                '<span class="badge bg-warning">Locked</span>' :
+                '<span class="badge bg-primary">Unlocked</span>'}
+        </td>
+        <td>
+            ${actionButtons}
         </td>
     `;
 
@@ -744,7 +760,7 @@ function initializeUserModals() {
             const clientId = button ? button.getAttribute('data-client-id') : '';
             loadAddUserModalContent(clientId);
         });
-        
+
         addUserModal.addEventListener('hidden.bs.modal', function() {
             console.log('🔥 Add modal hidden event fired');
 
@@ -893,6 +909,11 @@ function loadAddUserModalContent(clientId = '') {
             if (typeof initializeLocationDropdowns === 'function') {
                 initializeLocationDropdowns('modal_');
             }
+
+            if (typeof initializeAddUserModalValidation === 'function') {
+                console.log('🔥 About to call initializeAddUserModalValidation');
+                initializeAddUserModalValidation();
+            }
         })
         .catch(error => {
             console.error('Error loading add user form:', error);
@@ -936,8 +957,8 @@ function loadEditUserModalContent(userId) {
                 // Wait for DOM to update, then initialize form
                 setTimeout(() => {
                     const form = document.getElementById('editUserModalForm');
-                    if (form && typeof initializeEditUserForm === 'function') {
-                        initializeEditUserForm();
+                    if (form && typeof initializeEditModalValidation === 'function') {
+                        initializeEditModalValidation();
                     }
                 }, 200);
             }
@@ -961,8 +982,25 @@ function getProjectUrl(path) {
 
 // Initialize modals after user management
 initializeUserModals();
+
+document.addEventListener('shown.bs.modal', function(event) {
+    if (event.target && event.target.id === 'addUserModal') {
+        var profileIdField = document.getElementById('modal_profile_id');
+        if (profileIdField && !profileIdField.value) {
+            var prefix = '<?= substr(preg_replace("/[^A-Za-z0-9]/", "", $clientName), 0, 2) ?>'.toUpperCase();
+            var timestamp = Date.now().toString().slice(-6);
+            var random = Math.floor(Math.random() * 1000).toString().padStart(3, '0');
+            profileIdField.value = prefix + timestamp + random;
+        }
+    }
+});
 </script>
 
 <!-- Custom Field Modal removed - now managed in Settings -->
 
 <?php include 'includes/footer.php'; ?>
+<script>
+window.addUserSubmitUrl = '<?= UrlHelper::url('users/modal/submit-add') ?>';
+</script>
+<script src="<?= UrlHelper::url('public/js/add_user_modal_validation.js') ?>"></script>
+<script src="<?= UrlHelper::url('public/js/edit_user_validation.js') ?>"></script>

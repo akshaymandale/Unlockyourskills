@@ -91,7 +91,7 @@ class IdEncryption {
      * Check if a string looks like an encrypted ID
      * 
      * @param string $value The value to check
-     * @return bool True if it looks encrypted, false if it's a plain number
+     * @return bool True if it looks encrypted, false if it's a plain number or profile_id
      */
     public static function isEncrypted($value) {
         // If it's a plain number, it's not encrypted
@@ -99,15 +99,22 @@ class IdEncryption {
             return false;
         }
         
-        // If it contains URL-safe base64 characters, it's likely encrypted
-        return preg_match('/^[A-Za-z0-9\-_]+$/', $value) && strlen($value) > 10;
+        // Profile IDs typically have a pattern like "ABC123456789" (3 letters + numbers)
+        // They are usually 12-15 characters long
+        if (preg_match('/^[A-Z]{2,4}\d{8,12}$/', $value)) {
+            return false; // This is a profile_id, not encrypted
+        }
+        
+        // If it contains URL-safe base64 characters and is long enough, it's likely encrypted
+        // Encrypted IDs are typically much longer (40+ characters) due to base64 encoding
+        return preg_match('/^[A-Za-z0-9\-_]+$/', $value) && strlen($value) > 30;
     }
     
     /**
      * Safely get ID from parameter (handles both encrypted and plain IDs)
      * 
      * @param string $value The ID parameter value
-     * @return int The actual ID
+     * @return int|string The actual ID (numeric for encrypted IDs, string for profile_ids)
      */
     public static function getId($value) {
         if (self::isEncrypted($value)) {
@@ -116,6 +123,11 @@ class IdEncryption {
             // For backward compatibility, allow plain numeric IDs
             if (is_numeric($value) && $value > 0) {
                 return intval($value);
+            }
+            
+            // Handle profile_ids (non-numeric strings)
+            if (is_string($value) && !empty($value)) {
+                return $value; // Return profile_id as-is
             }
         }
         

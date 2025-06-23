@@ -21,8 +21,12 @@ class UserManagementController extends BaseController {
         $page = 1;
         $offset = 0;
 
-        // Check if filtering by client (for super admin)
-        $clientId = $_GET['client_id'] ?? null;
+        // Sanitize and validate client_id
+        if (isset($_GET['client_id']) && is_numeric($_GET['client_id'])) {
+            $clientId = (int)$_GET['client_id'];
+        } else {
+            $clientId = null;
+        }
         $currentUser = $_SESSION['user'] ?? null;
 
         // Set client management context if super admin is navigating from client management
@@ -471,7 +475,11 @@ class UserManagementController extends BaseController {
 
         // ✅ Update user data
         try {
-            $result = $this->userModel->updateUser($profile_id, $_POST, $_FILES);
+            // Remove user_id from POST data since it should never be updated
+            $updateData = $_POST;
+            unset($updateData['user_id']);
+            
+            $result = $this->userModel->updateUser($profile_id, $updateData, $_FILES);
 
             if ($result) {
                 $this->redirectWithToast('User updated successfully!', 'success', UrlHelper::url('users'));
@@ -663,7 +671,7 @@ class UserManagementController extends BaseController {
             
             if ($currentUser && $currentUser['system_role'] === 'super_admin') {
                 // Super admin can filter by client
-                if (!empty($_POST['client_id'])) {
+                if (!empty($_POST['client_id']) && is_numeric($_POST['client_id'])) {
                     $clientId = $_POST['client_id'];
                 }
             } elseif ($currentUser && $currentUser['system_role'] === 'admin') {
@@ -684,15 +692,19 @@ class UserManagementController extends BaseController {
                 }
             } else {
                 // Get all users (super admin viewing all)
-                $users = $this->userModel->getAllUsersPaginated($limit, $offset, $search, $filters);
-                $totalUsers = $this->userModel->getTotalUserCount($search, $filters);
+            $users = $this->userModel->getAllUsersPaginated($limit, $offset, $search, $filters);
+            $totalUsers = $this->userModel->getTotalUserCount($search, $filters);
             }
             
             $totalPages = ceil($totalUsers / $limit);
 
             // Add encrypted IDs to users for secure URL generation
             foreach ($users as &$user) {
-                $user['encrypted_id'] = IdEncryption::encrypt($user['profile_id']);
+                if (isset($user['id']) && is_numeric($user['id'])) {
+                    $user['encrypted_id'] = IdEncryption::encrypt($user['id']);
+                } else {
+                    $user['encrypted_id'] = null;
+                }
             }
 
             $response = [
@@ -915,106 +927,49 @@ class UserManagementController extends BaseController {
         header('Content-Type: application/json');
 
         try {
-            // Validate required fields
-            $requiredFields = ['full_name', 'email', 'contact_number', 'user_role'];
-            foreach ($requiredFields as $field) {
-                if (empty($_POST[$field])) {
-                    throw new Exception("Field '{$field}' is required");
-                }
-            }
-
-            // Validate email format
-            if (!filter_var($_POST['email'], FILTER_VALIDATE_EMAIL)) {
-                throw new Exception("Invalid email format");
-            }
-
-            // Validate contact number
-            if (!ctype_digit($_POST['contact_number']) || strlen($_POST['contact_number']) < 10) {
-                throw new Exception("Contact number must be numeric and at least 10 digits");
-            }
-
-            // Get current user for validation
+            // Server-side validation first
+            $errors = $this->validateUserData($_POST, $_FILES);
+            
+            // Specific validation for super admin in client context
             $currentUser = $_SESSION['user'] ?? null;
-            $target_client_id = trim($_POST['target_client_id'] ?? '');
-            $client_id = trim($_POST['client_id'] ?? '');
-            $finalClientId = $target_client_id ?: $client_id;
-
-            // Validate: If super admin is adding for specific client, only Admin role is allowed
-            if ($target_client_id && $currentUser && $currentUser['system_role'] === 'super_admin') {
-                if ($_POST['user_role'] !== 'Admin') {
-                    throw new Exception('Super admin can only add Admin role users for client management');
-                }
-            }
-
-            // Check client user limit
-            $client = $this->clientModel->getClientById($finalClientId);
-            if ($client && !$this->userModel->canClientAddUser($finalClientId)) {
-                throw new Exception('Cannot add user. Client has reached its user limit');
-            }
-
-            // Check admin role limit if user role is Admin
-            if ($_POST['user_role'] === 'Admin' && $client && !$this->userModel->canClientAddAdmin($finalClientId)) {
-                throw new Exception('Cannot add admin user. Client has reached its admin role limit');
-            }
-
-            // Validate dates
-            if (!empty($_POST['dob']) && strtotime($_POST['dob']) > time()) {
-                throw new Exception("Date of Birth cannot be a future date");
-            }
-
-            if (!empty($_POST['profile_expiry']) && strtotime($_POST['profile_expiry']) < time()) {
-                throw new Exception("Profile Expiry Date cannot be in the past");
-            }
-
-            // Handle Profile Picture Upload
-            $profile_picture = "";
-            if (!empty($_FILES["profile_picture"]["name"])) {
-                $target_dir = "uploads/";
-                if (!is_dir($target_dir)) {
-                    mkdir($target_dir, 0777, true);
-                    chmod($target_dir, 0777);
+            if (
+                $currentUser && $currentUser['system_role'] === 'super_admin' && 
+                !empty($_POST['target_client_id']) && 
+                $_POST['user_role'] !== 'Admin'
+            ) {
+                $errors[] = "Super admin can only create 'Admin' role users from client management.";
                 }
 
-                $profile_picture = $target_dir . basename($_FILES["profile_picture"]["name"]);
-                $imageFileType = strtolower(pathinfo($profile_picture, PATHINFO_EXTENSION));
-
-                if ($_FILES["profile_picture"]["size"] > 5242880) {
-                    throw new Exception("File size exceeds 5MB limit");
-                }
-                if (!in_array($imageFileType, ["jpg", "png", "jpeg"])) {
-                    throw new Exception("Only JPG, PNG, and JPEG formats are allowed");
-                }
-
-                if (!move_uploaded_file($_FILES["profile_picture"]["tmp_name"], $profile_picture)) {
-                    throw new Exception("Failed to upload profile picture");
-                }
+            if (!empty($errors)) {
+                echo json_encode(['success' => false, 'message' => implode(' ', $errors)]);
+                exit;
             }
 
-            // Create the user using the model
-            $result = $this->userModel->insertUser($_POST, $_FILES);
-
-            if ($result) {
-                // Update client user count
-                if ($client) {
-                    $this->clientModel->updateUserCount($client['id']);
-                }
-
-                echo json_encode([
-                    'success' => true,
-                    'message' => 'User added successfully!'
-                ]);
+            // If validation passes, attempt to insert the user
+            if ($this->userModel->insertUser($_POST, $_FILES)) {
+                 echo json_encode(['success' => true, 'message' => 'User added successfully!']);
             } else {
-                throw new Exception('Failed to create user');
+                throw new Exception("Failed to insert user into database.");
             }
 
         } catch (Exception $e) {
-            echo json_encode([
-                'success' => false,
-                'message' => $e->getMessage(),
-                'field_errors' => $this->getFieldSpecificErrors($e->getMessage())
-            ]);
-        }
-        exit();
+            error_log("Error in submitAddUserModal: " . $e->getMessage());
+            echo json_encode(['success' => false, 'message' => 'An unexpected error occurred: ' . $e->getMessage()]);
+            }
+        exit;
+    }
+
+    private function validateUserData($postData, $fileData) {
+        $errors = [];
+        if (empty($postData['full_name'])) $errors[] = 'Full name is required.';
+        if (empty($postData['email'])) $errors[] = 'Email is required.';
+        if (!filter_var($postData['email'], FILTER_VALIDATE_EMAIL)) $errors[] = 'Invalid email format.';
+        if (empty($postData['contact_number'])) $errors[] = 'Contact number is required.';
+        if (empty($postData['user_role'])) $errors[] = 'User role is required.';
+        
+        // Add more validation rules as needed from your storeUser method...
+
+        return $errors;
     }
 
     /**
@@ -1028,8 +983,8 @@ class UserManagementController extends BaseController {
             $fieldErrors = [];
             $errors = [];
 
-            // Get and validate profile ID
-            if (!isset($_POST['profile_id'])) {
+            // Get and validate user ID
+            if (!isset($_POST['user_id'])) {
                 echo json_encode([
                     'success' => false,
                     'message' => 'User ID is required.'
@@ -1038,7 +993,8 @@ class UserManagementController extends BaseController {
             }
 
             try {
-                $profile_id = IdEncryption::getId(trim($_POST['profile_id']));
+                // Decrypt the user_id to get the numeric ID
+                $userId = IdEncryption::getId(trim($_POST['user_id']));
             } catch (InvalidArgumentException $e) {
                 echo json_encode([
                     'success' => false,
@@ -1110,7 +1066,7 @@ class UserManagementController extends BaseController {
                 $clientId = $sessionUser['client_id'];
             }
 
-            $currentUser = $this->userModel->getUserById($profile_id, $clientId);
+            $currentUser = $this->userModel->getUserById($userId, $clientId);
             if (!$currentUser) {
                 echo json_encode([
                     'success' => false,
@@ -1122,7 +1078,7 @@ class UserManagementController extends BaseController {
             // Check admin role limit if changing to Admin role
             if ($user_role === 'Admin' && $currentUser['user_role'] !== 'Admin') {
                 $clientId = $currentUser['client_id'];
-                if (!$this->userModel->canClientAddAdmin($clientId, $profile_id)) {
+                if (!$this->userModel->canClientAddAdmin($clientId, $userId)) {
                     $fieldErrors['user_role'] = 'Cannot change user role to Admin. Client has reached its admin role limit.';
                     $errors[] = 'Cannot change user role to Admin. Client has reached its admin role limit.';
                 }
@@ -1175,7 +1131,11 @@ class UserManagementController extends BaseController {
             }
 
             // Update user data
-            $result = $this->userModel->updateUser($profile_id, $_POST, $_FILES);
+            // Remove user_id from POST data since it should never be updated
+            $updateData = $_POST;
+            unset($updateData['user_id']);
+            
+            $result = $this->userModel->updateUser($userId, $updateData, $_FILES);
 
             if ($result) {
                 echo json_encode([

@@ -106,8 +106,6 @@ class ClientController extends BaseController {
         exit();
     }
 
-
-
     /**
      * Show create client form (handled by modal in main view)
      */
@@ -290,11 +288,14 @@ class ClientController extends BaseController {
     }
 
     /**
-     * Get client data for edit modal (AJAX request)
+     * Edit client - routing compatible method
+     * Maps to: GET /clients/{id}/edit
      */
-    public function edit() {
-        $id = $_GET['id'] ?? null;
-        if (!$id) {
+    public function edit($id = null) {
+        // Use route parameter if provided, otherwise fall back to GET parameter
+        $clientId = $id ?? ($_GET['id'] ?? null);
+        
+        if (!$clientId) {
             if (isset($_GET['ajax'])) {
                 header('Content-Type: application/json');
                 echo json_encode(['error' => 'Client ID is required']);
@@ -304,7 +305,7 @@ class ClientController extends BaseController {
             exit;
         }
 
-        $client = $this->clientModel->getClientById($id);
+        $client = $this->clientModel->getClientById($clientId);
         if (!$client) {
             if (isset($_GET['ajax'])) {
                 header('Content-Type: application/json');
@@ -333,14 +334,14 @@ class ClientController extends BaseController {
     /**
      * Update client
      */
-    public function update() {
+    public function update($id = null) {
         if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
             header('Location: index.php?controller=ClientController&error=invalid_method');
             exit;
         }
 
         try {
-            $clientId = $_POST['client_id'] ?? null;
+            $clientId = $id ?? ($_POST['client_id'] ?? null);
             if (!$clientId) {
                 // Check if this is an AJAX request
                 if ($this->isAjaxRequest()) {

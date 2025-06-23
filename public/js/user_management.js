@@ -31,325 +31,195 @@ function debounce(func, wait) {
 
 // Initialize event listeners when document is ready
 document.addEventListener('DOMContentLoaded', function() {
-    // Search functionality
-    const searchInput = document.getElementById('searchInput');
-    const searchButton = document.getElementById('searchButton');
+    // This is the main entry point for the user management page.
+    
+    // Initialize modals (setting up the 'show' event listeners)
+    initializeModals();
 
-    if (searchInput && searchButton) {
-        searchButton.addEventListener('click', performSearch);
-        searchInput.addEventListener('keypress', function(e) {
-            if (e.key === 'Enter') {
-                performSearch();
-            }
-        });
+    // Initial load of users
+    loadUsers(1);
 
-        // Add debounced search on input
-        const debouncedSearch = debounce(performSearch, 500);
-        searchInput.addEventListener('input', debouncedSearch);
-    }
+    // Setup event listeners for filters and search
+    // Using debounce to prevent excessive AJAX calls on every keystroke
+    const debouncedSearch = debounce(performSearch, 300);
+    document.getElementById('searchInput').addEventListener('keyup', debouncedSearch);
 
-    // Filter functionality
-    const userStatusFilter = document.getElementById('userStatusFilter');
-    const lockedStatusFilter = document.getElementById('lockedStatusFilter');
-    const userRoleFilter = document.getElementById('userRoleFilter');
-    const genderFilter = document.getElementById('genderFilter');
-
-    if (userStatusFilter) userStatusFilter.addEventListener('change', applyFilters);
-    if (lockedStatusFilter) lockedStatusFilter.addEventListener('change', applyFilters);
-    if (userRoleFilter) userRoleFilter.addEventListener('change', applyFilters);
-    if (genderFilter) genderFilter.addEventListener('change', applyFilters);
-
-    // Clear filters functionality
-    const clearFiltersBtn = document.getElementById('clearFiltersBtn');
-    if (clearFiltersBtn) {
-        clearFiltersBtn.addEventListener('click', clearAllFilters);
-    }
-
-    // Pagination functionality
-    document.addEventListener('click', function(e) {
-        if (e.target.matches('.page-link[data-page]')) {
-            e.preventDefault();
-            const page = parseInt(e.target.getAttribute('data-page'));
-            loadUsers(page);
-        }
-    });
-
-    // Modal functionality is handled in the view file
+    document.getElementById('userStatusFilter').addEventListener('change', applyFilters);
+    document.getElementById('lockedStatusFilter').addEventListener('change', applyFilters);
+    document.getElementById('userRoleFilter').addEventListener('change', applyFilters);
+    document.getElementById('genderFilter').addEventListener('change', applyFilters);
+    document.getElementById('clearFiltersBtn').addEventListener('click', clearAllFilters);
 });
 
 function performSearch() {
-    const searchInput = document.getElementById('searchInput');
-    if (searchInput) {
-        currentSearch = searchInput.value.trim();
-        currentPage = 1; // Reset to first page
-        loadUsers();
-    }
+    currentPage = 1;
+    loadUsers(currentPage);
 }
 
 function applyFilters() {
-    const userStatusFilter = document.getElementById('userStatusFilter');
-    const lockedStatusFilter = document.getElementById('lockedStatusFilter');
-    const userRoleFilter = document.getElementById('userRoleFilter');
-    const genderFilter = document.getElementById('genderFilter');
-    
-    currentFilters.user_status = userStatusFilter ? userStatusFilter.value : '';
-    currentFilters.locked_status = lockedStatusFilter ? lockedStatusFilter.value : '';
-    currentFilters.user_role = userRoleFilter ? userRoleFilter.value : '';
-    currentFilters.gender = genderFilter ? genderFilter.value : '';
-    currentPage = 1; // Reset to first page
-    loadUsers();
+    currentPage = 1;
+    loadUsers(currentPage);
 }
 
 function clearAllFilters() {
-    // Clear search
-    const searchInput = document.getElementById('searchInput');
-    if (searchInput) {
-        searchInput.value = '';
-        currentSearch = '';
-    }
-
-    // Clear filters
-    const userStatusFilter = document.getElementById('userStatusFilter');
-    const lockedStatusFilter = document.getElementById('lockedStatusFilter');
-    const userRoleFilter = document.getElementById('userRoleFilter');
-    const genderFilter = document.getElementById('genderFilter');
-    
-    if (userStatusFilter) userStatusFilter.value = '';
-    if (lockedStatusFilter) lockedStatusFilter.value = '';
-    if (userRoleFilter) userRoleFilter.value = '';
-    if (genderFilter) genderFilter.value = '';
-    
-    currentFilters = {
-        user_status: '',
-        locked_status: '',
-        user_role: '',
-        gender: ''
-    };
-
+    document.getElementById('searchInput').value = '';
+    document.getElementById('userStatusFilter').value = '';
+    document.getElementById('lockedStatusFilter').value = '';
+    document.getElementById('userRoleFilter').value = '';
+    document.getElementById('genderFilter').value = '';
     currentPage = 1;
-    loadUsers();
+    loadUsers(currentPage);
 }
 
-function loadUsers(page = currentPage) {
+function loadUsers(page = 1) {
     currentPage = page;
+    const searchInput = document.getElementById('searchInput').value;
+    const userStatus = document.getElementById('userStatusFilter').value;
+    const lockedStatus = document.getElementById('lockedStatusFilter').value;
+    const userRole = document.getElementById('userRoleFilter').value;
+    const gender = document.getElementById('genderFilter').value;
     
-    // Show loading indicator
     const loadingIndicator = document.getElementById('loadingIndicator');
-    const usersContainer = document.getElementById('usersContainer');
+    const usersTableBody = document.getElementById('usersTableBody');
     const paginationContainer = document.getElementById('paginationContainer');
+    const resultsInfo = document.getElementById('resultsInfo');
+
+    loadingIndicator.style.display = 'block';
+    usersTableBody.innerHTML = '';
+    resultsInfo.textContent = 'Loading...';
+
+    // Determine if we are in client management mode
+    const urlParams = new URLSearchParams(window.location.search);
+    const clientId = urlParams.get('client_id');
+    let ajaxUrl = getProjectUrl('users/ajax-search');
     
-    if (loadingIndicator) loadingIndicator.style.display = 'block';
-    if (usersContainer) usersContainer.style.display = 'none';
-    if (paginationContainer) paginationContainer.style.display = 'none';
+    const params = new URLSearchParams({
+        page,
+        search: searchInput,
+        user_status: userStatus,
+        locked_status: lockedStatus,
+        user_role: userRole,
+        gender
+    });
 
-    // Prepare data for AJAX request
-    const formData = new FormData();
-    formData.append('controller', 'UserManagementController');
-    formData.append('action', 'ajaxSearch');
-    formData.append('page', currentPage);
-    formData.append('search', currentSearch);
-    formData.append('user_status', currentFilters.user_status);
-    formData.append('locked_status', currentFilters.locked_status);
-    formData.append('user_role', currentFilters.user_role);
-    formData.append('gender', currentFilters.gender);
+    if (clientId && !isNaN(clientId)) {
+        params.append('client_id', clientId);
+    }
+    
+    ajaxUrl += `?${params.toString()}`;
 
-    // Make AJAX request
-    fetch('index.php', {
-        method: 'POST',
-        body: formData
-    })
+    fetch(ajaxUrl)
     .then(response => response.json())
     .then(data => {
-        if (data.success) {
             updateUsersTable(data.users);
             updatePagination(data.pagination);
-            updateSearchInfo(data.totalUsers);
-        } else {
-            console.error('Error loading users:', data.message);
-            alert('Error loading users: ' + (data.message || 'Unknown error'));
-        }
+            updateSearchInfo(data.pagination.total_users);
     })
     .catch(error => {
-        console.error('AJAX Error:', error);
-        alert('Network error. Please try again.');
+            console.error('Error fetching users:', error);
+            resultsInfo.textContent = 'Error loading users.';
     })
     .finally(() => {
-        // Hide loading indicator
-        if (loadingIndicator) loadingIndicator.style.display = 'none';
-        if (usersContainer) usersContainer.style.display = 'block';
-        if (paginationContainer) paginationContainer.style.display = 'block';
+            loadingIndicator.style.display = 'none';
     });
 }
 
 function updateUsersTable(users) {
-    const tbody = document.getElementById('usersTableBody');
-    if (!tbody) return;
-    
-    tbody.innerHTML = '';
+    const usersTableBody = document.getElementById('usersTableBody');
+    usersTableBody.innerHTML = ''; // Clear existing rows
 
     if (users.length === 0) {
-        tbody.innerHTML = `
-            <tr>
-                <td colspan="7" class="no-results-message">
-                    <i class="fas fa-search"></i>
-                    <div>
-                        <h5>No users found</h5>
-                        <p>Try adjusting your search terms or filters</p>
-                    </div>
-                </td>
-            </tr>
-        `;
+        usersTableBody.innerHTML = '<tr><td colspan="7" class="text-center">No users found.</td></tr>';
         return;
     }
 
     users.forEach(user => {
-        const userStatusBadge = user.user_status == 1 
-            ? '<span class="badge bg-success">Active</span>' 
-            : '<span class="badge bg-danger">Inactive</span>';
+        const userStatusBadge = user.user_status === 'Active' ? `<span class="badge bg-success">${user.user_status}</span>` : `<span class="badge bg-danger">${user.user_status}</span>`;
+        const lockedStatusBadge = user.locked_status === '1' ? `<span class="badge bg-warning">Locked</span>` : `<span class="badge bg-secondary">Unlocked</span>`;
         
-        const lockedStatusBadge = user.locked_status == 1 
-            ? '<span class="badge bg-warning">Locked</span>' 
-            : '<span class="badge bg-primary">Unlocked</span>';
-        
-        const lockButton = user.locked_status == 1
-            ? `<a href="#" class="btn theme-btn-warning unlock-user"
-                 data-id="${user.encrypted_id}"
-                 data-name="${escapeHtml(user.full_name)}"
-                 title="Unlock User">
-                 <i class="fas fa-lock-open"></i>
-               </a>`
-            : `<a href="#" class="btn theme-btn-danger lock-user"
-                 data-id="${user.encrypted_id}"
-                 data-name="${escapeHtml(user.full_name)}"
-                 title="Lock User">
-                 <i class="fas fa-lock"></i>
-               </a>`;
-
-        const row = document.createElement('tr');
-        row.innerHTML = `
-            <td>${escapeHtml(user.profile_id)}</td>
-            <td>${escapeHtml(user.full_name)}</td>
-            <td>${escapeHtml(user.email)}</td>
-            <td>${escapeHtml(user.contact_number)}</td>
+        const row = `
+            <tr>
+                <td>${escapeHtml(user.profile_id || '')}</td>
+                <td>${escapeHtml(user.full_name || '')}</td>
+                <td>${escapeHtml(user.email || '')}</td>
+                <td>${escapeHtml(user.contact_number || '')}</td>
             <td>${userStatusBadge}</td>
             <td>${lockedStatusBadge}</td>
             <td>
-                <button type="button" class="btn theme-btn-primary edit-user-btn"
-                        data-user-id="${user.encrypted_id}"
-                        title="Edit User">
+                    <button class="btn btn-sm btn-outline-primary edit-user-btn" data-user-id="${user.encrypted_id}" title="Edit User">
                     <i class="fas fa-edit"></i>
                 </button>
-                ${lockButton}
-                <a href="#" class="btn theme-btn-danger delete-user"
-                  data-id="${user.encrypted_id}"
-                  data-name="${escapeHtml(user.full_name)}"
-                  title="Delete User">
-                  <i class="fas fa-trash-alt"></i>
-                </a>
+                    <button class="btn btn-sm btn-outline-danger delete-user-btn" data-user-id="${user.id}" title="Delete User">
+                        <i class="fas fa-trash"></i>
+                    </button>
             </td>
+            </tr>
         `;
-        tbody.appendChild(row);
+        usersTableBody.insertAdjacentHTML('beforeend', row);
     });
 }
 
 function updatePagination(pagination) {
-    const container = document.getElementById('paginationContainer');
-    if (!container) return;
+    const paginationContainer = document.getElementById('paginationContainer');
+    paginationContainer.innerHTML = ''; // Clear existing pagination
 
-    // Only show pagination if there are more than 10 total users
-    if (pagination.totalUsers <= 10) {
-        if (pagination.totalUsers > 0) {
-            // Show total count when no pagination needed
-            const plural = pagination.totalUsers !== 1 ? 's' : '';
-            container.innerHTML = `
-                <div class="text-center text-muted small">
-                    Showing all ${pagination.totalUsers} user${plural}
-                </div>
-            `;
-            container.style.display = 'block';
-        } else {
-            container.style.display = 'none';
-        }
-        return;
-    }
+    if (pagination.total_pages <= 1) return;
 
-    container.style.display = 'block';
-
-    // Create pagination navigation
-    let paginationHTML = '<nav><ul class="pagination justify-content-center" id="paginationList">';
+    let paginationHtml = '<nav><ul class="pagination justify-content-center">';
 
     // Previous button
-    if (pagination.currentPage > 1) {
-        paginationHTML += `
-            <li class="page-item">
-                <a class="page-link" href="#" data-page="${pagination.currentPage - 1}">«
-                  Previous</a>
+    paginationHtml += `
+        <li class="page-item ${pagination.current_page === 1 ? 'disabled' : ''}">
+            <a class="page-link" href="#" onclick="event.preventDefault(); loadUsers(${pagination.current_page - 1});">Previous</a>
             </li>
         `;
-    }
 
     // Page numbers
-    for (let i = 1; i <= pagination.totalPages; i++) {
-        const activeClass = i === pagination.currentPage ? 'active' : '';
-        paginationHTML += `
-            <li class="page-item ${activeClass}">
-                <a class="page-link" href="#" data-page="${i}">${i}</a>
+    for (let i = 1; i <= pagination.total_pages; i++) {
+        paginationHtml += `
+            <li class="page-item ${pagination.current_page === i ? 'active' : ''}">
+                <a class="page-link" href="#" onclick="event.preventDefault(); loadUsers(${i});">${i}</a>
             </li>
         `;
     }
 
     // Next button
-    if (pagination.currentPage < pagination.totalPages) {
-        paginationHTML += `
-            <li class="page-item">
-                <a class="page-link" href="#" data-page="${pagination.currentPage + 1}">Next
-                  »</a>
+    paginationHtml += `
+        <li class="page-item ${pagination.current_page === pagination.total_pages ? 'disabled' : ''}">
+            <a class="page-link" href="#" onclick="event.preventDefault(); loadUsers(${pagination.current_page + 1});">Next</a>
             </li>
         `;
-    }
 
-    paginationHTML += '</ul></nav>';
-    container.innerHTML = paginationHTML;
+    paginationHtml += '</ul></nav>';
+    paginationContainer.innerHTML = paginationHtml;
 }
 
 function updateSearchInfo(totalUsers) {
-    const searchInfo = document.getElementById('searchResultsInfo');
-    const resultsText = document.getElementById('resultsText');
-
-    if (!searchInfo || !resultsText) return;
-
-    if (currentSearch || currentFilters.user_status || currentFilters.locked_status || currentFilters.user_role || currentFilters.gender) {
-        let infoText = `Showing ${totalUsers} result(s)`;
-
-        if (currentSearch) {
-            infoText += ` for search: "<strong>${escapeHtml(currentSearch)}</strong>"`;
-        }
-
-        if (currentFilters.user_status || currentFilters.locked_status || currentFilters.user_role || currentFilters.gender) {
-            infoText += ' with filters applied';
-        }
-
-        resultsText.innerHTML = infoText;
-        searchInfo.style.display = 'block';
-    } else {
-        searchInfo.style.display = 'none';
-    }
+    const resultsInfo = document.getElementById('resultsInfo');
+    resultsInfo.textContent = `Showing ${totalUsers > 0 ? currentPage * 10 - 9 : 0} - ${Math.min(currentPage * 10, totalUsers)} of ${totalUsers} users.`;
 }
 
 function escapeHtml(text) {
-    const div = document.createElement('div');
-    div.textContent = text;
-    return div.innerHTML;
+    if (text === null || text === undefined) return '';
+    const map = {
+        '&': '&amp;',
+        '<': '&lt;',
+        '>': '&gt;',
+        '"': '&quot;',
+        "'": '&#039;'
+    };
+    return text.toString().replace(/[&<>"']/g, function(m) { return map[m]; });
 }
 
 // ===================================
 // MODAL FUNCTIONALITY
 // ===================================
 
-// Modal initialization will be called from main DOMContentLoaded
-
+/**
+ * Sets up the initial event listeners for the Add and Edit modals.
+ * This function only runs once on page load.
+ */
 function initializeModals() {
-    // Add User Modal
     const addUserModal = document.getElementById('addUserModal');
     if (addUserModal) {
         addUserModal.addEventListener('show.bs.modal', function(event) {
@@ -357,121 +227,128 @@ function initializeModals() {
             const clientId = button ? button.getAttribute('data-client-id') : '';
             loadAddUserModalContent(clientId);
         });
-
+        // Add a listener to clear content when the modal is hidden to ensure it's fresh next time.
         addUserModal.addEventListener('hidden.bs.modal', function() {
-            // Clear modal content when closed
             const modalContent = document.getElementById('addUserModalContent');
-            if (modalContent) {
-                modalContent.innerHTML = `
-                    <div class="text-center py-4">
-                        <div class="spinner-border text-primary" role="status">
-                            <span class="visually-hidden">Loading...</span>
-                        </div>
-                        <p class="mt-2">Loading form...</p>
-                    </div>
-                `;
-            }
+            if(modalContent) modalContent.innerHTML = '';
         });
     }
 
-    // Edit User Modal
     const editUserModal = document.getElementById('editUserModal');
     if (editUserModal) {
         editUserModal.addEventListener('show.bs.modal', function(event) {
             const button = event.relatedTarget;
             const userId = button ? button.getAttribute('data-user-id') : '';
+            if (userId) {
             loadEditUserModalContent(userId);
+            }
         });
-
         editUserModal.addEventListener('hidden.bs.modal', function() {
-            // Clear modal content when closed
             const modalContent = document.getElementById('editUserModalContent');
-            if (modalContent) {
-                modalContent.innerHTML = `
-                    <div class="text-center py-4">
-                        <div class="spinner-border text-primary" role="status">
-                            <span class="visually-hidden">Loading...</span>
-                        </div>
-                        <p class="mt-2">Loading form...</p>
-                    </div>
-                `;
+            if(modalContent) modalContent.innerHTML = '';
+        });
+    }
+    
+    // This handles clicks on edit buttons that are added to the page dynamically via AJAX.
+    document.addEventListener('click', function (event) {
+        const editButton = event.target.closest('.edit-user-btn');
+        if (editButton) {
+            const userId = editButton.getAttribute('data-user-id');
+            const modal = new bootstrap.Modal(document.getElementById('editUserModal'));
+            modal.show();
+            // The 'show.bs.modal' event will handle loading the content.
             }
         });
     }
 
-    // Handle edit button clicks in AJAX-generated content
-    document.addEventListener('click', function(e) {
-        if (e.target.closest('.edit-user-btn')) {
-            e.preventDefault();
-            const button = e.target.closest('.edit-user-btn');
-            const userId = button.getAttribute('data-user-id');
-
-            // Show modal and load content
-            const editModal = new bootstrap.Modal(document.getElementById('editUserModal'));
-            editModal.show();
-            loadEditUserModalContent(userId);
+/**
+ * Attaches a robust, delegated event listener to a modal's content area.
+ * This is the definitive validation handler for all modal interactions.
+ * It listens for both 'click' (on submit) and 'focusout' (on fields).
+ * @param {HTMLElement} modalContent - The element containing the modal's body.
+ */
+function attachValidationHandler(modalContent) {
+    const masterEventHandler = (event) => {
+        if (event.type === 'click') {
+            const submitButton = event.target.closest('button[type="submit"]');
+            if (submitButton) {
+                console.log('DEBUG: Click event on submit button detected by masterEventHandler');
+                event.preventDefault();
+                event.stopPropagation();
+                const form = submitButton.closest('form');
+                if (!form) return;
+                if (form.id === 'addUserModalForm' && typeof validateAddUserModal === 'function') {
+                    console.log('DEBUG: Calling validateAddUserModal');
+                    if (validateAddUserModal()) {
+                        console.log('DEBUG: Validation passed, calling submitAddUserModal');
+                        submitAddUserModal();
+                    }
+                } else if (form.id === 'editUserModalForm' && typeof validateEditUserModal === 'function') {
+                    if (validateEditUserModal()) {
+                        submitEditUserModal();
+                    }
+                }
+            }
         }
-    });
+        if (event.type === 'focusout') {
+            const field = event.target.closest('input, select, textarea');
+            if (field) {
+                console.log('DEBUG: Focusout event on field:', field.id);
+                const form = field.closest('form');
+                if (!form) return;
+                if (form.id === 'addUserModalForm' && typeof validateField === 'function') {
+                    validateField(field);
+                } else if (form.id === 'editUserModalForm' && typeof validateEditField === 'function') {
+                    validateEditField(field); 
+                }
+            }
+        }
+    };
+    modalContent.removeEventListener('click', masterEventHandler, { capture: true });
+    modalContent.removeEventListener('focusout', masterEventHandler, { capture: true });
+    modalContent.addEventListener('click', masterEventHandler, { capture: true });
+    modalContent.addEventListener('focusout', masterEventHandler, { capture: true });
 }
 
+/**
+ * Loads the content for the Add User modal and attaches the validation handler.
+ */
 function loadAddUserModalContent(clientId = '') {
     const modalContent = document.getElementById('addUserModalContent');
     if (!modalContent) return;
+    
+    modalContent.innerHTML = `<div class="text-center py-5"><div class="spinner-border text-primary" role="status"><span class="visually-hidden">Loading...</span></div></div>`;
 
-    // Show loading state
-    modalContent.innerHTML = `
-        <div class="text-center py-4">
-            <div class="spinner-border text-primary" role="status">
-                <span class="visually-hidden">Loading...</span>
-            </div>
-            <p class="mt-2">Loading form...</p>
-        </div>
-    `;
-
-    // Build URL with client_id if provided
     let url = getProjectUrl('users/modal/add');
-    if (clientId) {
-        url += '?client_id=' + encodeURIComponent(clientId);
-    }
+    if (clientId) url += '?client_id=' + encodeURIComponent(clientId);
 
     fetch(url)
         .then(response => response.text())
         .then(html => {
             modalContent.innerHTML = html;
 
-            // Initialize form functionality
-            initializeAddUserForm();
+            // Initialize validation for the Add User modal
+            if (typeof initializeAddUserModalValidation === 'function') {
+                initializeAddUserModalValidation();
+            }
 
-            // Initialize location dropdowns
-            initializeLocationDropdowns('modal_');
-
-            // Initialize timezone dropdown
-            initializeTimezoneDropdown('modal_');
+            if (typeof initializeLocationDropdowns === 'function') initializeLocationDropdowns('modal_');
+            if (typeof initializeTimezoneDropdown === 'function') initializeTimezoneDropdown('modal_');
         })
         .catch(error => {
             console.error('Error loading add user form:', error);
-            modalContent.innerHTML = `
-                <div class="alert alert-danger">
-                    <i class="fas fa-exclamation-triangle"></i>
-                    Error loading form. Please try again.
-                </div>
-            `;
+            modalContent.innerHTML = `<div class="alert alert-danger p-4">Error loading form. Please close this modal and try again.</div>`;
         });
 }
 
+/**
+ * Loads the content for the Edit User modal and attaches the validation handler.
+ */
 function loadEditUserModalContent(userId) {
     const modalContent = document.getElementById('editUserModalContent');
     if (!modalContent) return;
 
-    // Show loading state
-    modalContent.innerHTML = `
-        <div class="text-center py-4">
-            <div class="spinner-border text-primary" role="status">
-                <span class="visually-hidden">Loading...</span>
-            </div>
-            <p class="mt-2">Loading form...</p>
-        </div>
-    `;
+    modalContent.innerHTML = `<div class="text-center py-5"><div class="spinner-border text-primary" role="status"><span class="visually-hidden">Loading...</span></div></div>`;
 
     const url = getProjectUrl('users/modal/edit') + '?user_id=' + encodeURIComponent(userId);
 
@@ -479,427 +356,15 @@ function loadEditUserModalContent(userId) {
         .then(response => response.text())
         .then(html => {
             modalContent.innerHTML = html;
-
-            // Initialize form functionality
-            initializeEditUserForm();
-
-            // Initialize location dropdowns
-            initializeLocationDropdowns('edit_modal_');
-
-            // Initialize timezone dropdown
-            initializeTimezoneDropdown('edit_modal_');
+            if (typeof initializeEditModalValidation === 'function') {
+                initializeEditModalValidation();
+            }
+            if (typeof initializeLocationDropdowns === 'function') initializeLocationDropdowns('edit_modal_');
+            if (typeof initializeTimezoneDropdown === 'function') initializeTimezoneDropdown('edit_modal_');
         })
         .catch(error => {
             console.error('Error loading edit user form:', error);
-            modalContent.innerHTML = `
-                <div class="alert alert-danger">
-                    <i class="fas fa-exclamation-triangle"></i>
-                    Error loading form. Please try again.
-                </div>
-            `;
-        });
-}
-
-function initializeAddUserForm() {
-    const form = document.getElementById('addUserModalForm');
-    if (!form) return;
-
-    form.addEventListener('submit', function(e) {
-        e.preventDefault();
-
-        // ✅ Run client-side validation first
-        if (typeof validateModalForm === 'function') {
-            const isValid = validateModalForm();
-            if (!isValid) {
-                // Show validation error alert
-                alert('Please fix all validation errors before submitting the form. Check tabs with red borders for errors.');
-
-                // Focus on first tab with errors
-                const firstErrorTab = document.querySelector('#addUserModalTabs .nav-link.tab-error');
-                if (firstErrorTab) {
-                    firstErrorTab.click();
-                }
-                return; // Stop form submission
-            }
-        }
-
-        // Show loading state
-        const submitBtn = form.querySelector('button[type="submit"]');
-        const originalText = submitBtn.innerHTML;
-        submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Saving...';
-        submitBtn.disabled = true;
-
-        const formData = new FormData(form);
-
-        // Debug: Log form data
-        console.log('🔥 Form submission data:');
-        for (let [key, value] of formData.entries()) {
-            console.log(`${key}: ${value}`);
-        }
-
-        const submitUrl = getProjectUrl('users/modal/add');
-        console.log('🔥 Submitting to URL:', submitUrl);
-
-        fetch(submitUrl, {
-            method: 'POST',
-            body: formData
-        })
-        .then(response => {
-            console.log('🔥 Response status:', response.status);
-            console.log('🔥 Response headers:', response.headers);
-            console.log('🔥 Response URL:', response.url);
-
-            if (!response.ok) {
-                throw new Error(`HTTP error! status: ${response.status}`);
-            }
-
-            return response.text(); // Get as text first to see what we're getting
-        })
-        .then(responseText => {
-            console.log('🔥 Raw response:', responseText);
-
-            // Try to parse as JSON
-            let data;
-            try {
-                data = JSON.parse(responseText);
-            } catch (e) {
-                console.error('❌ Failed to parse JSON:', e);
-                console.error('❌ Response was:', responseText);
-                throw new Error('Invalid JSON response from server');
-            }
-
-            console.log('🔥 Parsed response data:', data);
-            if (data.success) {
-                // Close modal properly
-                closeModalProperly('addUserModal');
-
-                // Show success message
-                showToast('success', data.message || 'User added successfully!');
-
-                // Reload users list
-                loadUsers(1);
-            } else {
-                // Handle validation errors - show on form fields instead of toast
-                if (data.field_errors && Object.keys(data.field_errors).length > 0) {
-                    // Show field-specific errors on the modal form
-                    if (typeof showServerValidationErrors === 'function') {
-                        showServerValidationErrors(data.field_errors);
-                    } else {
-                        // Fallback: show individual field errors
-                        Object.keys(data.field_errors).forEach(fieldName => {
-                            const field = document.querySelector(`[name="${fieldName}"]`);
-                            if (field) {
-                                showFieldValidationError(field, data.field_errors[fieldName]);
-                            }
-                        });
-                    }
-
-                    // Focus on first tab with errors
-                    const firstErrorTab = document.querySelector('#addUserModalTabs .nav-link.tab-error');
-                    if (firstErrorTab) {
-                        firstErrorTab.click();
-                    }
-                } else {
-                    // General error - show as toast
-                    showToast('error', data.message || 'Error adding user');
-                }
-            }
-        })
-        .catch(error => {
-            console.error('Error submitting form:', error);
-            showToast('error', 'Network error. Please try again.');
-        })
-        .finally(() => {
-            // Restore button state
-            submitBtn.innerHTML = originalText;
-            submitBtn.disabled = false;
-        });
-    });
-}
-
-function initializeEditUserForm() {
-    // Wait for the form to be properly loaded with multiple retries
-    let attempts = 0;
-    const maxAttempts = 10;
-
-    function tryInitialize() {
-        attempts++;
-        const form = document.getElementById('editUserModalForm');
-
-        if (form) {
-            // Set up basic validation
-            setupEditModalValidation(form);
-
-            // Initialize location dropdowns with proper prefix
-            if (typeof initializeLocationDropdowns === 'function') {
-                initializeLocationDropdowns('edit_modal_');
-            }
-
-            // Initialize timezone dropdown
-            if (typeof initializeTimezoneDropdown === 'function') {
-                initializeTimezoneDropdown('edit_modal_');
-            }
-
-            return; // Success, exit
-        }
-
-        if (attempts < maxAttempts) {
-            setTimeout(tryInitialize, 300);
-        }
-    }
-
-    // Start trying immediately
-    tryInitialize();
-}
-
-function setupEditModalValidation(form) {
-    // Remove any existing event listeners to prevent duplicates
-    const fields = form.querySelectorAll('input, select, textarea');
-
-    fields.forEach(field => {
-        // Remove existing blur listeners
-        field.removeEventListener('blur', handleEditModalFieldValidation);
-        // Add new blur listener
-        field.addEventListener('blur', handleEditModalFieldValidation);
-    });
-
-    // Handle form submission
-    form.removeEventListener('submit', handleEditModalFormSubmit);
-    form.addEventListener('submit', handleEditModalFormSubmit);
-
-    // Validation setup complete
-}
-
-function handleEditModalFieldValidation(e) {
-    const field = e.target;
-    if (typeof validateEditModalField === 'function') {
-        validateEditModalField(field);
-    }
-}
-
-function handleEditModalFormSubmit(e) {
-    e.preventDefault();
-    console.log('🔥 Edit user form submitted');
-
-    const form = e.target;
-
-    // Validate the entire form
-    let isValid = true;
-    if (typeof validateEditModalForm === 'function') {
-        isValid = validateEditModalForm();
-    }
-
-    if (!isValid) {
-        console.log('❌ Edit user validation failed');
-        alert('Please fix all validation errors before submitting the form.');
-        return false;
-    }
-
-    console.log('✅ Edit user validation passed, submitting via AJAX');
-
-    // Show loading state
-    const submitBtn = form.querySelector('button[type="submit"]');
-    const originalText = submitBtn.innerHTML;
-    submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Updating...';
-    submitBtn.disabled = true;
-
-    const formData = new FormData(form);
-
-    // Debug: Log form data
-    console.log('🔥 Edit user form submission data:');
-    for (let [key, value] of formData.entries()) {
-        console.log(`${key}: ${value}`);
-    }
-
-    fetch(getProjectUrl('users/modal/edit'), {
-        method: 'POST',
-        body: formData
-    })
-    .then(response => {
-        console.log('🔥 Edit user response status:', response.status);
-        console.log('🔥 Edit user response URL:', response.url);
-
-        if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`);
-        }
-
-        return response.text(); // Get as text first to see what we're getting
-    })
-    .then(responseText => {
-        console.log('🔥 Edit user raw response:', responseText);
-
-        // Try to parse as JSON
-        let data;
-        try {
-            data = JSON.parse(responseText);
-        } catch (e) {
-            console.error('❌ Failed to parse JSON:', e);
-            console.error('❌ Response was:', responseText);
-            throw new Error('Invalid JSON response from server');
-        }
-
-        console.log('🔥 Edit user parsed response data:', data);
-
-        if (data.success) {
-            // Close modal properly
-            closeModalProperly('editUserModal');
-
-            // Show success message
-            showToast('success', data.message || 'User updated successfully!');
-
-            // Reload users list
-            loadUsers(currentPage);
-        } else {
-            // Handle validation errors
-            if (data.field_errors && Object.keys(data.field_errors).length > 0) {
-                console.log('🔥 Showing field-specific errors:', data.field_errors);
-                Object.keys(data.field_errors).forEach(fieldName => {
-                    const field = document.querySelector(`#editUserModalForm [name="${fieldName}"]`);
-                    if (field && typeof showEditModalError === 'function') {
-                        showEditModalError(field, data.field_errors[fieldName]);
-                    }
-                });
-
-                // Update tab highlighting
-                if (typeof updateEditModalTabHighlighting === 'function') {
-                    updateEditModalTabHighlighting();
-                }
-
-                // Focus on first tab with errors
-                const firstErrorTab = document.querySelector('#editUserModalTabs .nav-link.tab-error');
-                if (firstErrorTab) {
-                    firstErrorTab.click();
-                }
-            } else {
-                // General error - show as toast
-                showToast('error', data.message || 'Error updating user');
-            }
-        }
-    })
-    .catch(error => {
-        console.error('Error submitting form:', error);
-        showToast('error', 'Network error. Please try again.');
-    })
-    .finally(() => {
-        // Restore button state
-        submitBtn.innerHTML = originalText;
-        submitBtn.disabled = false;
-    });
-}
-
-// Helper function to show field validation errors (consistent with VLR packages)
-function showFieldValidationError(input, message) {
-    let errorElement = input.parentNode.querySelector(".error-message");
-    if (!errorElement) {
-        errorElement = document.createElement("span");
-        errorElement.classList.add("error-message");
-        input.parentNode.appendChild(errorElement);
-    }
-    errorElement.textContent = message;
-    errorElement.style.color = "red";
-    errorElement.style.marginLeft = "10px";
-    errorElement.style.fontSize = "12px";
-
-    // Add Bootstrap error styling (consistent with VLR packages)
-    input.classList.add("is-invalid");
-}
-
-// Helper function to hide field validation errors
-function hideFieldValidationError(input) {
-    let errorElement = input.parentNode.querySelector(".error-message");
-    if (errorElement) {
-        errorElement.textContent = "";
-    }
-    input.classList.remove("is-invalid");
-}
-
-// Helper function to properly close Bootstrap modals and remove backdrop
-function closeModalProperly(modalId) {
-    console.log('🔥 Closing modal:', modalId);
-
-    const modalElement = document.getElementById(modalId);
-    if (!modalElement) {
-        console.log('❌ Modal element not found:', modalId);
-        return;
-    }
-
-    let modal = bootstrap.Modal.getInstance(modalElement);
-
-    if (!modal) {
-        console.log('🔥 No modal instance found, creating new one');
-        modal = new bootstrap.Modal(modalElement);
-    }
-
-    // Hide the modal
-    modal.hide();
-
-    // Force cleanup after animation completes
-    setTimeout(() => {
-        console.log('🔥 Forcing modal cleanup');
-
-        // Remove any remaining backdrops
-        const backdrops = document.querySelectorAll('.modal-backdrop');
-        console.log('🔥 Found', backdrops.length, 'backdrops to remove');
-        backdrops.forEach(backdrop => {
-            console.log('🔥 Removing backdrop');
-            backdrop.remove();
-        });
-
-        // Remove modal-open class from body
-        document.body.classList.remove('modal-open');
-
-        // Reset body styles
-        document.body.style.paddingRight = '';
-        document.body.style.overflow = '';
-
-        // Ensure modal is hidden
-        modalElement.classList.remove('show');
-        modalElement.style.display = 'none';
-        modalElement.setAttribute('aria-hidden', 'true');
-        modalElement.removeAttribute('aria-modal');
-
-        console.log('✅ Modal cleanup completed');
-    }, 300);
-}
-
-// Helper function to show toast notifications
-function showToast(type, message) {
-    // Create toast element
-    const toastId = 'toast-' + Date.now();
-    const toastHtml = `
-        <div id="${toastId}" class="toast align-items-center text-white bg-${type === 'success' ? 'success' : 'danger'} border-0" role="alert" aria-live="assertive" aria-atomic="true">
-            <div class="d-flex">
-                <div class="toast-body">
-                    <i class="fas fa-${type === 'success' ? 'check-circle' : 'exclamation-circle'} me-2"></i>
-                    ${message}
-                </div>
-                <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
-            </div>
-        </div>
-    `;
-
-    // Add to toast container or create one
-    let toastContainer = document.querySelector('.toast-container');
-    if (!toastContainer) {
-        toastContainer = document.createElement('div');
-        toastContainer.className = 'toast-container position-fixed top-0 end-0 p-3';
-        toastContainer.style.zIndex = '9999';
-        document.body.appendChild(toastContainer);
-    }
-
-    toastContainer.insertAdjacentHTML('beforeend', toastHtml);
-
-    // Show toast
-    const toastElement = document.getElementById(toastId);
-    const toast = new bootstrap.Toast(toastElement, {
-        autohide: true,
-        delay: 5000
-    });
-    toast.show();
-
-    // Remove toast element after it's hidden
-    toastElement.addEventListener('hidden.bs.toast', function() {
-        toastElement.remove();
+            modalContent.innerHTML = `<div class="alert alert-danger p-4">Error loading form. Please close this modal and try again.</div>`;
     });
 }
 

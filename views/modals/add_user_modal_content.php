@@ -82,7 +82,7 @@ $isSuperAdminForClient = $isFromClientManagement;
     </div>
 <?php endif; ?>
 
-<form id="addUserModalForm" method="POST" enctype="multipart/form-data">
+<form id="addUserModalForm" method="POST" enctype="multipart/form-data" action="javascript:void(0);">
     <!-- ✅ Tabs Section -->
     <!-- Tabs Navigation -->
     <ul class="nav nav-tabs" id="addUserModalTabs" role="tablist">
@@ -104,7 +104,7 @@ $isSuperAdminForClient = $isFromClientManagement;
     </ul>
 
     <!-- Hidden fields -->
-    <input type="hidden" name="client_id" value="<?= htmlspecialchars($clientName); ?>">
+    <input type="hidden" name="client_id" value="<?= htmlspecialchars($targetClientId); ?>">
     <input type="hidden" name="target_client_id" value="<?= htmlspecialchars($targetClientId); ?>">
 
     <!-- Tabs Content -->
@@ -455,10 +455,23 @@ $isSuperAdminForClient = $isFromClientManagement;
         <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
             <i class="fas fa-times me-1"></i><?= Localization::translate('cancel'); ?>
         </button>
-        <button type="submit" class="btn btn-primary">
+        <button type="submit" class="btn btn-primary" id="addUserSubmitButton">
             <i class="fas fa-save me-1"></i><?= Localization::translate('submit'); ?>
         </button>
     </div>
 </form>
 
-<!-- JavaScript functionality is now handled by the included add_user_validation.js file -->
+<script>
+// Set required variables for modal validation
+window.isSuperAdminForClient = <?= json_encode($isSuperAdminForClient); ?>;
+window.addUserSubmitUrl = '<?= UrlHelper::url('users/modal/submit-add') ?>';
+
+// Immediately generate and set profile_id when modal content is loaded
+var profileIdField = document.getElementById('modal_profile_id');
+if (profileIdField && !profileIdField.value) {
+    var prefix = '<?= substr(preg_replace("/[^A-Za-z0-9]/", "", $clientName), 0, 2) ?>'.toUpperCase();
+    var timestamp = Date.now().toString().slice(-6);
+    var random = Math.floor(Math.random() * 1000).toString().padStart(3, '0');
+    profileIdField.value = prefix + timestamp + random;
+}
+</script>

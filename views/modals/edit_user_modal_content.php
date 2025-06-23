@@ -67,10 +67,11 @@ $userRoles = $userModel->getClientUserRoles();
 $clientName = $_SESSION['client_code'] ?? 'DEFAULT';
 ?>
 
-<form id="editUserModalForm" method="POST" enctype="multipart/form-data">
-    <!-- Hidden field for encrypted profile ID -->
-    <input type="hidden" name="profile_id" value="<?= IdEncryption::encrypt($user['profile_id']); ?>">
-    <input type="hidden" name="client_id" value="<?= htmlspecialchars($clientName); ?>">
+<form id="editUserModalForm" method="POST" action="/Unlockyourskills/users/modal/edit" enctype="multipart/form-data">
+    <!-- Hidden field for user ID (encrypted numeric ID) -->
+    <input type="hidden" name="user_id" value="<?= htmlspecialchars(IdEncryption::encrypt($user['id'])); ?>">
+    <!-- Hidden field for client ID (must be numeric) -->
+    <input type="hidden" name="client_id" value="<?= htmlspecialchars($user['client_id']); ?>">
     
     <!-- ✅ Tabs Section -->
     <!-- Tabs Navigation -->
@@ -130,7 +131,7 @@ $clientName = $_SESSION['client_code'] ?? 'DEFAULT';
                 </div>
                 <div class="col-lg-6 col-md-6 col-sm-12 form-group">
                     <label><?= Localization::translate('dob'); ?></label>
-                    <input type="date" name="dob" class="form-control" value="<?= htmlspecialchars($user['dob']); ?>">
+                    <input type="date" name="dob" class="form-control" value="<?= htmlspecialchars($user['dob'] ?? ''); ?>">
                 </div>
             </div>
             <div class="row">
@@ -157,7 +158,7 @@ $clientName = $_SESSION['client_code'] ?? 'DEFAULT';
                 </div>
                 <div class="col-lg-6 col-md-6 col-sm-12 form-group">
                     <label><?= Localization::translate('profile_expiry_date'); ?></label>
-                    <input type="date" name="profile_expiry" class="form-control" value="<?= htmlspecialchars($user['profile_expiry']); ?>">
+                    <input type="date" name="profile_expiry" class="form-control" value="<?= htmlspecialchars($user['profile_expiry'] ?? ''); ?>">
                 </div>
             </div>
             <div class="row">
@@ -269,11 +270,11 @@ $clientName = $_SESSION['client_code'] ?? 'DEFAULT';
             <div class="row">
                 <div class="col-lg-6 col-md-6 col-sm-12 form-group">
                     <label><?= Localization::translate('joining_date'); ?></label>
-                    <input type="date" name="joining_date" class="form-control" value="<?= htmlspecialchars($user['joining_date']); ?>">
+                    <input type="date" name="joining_date" class="form-control" value="<?= htmlspecialchars($user['joining_date'] ?? ''); ?>">
                 </div>
                 <div class="col-lg-6 col-md-6 col-sm-12 form-group">
                     <label><?= Localization::translate('retirement_date'); ?></label>
-                    <input type="date" name="retirement_date" class="form-control" value="<?= htmlspecialchars($user['retirement_date']); ?>">
+                    <input type="date" name="retirement_date" class="form-control" value="<?= htmlspecialchars($user['retirement_date'] ?? ''); ?>">
                 </div>
             </div>
         </div>
