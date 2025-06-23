@@ -283,6 +283,7 @@ include 'includes/sidebar.php';
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="<?= Localization::translate('clients_close'); ?>"></button>
             </div>
             <form id="editClientForm" method="POST" action="" enctype="multipart/form-data">
+                <input type="hidden" name="_method" value="PUT">
                 <input type="hidden" id="edit_client_id" name="client_id">
                 <div class="modal-body">
                     <div class="row">

@@ -180,10 +180,7 @@ document.addEventListener("DOMContentLoaded", function () {
             default:
                 // Handle custom fields (Extra Details tab)
                 if (fieldName && fieldName.startsWith("custom_field_")) {
-                    // Check if field is required by looking at the label for asterisk
-                    const fieldLabel = document.querySelector(`label[for="${field.id}"]`);
-                    const isRequired = fieldLabel && fieldLabel.innerHTML.includes('*');
-
+                    const isRequired = field.getAttribute('data-required') === '1';
                     if (isRequired && value === "") {
                         showError(field, "This field is required");
                         isValid = false;
@@ -441,9 +438,7 @@ window.validateEditModalForm = function() {
             default:
                 // Handle custom fields
                 if (fieldName && fieldName.startsWith("custom_field_")) {
-                    const fieldLabel = document.querySelector(`label[for="${field.id}"]`);
-                    const isRequired = fieldLabel && fieldLabel.innerHTML.includes('*');
-
+                    const isRequired = field.getAttribute('data-required') === '1';
                     if (isRequired && value === "") {
                         showEditModalError(field, "This field is required");
                         isValid = false;
@@ -577,6 +572,24 @@ window.initializeEditModalValidation = function() {
         field.removeEventListener('blur', handleEditModalFieldBlur);
         field.addEventListener('blur', handleEditModalFieldBlur);
     });
+
+    // Add submit handler to block submission if validation fails
+    form.onsubmit = null;
+    form.addEventListener('submit', function(event) {
+        event.preventDefault();
+        if (typeof validateEditModalForm === 'function') {
+            if (validateEditModalForm()) {
+                submitEditUserModal();
+            } else {
+                // Optionally, focus the first invalid field or tab
+                const firstInvalid = form.querySelector('.is-invalid');
+                if (firstInvalid) firstInvalid.focus();
+            }
+        } else {
+            // If validation function doesn't exist, submit directly
+            submitEditUserModal();
+        }
+    });
 };
 
 // ✅ Blur event handler for edit modal fields
@@ -588,3 +601,76 @@ function handleEditModalFieldBlur(event) {
         console.log('❌ validateEditModalField function not available');
     }
 }
+
+// ✅ Function to submit edit user modal form
+function submitEditUserModal() {
+    const form = document.getElementById('editUserModalForm');
+    if (!form) {
+        console.error('Edit user modal form not found');
+        return;
+    }
+
+    const formData = new FormData(form);
+    const submitButton = form.querySelector('button[type="submit"]');
+    
+    // Disable submit button and show loading state
+    if (submitButton) {
+        submitButton.disabled = true;
+        const originalText = submitButton.innerHTML;
+        submitButton.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Updating...';
+    }
+
+    fetch('/Unlockyourskills/users/modal/edit', {
+        method: 'POST',
+        body: formData
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            // Close the modal
+            const modal = bootstrap.Modal.getInstance(document.getElementById('editUserModal'));
+            if (modal) modal.hide();
+            
+            // Show success message
+            if (typeof showSimpleToast === 'function') {
+                showSimpleToast(data.message || 'User updated successfully!', 'success');
+            }
+            
+            // Reload the users table
+            if (typeof loadUsers === 'function') {
+                loadUsers(1);
+            }
+        } else {
+            // Show error message
+            if (typeof showSimpleToast === 'function') {
+                showSimpleToast(data.message || 'An error occurred while updating the user.', 'error');
+            }
+            
+            // Handle field-specific errors if any
+            if (data.field_errors) {
+                Object.keys(data.field_errors).forEach(fieldName => {
+                    const field = form.querySelector(`[name="${fieldName}"]`);
+                    if (field && typeof showEditModalError === 'function') {
+                        showEditModalError(field, data.field_errors[fieldName]);
+                    }
+                });
+            }
+        }
+    })
+    .catch(error => {
+        console.error('Edit user submission error:', error);
+        if (typeof showSimpleToast === 'function') {
+            showSimpleToast('A network error occurred. Please try again.', 'error');
+        }
+    })
+    .finally(() => {
+        // Re-enable submit button
+        if (submitButton) {
+            submitButton.disabled = false;
+            submitButton.innerHTML = '<i class="fas fa-save me-1"></i>Update';
+        }
+    });
+}
+
+// Make functions globally available
+window.submitEditUserModal = submitEditUserModal;

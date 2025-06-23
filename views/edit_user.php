@@ -18,10 +18,10 @@ $clientName = $_SESSION['client_code'] ?? 'DEFAULT';
         <h1 class="page-title text-purple">
             <?= Localization::translate('edit_user_title'); ?>
         </h1>
-        <form action="<?= UrlHelper::url('users/' . IdEncryption::encrypt($user['profile_id'])) ?>" id="editUserForm" method="POST"
+        <form action="<?= UrlHelper::url('users/' . htmlspecialchars($user['profile_id'])) ?>" id="editUserForm" method="POST"
             enctype="multipart/form-data">
             <!-- ✅ Hidden field for encrypted profile ID -->
-            <input type="hidden" name="profile_id" value="<?= IdEncryption::encrypt($user['profile_id']); ?>">
+            <input type="hidden" name="profile_id" value="<?= htmlspecialchars($user['profile_id']); ?>">
             
             <!-- ✅ Tabs Section -->
             <!-- Tabs Navigation -->

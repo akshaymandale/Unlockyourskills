@@ -160,11 +160,20 @@ class UserModel {
     }
 
      // ✅ Soft Delete Function
-     public function softDeleteUser($profile_id) {
+     public function softDeleteUser($id) {
         try {
+            // Determine if the ID is numeric (primary key) or string (profile_id)
+            $isNumericId = is_numeric($id);
+            
             // Get user ID first
-            $getUserStmt = $this->conn->prepare("SELECT id FROM user_profiles WHERE profile_id = :profile_id");
-            $getUserStmt->execute([':profile_id' => $profile_id]);
+            if ($isNumericId) {
+                $getUserStmt = $this->conn->prepare("SELECT id FROM user_profiles WHERE id = :id");
+                $getUserStmt->execute([':id' => $id]);
+            } else {
+                $getUserStmt = $this->conn->prepare("SELECT id FROM user_profiles WHERE profile_id = :profile_id");
+                $getUserStmt->execute([':profile_id' => $id]);
+            }
+            
             $user = $getUserStmt->fetch(PDO::FETCH_ASSOC);
 
             if ($user) {
@@ -175,9 +184,16 @@ class UserModel {
             }
 
             // Soft delete the user
-            $query = "UPDATE user_profiles SET is_deleted = 1 WHERE profile_id = :profile_id";
-            $stmt = $this->conn->prepare($query);
-            $stmt->bindParam(":profile_id", $profile_id);
+            if ($isNumericId) {
+                $query = "UPDATE user_profiles SET is_deleted = 1 WHERE id = :id";
+                $stmt = $this->conn->prepare($query);
+                $stmt->bindParam(":id", $id);
+            } else {
+                $query = "UPDATE user_profiles SET is_deleted = 1 WHERE profile_id = :profile_id";
+                $stmt = $this->conn->prepare($query);
+                $stmt->bindParam(":profile_id", $id);
+            }
+            
             return $stmt->execute();
         } catch (PDOException $e) {
             error_log("UserModel softDeleteUser error: " . $e->getMessage());
@@ -186,11 +202,22 @@ class UserModel {
     }
 
     // Lock and unlock user from actions
-    public function updateLockStatus($profile_id, $locked_status) {
-        $query = "UPDATE user_profiles SET locked_status = :locked_status WHERE profile_id = :profile_id";
-        $stmt = $this->conn->prepare($query);
-        $stmt->bindParam(":locked_status", $locked_status, PDO::PARAM_INT);
-        $stmt->bindParam(":profile_id", $profile_id, PDO::PARAM_STR);
+    public function updateLockStatus($id, $locked_status) {
+        // Determine if the ID is numeric (primary key) or string (profile_id)
+        $isNumericId = is_numeric($id);
+        
+        if ($isNumericId) {
+            $query = "UPDATE user_profiles SET locked_status = :locked_status WHERE id = :id";
+            $stmt = $this->conn->prepare($query);
+            $stmt->bindParam(":locked_status", $locked_status, PDO::PARAM_INT);
+            $stmt->bindParam(":id", $id, PDO::PARAM_INT);
+        } else {
+            $query = "UPDATE user_profiles SET locked_status = :locked_status WHERE profile_id = :profile_id";
+            $stmt = $this->conn->prepare($query);
+            $stmt->bindParam(":locked_status", $locked_status, PDO::PARAM_INT);
+            $stmt->bindParam(":profile_id", $id, PDO::PARAM_STR);
+        }
+        
         return $stmt->execute();
     }
 
@@ -323,9 +350,25 @@ class UserModel {
 
     // Get user by profile ID for editing
     public function getUserById($profile_id, $clientId = null) {
+        return $this->getUserByIdOrProfileId($profile_id, $clientId);
+    }
+
+    /**
+     * Get user by ID (numeric) or profile_id (string)
+     * This method can handle both the primary key ID and the profile_id
+     */
+    public function getUserByIdOrProfileId($id, $clientId = null) {
         try {
-            $sql = "SELECT * FROM user_profiles WHERE profile_id = :profile_id AND is_deleted = 0";
-            $params = [':profile_id' => $profile_id];
+            // Check if the ID is numeric (primary key) or string (profile_id)
+            if (is_numeric($id)) {
+                // It's a numeric ID (primary key)
+                $sql = "SELECT * FROM user_profiles WHERE id = :id AND is_deleted = 0";
+                $params = [':id' => $id];
+            } else {
+                // It's a profile_id (string)
+                $sql = "SELECT * FROM user_profiles WHERE profile_id = :profile_id AND is_deleted = 0";
+                $params = [':profile_id' => $id];
+            }
 
             if ($clientId !== null) {
                 $sql .= " AND client_id = :client_id";
@@ -336,14 +379,15 @@ class UserModel {
             $stmt->execute($params);
             return $stmt->fetch(PDO::FETCH_ASSOC);
         } catch (PDOException $e) {
-            error_log("UserModel getUserById error: " . $e->getMessage());
+            error_log("UserModel getUserByIdOrProfileId error: " . $e->getMessage());
             return false;
         }
     }
 
     // Update user information
-    public function updateUser($profile_id, $postData, $fileData = []) {
+    public function updateUser($id, $postData, $fileData = []) {
         try {
+            $isNumericId = is_numeric($id);
             // Extract values safely, setting NULL if empty
             $full_name = $postData['full_name'] ?? null;
             $email = $postData['email'] ?? null;
@@ -417,17 +461,18 @@ class UserModel {
                 retirement_date = :retirement_date,
                 updated_by = :updated_by";
 
-            // Only update profile picture if a new one was uploaded
             if ($profile_picture) {
                 $sql .= ", profile_picture = :profile_picture";
             }
-
-            $sql .= " WHERE profile_id = :profile_id AND is_deleted = 0";
+            if ($isNumericId) {
+                $sql .= " WHERE id = :id AND is_deleted = 0";
+            } else {
+                $sql .= " WHERE profile_id = :profile_id AND is_deleted = 0";
+            }
 
             $stmt = $this->conn->prepare($sql);
 
             $params = [
-                ':profile_id' => $profile_id,
                 ':full_name' => $full_name,
                 ':email' => $email,
                 ':contact_number' => $contact_number,
@@ -448,8 +493,11 @@ class UserModel {
                 ':retirement_date' => $retirement_date,
                 ':updated_by' => $currentUserId
             ];
-
-            // Add profile picture parameter if needed
+            if ($isNumericId) {
+                $params[':id'] = $id;
+            } else {
+                $params[':profile_id'] = $id;
+            }
             if ($profile_picture) {
                 $params[':profile_picture'] = $profile_picture;
             }
@@ -463,9 +511,15 @@ class UserModel {
 
             // Update custom field values if any
             if (!empty($customFieldValues)) {
-                // Get user ID from profile_id
-                $userStmt = $this->conn->prepare("SELECT id FROM user_profiles WHERE profile_id = :profile_id");
-                $userStmt->execute([':profile_id' => $profile_id]);
+                // Get user ID from the appropriate field
+                if ($isNumericId) {
+                    $userStmt = $this->conn->prepare("SELECT id FROM user_profiles WHERE id = :id");
+                    $userStmt->execute([':id' => $id]);
+                } else {
+                    $userStmt = $this->conn->prepare("SELECT id FROM user_profiles WHERE profile_id = :profile_id");
+                    $userStmt->execute([':profile_id' => $id]);
+                }
+                
                 $user = $userStmt->fetch(PDO::FETCH_ASSOC);
 
                 if ($user) {
@@ -490,6 +544,9 @@ class UserModel {
      * Get users by client (for client admins)
      */
     public function getUsersByClient($clientId, $limit = 10, $offset = 0, $search = '', $filters = []) {
+        if (empty($clientId) || !is_numeric($clientId)) {
+            return [];
+        }
         $sql = "SELECT up.*, c.client_name, c.max_users
                 FROM user_profiles up
                 LEFT JOIN clients c ON up.client_id = c.id
@@ -706,6 +763,9 @@ class UserModel {
      * Get Admin users by client
      */
     public function getAdminUsersByClient($clientId, $limit = 10, $offset = 0, $search = '', $filters = []) {
+        if (empty($clientId) || !is_numeric($clientId)) {
+            return [];
+        }
         $sql = "SELECT up.*, c.client_name, c.max_users
                 FROM user_profiles up
                 LEFT JOIN clients c ON up.client_id = c.id

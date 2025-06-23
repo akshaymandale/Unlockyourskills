@@ -296,7 +296,7 @@ Router::middleware(['Auth'])->group(function() {
     Router::get('/clients/create', 'ClientController@add');
     Router::post('/clients', 'ClientController@save');
     Router::get('/clients/{id}/edit', 'ClientController@edit');
-    Router::put('/clients/{id}', 'ClientController@update');
+    Router::post('/clients/{id}', 'ClientController@update');
     Router::delete('/clients/{id}', 'ClientController@delete');
     
     // Client AJAX operations
@@ -330,3 +330,4 @@ Router::prefix('api')->middleware(['Auth'])->group(function() {
 // ===================================
 
 // Note: Fallback routes removed to prevent regex issues
+Router::post('/users/modal/submit-add', 'UserManagementController@submitAddUserModal');

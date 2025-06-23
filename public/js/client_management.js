@@ -205,7 +205,7 @@ document.addEventListener('DOMContentLoaded', function() {
         // Set form action
         const editForm = document.getElementById('editClientForm');
         if (editForm) {
-            editForm.action = `/clients/${client.id}/update`;
+            editForm.action = getProjectUrl(`clients/${client.id}`);
         }
 
         // Populate basic information
