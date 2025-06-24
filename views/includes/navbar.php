@@ -8,6 +8,15 @@ $navbarData = $navbarController->getNavbarData();
 $languages = $navbarData['languages'];
 $userLanguage = $navbarData['userLanguage'];
 
+// ✅ Get current user data from session
+$currentUser = $_SESSION['user'] ?? null;
+$userFullName = $currentUser['full_name'] ?? 'User';
+$userEmail = $currentUser['email'] ?? '';
+$userRole = $currentUser['user_role'] ?? '';
+$systemRole = $currentUser['system_role'] ?? 'user';
+$profilePicture = $currentUser['profile_picture'] ?? null;
+$profileId = $currentUser['profile_id'] ?? '';
+
 // ✅ Default values
 $selectedLanguage = "EN";
 $selectedIcon = "fas fa-globe";
@@ -70,10 +79,70 @@ foreach ($languages as $lang) {
         <!-- ✅ Profile Menu -->
         <div class="profile-menu">
             <button class="profile-btn" id="profileToggle" title="<?= Localization::translate('profile'); ?>">
-                <i class="fas fa-user"></i>
+                <?php 
+                $profilePictureUrl = null;
+                $profilePictureExists = false;
+                
+                if ($profilePicture) {
+                    // Handle different path formats
+                    if (strpos($profilePicture, 'http') === 0) {
+                        // External URL
+                        $profilePictureUrl = $profilePicture;
+                        $profilePictureExists = true;
+                    } elseif (strpos($profilePicture, '/') === 0) {
+                        // Absolute path
+                        $profilePictureUrl = $profilePicture;
+                        $profilePictureExists = file_exists($_SERVER['DOCUMENT_ROOT'] . $profilePicture);
+                    } else {
+                        // Relative path - assume it's in uploads directory
+                        $profilePictureUrl = UrlHelper::url('uploads/' . ltrim($profilePicture, '/'));
+                        $profilePictureExists = file_exists(__DIR__ . '/../../uploads/' . ltrim($profilePicture, '/'));
+                    }
+                }
+                ?>
+                <?php if ($profilePictureExists): ?>
+                    <img src="<?= htmlspecialchars($profilePictureUrl); ?>" alt="Profile" class="profile-avatar">
+                <?php else: ?>
+                    <i class="fas fa-user"></i>
+                <?php endif; ?>
+                <span class="profile-name"><?= htmlspecialchars($userFullName); ?></span>
+                <i class="fas fa-chevron-down"></i>
             </button>
             <div class="dropdown-menu" id="profileDropdown">
-                <a class="dropdown-item" href="#"><i class="fas fa-user-circle"></i> <?= Localization::translate('profile'); ?></a>
+                <!-- User Info Header -->
+                <div class="profile-header">
+                    <div class="profile-info">
+                        <?php if ($profilePictureExists): ?>
+                            <img src="<?= htmlspecialchars($profilePictureUrl); ?>" alt="Profile" class="profile-avatar-large">
+                        <?php else: ?>
+                            <div class="profile-avatar-placeholder">
+                                <i class="fas fa-user"></i>
+                            </div>
+                        <?php endif; ?>
+                        <div class="profile-details">
+                            <div class="profile-name-large"><?= htmlspecialchars($userFullName); ?></div>
+                            <div class="profile-email"><?= htmlspecialchars($userEmail); ?></div>
+                            <div class="profile-role"><?= htmlspecialchars($userRole); ?></div>
+                            <div class="profile-id">ID: <?= htmlspecialchars($profileId); ?></div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="dropdown-divider"></div>
+                
+                <!-- Profile Actions -->
+                <?php if ($systemRole !== 'super_admin'): ?>
+                <a class="dropdown-item" href="<?= UrlHelper::url('users/' . $_SESSION['id'] . '/edit') ?>">
+                    <i class="fas fa-user-edit"></i> <?= Localization::translate('edit_profile'); ?>
+                </a>
+                <?php endif; ?>
+                <a class="dropdown-item" href="<?= UrlHelper::url('settings') ?>">
+                    <i class="fas fa-cog"></i> <?= Localization::translate('settings'); ?>
+                </a>
+                
+                <div class="dropdown-divider"></div>
+                
+                <!-- Logout -->
                 <a class="dropdown-item" href="<?= UrlHelper::url('logout') ?>">
                     <i class="fas fa-sign-out-alt"></i> <?= Localization::translate('logout'); ?>
                 </a>
