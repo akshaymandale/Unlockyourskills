@@ -310,16 +310,6 @@ if (isset($_GET['client_id'])) {
 // Pass backend data to JavaScript
 const currentUserRole = '<?= $_SESSION['user']['system_role'] ?? 'guest'; ?>';
 
-// Dynamic client management with AJAX (like social feed)
-let currentPage = 1;
-let currentSearch = '';
-let currentFilters = {
-    user_status: '',
-    locked_status: '',
-    user_role: '',
-    gender: ''
-};
-
 document.addEventListener('DOMContentLoaded', function() {
     console.log('🔥 User Management: DOM loaded');
     

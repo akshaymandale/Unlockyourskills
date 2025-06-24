@@ -65,12 +65,12 @@ class UserModel {
         // Handling Profile Picture Upload
         $profile_picture = null;
         if (!empty($fileData['profile_picture']['name'])) {
-            $uploadDir = "uploads/";
+            $uploadDir = "uploads/profile_pictures/";
             if (!is_dir($uploadDir)) {
-                mkdir($uploadDir, 0777, true);
-                chmod($uploadDir, 0777); // Ensure proper permissions
+                mkdir($uploadDir, 0755, true);
             }
-            $profile_picture = $uploadDir . basename($fileData['profile_picture']['name']);
+            $ext = pathinfo($fileData['profile_picture']['name'], PATHINFO_EXTENSION);
+            $profile_picture = $uploadDir . uniqid('profile_', true) . '.' . $ext;
             if (!move_uploaded_file($fileData['profile_picture']['tmp_name'], $profile_picture)) {
                 die("Error: Failed to upload profile picture.");
             }
@@ -425,13 +425,19 @@ class UserModel {
             // Handle profile picture upload (optional for update)
             $profile_picture = null;
             if (!empty($fileData['profile_picture']['name'])) {
-                $uploadDir = "uploads/";
+                $uploadDir = "uploads/profile_pictures/";
                 if (!is_dir($uploadDir)) {
-                    mkdir($uploadDir, 0777, true);
-                    chmod($uploadDir, 0777); // Ensure proper permissions
+                    mkdir($uploadDir, 0755, true);
                 }
-                $profile_picture = $uploadDir . basename($fileData['profile_picture']['name']);
+                $profile_picture = $uploadDir . uniqid() . "_" . basename($fileData['profile_picture']['name']);
+                // Debug logging
+                error_log('EditUser $_FILES: ' . print_r($fileData['profile_picture'], true));
+                error_log('EditUser file_exists(tmp): ' . (file_exists($fileData['profile_picture']['tmp_name']) ? 'yes' : 'no'));
+                error_log('EditUser TMP: ' . $fileData['profile_picture']['tmp_name'] . ' -> ' . $profile_picture);
+                error_log('EditUser Is uploaded file: ' . (is_uploaded_file($fileData['profile_picture']['tmp_name']) ? 'yes' : 'no'));
+                error_log('EditUser Dir writable: ' . (is_writable($uploadDir) ? 'yes' : 'no'));
                 if (!move_uploaded_file($fileData['profile_picture']['tmp_name'], $profile_picture)) {
+                    error_log('EditUser move_uploaded_file failed');
                     throw new Exception("Failed to upload profile picture.");
                 }
             }

@@ -1094,8 +1094,8 @@ class UserManagementController extends BaseController {
                 exit();
             }
 
-            // Handle profile picture upload
-            $profile_picture = null;
+            // Remove file upload/move logic from controller
+            // Only validate file type/size if needed, but do not move or process the file
             if (isset($_FILES["profile_picture"]) && $_FILES["profile_picture"]["error"] == 0) {
                 $allowed_types = ["image/jpeg", "image/png", "image/jpg"];
                 $max_size = 5 * 1024 * 1024; // 5MB
@@ -1106,17 +1106,6 @@ class UserManagementController extends BaseController {
                 } elseif ($_FILES["profile_picture"]["size"] > $max_size) {
                     $fieldErrors['profile_picture'] = 'Image size must be less than 5MB';
                     $errors[] = 'Image size must be less than 5MB';
-                } else {
-                    $upload_dir = "uploads/profile_pictures/";
-                    if (!is_dir($upload_dir)) {
-                        mkdir($upload_dir, 0755, true);
-                    }
-                    $profile_picture = $upload_dir . uniqid() . "_" . basename($_FILES["profile_picture"]["name"]);
-
-                    if (!move_uploaded_file($_FILES["profile_picture"]["tmp_name"], $profile_picture)) {
-                        $fieldErrors['profile_picture'] = 'Failed to upload profile picture';
-                        $errors[] = 'Failed to upload profile picture';
-                    }
                 }
 
                 // Return validation errors if any from file upload

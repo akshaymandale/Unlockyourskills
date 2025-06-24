@@ -76,3 +76,36 @@ require_once __DIR__ . '/../../core/UrlHelper.php';
 </head>
 <body>
 
+<script>
+window.currentUserId = <?= json_encode($_SESSION['id'] ?? null) ?>;
+</script>
+
+<!-- Global Edit User Modal (for profile editing from navbar) -->
+<div class="modal fade" id="editUserModal" tabindex="-1" aria-labelledby="editUserModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-xl">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="editUserModalLabel">
+                    <i class="fas fa-user-edit me-2"></i><?= Localization::translate('edit_user_title'); ?>
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div id="editUserModalContent">
+                    <!-- Content will be loaded dynamically -->
+                    <div class="text-center py-4">
+                        <div class="spinner-border text-primary" role="status">
+                            <span class="visually-hidden">Loading...</span>
+                        </div>
+                        <p class="mt-2">Loading form...</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- GLOBAL SCRIPTS -->
+<script src="<?= UrlHelper::url('public/bootstrap/js/bootstrap.bundle.min.js') ?>"></script>
+<script src="<?= UrlHelper::url('public/js/user_management.js') ?>"></script>
+
