@@ -1216,5 +1216,6 @@
     "js.validation.tag_too_long": "Each tag cannot exceed 50 characters.",
     "js.validation.too_many_tags": "Maximum 10 tags allowed.",
     "js.validation.schedule_date_required": "Please select a date and time for scheduling.",
-    "js.validation.schedule_date_future": "Scheduled date must be in the future."
+    "js.validation.schedule_date_future": "Scheduled date must be in the future.",
+    "edit_profile": "Edit Profile"
 }
