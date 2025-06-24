@@ -102,7 +102,8 @@ class LoginController extends BaseController {
             'email' => $user['email'],
             'user_role' => $user['user_role'],
             'system_role' => $user['system_role'] ?? 'user',
-            'client_name' => $user['client_name'] ?? 'Unknown Client'
+            'client_name' => $user['client_name'] ?? 'Unknown Client',
+            'profile_picture' => $user['profile_picture'] ?? '',
         ];
     }
 

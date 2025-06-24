@@ -31,24 +31,58 @@ function debounce(func, wait) {
 
 // Initialize event listeners when document is ready
 document.addEventListener('DOMContentLoaded', function() {
-    // This is the main entry point for the user management page.
-    
-    // Initialize modals (setting up the 'show' event listeners)
-    initializeModals();
+    // Only run user management logic if the user management table is present
+    if (document.getElementById('usersTableBody')) {
+        // Initialize modals (setting up the 'show' event listeners)
+        initializeModals();
 
-    // Initial load of users
-    loadUsers(1);
+        // Initial load of users
+        loadUsers(1);
 
-    // Setup event listeners for filters and search
-    // Using debounce to prevent excessive AJAX calls on every keystroke
-    const debouncedSearch = debounce(performSearch, 300);
-    document.getElementById('searchInput').addEventListener('keyup', debouncedSearch);
+        // Setup event listeners for filters and search
+        // Using debounce to prevent excessive AJAX calls on every keystroke
+        const debouncedSearch = debounce(performSearch, 300);
+        document.getElementById('searchInput').addEventListener('keyup', debouncedSearch);
 
-    document.getElementById('userStatusFilter').addEventListener('change', applyFilters);
-    document.getElementById('lockedStatusFilter').addEventListener('change', applyFilters);
-    document.getElementById('userRoleFilter').addEventListener('change', applyFilters);
-    document.getElementById('genderFilter').addEventListener('change', applyFilters);
-    document.getElementById('clearFiltersBtn').addEventListener('click', clearAllFilters);
+        document.getElementById('userStatusFilter').addEventListener('change', applyFilters);
+        document.getElementById('lockedStatusFilter').addEventListener('change', applyFilters);
+        document.getElementById('userRoleFilter').addEventListener('change', applyFilters);
+        document.getElementById('genderFilter').addEventListener('change', applyFilters);
+        document.getElementById('clearFiltersBtn').addEventListener('click', clearAllFilters);
+    }
+
+    // Navbar Edit Profile button (global)
+    const editProfileBtn = document.getElementById('editProfileBtn');
+    if (editProfileBtn) {
+        editProfileBtn.addEventListener('click', function(e) {
+            e.preventDefault();
+            // Use the current user's ID from a global JS variable or data attribute
+            let userId = null;
+            if (window.currentUserId) {
+                userId = window.currentUserId;
+            } else if (typeof CURRENT_USER_ID !== 'undefined') {
+                userId = CURRENT_USER_ID;
+            } else if (editProfileBtn.dataset.userId) {
+                userId = editProfileBtn.dataset.userId;
+            } else {
+                // fallback: try to get from session injected into JS
+                userId = editProfileBtn.getAttribute('data-user-id');
+            }
+            if (!userId) {
+                // Try to get from meta tag or global
+                const metaUserId = document.querySelector('meta[name="current-user-id"]');
+                if (metaUserId) userId = metaUserId.getAttribute('content');
+            }
+            if (!userId) {
+                alert('Could not determine current user ID for profile editing.');
+                return;
+            }
+            // Show the modal and load content
+            const modal = new bootstrap.Modal(document.getElementById('editUserModal'));
+            modal.show();
+            loadEditUserModalContent(userId);
+        });
+    }
 });
 
 function performSearch() {
@@ -91,7 +125,7 @@ function loadUsers(page = 1) {
     // Determine if we are in client management mode
     const urlParams = new URLSearchParams(window.location.search);
     const clientId = urlParams.get('client_id');
-    let ajaxUrl = getProjectUrl('users/ajax-search');
+    let ajaxUrl = getProjectUrl('users/ajax/search');
     
     const params = new URLSearchParams({
         page,
@@ -106,21 +140,25 @@ function loadUsers(page = 1) {
         params.append('client_id', clientId);
     }
     
-    ajaxUrl += `?${params.toString()}`;
-
-    fetch(ajaxUrl)
+    fetch(ajaxUrl, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/x-www-form-urlencoded'
+        },
+        body: params.toString()
+    })
     .then(response => response.json())
     .then(data => {
-            updateUsersTable(data.users);
-            updatePagination(data.pagination);
-            updateSearchInfo(data.pagination.total_users);
+        updateUsersTable(data.users);
+        updatePagination(data.pagination);
+        updateSearchInfo(data.pagination.total_users);
     })
     .catch(error => {
-            console.error('Error fetching users:', error);
-            resultsInfo.textContent = 'Error loading users.';
+        console.error('Error fetching users:', error);
+        resultsInfo.textContent = 'Error loading users.';
     })
     .finally(() => {
-            loadingIndicator.style.display = 'none';
+        loadingIndicator.style.display = 'none';
     });
 }
 

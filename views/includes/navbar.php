@@ -31,6 +31,34 @@ foreach ($languages as $lang) {
         break;
     }
 }
+
+$profilePictureUrl = null;
+$profilePictureExists = false;
+// Robustly determine if a profile picture exists and set the URL
+if ($profilePicture) {
+    if (strpos($profilePicture, 'http') === 0) {
+        $profilePictureUrl = $profilePicture;
+        $profilePictureExists = true;
+    } elseif (strpos($profilePicture, '/') === 0) {
+        $profilePictureUrl = $profilePicture;
+        $profilePictureExists = file_exists($_SERVER['DOCUMENT_ROOT'] . $profilePicture);
+    } else {
+        // If already starts with 'uploads/', don't prepend
+        if (strpos($profilePicture, 'uploads/') === 0) {
+            $profilePictureUrl = UrlHelper::url($profilePicture);
+            $profilePictureExists = file_exists(__DIR__ . '/../../' . $profilePicture);
+        } else {
+            $profilePictureUrl = UrlHelper::url('uploads/' . ltrim($profilePicture, '/'));
+            $profilePictureExists = file_exists(__DIR__ . '/../../uploads/' . ltrim($profilePicture, '/'));
+        }
+    }
+}
+
+// Debug output for profile picture
+echo '<!-- profile_picture: ' . htmlspecialchars($profilePicture ?? '') . ' -->';
+echo '<!-- profilePictureUrl: ' . htmlspecialchars($profilePictureUrl ?? '') . ' -->';
+echo '<!-- profilePictureExists: ' . ($profilePictureExists ? 'yes' : 'no') . ' -->';
+echo '<!-- SESSION_USER: ' . print_r($_SESSION['user'] ?? [], true) . ' -->';
 ?>
 
 <nav class="navbar">
@@ -79,32 +107,7 @@ foreach ($languages as $lang) {
         <!-- ✅ Profile Menu -->
         <div class="profile-menu">
             <button class="profile-btn" id="profileToggle" title="<?= Localization::translate('profile'); ?>">
-                <?php 
-                $profilePictureUrl = null;
-                $profilePictureExists = false;
-                
-                if ($profilePicture) {
-                    // Handle different path formats
-                    if (strpos($profilePicture, 'http') === 0) {
-                        // External URL
-                        $profilePictureUrl = $profilePicture;
-                        $profilePictureExists = true;
-                    } elseif (strpos($profilePicture, '/') === 0) {
-                        // Absolute path
-                        $profilePictureUrl = $profilePicture;
-                        $profilePictureExists = file_exists($_SERVER['DOCUMENT_ROOT'] . $profilePicture);
-                    } else {
-                        // Relative path - assume it's in uploads directory
-                        $profilePictureUrl = UrlHelper::url('uploads/' . ltrim($profilePicture, '/'));
-                        $profilePictureExists = file_exists(__DIR__ . '/../../uploads/' . ltrim($profilePicture, '/'));
-                    }
-                }
-                ?>
-                <?php if ($profilePictureExists): ?>
-                    <img src="<?= htmlspecialchars($profilePictureUrl); ?>" alt="Profile" class="profile-avatar">
-                <?php else: ?>
-                    <i class="fas fa-user"></i>
-                <?php endif; ?>
+                <i class="fas fa-user"></i>
                 <span class="profile-name"><?= htmlspecialchars($userFullName); ?></span>
                 <i class="fas fa-chevron-down"></i>
             </button>
@@ -132,7 +135,7 @@ foreach ($languages as $lang) {
                 
                 <!-- Profile Actions -->
                 <?php if ($systemRole !== 'super_admin'): ?>
-                <a class="dropdown-item" href="<?= UrlHelper::url('users/' . $_SESSION['id'] . '/edit') ?>">
+                <a class="dropdown-item" href="#" id="editProfileBtn">
                     <i class="fas fa-user-edit"></i> <?= Localization::translate('edit_profile'); ?>
                 </a>
                 <?php endif; ?>
