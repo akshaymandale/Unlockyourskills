@@ -15,7 +15,7 @@ class SurveyQuestionController extends BaseController
     {
         // Check if user is logged in and get client_id
         if (!isset($_SESSION['user']['client_id'])) {
-            $this->toastError('Unauthorized access. Please log in.', 'index.php?controller=LoginController');
+            $this->toastError('Unauthorized access. Please log in.', '/unlockyourskills/login');
             return;
         }
 
@@ -39,7 +39,7 @@ class SurveyQuestionController extends BaseController
     if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         if (!isset($_SESSION['id']) || !isset($_SESSION['user']['client_id'])) {
-            $this->toastError('Unauthorized access. Please log in.', 'index.php?controller=LoginController');
+            $this->toastError('Unauthorized access. Please log in.', '/unlockyourskills/login');
             return;
         }
 
@@ -78,7 +78,7 @@ class SurveyQuestionController extends BaseController
 
         if (!empty($errors)) {
             $message = implode(', ', $errors);
-            $this->toastError($message, 'index.php?controller=SurveyQuestionController');
+            $this->toastError($message, '/unlockyourskills/surveys');
             return;
         }
 
@@ -118,9 +118,9 @@ class SurveyQuestionController extends BaseController
                     $optionMedias = $_FILES['optionMedia'] ?? null;
                     $this->surveyQuestionModel->updateOptions($questionId, $options, $optionMedias, $createdBy, $existingOptionMedias, $filterClientId);
                 }
-                $this->toastSuccess('Survey question updated successfully!', 'index.php?controller=SurveyQuestionController');
+                $this->toastSuccess('Survey question updated successfully!', '/unlockyourskills/surveys');
             } else {
-                $this->toastError('Failed to update survey question or access denied.', 'index.php?controller=SurveyQuestionController');
+                $this->toastError('Failed to update survey question or access denied.', '/unlockyourskills/surveys');
             }
         } else {
             // INSERT
@@ -133,13 +133,13 @@ class SurveyQuestionController extends BaseController
             }
 
             if ($questionId) {
-                $this->toastSuccess('Survey question saved successfully!', 'index.php?controller=SurveyQuestionController');
+                $this->toastSuccess('Survey question saved successfully!', '/unlockyourskills/surveys');
             } else {
-                $this->toastError('Failed to save survey question.', 'index.php?controller=SurveyQuestionController');
+                $this->toastError('Failed to save survey question.', '/unlockyourskills/surveys');
             }
         }
     } else {
-        echo "<script>alert('Invalid request parameters.'); window.location.href='index.php?controller=SurveyQuestionController';</script>";
+        $this->toastError('Invalid request parameters.', '/unlockyourskills/surveys');
     }
 }
 
@@ -171,7 +171,7 @@ class SurveyQuestionController extends BaseController
     {
         // Check if user is logged in and get client_id
         if (!isset($_SESSION['user']['client_id'])) {
-            $this->toastError('Unauthorized access. Please log in.', 'index.php?controller=LoginController');
+            $this->toastError('Unauthorized access. Please log in.', '/unlockyourskills/login');
             return;
         }
 
@@ -187,12 +187,12 @@ class SurveyQuestionController extends BaseController
             $success = $this->surveyQuestionModel->deleteQuestion($id, $filterClientId); // Soft delete
 
             if ($success) {
-                $this->toastSuccess('Survey question deleted successfully!', 'index.php?controller=SurveyQuestionController');
+                $this->toastSuccess('Survey question deleted successfully!', '/unlockyourskills/surveys');
             } else {
-                $this->toastError('Failed to delete survey question or access denied.', 'index.php?controller=SurveyQuestionController');
+                $this->toastError('Failed to delete survey question or access denied.', '/unlockyourskills/surveys');
             }
         } else {
-            $this->toastError('Invalid request parameters.', 'index.php?controller=SurveyQuestionController');
+            $this->toastError('Invalid request parameters.', '/unlockyourskills/surveys');
         }
     }
 

@@ -96,6 +96,15 @@ document.addEventListener("DOMContentLoaded", function () {
             nonScormTags.push(tagText);
             updateNonScormTagDisplay();
             updateNonScormHiddenTagList();
+            // Immediately hide validation error when tag is added
+            const tagInput = document.getElementById("nonscormTagInput");
+            if (tagInput) {
+                hideError(tagInput);
+            }
+            // Trigger validation after adding tag
+            if (typeof validateTags === 'function') {
+                validateTags();
+            }
         }
     }
 
@@ -103,6 +112,23 @@ document.addEventListener("DOMContentLoaded", function () {
         nonScormTags = nonScormTags.filter(tag => tag !== tagText);
         updateNonScormTagDisplay();
         updateNonScormHiddenTagList();
+        // Check if we should show error when all tags are removed
+        if (nonScormTags.length === 0) {
+            const tagInput = document.getElementById("nonscormTagInput");
+            if (tagInput && tagInput.value.trim() === "") {
+                showError(tagInput, translate('js.validation.tags_required') || 'At least one tag is required.');
+            }
+        } else {
+            // Hide error if there are still tags
+            const tagInput = document.getElementById("nonscormTagInput");
+            if (tagInput) {
+                hideError(tagInput);
+            }
+        }
+        // Trigger validation after removing tag
+        if (typeof validateTags === 'function') {
+            validateTags();
+        }
     }
 
     function updateNonScormTagDisplay() {
@@ -173,12 +199,16 @@ document.addEventListener("DOMContentLoaded", function () {
     function createExistingFilePreview(fileName, previewContainer) {
         const fileExtension = fileName.split('.').pop().toLowerCase();
         let previewHTML = '';
+        let filePath = fileName;
+        if (!fileName.startsWith('uploads/non_scorm/')) {
+            filePath = 'uploads/non_scorm/' + fileName;
+        }
 
         if (['jpg', 'jpeg', 'png', 'gif', 'webp'].includes(fileExtension)) {
             // Image preview with cross button
             previewHTML = `
                 <div class="preview-wrapper">
-                    <img src="uploads/non_scorm/${fileName}" alt="Preview" style="max-width: 150px; max-height: 100px; object-fit: cover; border: 1px solid #ddd; border-radius: 5px;">
+                    <img src="${filePath}" alt="Preview" style="max-width: 150px; max-height: 100px; object-fit: cover; border: 1px solid #ddd; border-radius: 5px;">
                     <button type="button" class="remove-preview" onclick="removeNonScormFilePreview('${previewContainer.id}')">×</button>
                 </div>
                 <p style="margin-top: 5px; font-size: 12px; color: #6c757d;">Current file: ${fileName}</p>
@@ -191,7 +221,7 @@ document.addEventListener("DOMContentLoaded", function () {
                         <i class="fas fa-file" style="font-size: 24px; color: #6c757d;"></i>
                         <button type="button" class="remove-preview" onclick="removeNonScormFilePreview('${previewContainer.id}')">×</button>
                     </div>
-                    <p style="margin-top: 5px; font-size: 12px; color: #6c757d;">Current file: <a href="uploads/non_scorm/${fileName}" target="_blank">${fileName}</a></p>
+                    <p style="margin-top: 5px; font-size: 12px; color: #6c757d;">Current file: <a href="${filePath}" target="_blank">${fileName}</a></p>
                 </div>
             `;
         }
@@ -417,6 +447,10 @@ document.addEventListener("DOMContentLoaded", function () {
             nonScormTags = [];
             updateNonScormTagDisplay();
             updateNonScormHiddenTagList();
+            // Trigger validation after clearing tags
+            if (typeof validateTags === 'function') {
+                validateTags();
+            }
 
             // Clear file previews
             document.querySelectorAll('#contentPackagePreview, #launchFilePreview, #thumbnailImagePreview, #manifestFilePreview').forEach(container => {
@@ -446,6 +480,9 @@ document.addEventListener("DOMContentLoaded", function () {
             
             // Reset modal title
             document.getElementById("nonScormModalLabel").textContent = "Add Non-SCORM Package";
+            
+            // Re-enable submit buttons
+            enableSubmitButtons();
         }
     }
 
@@ -471,4 +508,73 @@ document.addEventListener("DOMContentLoaded", function () {
 
     // Make removeNonScormTag globally accessible
     window.removeNonScormTag = removeNonScormTag;
+
+    // Function to re-enable submit buttons
+    function enableSubmitButtons() {
+        if (nonScormForm) {
+            nonScormForm.querySelectorAll('button[type="submit"]').forEach(btn => {
+                btn.disabled = false;
+            });
+        }
+        
+        // Also reset submission state in validation file if available
+        if (typeof window.resetNonScormSubmissionState === 'function') {
+            window.resetNonScormSubmissionState();
+        }
+    }
+
+    // Error handling functions
+    function showError(element, message) {
+        if (!element) return;
+        
+        hideError(element);
+        
+        const errorDiv = document.createElement('div');
+        errorDiv.className = 'error-message text-danger mt-1';
+        errorDiv.textContent = message;
+        errorDiv.style.fontSize = '0.875rem';
+        
+        element.classList.add('is-invalid');
+        element.parentNode.appendChild(errorDiv);
+        
+        // Check form validity and update submit button state
+        if (typeof checkFormValidityAndUpdateSubmitButton === 'function') {
+            checkFormValidityAndUpdateSubmitButton();
+        }
+    }
+
+    function hideError(element) {
+        if (!element) return;
+        
+        element.classList.remove('is-invalid');
+        const existingError = element.parentNode.querySelector('.error-message');
+        if (existingError) {
+            existingError.remove();
+        }
+        
+        // Check form validity and update submit button state
+        if (typeof checkFormValidityAndUpdateSubmitButton === 'function') {
+            checkFormValidityAndUpdateSubmitButton();
+        }
+    }
+
+    // Translation function (fallback if not available)
+    function translate(key) {
+        // Use global translation function if available
+        if (typeof window.translate === 'function') {
+            return window.translate(key);
+        }
+
+        // Use global translations object if available
+        if (typeof window.translations === 'object' && window.translations[key]) {
+            return window.translations[key];
+        }
+
+        // Fallback messages
+        const fallbacks = {
+            'js.validation.tags_required': 'At least one tag is required.'
+        };
+
+        return fallbacks[key] || key;
+    }
 });

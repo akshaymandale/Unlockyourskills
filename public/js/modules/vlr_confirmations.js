@@ -105,44 +105,44 @@ class VLRConfirmations {
         // Determine type and action from class
         if (classList.contains('delete-scorm')) {
             type = 'SCORM package';
-            action = 'index.php?controller=VLRController&action=delete&id=';
+            action = '/unlockyourskills/vlr/scorm/';
         } else if (classList.contains('delete-non-scorm')) {
             type = 'non-SCORM package';
-            action = 'index.php?controller=VLRController&action=deleteNonScormPackage&id=';
+            action = '/unlockyourskills/vlr/non-scorm/';
         } else if (classList.contains('delete-assessment')) {
             type = 'assessment';
-            action = 'index.php?controller=VLRController&action=deleteAssessment&id=';
+            action = '/unlockyourskills/vlr/assessment-packages/';
         } else if (classList.contains('delete-audio')) {
             type = 'audio package';
-            action = 'index.php?controller=VLRController&action=deleteAudioPackage&id=';
+            action = '/unlockyourskills/vlr/audio/';
         } else if (classList.contains('delete-video')) {
             type = 'video package';
-            action = 'index.php?controller=VLRController&action=deleteVideoPackage&id=';
+            action = '/unlockyourskills/vlr/video/';
         } else if (classList.contains('delete-image')) {
             type = 'image package';
-            action = 'index.php?controller=VLRController&action=deleteImagePackage&id=';
+            action = '/unlockyourskills/vlr/images/';
         } else if (classList.contains('delete-document')) {
             type = 'document';
-            action = 'index.php?controller=VLRController&action=deleteDocument&id=';
+            action = '/unlockyourskills/vlr/documents/';
         } else if (classList.contains('delete-external')) {
             type = 'external content';
-            action = 'index.php?controller=VLRController&action=deleteExternal&id=';
+            action = '/unlockyourskills/vlr/external/';
         } else if (classList.contains('delete-interactive')) {
             type = 'interactive content';
-            action = 'index.php?controller=VLRController&action=deleteInteractiveContent&id=';
+            action = '/unlockyourskills/vlr/interactive/';
         } else if (classList.contains('delete-survey')) {
             type = 'survey';
-            action = 'index.php?controller=VLRController&action=deleteSurvey&id=';
+            action = '/unlockyourskills/vlr/surveys/';
         } else if (classList.contains('delete-feedback')) {
             type = 'feedback';
-            action = 'index.php?controller=VLRController&action=deleteFeedback&id=';
+            action = '/unlockyourskills/vlr/feedback/';
         }
 
         return {
             type: type,
             id: button.dataset.id,
             title: button.dataset.title || 'Untitled',
-            action: action + button.dataset.id
+            action: `${action}${button.dataset.id}`
         };
     }
 
@@ -151,32 +151,60 @@ class VLRConfirmations {
 
         if (typeof confirmDelete === 'function') {
             const callback = () => {
-                console.log('🔗 VLR Callback executing! Redirecting to:', data.action);
-                window.location.href = data.action;
+                console.log('🔗 VLR Callback executing! Making DELETE request to:', data.action);
+                this.performDeleteRequest(data.action);
             };
             confirmDelete(itemName, callback);
         } else {
             const fallbackMessage = this.getTranslation('confirmation.delete.message', {item: itemName}) || `Are you sure you want to delete ${itemName}?`;
             if (confirm(fallbackMessage)) {
-                window.location.href = data.action;
+                this.performDeleteRequest(data.action);
             }
         }
+    }
+
+    performDeleteRequest(url) {
+        // Create a form to submit DELETE request
+        const form = document.createElement('form');
+        form.method = 'POST';
+        form.action = url;
+        
+        // Add method override for DELETE
+        const methodInput = document.createElement('input');
+        methodInput.type = 'hidden';
+        methodInput.name = '_method';
+        methodInput.value = 'DELETE';
+        form.appendChild(methodInput);
+        
+        // Add CSRF token if available
+        const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
+        if (csrfToken) {
+            const csrfInput = document.createElement('input');
+            csrfInput.type = 'hidden';
+            csrfInput.name = '_token';
+            csrfInput.value = csrfToken;
+            form.appendChild(csrfInput);
+        }
+        
+        // Submit the form
+        document.body.appendChild(form);
+        form.submit();
     }
 
     // Static helper methods for VLR
     static deletePackage(type, id, title) {
         const actionMap = {
-            'scorm': 'delete',
-            'non-scorm': 'deleteNonScormPackage',
-            'assessment': 'deleteAssessment',
-            'audio': 'deleteAudioPackage',
-            'video': 'deleteVideoPackage',
-            'image': 'deleteImagePackage',
-            'document': 'deleteDocument',
-            'external': 'deleteExternal',
-            'interactive': 'deleteInteractiveContent',
-            'survey': 'deleteSurvey',
-            'feedback': 'deleteFeedback'
+            'scorm': '/unlockyourskills/vlr/scorm/',
+            'non-scorm': '/unlockyourskills/vlr/non-scorm/',
+            'assessment': '/unlockyourskills/vlr/assessment-packages/',
+            'audio': '/unlockyourskills/vlr/audio/',
+            'video': '/unlockyourskills/vlr/video/',
+            'image': '/unlockyourskills/vlr/images/',
+            'document': '/unlockyourskills/vlr/documents/',
+            'external': '/unlockyourskills/vlr/external/',
+            'interactive': '/unlockyourskills/vlr/interactive/',
+            'survey': '/unlockyourskills/vlr/surveys/',
+            'feedback': '/unlockyourskills/vlr/feedback/'
         };
 
         const action = actionMap[type];
@@ -185,19 +213,47 @@ class VLRConfirmations {
             return;
         }
 
-        const url = `index.php?controller=VLRController&action=${action}&id=${id}`;
+        const url = `${action}${id}`;
         const itemName = VLRConfirmations.getStaticTranslatedItemName(type, title);
 
         if (typeof confirmDelete === 'function') {
             confirmDelete(itemName, () => {
-                window.location.href = url;
+                VLRConfirmations.performStaticDeleteRequest(url);
             });
         } else {
             const fallbackMessage = VLRConfirmations.getStaticTranslation('confirmation.delete.message', {item: itemName}) || `Are you sure you want to delete ${itemName}?`;
             if (confirm(fallbackMessage)) {
-                window.location.href = url;
+                VLRConfirmations.performStaticDeleteRequest(url);
             }
         }
+    }
+
+    static performStaticDeleteRequest(url) {
+        // Create a form to submit DELETE request
+        const form = document.createElement('form');
+        form.method = 'POST';
+        form.action = url;
+        
+        // Add method override for DELETE
+        const methodInput = document.createElement('input');
+        methodInput.type = 'hidden';
+        methodInput.name = '_method';
+        methodInput.value = 'DELETE';
+        form.appendChild(methodInput);
+        
+        // Add CSRF token if available
+        const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
+        if (csrfToken) {
+            const csrfInput = document.createElement('input');
+            csrfInput.type = 'hidden';
+            csrfInput.name = '_token';
+            csrfInput.value = csrfToken;
+            form.appendChild(csrfInput);
+        }
+        
+        // Submit the form
+        document.body.appendChild(form);
+        form.submit();
     }
 
     // Static helper methods for translations

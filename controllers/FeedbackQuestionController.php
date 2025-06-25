@@ -16,7 +16,7 @@ class FeedbackQuestionController extends BaseController
     {
         // Check if user is logged in and get client_id
         if (!isset($_SESSION['user']['client_id'])) {
-            $this->toastError('Unauthorized access. Please log in.', 'index.php?controller=LoginController');
+            $this->toastError('Unauthorized access. Please log in.', '/unlockyourskills/login');
             return;
         }
 
@@ -39,12 +39,12 @@ class FeedbackQuestionController extends BaseController
     public function save()
     {
         if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
-            $this->toastError('Invalid request method.', 'index.php?controller=FeedbackQuestionController');
+            $this->toastError('Invalid request method.', '/unlockyourskills/feedback');
             return;
         }
 
         if (!isset($_SESSION['id']) || !isset($_SESSION['user']['client_id'])) {
-            $this->toastError('Unauthorized access. Please log in.', 'index.php?controller=LoginController');
+            $this->toastError('Unauthorized access. Please log in.', '/unlockyourskills/login');
             return;
         }
 
@@ -85,7 +85,7 @@ class FeedbackQuestionController extends BaseController
             $existingQuestion = $this->feedbackQuestionModel->getQuestionById($id, $filterClientId);
 
             if (!$existingQuestion) {
-                $this->toastError('Feedback question not found or access denied.', 'index.php?controller=FeedbackQuestionController');
+                $this->toastError('Feedback question not found or access denied.', '/unlockyourskills/feedback');
                 return;
             }
             if (!$mediaFileName) {
@@ -95,9 +95,9 @@ class FeedbackQuestionController extends BaseController
             }
         }
 
-        if ($errors) {
+        if (!empty($errors)) {
             $errorMessage = implode(', ', $errors);
-            $this->toastError($errorMessage, 'index.php?controller=FeedbackQuestionController');
+            $this->toastError($errorMessage, '/unlockyourskills/feedback');
             return;
         }
 
@@ -120,14 +120,14 @@ class FeedbackQuestionController extends BaseController
 
             $result = $this->feedbackQuestionModel->updateQuestion($id, $data, $filterClientId);
             if (!$result) {
-                $this->toastError('Failed to update feedback question or access denied.', 'index.php?controller=FeedbackQuestionController');
+                $this->toastError('Failed to update feedback question or access denied.', '/unlockyourskills/feedback');
                 return;
             }
             $questionId = $id;
         } else {
             $questionId = $this->feedbackQuestionModel->saveQuestion($data);
             if (!$questionId) {
-                $this->toastError('Failed to save feedback question.', 'index.php?controller=FeedbackQuestionController');
+                $this->toastError('Failed to save feedback question.', '/unlockyourskills/feedback');
                 return;
             }
         }
@@ -183,13 +183,11 @@ class FeedbackQuestionController extends BaseController
         }
 
         if ($id) {
-            $this->toastSuccess('Feedback question updated successfully!', 'index.php?controller=FeedbackQuestionController');
+            $this->toastSuccess('Feedback question updated successfully!', '/unlockyourskills/feedback');
         } else {
-            $this->toastSuccess('Feedback question saved successfully!', 'index.php?controller=FeedbackQuestionController');
+            $this->toastSuccess('Feedback question saved successfully!', '/unlockyourskills/feedback');
         }
     }
-
-
 
     // File upload helper
     private function handleUpload($file, $folder = 'feedback')
@@ -222,7 +220,7 @@ class FeedbackQuestionController extends BaseController
     {
         // Check if user is logged in and get client_id
         if (!isset($_SESSION['user']['client_id'])) {
-            $this->toastError('Unauthorized access. Please log in.', 'index.php?controller=LoginController');
+            $this->toastError('Unauthorized access. Please log in.', '/unlockyourskills/login');
             return;
         }
 
@@ -230,7 +228,7 @@ class FeedbackQuestionController extends BaseController
         $currentUser = $_SESSION['user'] ?? null;
 
         if (!isset($_GET['id']) || !is_numeric($_GET['id'])) {
-            $this->toastError('Invalid request parameters.', 'index.php?controller=FeedbackQuestionController');
+            $this->toastError('Invalid request parameters.', '/unlockyourskills/feedback');
             return;
         }
 
@@ -242,9 +240,9 @@ class FeedbackQuestionController extends BaseController
         $success = $this->feedbackQuestionModel->deleteQuestion($id, $filterClientId);
 
         if ($success) {
-            $this->toastSuccess('Feedback question deleted successfully!', 'index.php?controller=FeedbackQuestionController');
+            $this->toastSuccess('Feedback question deleted successfully!', '/unlockyourskills/feedback');
         } else {
-            $this->toastError('Failed to delete feedback question or access denied.', 'index.php?controller=FeedbackQuestionController');
+            $this->toastError('Failed to delete feedback question or access denied.', '/unlockyourskills/feedback');
         }
     }
 
@@ -358,8 +356,6 @@ class FeedbackQuestionController extends BaseController
             echo json_encode(['error' => 'Question not found']);
             return;
         }
-
-
 
         header('Content-Type: application/json');
         echo json_encode([

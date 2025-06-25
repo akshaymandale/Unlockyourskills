@@ -8,12 +8,11 @@
     <div class="container add-feedback-question-container">
 
         <div class="back-arrow-container">
-            <a href="index.php?controller=VLRController&tab=feedback" class="back-link">
+            <a href="/unlockyourskills/vlr?tab=feedback" class="back-link">
                 <i class="fas fa-arrow-left"></i>
             </a>
             <span class="divider-line"></span>
-            <h1 class="page-title text-purple"><?= Localization::translate('feedback_question_management_title'); ?>
-            </h1>
+            <h1 class="page-title text-purple"><?= Localization::translate('feedback_question_management_title'); ?></h1>
         </div>
 
         <!-- ✅ Filters & Search Section -->
@@ -197,8 +196,8 @@
     aria-labelledby="addFeedbackQuestionModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-lg modal-dialog-scrollable">
         <div class="modal-content">
-            <form id="feedbackQuestionForm" enctype="multipart/form-data" method="POST"
-                action="index.php?controller=FeedbackQuestionController&action=save" novalidate>
+            <form id="addFeedbackQuestionForm" method="POST"
+                action="/unlockyourskills/feedback" novalidate>
 
                 <input type="hidden" name="feedbackQuestionId" id="feedbackQuestionId">
                 <input type="hidden" name="existingFeedbackQuestionMedia" id="existingFeedbackQuestionMedia">

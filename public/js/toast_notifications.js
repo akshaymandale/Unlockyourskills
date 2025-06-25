@@ -203,13 +203,10 @@ document.addEventListener('DOMContentLoaded', function() {
         const decodedMessage = decodeURIComponent(message);
         showSimpleToast(decodedMessage, messageType);
 
-        // Clean up URL parameters
-        const newUrl = window.location.pathname + '?' +
-            Array.from(urlParams.entries())
-                .filter(([key]) => key !== 'message' && key !== 'type')
-                .map(([key, value]) => `${key}=${value}`)
-                .join('&');
-
+        // Clean up URL parameters (remove message and type, keep others)
+        urlParams.delete('message');
+        urlParams.delete('type');
+        const newUrl = window.location.pathname + (urlParams.toString() ? '?' + urlParams.toString() : '');
         window.history.replaceState({}, '', newUrl);
     }
 });

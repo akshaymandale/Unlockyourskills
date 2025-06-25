@@ -122,14 +122,14 @@ class QuestionController extends BaseController {
                 }
 
                 if ($questionId) {
-                    $this->toastSuccess('Question added successfully!', 'index.php?controller=QuestionController');
+                    $this->toastSuccess('Question added successfully!', '/unlockyourskills/vlr/questions');
                 } else {
-                    $this->toastError('Failed to insert question.', 'index.php?controller=QuestionController');
+                    $this->toastError('Failed to insert question.', '/unlockyourskills/vlr/questions');
                 }
                 return;
             } else {
                 $errorMsg = implode(', ', $errors);
-                $this->toastError("Error(s): $errorMsg", 'index.php?controller=QuestionController');
+                $this->toastError("Error(s): $errorMsg", '/unlockyourskills/vlr/questions');
                 return;
             }
         }
@@ -223,14 +223,14 @@ class QuestionController extends BaseController {
                 }
     
                 if ($updateResult) {
-                    $this->toastSuccess('Question updated successfully!', 'index.php?controller=QuestionController');
+                    $this->toastSuccess('Question updated successfully!', '/unlockyourskills/vlr/questions');
                 } else {
-                    $this->toastError('Failed to update question.', 'index.php?controller=QuestionController');
+                    $this->toastError('Failed to update question.', '/unlockyourskills/vlr/questions');
                 }
                 return;
             } else {
                 $errorMsg = implode(', ', $errors);
-                $this->toastError("Error(s): $errorMsg", 'index.php?controller=QuestionController');
+                $this->toastError("Error(s): $errorMsg", '/unlockyourskills/vlr/questions');
                 return;
             }
         }
@@ -245,11 +245,11 @@ class QuestionController extends BaseController {
                 $isEdit = true;
                 require 'views/add_assessment.php';
             } else {
-                $this->toastError('Question not found.', 'index.php?controller=QuestionController');
+                $this->toastError('Question not found.', '/unlockyourskills/vlr/questions');
                 return;
             }
         } else {
-            $this->toastError('Invalid request.', 'index.php?controller=QuestionController');
+            $this->toastError('Invalid request.', '/unlockyourskills/vlr/questions');
             return;
         }
     }
@@ -261,12 +261,12 @@ class QuestionController extends BaseController {
             $id = intval($_GET['id']);
             $success = $this->questionModel->softDeleteQuestion($id);
             if ($success) {
-                $this->toastSuccess('Question deleted successfully!', 'index.php?controller=QuestionController');
+                $this->toastSuccess('Question deleted successfully!', '/unlockyourskills/vlr/questions');
             } else {
-                $this->toastError('Failed to delete question.', 'index.php?controller=QuestionController');
+                $this->toastError('Failed to delete question.', '/unlockyourskills/vlr/questions');
             }
         } else {
-            $this->toastError('Invalid request.', 'index.php?controller=QuestionController');
+            $this->toastError('Invalid request.', '/unlockyourskills/vlr/questions');
         }
     }
 
@@ -342,7 +342,7 @@ class QuestionController extends BaseController {
                 echo json_encode(['success' => false, 'message' => 'Invalid request method.']);
                 return;
             }
-            $this->toastError('Invalid request method.', 'index.php?controller=QuestionController');
+            $this->toastError('Invalid request method.', '/unlockyourskills/vlr/questions');
             return;
         }
 
@@ -352,7 +352,7 @@ class QuestionController extends BaseController {
                 echo json_encode(['success' => false, 'message' => 'Unauthorized access. Please log in.']);
                 return;
             }
-            $this->toastError('Unauthorized access. Please log in.', 'index.php?controller=LoginController');
+            $this->toastError('Unauthorized access. Please log in.', '/unlockyourskills/login');
             return;
         }
 
@@ -490,9 +490,9 @@ class QuestionController extends BaseController {
                     return;
                 } else {
                     if ($questionId) {
-                        $this->toastSuccess('Question updated successfully!', 'index.php?controller=QuestionController');
+                        $this->toastSuccess('Question updated successfully!', '/unlockyourskills/vlr/questions');
                     } else {
-                        $this->toastSuccess('Question added successfully!', 'index.php?controller=QuestionController');
+                        $this->toastSuccess('Question added successfully!', '/unlockyourskills/vlr/questions');
                     }
                 }
             } else {
@@ -501,7 +501,7 @@ class QuestionController extends BaseController {
                     echo json_encode(['success' => false, 'message' => 'Failed to save question.']);
                     return;
                 } else {
-                    $this->toastError('Failed to save question.', 'index.php?controller=QuestionController');
+                    $this->toastError('Failed to save question.', '/unlockyourskills/vlr/questions');
                 }
             }
             return;
@@ -512,7 +512,7 @@ class QuestionController extends BaseController {
                 echo json_encode(['success' => false, 'message' => "Error(s): $errorMsg"]);
                 return;
             } else {
-                $this->toastError("Error(s): $errorMsg", 'index.php?controller=QuestionController');
+                $this->toastError("Error(s): $errorMsg", '/unlockyourskills/vlr/questions');
             }
             return;
         }
@@ -563,7 +563,7 @@ class QuestionController extends BaseController {
         $format = $_GET['format'] ?? 'csv'; // csv or excel
 
         if (!in_array($type, ['objective', 'subjective'])) {
-            echo "<script>alert('Invalid template type.'); window.location.href='index.php?controller=QuestionController';</script>";
+            $this->toastError('Invalid template type.', '/unlockyourskills/vlr/questions');
             return;
         }
 
@@ -947,24 +947,24 @@ class QuestionController extends BaseController {
 
     public function importQuestions() {
         if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
-            echo "<script>alert('Invalid request method.'); window.location.href='index.php?controller=QuestionController';</script>";
+            $this->toastError('Invalid request method.', '/unlockyourskills/vlr/questions');
             return;
         }
 
         if (!isset($_SESSION['id'])) {
-            echo "<script>alert('Unauthorized access. Please log in.'); window.location.href='index.php?controller=VLRController';</script>";
+            $this->toastError('Unauthorized access. Please log in.', '/unlockyourskills/login');
             return;
         }
 
         $questionType = $_POST['questionType'] ?? '';
 
         if (!in_array($questionType, ['objective', 'subjective'])) {
-            echo "<script>alert('Invalid question type selected.'); window.location.href='index.php?controller=QuestionController';</script>";
+            $this->toastError('Invalid question type selected.', '/unlockyourskills/vlr/questions');
             return;
         }
 
         if (!isset($_FILES['importFile']) || $_FILES['importFile']['error'] !== UPLOAD_ERR_OK) {
-            echo "<script>alert('Please select a valid Excel file.'); window.location.href='index.php?controller=QuestionController';</script>";
+            $this->toastError('Please select a valid Excel file.', '/unlockyourskills/vlr/questions');
             return;
         }
 
@@ -982,7 +982,7 @@ class QuestionController extends BaseController {
         $allowedExtensions = ['xls', 'xlsx', 'csv'];
 
         if (!in_array($file['type'], $allowedTypes) && !in_array($fileExtension, $allowedExtensions)) {
-            echo "<script>alert('Invalid file type. Please upload Excel (.xlsx, .xls) or CSV (.csv) file.'); window.location.href='index.php?controller=QuestionController';</script>";
+            $this->toastError('Invalid file type. Please upload Excel (.xlsx, .xls) or CSV (.csv) file.', '/unlockyourskills/vlr/questions');
             return;
         }
 
@@ -994,11 +994,10 @@ class QuestionController extends BaseController {
             if (!empty($result['errors'])) {
                 $message .= " Note: " . count($result['errors']) . " rows had errors and were skipped.";
             }
+            $this->toastSuccess($message, '/unlockyourskills/vlr/questions');
         } else {
-            $message = "Import failed: " . $result['message'];
+            $this->toastError("Import failed: " . $result['message'], '/unlockyourskills/vlr/questions');
         }
-
-        echo "<script>alert('$message'); window.location.href='index.php?controller=QuestionController';</script>";
     }
 
     private function processImportFile($file, $questionType) {

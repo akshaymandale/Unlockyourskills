@@ -200,7 +200,7 @@ document.addEventListener("DOMContentLoaded", function () {
 
         const assessmentId = assessmentData.id;
     
-        fetch(`index.php?controller=VLRController&action=getAssessmentById&id=${assessmentId}`)
+        fetch(`/unlockyourskills/vlr/assessment-packages/${assessmentId}`)
             .then(response => response.json())
             .then(assessmentData => {
                 console.log(assessmentData);

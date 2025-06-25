@@ -100,7 +100,7 @@ document.addEventListener("DOMContentLoaded", function () {
             }
             feedbackIdInput.value = feedbackId;
 
-            fetch(`index.php?controller=VLRController&action=getFeedbackById&id=${feedbackId}`)
+            fetch(`/unlockyourskills/vlr/feedback/${feedbackId}`)
                 .then(response => response.json())
                 .then(data => {
                     console.log(data);

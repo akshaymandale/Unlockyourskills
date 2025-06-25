@@ -87,7 +87,8 @@ document.addEventListener("DOMContentLoaded", function () {
         currentPage = page;
 
         try {
-            const response = await fetch(`index.php?controller=FeedbackQuestionController&action=getQuestions&${params.toString()}`);
+            const url = `/unlockyourskills/vlr/feedback/questions?${params.toString()}`;
+            const response = await fetch(url);
             const data = await response.json();
             questionsData = data.questions || [];
             renderQuestionsTable();
@@ -142,7 +143,7 @@ document.addEventListener("DOMContentLoaded", function () {
 
     async function loadFilterOptions() {
         try {
-            const response = await fetch(`index.php?controller=FeedbackQuestionController&action=getFilterOptions`);
+            const response = await fetch(`/unlockyourskills/vlr/feedback/filter-options`);
             const data = await response.json();
             filterType.innerHTML = `<option value="">All Types</option>`;
             (data.types || []).forEach(type => {
@@ -160,7 +161,7 @@ document.addEventListener("DOMContentLoaded", function () {
         }
 
         try {
-            const response = await fetch(`index.php?controller=FeedbackQuestionController&action=getSelectedQuestions`, {
+            const response = await fetch(`/unlockyourskills/vlr/feedback/selected-questions`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ ids: Array.from(temporarySelections) })

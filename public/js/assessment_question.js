@@ -145,7 +145,7 @@ document.addEventListener('DOMContentLoaded', function () {
         formData.append('tags', currentFilters.tags);
 
         // Make AJAX request
-        fetch('index.php', {
+        fetch('/unlockyourskills/vlr/questions', {
             method: 'POST',
             body: formData
         })
@@ -491,7 +491,7 @@ document.addEventListener('DOMContentLoaded', function () {
     }
     function loadQuestionForEdit(questionId) {
         // Fetch question data via AJAX
-        fetch(`index.php?controller=QuestionController&action=getQuestionById&id=${questionId}`)
+        fetch(`/unlockyourskills/vlr/questions/${questionId}`)
             .then(response => {
                 if (!response.ok) {
                     throw new Error(`HTTP error! status: ${response.status}`);
@@ -697,7 +697,7 @@ document.addEventListener('DOMContentLoaded', function () {
             // Submit form via AJAX
             const formData = new FormData(assessmentForm);
 
-            fetch('index.php?controller=QuestionController&action=save', {
+            fetch('/unlockyourskills/vlr/questions', {
                 method: 'POST',
                 headers: {
                     'X-Requested-With': 'XMLHttpRequest'

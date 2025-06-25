@@ -108,7 +108,7 @@ document.addEventListener("DOMContentLoaded", function () {
             }
             surveyIdInput.value = surveyId;
 
-            fetch(`index.php?controller=VLRController&action=getSurveyById&id=${surveyId}`)
+            fetch(`/unlockyourskills/vlr/surveys/${surveyId}`)
                 .then(response => response.json())
                 .then(data => {
                     console.log(data);

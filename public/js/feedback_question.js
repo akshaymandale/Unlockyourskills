@@ -275,7 +275,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
     // Function to fetch question data and populate edit form
     function fetchAndEditQuestion(questionId) {
-        fetch(`index.php?controller=FeedbackQuestionController&action=getQuestionById&id=${questionId}`)
+        fetch(`/unlockyourskills/feedback/${questionId}`)
             .then(response => response.json())
             .then(data => {
                 if (data.error) {

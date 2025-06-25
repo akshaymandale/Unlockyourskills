@@ -8,7 +8,7 @@
   <div class="container add-survey-question-container">
 
     <div class="back-arrow-container">
-      <a href="index.php?controller=VLRController&tab=survey" class="back-link">
+      <a href="/unlockyourskills/vlr?tab=survey" class="back-link">
         <i class="fas fa-arrow-left"></i>
       </a>
       <span class="divider-line"></span>
@@ -198,8 +198,8 @@
   aria-labelledby="addSurveyQuestionModalLabel" aria-hidden="true">
   <div class="modal-dialog modal-lg modal-dialog-scrollable">
     <div class="modal-content">
-      <form id="surveyQuestionForm" enctype="multipart/form-data" method="POST"
-        action="index.php?controller=SurveyQuestionController&action=save">
+      <form id="addSurveyQuestionForm" method="POST"
+        action="/unlockyourskills/surveys" novalidate>
 
         <!-- Hidden ID for editing -->
         <input type="hidden" name="surveyQuestionId" id="surveyQuestionId" value="">

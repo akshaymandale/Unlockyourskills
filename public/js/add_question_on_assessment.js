@@ -82,7 +82,7 @@ document.addEventListener("DOMContentLoaded", function () {
         currentPage = page;
 
         const params = new URLSearchParams({ search, marks, type, limit, page });
-        const url = `index.php?controller=AssessmentController&action=getQuestions&${params.toString()}`;
+        const url = `/unlockyourskills/vlr/assessment-packages/questions?${params.toString()}`;
 
         try {
             const response = await fetch(url);
@@ -141,7 +141,7 @@ document.addEventListener("DOMContentLoaded", function () {
     }
 
     async function loadFilterOptions() {
-        const response = await fetch(`index.php?controller=AssessmentController&action=getFilterOptions`);
+        const response = await fetch(`/unlockyourskills/vlr/assessment-packages/filter-options`);
         const data = await response.json();
 
         const marksSelect = document.getElementById("assessment_filterMarks");
@@ -164,7 +164,7 @@ document.addEventListener("DOMContentLoaded", function () {
         }
 
         try {
-            const response = await fetch(`index.php?controller=AssessmentController&action=getSelectedQuestions`, {
+            const response = await fetch(`/unlockyourskills/vlr/assessment-packages/selected-questions`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ ids: Array.from(temporarySelections) })
