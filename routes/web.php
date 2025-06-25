@@ -129,43 +129,66 @@ Router::middleware(['Auth'])->group(function() {
     
     // SCORM Packages
     Router::get('/vlr/scorm', 'VLRController@scormIndex');
-    Router::post('/vlr/scorm', 'VLRController@scormSave');
-    Router::delete('/vlr/scorm/{id}', 'VLRController@scormDelete');
+    Router::post('/vlr/scorm', 'VLRController@addOrEditScormPackage');
+    Router::delete('/vlr/scorm/{id}', 'VLRController@delete');
     
     // External Content
     Router::get('/vlr/external', 'VLRController@externalIndex');
-    Router::post('/vlr/external', 'VLRController@externalSave');
-    Router::delete('/vlr/external/{id}', 'VLRController@externalDelete');
+    Router::post('/vlr/external', 'VLRController@addOrEditExternalContent');
+    Router::delete('/vlr/external/{id}', 'VLRController@deleteExternal');
     
     // Documents
     Router::get('/vlr/documents', 'VLRController@documentsIndex');
-    Router::post('/vlr/documents', 'VLRController@documentsSave');
-    Router::delete('/vlr/documents/{id}', 'VLRController@documentsDelete');
+    Router::post('/vlr/documents', 'VLRController@addOrEditDocument');
+    Router::delete('/vlr/documents/{id}', 'VLRController@deleteDocument');
     
     // Audio Packages
     Router::get('/vlr/audio', 'VLRController@audioIndex');
-    Router::post('/vlr/audio', 'VLRController@audioSave');
-    Router::delete('/vlr/audio/{id}', 'VLRController@audioDelete');
+    Router::post('/vlr/audio', 'VLRController@addOrEditAudioPackage');
+    Router::delete('/vlr/audio/{id}', 'VLRController@deleteAudioPackage');
     
     // Video Packages
     Router::get('/vlr/video', 'VLRController@videoIndex');
-    Router::post('/vlr/video', 'VLRController@videoSave');
-    Router::delete('/vlr/video/{id}', 'VLRController@videoDelete');
+    Router::post('/vlr/video', 'VLRController@addOrEditVideoPackage');
+    Router::delete('/vlr/video/{id}', 'VLRController@deleteVideoPackage');
     
     // Image Packages
     Router::get('/vlr/images', 'VLRController@imageIndex');
-    Router::post('/vlr/images', 'VLRController@imageSave');
-    Router::delete('/vlr/images/{id}', 'VLRController@imageDelete');
+    Router::post('/vlr/images', 'VLRController@addOrEditImagePackage');
+    Router::delete('/vlr/images/{id}', 'VLRController@deleteImagePackage');
     
     // Interactive Content
     Router::get('/vlr/interactive', 'VLRController@interactiveIndex');
-    Router::post('/vlr/interactive', 'VLRController@interactiveSave');
-    Router::delete('/vlr/interactive/{id}', 'VLRController@interactiveDelete');
+    Router::post('/vlr/interactive', 'VLRController@addOrEditInteractiveContent');
+    Router::delete('/vlr/interactive/{id}', 'VLRController@deleteInteractiveContent');
     
     // Assessment Packages
     Router::get('/vlr/assessment-packages', 'VLRController@assessmentIndex');
-    Router::post('/vlr/assessment-packages', 'VLRController@assessmentSave');
-    Router::delete('/vlr/assessment-packages/{id}', 'VLRController@assessmentDelete');
+    Router::post('/vlr/assessment-packages', 'VLRController@addOrEditAssessment');
+    Router::delete('/vlr/assessment-packages/{id}', 'VLRController@deleteAssessment');
+    
+    // Non-SCORM Content
+    Router::get('/vlr/non-scorm', 'VLRController@nonScormIndex');
+    Router::post('/vlr/non-scorm', 'VLRController@addOrEditNonScormPackage');
+    Router::delete('/vlr/non-scorm/{id}', 'VLRController@deleteNonScormPackage');
+    
+    // Survey Packages
+    Router::get('/vlr/surveys', 'VLRController@surveyIndex');
+    Router::post('/vlr/surveys', 'VLRController@addOrEditSurvey');
+    Router::delete('/vlr/surveys/{id}', 'VLRController@deleteSurvey');
+    
+    // Feedback Packages
+    Router::get('/vlr/feedback', 'VLRController@feedbackIndex');
+    Router::post('/vlr/feedback', 'VLRController@addOrEditFeedback');
+    Router::delete('/vlr/feedback/{id}', 'VLRController@deleteFeedback');
+    
+    // VLR Assessment Question Management
+    Router::get('/vlr/questions', 'QuestionController@index');
+    Router::get('/vlr/questions/create', 'QuestionController@add');
+    Router::post('/vlr/questions', 'QuestionController@save');
+    Router::get('/vlr/questions/{id}/edit', 'QuestionController@edit');
+    Router::put('/vlr/questions/{id}', 'QuestionController@save');
+    Router::delete('/vlr/questions/{id}', 'QuestionController@delete');
     
     // ===================================
     // SURVEY QUESTIONS

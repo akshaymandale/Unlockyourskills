@@ -1,6 +1,7 @@
 -- Interactive & AI Powered Content Package Table
 CREATE TABLE IF NOT EXISTS `interactive_ai_content_package` (
   `id` int(11) NOT NULL AUTO_INCREMENT,
+  `client_id` int(11) NOT NULL,
   `title` varchar(255) NOT NULL,
   `content_type` enum('adaptive_learning', 'ai_tutoring', 'ar_vr') NOT NULL,
   `description` text,
@@ -47,6 +48,7 @@ CREATE TABLE IF NOT EXISTS `interactive_ai_content_package` (
   `is_deleted` tinyint(1) NOT NULL DEFAULT '0',
   
   PRIMARY KEY (`id`),
+  KEY `idx_client_id` (`client_id`),
   KEY `idx_content_type` (`content_type`),
   KEY `idx_created_by` (`created_by`),
   KEY `idx_is_deleted` (`is_deleted`),

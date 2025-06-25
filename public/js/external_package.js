@@ -421,7 +421,7 @@ document.addEventListener("DOMContentLoaded", function () {
         previewContainer.appendChild(previewWrapper);
     }
 
-    function createExistingFilePreview(fileName, previewContainer, uploadPath = 'uploads/external_content/') {
+    function createExistingFilePreview(fileName, previewContainer, uploadPath = 'uploads/external/thumbnails/') {
         const fileExtension = fileName.split('.').pop().toLowerCase();
         let previewHTML = '';
 
@@ -521,6 +521,21 @@ document.addEventListener("DOMContentLoaded", function () {
             // ✅ Show existing file previews (following Non-SCORM pattern)
             if (contentData.thumbnail && thumbnailFileLink) {
                 createExistingFilePreview(contentData.thumbnail, thumbnailFileLink);
+            }
+
+            // ✅ Show existing thumbnail preview in the image element
+            if (contentData.thumbnail) {
+                const thumbnailPreview = document.getElementById('thumbnailPreview');
+                if (thumbnailPreview) {
+                    thumbnailPreview.src = `uploads/external/thumbnails/${contentData.thumbnail}`;
+                    thumbnailPreview.style.display = 'block';
+                }
+                
+                // Set the existing thumbnail value in hidden field
+                const existingThumbnailField = document.getElementById('existing_thumbnail');
+                if (existingThumbnailField) {
+                    existingThumbnailField.value = contentData.thumbnail;
+                }
             }
 
             // Set mobile support radio buttons

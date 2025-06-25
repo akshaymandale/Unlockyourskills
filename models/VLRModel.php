@@ -697,7 +697,7 @@ class VLRModel
 public function insertAudioPackage($data)
 {
     // Validate required fields
-    $requiredFields = ['title', 'audio_file', 'version', 'mobile_support', 'tags', 'created_by'];
+    $requiredFields = ['client_id', 'title', 'audio_file', 'version', 'mobile_support', 'tags', 'created_by'];
     foreach ($requiredFields as $field) {
         if (empty($data[$field])) {
             return false;
@@ -706,11 +706,12 @@ public function insertAudioPackage($data)
 
     $stmt = $this->conn->prepare("
         INSERT INTO audio_package
-        (title, audio_file, version, language, time_limit, description, tags, mobile_support, created_by, is_deleted, created_at)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 0, NOW())
+        (client_id, title, audio_file, version, language, time_limit, description, tags, mobile_support, created_by, is_deleted, created_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, NOW())
     ");
 
     return $stmt->execute([
+        $data['client_id'],
         $data['title'],
         $data['audio_file'],
         $data['version'],
@@ -784,7 +785,7 @@ public function deleteAudioPackage($id)
 public function insertVideoPackage($data)
 {
     // Validate required fields
-    $requiredFields = ['title', 'video_file', 'version', 'mobile_support', 'tags', 'created_by'];
+    $requiredFields = ['client_id', 'title', 'video_file', 'version', 'mobile_support', 'tags', 'created_by'];
     foreach ($requiredFields as $field) {
         if (empty($data[$field])) {
             return false;
@@ -793,11 +794,12 @@ public function insertVideoPackage($data)
 
     $stmt = $this->conn->prepare("
         INSERT INTO video_package
-        (title, video_file, version, language, time_limit, description, tags, mobile_support, created_by, is_deleted, created_at)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 0, NOW())
+        (client_id, title, video_file, version, language, time_limit, description, tags, mobile_support, created_by, is_deleted, created_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, NOW())
     ");
 
     return $stmt->execute([
+        $data['client_id'],
         $data['title'],
         $data['video_file'],
         $data['version'],
@@ -871,7 +873,7 @@ public function deleteVideoPackage($id)
 public function insertImagePackage($data)
 {
     // Validate required fields
-    $requiredFields = ['title', 'image_file', 'version', 'mobile_support', 'tags', 'created_by'];
+    $requiredFields = ['client_id', 'title', 'image_file', 'version', 'mobile_support', 'tags', 'created_by'];
     foreach ($requiredFields as $field) {
         if (empty($data[$field])) {
             return false;
@@ -880,11 +882,12 @@ public function insertImagePackage($data)
 
     $stmt = $this->conn->prepare("
         INSERT INTO image_package
-        (title, image_file, version, language, description, tags, mobile_support, created_by, is_deleted, created_at)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, 0, NOW())
+        (client_id, title, image_file, version, language, description, tags, mobile_support, created_by, is_deleted, created_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 0, NOW())
     ");
 
     return $stmt->execute([
+        $data['client_id'],
         $data['title'],
         $data['image_file'],
         $data['version'],
@@ -1178,54 +1181,76 @@ public function deleteImagePackage($id)
     // Insert Interactive & AI Powered Content Package
     public function insertInteractiveContent($data)
     {
+        error_log("VLRModel: insertInteractiveContent called with data: " . print_r($data, true));
+        
         // Validate required fields
-        $requiredFields = ['title', 'content_type', 'version', 'mobile_support', 'tags', 'created_by'];
+        $requiredFields = ['title', 'content_type', 'version', 'mobile_support', 'tags', 'created_by', 'client_id'];
         foreach ($requiredFields as $field) {
             if (empty($data[$field])) {
+                error_log("VLRModel: Required field missing: " . $field);
                 return false;
             }
         }
+        
+        error_log("VLRModel: All required fields present");
 
-        $stmt = $this->conn->prepare("
-            INSERT INTO interactive_ai_content_package
-            (title, content_type, description, tags, version, language, time_limit, mobile_support,
-             content_url, embed_code, ai_model, interaction_type, difficulty_level, learning_objectives,
-             prerequisites, content_file, thumbnail_image, metadata_file, vr_platform, ar_platform,
-             device_requirements, tutor_personality, response_style, knowledge_domain, adaptation_algorithm,
-             assessment_integration, progress_tracking, created_by, is_deleted, created_at)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, NOW())
-        ");
+        try {
+            $stmt = $this->conn->prepare("
+                INSERT INTO interactive_ai_content_package
+                (client_id, title, content_type, description, tags, version, language, time_limit, mobile_support,
+                 content_url, embed_code, ai_model, interaction_type, difficulty_level, learning_objectives,
+                 prerequisites, content_file, thumbnail_image, metadata_file, vr_platform, ar_platform,
+                 device_requirements, tutor_personality, response_style, knowledge_domain, adaptation_algorithm,
+                 assessment_integration, progress_tracking, created_by, is_deleted, created_at)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, NOW())
+            ");
 
-        return $stmt->execute([
-            $data['title'],
-            $data['content_type'],
-            $data['description'] ?? null,
-            $data['tags'],
-            $data['version'],
-            $data['language'] ?? null,
-            $data['time_limit'] ?? null,
-            $data['mobile_support'],
-            $data['content_url'] ?? null,
-            $data['embed_code'] ?? null,
-            $data['ai_model'] ?? null,
-            $data['interaction_type'] ?? null,
-            $data['difficulty_level'] ?? null,
-            $data['learning_objectives'] ?? null,
-            $data['prerequisites'] ?? null,
-            $data['content_file'] ?? null,
-            $data['thumbnail_image'] ?? null,
-            $data['metadata_file'] ?? null,
-            $data['vr_platform'] ?? null,
-            $data['ar_platform'] ?? null,
-            $data['device_requirements'] ?? null,
-            $data['tutor_personality'] ?? null,
-            $data['response_style'] ?? null,
-            $data['knowledge_domain'] ?? null,
-            $data['adaptation_algorithm'] ?? null,
-            $data['assessment_integration'] ?? null,
-            $data['progress_tracking'] ?? null,
-            $data['created_by']
-        ]);
+            $result = $stmt->execute([
+                $data['client_id'],
+                $data['title'],
+                $data['content_type'],
+                $data['description'] ?? null,
+                $data['tags'],
+                $data['version'],
+                $data['language'] ?? null,
+                $data['time_limit'] ?? null,
+                $data['mobile_support'],
+                $data['content_url'] ?? null,
+                $data['embed_code'] ?? null,
+                $data['ai_model'] ?? null,
+                $data['interaction_type'] ?? null,
+                $data['difficulty_level'] ?? null,
+                $data['learning_objectives'] ?? null,
+                $data['prerequisites'] ?? null,
+                $data['content_file'] ?? null,
+                $data['thumbnail_image'] ?? null,
+                $data['metadata_file'] ?? null,
+                $data['vr_platform'] ?? null,
+                $data['ar_platform'] ?? null,
+                $data['device_requirements'] ?? null,
+                $data['tutor_personality'] ?? null,
+                $data['response_style'] ?? null,
+                $data['knowledge_domain'] ?? null,
+                $data['adaptation_algorithm'] ?? null,
+                $data['assessment_integration'] ?? null,
+                $data['progress_tracking'] ?? null,
+                $data['created_by']
+            ]);
+            
+            if ($result) {
+                error_log("VLRModel: Insert successful, last insert ID: " . $this->conn->lastInsertId());
+                return $this->conn->lastInsertId();
+            } else {
+                error_log("VLRModel: Insert failed, error info: " . print_r($stmt->errorInfo(), true));
+                return false;
+            }
+        } catch (PDOException $e) {
+            error_log("VLRModel: PDO Exception in insertInteractiveContent: " . $e->getMessage());
+            return false;
+        } catch (Exception $e) {
+            error_log("VLRModel: General Exception in insertInteractiveContent: " . $e->getMessage());
+            return false;
+        }
     }
 
     // Update Interactive & AI Powered Content Package
@@ -1311,10 +1336,18 @@ public function deleteImagePackage($id)
     }
 
     // Soft Delete Interactive & AI Powered Content Package
-    public function deleteInteractiveContent($id)
+    public function deleteInteractiveContent($id, $clientId = null)
     {
-        $stmt = $this->conn->prepare("UPDATE interactive_ai_content_package SET is_deleted = 1 WHERE id = ?");
-        return $stmt->execute([$id]);
+        $sql = "UPDATE interactive_ai_content_package SET is_deleted = 1 WHERE id = ?";
+        $params = [$id];
+
+        if ($clientId !== null) {
+            $sql .= " AND client_id = ?";
+            $params[] = $clientId;
+        }
+
+        $stmt = $this->conn->prepare($sql);
+        return $stmt->execute($params);
     }
 
     // ✅ Non-SCORM Package Methods
@@ -1323,7 +1356,7 @@ public function deleteImagePackage($id)
     public function insertNonScormPackage($data)
     {
         // Validate required fields
-        $requiredFields = ['title', 'content_type', 'version', 'mobile_support', 'tags', 'created_by'];
+        $requiredFields = ['title', 'content_type', 'version', 'mobile_support', 'tags', 'created_by', 'client_id'];
         foreach ($requiredFields as $field) {
             if (empty($data[$field])) {
                 return false;
@@ -1332,17 +1365,18 @@ public function deleteImagePackage($id)
 
         $stmt = $this->conn->prepare("
             INSERT INTO non_scorm_package
-            (title, content_type, description, tags, version, language, time_limit, mobile_support,
+            (client_id, title, content_type, description, tags, version, language, time_limit, mobile_support,
              content_url, launch_file, content_package, thumbnail_image, manifest_file,
              html5_framework, responsive_design, offline_support, flash_version, flash_security,
              unity_version, unity_platform, unity_compression, web_technologies, browser_requirements,
              external_dependencies, mobile_platform, app_store_url, minimum_os_version,
              progress_tracking, assessment_integration, completion_criteria, scoring_method,
              file_size, bandwidth_requirement, screen_resolution, created_by, is_deleted, created_at)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, NOW())
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, NOW())
         ");
 
         return $stmt->execute([
+            $data['client_id'],
             $data['title'],
             $data['content_type'],
             $data['description'] ?? null,

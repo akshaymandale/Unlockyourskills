@@ -2,6 +2,7 @@
 // controllers/VLRController.php
 require_once 'models/VLRModel.php';
 require_once 'controllers/BaseController.php';
+require_once 'core/UrlHelper.php';
 
 class VLRController extends BaseController
 {
@@ -16,7 +17,7 @@ class VLRController extends BaseController
     {
         // Check if user is logged in and get client_id
         if (!isset($_SESSION['user']['client_id'])) {
-            $this->toastError('Unauthorized access. Please log in.', 'index.php?controller=LoginController');
+            $this->toastError('Unauthorized access. Please log in.', '/unlockyourskills/login');
             return;
         }
 
@@ -93,7 +94,7 @@ class VLRController extends BaseController
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             // Validate session (ensure user is logged in)
             if (!isset($_SESSION['id']) || !isset($_SESSION['user']['client_id'])) {
-                $this->toastError('Unauthorized access. Please log in.', 'index.php?controller=LoginController');
+                $this->toastError('Unauthorized access. Please log in.', '/unlockyourskills/login');
                 return;
             }
 
@@ -124,7 +125,7 @@ class VLRController extends BaseController
                         UPLOAD_ERR_EXTENSION => 'File upload stopped by extension.'
                     ];
                     $errorMessage = $uploadErrors[$_FILES['zipFile']['error']] ?? 'Unknown upload error.';
-                    $this->toastError("File upload failed: $errorMessage", 'index.php?controller=VLRController&tab=scorm');
+                    $this->toastError("File upload failed: $errorMessage", '/unlockyourskills/vlr?tab=scorm');
                     return;
                 }
 
@@ -132,14 +133,14 @@ class VLRController extends BaseController
                 $fileExtension = strtolower(pathinfo($_FILES['zipFile']['name'], PATHINFO_EXTENSION));
                 $allowedExtensions = ['zip', 'rar', '7z'];
                 if (!in_array($fileExtension, $allowedExtensions)) {
-                    $this->toastError('Invalid file type. Only ZIP, RAR, and 7Z files are allowed.', 'index.php?controller=VLRController&tab=scorm');
+                    $this->toastError('Invalid file type. Only ZIP, RAR, and 7Z files are allowed.', '/unlockyourskills/vlr?tab=scorm');
                     return;
                 }
 
                 // Validate file size (50MB limit)
                 $maxSize = 50 * 1024 * 1024; // 50MB
                 if ($_FILES['zipFile']['size'] > $maxSize) {
-                    $this->toastError('File size too large. Maximum size is 50MB.', 'index.php?controller=VLRController&tab=scorm');
+                    $this->toastError('File size too large. Maximum size is 50MB.', '/unlockyourskills/vlr?tab=scorm');
                     return;
                 }
 
@@ -149,7 +150,7 @@ class VLRController extends BaseController
                 if (move_uploaded_file($_FILES['zipFile']['tmp_name'], $uploadFilePath)) {
                     $zipFileName = $uniqueFileName;
                 } else {
-                    $this->toastError('File upload failed. Please check directory permissions.', 'index.php?controller=VLRController&tab=scorm');
+                    $this->toastError('File upload failed. Please check directory permissions.', '/unlockyourskills/vlr?tab=scorm');
                     return;
                 }
             }
@@ -180,7 +181,7 @@ class VLRController extends BaseController
 
             if (!empty($errors)) {
                 $errorMessage = implode(', ', $errors);
-                $this->toastError("Validation errors: $errorMessage", 'index.php?controller=VLRController&tab=scorm');
+                $this->toastError("Validation errors: $errorMessage", '/unlockyourskills/vlr?tab=scorm');
                 return;
             }
 
@@ -207,21 +208,21 @@ class VLRController extends BaseController
 
                 $result = $this->VLRModel->updateScormPackage($scormId, $data, $filterClientId);
                 if ($result) {
-                    $this->toastSuccess('SCORM package updated successfully!', 'index.php?controller=VLRController&tab=scorm');
+                    $this->toastSuccess('SCORM package updated successfully!', '/unlockyourskills/vlr?tab=scorm');
                 } else {
-                    $this->toastError('Failed to update SCORM package or access denied.', 'index.php?controller=VLRController&tab=scorm');
+                    $this->toastError('Failed to update SCORM package or access denied.', '/unlockyourskills/vlr?tab=scorm');
                 }
             } else {
                 // Insert new SCORM package
                 $result = $this->VLRModel->insertScormPackage($data);
                 if ($result) {
-                    $this->toastSuccess('SCORM package added successfully!', 'index.php?controller=VLRController&tab=scorm');
+                    $this->toastSuccess('SCORM package added successfully!', '/unlockyourskills/vlr?tab=scorm');
                 } else {
-                    $this->toastError('Failed to insert SCORM package.', 'index.php?controller=VLRController&tab=scorm');
+                    $this->toastError('Failed to insert SCORM package.', '/unlockyourskills/vlr?tab=scorm');
                 }
             }
         } else {
-            $this->toastError('Invalid request parameters.', 'index.php?controller=VLRController&tab=scorm');
+            $this->toastError('Invalid request parameters.', '/unlockyourskills/vlr?tab=scorm');
         }
     }
 
@@ -230,7 +231,7 @@ class VLRController extends BaseController
     {
         // Validate session (ensure user is logged in)
         if (!isset($_SESSION['id']) || !isset($_SESSION['user']['client_id'])) {
-            $this->toastError('Unauthorized access. Please log in.', 'index.php?controller=LoginController');
+            $this->toastError('Unauthorized access. Please log in.', '/unlockyourskills/login');
             return;
         }
 
@@ -249,14 +250,14 @@ class VLRController extends BaseController
 
             if ($result) {
                 error_log("🎉 SCORM package deleted successfully!");
-                $this->toastSuccess('SCORM package deleted successfully!', 'index.php?controller=VLRController&tab=scorm');
+                $this->toastSuccess('SCORM package deleted successfully!', '/unlockyourskills/vlr?tab=scorm');
             } else {
                 error_log("❌ Failed to delete SCORM package or access denied");
-                $this->toastError('Failed to delete SCORM package or access denied.', 'index.php?controller=VLRController&tab=scorm');
+                $this->toastError('Failed to delete SCORM package or access denied.', '/unlockyourskills/vlr?tab=scorm');
             }
         } else {
             error_log("❌ No ID provided in request");
-            $this->toastError('Invalid request.', 'index.php?controller=VLRController&tab=scorm');
+            $this->toastError('Invalid request.', '/unlockyourskills/vlr?tab=scorm');
         }
     }
 
@@ -267,7 +268,7 @@ class VLRController extends BaseController
         if ($_SERVER["REQUEST_METHOD"] === "POST") {
             // Validate session (ensure user is logged in)
             if (!isset($_SESSION['id']) || !isset($_SESSION['user']['client_id'])) {
-                $this->toastError('Unauthorized access. Please log in.', 'index.php?controller=LoginController');
+                $this->toastError('Unauthorized access. Please log in.', '/unlockyourskills/login');
                 return;
             }
 
@@ -365,6 +366,9 @@ class VLRController extends BaseController
                         $errors[] = "Failed to upload thumbnail.";
                     }
                 }
+            } elseif ($isEdit && !empty($_POST['existing_thumbnail'])) {
+                // ✅ Preserve existing thumbnail if no new one is uploaded during edit
+                $thumbnail = $_POST['existing_thumbnail'];
             }
 
             // ✅ Audio File Upload Handling (EXISTING)
@@ -406,7 +410,7 @@ class VLRController extends BaseController
             // ✅ If errors exist, redirect with toast notification
             if (!empty($errors)) {
                 $errorMessage = implode(', ', $errors);
-                $this->toastError($errorMessage, 'index.php?controller=VLRController&tab=external');
+                $this->toastError($errorMessage, '/unlockyourskills/vlr?tab=external');
                 return;
             }
 
@@ -444,49 +448,53 @@ class VLRController extends BaseController
 
                 $result = $this->VLRModel->updateExternalContent($id, $data, $filterClientId);
                 if ($result) {
-                    $this->toastSuccess('External Content package updated successfully!', 'index.php?controller=VLRController&tab=external');
+                    $this->toastSuccess('External Content package updated successfully!', '/unlockyourskills/vlr?tab=external');
                 } else {
-                    $this->toastError('Failed to update External Content package or access denied.', 'index.php?controller=VLRController&tab=external');
+                    $this->toastError('Failed to update External Content package or access denied.', '/unlockyourskills/vlr?tab=external');
                 }
             } else {
                 $data['created_by'] = $modifiedBy;
                 $result = $this->VLRModel->insertExternalContent($data);
                 if ($result) {
-                    $this->toastSuccess('External Content package added successfully!', 'index.php?controller=VLRController&tab=external');
+                    $this->toastSuccess('External Content package added successfully!', '/unlockyourskills/vlr?tab=external');
                 } else {
-                    $this->toastError('Failed to insert External Content package.', 'index.php?controller=VLRController&tab=external');
+                    $this->toastError('Failed to insert External Content package.', '/unlockyourskills/vlr?tab=external');
                 }
             }
         }
     }
 
     // Delete External content data
-    public function deleteExternal()
+    public function deleteExternal($id = null)
     {
         // Validate session (ensure user is logged in)
         if (!isset($_SESSION['id']) || !isset($_SESSION['user']['client_id'])) {
-            $this->toastError('Unauthorized access. Please log in.', 'index.php?controller=LoginController');
+            $this->toastError('Unauthorized access. Please log in.', '/unlockyourskills/login');
             return;
         }
 
         $clientId = $_SESSION['user']['client_id'];
         $currentUser = $_SESSION['user'] ?? null;
 
-        if (isset($_GET['id'])) {
+        // Accept ID from route parameter or fallback to GET for backward compatibility
+        if ($id === null && isset($_GET['id'])) {
             $id = $_GET['id'];
+        }
 
-            // Determine client filtering based on user role
-            $filterClientId = ($currentUser && $currentUser['system_role'] === 'admin') ? $clientId : null;
+        if (!$id) {
+            $this->toastError('Invalid request.', '/unlockyourskills/vlr?tab=external');
+            return;
+        }
 
-            $result = $this->VLRModel->deleteExternalContent($id, $filterClientId);
+        // Determine client filtering based on user role
+        $filterClientId = ($currentUser && $currentUser['system_role'] === 'admin') ? $clientId : null;
 
-            if ($result) {
-                $this->toastSuccess('External Content deleted successfully!', 'index.php?controller=VLRController&tab=external');
-            } else {
-                $this->toastError('Failed to delete External Content package or access denied.', 'index.php?controller=VLRController&tab=external');
-            }
+        $result = $this->VLRModel->deleteExternalContent($id, $filterClientId);
+
+        if ($result) {
+            $this->toastSuccess('External Content deleted successfully!', '/unlockyourskills/vlr?tab=external');
         } else {
-            $this->toastError('Invalid request.', 'index.php?controller=VLRController&tab=external');
+            $this->toastError('Failed to delete External Content package or access denied.', '/unlockyourskills/vlr?tab=external');
         }
     }
 
@@ -503,7 +511,7 @@ class VLRController extends BaseController
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             // Validate session (ensure user is logged in)
             if (!isset($_SESSION['id']) || !isset($_SESSION['user']['client_id'])) {
-                $this->toastError('Unauthorized access. Please log in.', 'index.php?controller=LoginController');
+                $this->toastError('Unauthorized access. Please log in.', '/unlockyourskills/login');
                 return;
             }
 
@@ -624,9 +632,9 @@ class VLRController extends BaseController
             }
 
             if ($result) {
-                $this->toastSuccess($isEdit ? 'Document updated successfully!' : 'Document added successfully!', 'index.php?controller=VLRController&tab=document');
+                $this->toastSuccess($isEdit ? 'Document updated successfully!' : 'Document added successfully!', '/unlockyourskills/vlr?tab=document');
             } else {
-                $this->toastError($isEdit ? 'Failed to update document.' : 'Failed to add document.', 'index.php?controller=VLRController&tab=document');
+                $this->toastError($isEdit ? 'Failed to update document.' : 'Failed to add document.', '/unlockyourskills/vlr?tab=document');
             }
         }
     }
@@ -636,30 +644,36 @@ class VLRController extends BaseController
     /**
      * Delete a document
      */
-    public function deleteDocument()
+    public function deleteDocument($id = null)
     {
         // Validate session (ensure user is logged in)
         if (!isset($_SESSION['id']) || !isset($_SESSION['user']['client_id'])) {
-            $this->toastError('Unauthorized access. Please log in.', 'index.php?controller=LoginController');
+            $this->toastError('Unauthorized access. Please log in.', '/unlockyourskills/login');
             return;
         }
 
         $clientId = $_SESSION['user']['client_id'];
         $currentUser = $_SESSION['user'] ?? null;
 
-        if (isset($_GET['id'])) {
+        // Accept ID from route parameter or fallback to GET for backward compatibility
+        if ($id === null && isset($_GET['id'])) {
             $id = $_GET['id'];
+        }
 
-            // Determine client filtering based on user role
-            $filterClientId = ($currentUser && $currentUser['system_role'] === 'admin') ? $clientId : null;
+        if (!$id) {
+            $this->toastError('Invalid request.', '/unlockyourskills/vlr?tab=document');
+            return;
+        }
 
-            $result = $this->VLRModel->deleteDocument($id, $filterClientId);
+        // Determine client filtering based on user role
+        $filterClientId = ($currentUser && $currentUser['system_role'] === 'admin') ? $clientId : null;
 
-            if ($result) {
-                $this->toastSuccess('Document deleted successfully!', 'index.php?controller=VLRController&tab=document');
-            } else {
-                $this->toastError('Failed to delete document or access denied.', 'index.php?controller=VLRController&tab=document');
-            }
+        $result = $this->VLRModel->deleteDocument($id, $filterClientId);
+
+        if ($result) {
+            $this->toastSuccess('Document deleted successfully!', '/unlockyourskills/vlr?tab=document');
+        } else {
+            $this->toastError('Failed to delete document or access denied.', '/unlockyourskills/vlr?tab=document');
         }
     }
 
@@ -683,7 +697,7 @@ class VLRController extends BaseController
         }
 
         if (!isset($_SESSION['id']) || !isset($_SESSION['user']['client_id'])) {
-            $this->toastError('Unauthorized access. Please log in.', 'index.php?controller=LoginController');
+            $this->toastError('Unauthorized access. Please log in.', '/unlockyourskills/login');
             return;
         }
 
@@ -726,7 +740,7 @@ class VLRController extends BaseController
 
         if (!empty($errors)) {
             $errorMsg = implode(', ', $errors);
-            $this->toastError($errorMsg, 'javascript:history.back()');
+            $this->toastError($errorMsg, '/unlockyourskills/vlr?tab=assessment');
             return;
         }
 
@@ -751,16 +765,16 @@ class VLRController extends BaseController
         if (!empty($assessmentId)) {
             $result = $this->VLRModel->updateAssessmentWithQuestions($data, $assessmentId);
             if ($result) {
-                $this->toastSuccess('Assessment updated successfully!', 'index.php?controller=VLRController&tab=assessment');
+                $this->toastSuccess('Assessment updated successfully!', '/unlockyourskills/vlr?tab=assessment');
             } else {
-                $this->toastError('Failed to update assessment.', 'index.php?controller=VLRController&tab=assessment');
+                $this->toastError('Failed to update assessment.', '/unlockyourskills/vlr?tab=assessment');
             }
         } else {
             $result = $this->VLRModel->saveAssessmentWithQuestions($data);
             if ($result) {
-                $this->toastSuccess('Assessment saved successfully!', 'index.php?controller=VLRController&tab=assessment');
+                $this->toastSuccess('Assessment saved successfully!', '/unlockyourskills/vlr?tab=assessment');
             } else {
-                $this->toastError('Failed to save assessment.', 'index.php?controller=VLRController&tab=assessment');
+                $this->toastError('Failed to save assessment.', '/unlockyourskills/vlr?tab=assessment');
             }
         }
     }
@@ -774,12 +788,12 @@ class VLRController extends BaseController
             $result = $this->VLRModel->deleteAssessment($id);
 
             if ($result) {
-                $this->toastSuccess('Assessment deleted successfully!', 'index.php?controller=VLRController&tab=assessment');
+                $this->toastSuccess('Assessment deleted successfully!', '/unlockyourskills/vlr?tab=assessment');
             } else {
-                $this->toastError('Failed to delete assessment.', 'index.php?controller=VLRController&tab=assessment');
+                $this->toastError('Failed to delete assessment.', '/unlockyourskills/vlr?tab=assessment');
             }
         } else {
-            $this->toastError('Invalid request.', 'index.php?controller=VLRController&tab=assessment');
+            $this->toastError('Invalid request.', '/unlockyourskills/vlr?tab=assessment');
         }
     }
 
@@ -787,15 +801,18 @@ class VLRController extends BaseController
 public function addOrEditAudioPackage()
 {
     if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
-        $this->toastError('Invalid request parameters.', 'index.php?controller=VLRController&tab=audio');
+        $this->toastError('Invalid request parameters.', '/unlockyourskills/vlr?tab=audio');
         return;
     }
 
     // ✅ Ensure session is valid
     if (!isset($_SESSION['id'])) {
-        $this->toastError('Unauthorized access. Please log in.', 'index.php?controller=VLRController&tab=audio');
+        $this->toastError('Unauthorized access. Please log in.', '/unlockyourskills/login');
         return;
     }
+
+    // ✅ Get client ID from session
+    $clientId = $_SESSION['user']['client_id'];
 
     // ✅ Extract POST and FILES data (with fallbacks for suffixed names)
     $audioId    = $_POST['audio_id'] ?? $_POST['audio_idaudio'] ?? null;
@@ -836,7 +853,7 @@ public function addOrEditAudioPackage()
     // ✅ Handle validation failure
     if (!empty($errors)) {
         $errorMessage = implode(', ', $errors);
-        $this->toastError($errorMessage, 'index.php?controller=VLRController&tab=audio');
+        $this->toastError($errorMessage, '/unlockyourskills/vlr?tab=audio');
         return;
     }
 
@@ -856,7 +873,7 @@ public function addOrEditAudioPackage()
         $targetPath = $uploadDir . $uniqueName;
 
         if (!move_uploaded_file($audioFile['tmp_name'], $targetPath)) {
-            $this->toastError('Audio upload failed.', 'index.php?controller=VLRController&tab=audio');
+            $this->toastError('Audio upload failed.', '/unlockyourskills/vlr?tab=audio');
             return;
         }
 
@@ -865,6 +882,7 @@ public function addOrEditAudioPackage()
 
     // ✅ Prepare clean data for DB
     $data = [
+        'client_id'      => $clientId,
         'title'          => $title,
         'audio_file'     => $audioFileName,
         'description'    => trim($_POST['description'] ?? $_POST['descriptionaudio'] ?? '') ?: null,
@@ -886,28 +904,32 @@ public function addOrEditAudioPackage()
     }
 
     if ($success) {
-        $this->toastSuccess($audioId ? 'Audio package updated successfully!' : 'Audio package added successfully!', 'index.php?controller=VLRController&tab=audio');
+        $this->toastSuccess($audioId ? 'Audio package updated successfully!' : 'Audio package added successfully!', '/unlockyourskills/vlr?tab=audio');
     } else {
-        $this->toastError($audioId ? 'Failed to update audio package.' : 'Failed to add audio package.', 'index.php?controller=VLRController&tab=audio');
+        $this->toastError($audioId ? 'Failed to update audio package.' : 'Failed to add audio package.', '/unlockyourskills/vlr?tab=audio');
     }
 }
 
 
 // Delete Audio Package
-public function deleteAudioPackage()
+public function deleteAudioPackage($id = null)
 {
-    if (!isset($_GET['id'])) {
-        $this->toastError('Invalid request.', 'index.php?controller=VLRController&tab=audio');
+    // If no ID provided as parameter, check GET (for backward compatibility)
+    if ($id === null && isset($_GET['id'])) {
+        $id = $_GET['id'];
+    }
+    
+    if (!$id) {
+        $this->toastError('Invalid request.', '/unlockyourskills/vlr?tab=audio');
         return;
     }
 
-    $id = $_GET['id'];
     $success = $this->VLRModel->deleteAudioPackage($id);
 
     if ($success) {
-        $this->toastSuccess('Audio package deleted successfully!', 'index.php?controller=VLRController&tab=audio');
+        $this->toastSuccess('Audio package deleted successfully!', '/unlockyourskills/vlr?tab=audio');
     } else {
-        $this->toastError('Failed to delete audio package.', 'index.php?controller=VLRController&tab=audio');
+        $this->toastError('Failed to delete audio package.', '/unlockyourskills/vlr?tab=audio');
     }
 }
 
@@ -917,15 +939,18 @@ public function deleteAudioPackage()
 public function addOrEditVideoPackage()
 {
     if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
-        $this->toastError('Invalid request parameters.', 'index.php?controller=VLRController&tab=video');
+        $this->toastError('Invalid request parameters.', '/unlockyourskills/vlr?tab=video');
         return;
     }
 
     // ✅ Ensure session is valid
     if (!isset($_SESSION['id'])) {
-        $this->toastError('Unauthorized access. Please log in.', 'index.php?controller=VLRController&tab=video');
+        $this->toastError('Unauthorized access. Please log in.', '/unlockyourskills/login');
         return;
     }
+
+    // ✅ Get client ID from session
+    $clientId = $_SESSION['user']['client_id'];
 
     // ✅ Extract POST and FILES data (with fallbacks for suffixed names)
     $videoId     = $_POST['video_id'] ?? $_POST['video_idvideo'] ?? null;
@@ -966,7 +991,7 @@ public function addOrEditVideoPackage()
     // ✅ Handle validation failure
     if (!empty($errors)) {
         $errorMessage = implode(', ', $errors);
-        $this->toastError($errorMessage, 'index.php?controller=VLRController&tab=video');
+        $this->toastError($errorMessage, '/unlockyourskills/vlr?tab=video');
         return;
     }
 
@@ -986,7 +1011,7 @@ public function addOrEditVideoPackage()
         $targetPath = $uploadDir . $uniqueName;
 
         if (!move_uploaded_file($videoFile['tmp_name'], $targetPath)) {
-            $this->toastError('Video upload failed.', 'index.php?controller=VLRController&tab=video');
+            $this->toastError('Video upload failed.', '/unlockyourskills/vlr?tab=video');
             return;
         }
 
@@ -995,6 +1020,7 @@ public function addOrEditVideoPackage()
 
     // ✅ Prepare clean data for DB
     $data = [
+        'client_id'      => $clientId,
         'title'          => $title,
         'video_file'     => $videoFileName,
         'description'    => trim($_POST['description'] ?? $_POST['descriptionvideo'] ?? '') ?: null,
@@ -1016,27 +1042,31 @@ public function addOrEditVideoPackage()
     }
 
     if ($success) {
-        $this->toastSuccess($videoId ? 'Video package updated successfully!' : 'Video package added successfully!', 'index.php?controller=VLRController&tab=video');
+        $this->toastSuccess($videoId ? 'Video package updated successfully!' : 'Video package added successfully!', '/unlockyourskills/vlr?tab=video');
     } else {
-        $this->toastError($videoId ? 'Failed to update video package.' : 'Failed to add video package.', 'index.php?controller=VLRController&tab=video');
+        $this->toastError($videoId ? 'Failed to update video package.' : 'Failed to add video package.', '/unlockyourskills/vlr?tab=video');
     }
 }
 
 // ✅ Delete Video Package
-public function deleteVideoPackage()
+public function deleteVideoPackage($id = null)
 {
-    if (!isset($_GET['id'])) {
-        $this->toastError('Invalid request.', 'index.php?controller=VLRController&tab=video');
+    // If no ID provided as parameter, check GET (for backward compatibility)
+    if ($id === null && isset($_GET['id'])) {
+        $id = $_GET['id'];
+    }
+    
+    if (!$id) {
+        $this->toastError('Invalid request.', '/unlockyourskills/vlr?tab=video');
         return;
     }
 
-    $id = $_GET['id'];
     $success = $this->VLRModel->deleteVideoPackage($id);
 
     if ($success) {
-        $this->toastSuccess('Video package deleted successfully!', 'index.php?controller=VLRController&tab=video');
+        $this->toastSuccess('Video package deleted successfully!', '/unlockyourskills/vlr?tab=video');
     } else {
-        $this->toastError('Failed to delete video package.', 'index.php?controller=VLRController&tab=video');
+        $this->toastError('Failed to delete video package.', '/unlockyourskills/vlr?tab=video');
     }
 }
 
@@ -1045,15 +1075,17 @@ public function deleteVideoPackage()
 public function addOrEditImagePackage()
 {
     if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
-        $this->toastError('Invalid request parameters.', 'index.php?controller=VLRController&tab=image');
+        $this->toastError('Invalid request parameters.', '/unlockyourskills/vlr?tab=image');
         return;
     }
 
     // ✅ Ensure session is valid
     if (!isset($_SESSION['id'])) {
-        $this->toastError('Unauthorized access. Please log in.', 'index.php?controller=VLRController&tab=image');
+        $this->toastError('Unauthorized access. Please log in.', '/unlockyourskills/login');
         return;
     }
+    // ✅ Get client ID from session
+    $clientId = $_SESSION['user']['client_id'];
 
     // ✅ Extract POST and FILES data (with fallbacks for suffixed names)
     $imageId     = $_POST['image_id'] ?? $_POST['image_idimage'] ?? null;
@@ -1088,7 +1120,7 @@ public function addOrEditImagePackage()
     // ✅ Handle validation failure
     if (!empty($errors)) {
         $errorMessage = implode(', ', $errors);
-        $this->toastError($errorMessage, 'index.php?controller=VLRController&tab=image');
+        $this->toastError($errorMessage, '/unlockyourskills/vlr?tab=image');
         return;
     }
 
@@ -1108,7 +1140,7 @@ public function addOrEditImagePackage()
         $targetPath = $uploadDir . $uniqueName;
 
         if (!move_uploaded_file($imageFile['tmp_name'], $targetPath)) {
-            $this->toastError('Image upload failed.', 'index.php?controller=VLRController&tab=image');
+            $this->toastError('Image upload failed.', '/unlockyourskills/vlr?tab=image');
             return;
         }
 
@@ -1117,6 +1149,7 @@ public function addOrEditImagePackage()
 
     // ✅ Prepare clean data for DB
     $data = [
+        'client_id'      => $clientId,
         'title'          => $title,
         'image_file'     => $imageFileName,
         'description'    => trim($_POST['description'] ?? $_POST['descriptionimage'] ?? '') ?: null,
@@ -1137,27 +1170,31 @@ public function addOrEditImagePackage()
     }
 
     if ($success) {
-        $this->toastSuccess($imageId ? 'Image package updated successfully!' : 'Image package added successfully!', 'index.php?controller=VLRController&tab=image');
+        $this->toastSuccess($imageId ? 'Image package updated successfully!' : 'Image package added successfully!', '/unlockyourskills/vlr?tab=image');
     } else {
-        $this->toastError($imageId ? 'Failed to update image package.' : 'Failed to add image package.', 'index.php?controller=VLRController&tab=image');
+        $this->toastError($imageId ? 'Failed to update image package.' : 'Failed to add image package.', '/unlockyourskills/vlr?tab=image');
     }
 }
 
 // ✅ Delete Image Package
-public function deleteImagePackage()
+public function deleteImagePackage($id = null)
 {
-    if (!isset($_GET['id'])) {
-        $this->toastError('Invalid request.', 'index.php?controller=VLRController&tab=image');
+    // If no ID provided as parameter, check GET (for backward compatibility)
+    if ($id === null && isset($_GET['id'])) {
+        $id = $_GET['id'];
+    }
+    
+    if (!$id) {
+        $this->toastError('Invalid request.', '/unlockyourskills/vlr?tab=image');
         return;
     }
 
-    $id = $_GET['id'];
     $success = $this->VLRModel->deleteImagePackage($id);
 
     if ($success) {
-        $this->toastSuccess('Image package deleted successfully!', 'index.php?controller=VLRController&tab=image');
+        $this->toastSuccess('Image package deleted successfully!', '/unlockyourskills/vlr?tab=image');
     } else {
-        $this->toastError('Failed to delete image package.', 'index.php?controller=VLRController&tab=image');
+        $this->toastError('Failed to delete image package.', '/unlockyourskills/vlr?tab=image');
     }
 }
 
@@ -1175,9 +1212,11 @@ public function deleteImagePackage()
         }
 
         if (!isset($_SESSION['id'])) {
-            $this->toastError('Unauthorized access. Please log in.', 'index.php?controller=VLRController');
+            $this->toastError('Unauthorized access. Please log in.', '/unlockyourskills/login');
             return;
         }
+        // ✅ Get client ID from session
+        $clientId = $_SESSION['user']['client_id'];
 
         // Server-side validation
         $title = trim($_POST['title'] ?? '');
@@ -1203,12 +1242,13 @@ public function deleteImagePackage()
 
         if (!empty($errors)) {
             $errorMsg = implode(', ', $errors);
-            $this->toastError($errorMsg, 'javascript:history.back()');
+            $this->toastError($errorMsg, '/unlockyourskills/vlr?tab=survey');
             return;
         }
 
         // Prepare data for saving
         $data = [
+            'client_id' => $clientId,
             'title' => $title,
             'tags' => $tags,
             'created_by' => $createdBy,
@@ -1219,16 +1259,16 @@ public function deleteImagePackage()
         if (!empty($surveyId)) {
             $result = $this->VLRModel->updateSurveyWithQuestions($data, $surveyId);
             if ($result) {
-                $this->toastSuccess('Survey updated successfully!', 'index.php?controller=VLRController&tab=survey');
+                $this->toastSuccess('Survey updated successfully!', '/unlockyourskills/vlr?tab=survey');
             } else {
-                $this->toastError('Failed to update survey.', 'index.php?controller=VLRController&tab=survey');
+                $this->toastError('Failed to update survey.', '/unlockyourskills/vlr?tab=survey');
             }
         } else {
             $result = $this->VLRModel->saveSurveyWithQuestions($data);
             if ($result) {
-                $this->toastSuccess('Survey saved successfully!', 'index.php?controller=VLRController&tab=survey');
+                $this->toastSuccess('Survey saved successfully!', '/unlockyourskills/vlr?tab=survey');
             } else {
-                $this->toastError('Failed to save survey.', 'index.php?controller=VLRController&tab=survey');
+                $this->toastError('Failed to save survey.', '/unlockyourskills/vlr?tab=survey');
             }
         }
     }
@@ -1244,12 +1284,12 @@ public function deleteImagePackage()
             $result = $this->VLRModel->deleteSurvey($id);
 
             if ($result) {
-                $this->toastSuccess('Survey deleted successfully!', 'index.php?controller=VLRController&tab=survey');
+                $this->toastSuccess('Survey deleted successfully!', '/unlockyourskills/vlr?tab=survey');
             } else {
-                $this->toastError('Failed to delete survey.', 'index.php?controller=VLRController&tab=survey');
+                $this->toastError('Failed to delete survey.', '/unlockyourskills/vlr?tab=survey');
             }
         } else {
-            $this->toastError('Invalid request.', 'index.php?controller=VLRController&tab=survey');
+            $this->toastError('Invalid request.', '/unlockyourskills/vlr?tab=survey');
         }
     }
 
@@ -1286,11 +1326,13 @@ public function deleteImagePackage()
         }
 
         if (!isset($_SESSION['id'])) {
-            $this->toastError('Unauthorized access. Please log in.', 'index.php?controller=VLRController');
+            $this->toastError('Unauthorized access. Please log in.', '/unlockyourskills/login');
             return;
         }
 
         // Server-side validation
+        // ✅ Get client ID from session
+        $clientId = $_SESSION['user']['client_id'];
         $title = trim($_POST['title'] ?? '');
         $tags = trim($_POST['feedbackTagList'] ?? '');
         $questionIdsRaw = $_POST['feedback_selectedQuestionIds'] ?? '';
@@ -1303,9 +1345,6 @@ public function deleteImagePackage()
             $errors[] = "Feedback title is required.";
         }
 
-        if (empty($tags)) {
-            $errors[] = "Tags/keywords are required.";
-        }
 
         $questionIds = array_filter(array_map('trim', explode(',', $questionIdsRaw)));
         if (empty($questionIds)) {
@@ -1314,12 +1353,13 @@ public function deleteImagePackage()
 
         if (!empty($errors)) {
             $errorMsg = implode(', ', $errors);
-            $this->toastError($errorMsg, 'javascript:history.back()');
+            $this->toastError($errorMsg, '/unlockyourskills/vlr?tab=feedback');
             return;
         }
 
         // Prepare data for saving
         $data = [
+            'client_id' => $clientId,
             'title' => $title,
             'tags' => $tags,
             'created_by' => $createdBy,
@@ -1330,16 +1370,16 @@ public function deleteImagePackage()
         if (!empty($feedbackId)) {
             $result = $this->VLRModel->updateFeedbackWithQuestions($data, $feedbackId);
             if ($result) {
-                $this->toastSuccess('Feedback updated successfully!', 'index.php?controller=VLRController&tab=feedback');
+                $this->toastSuccess('Feedback updated successfully!', '/unlockyourskills/vlr?tab=feedback');
             } else {
-                $this->toastError('Failed to update feedback.', 'index.php?controller=VLRController&tab=feedback');
+                $this->toastError('Failed to update feedback.', '/unlockyourskills/vlr?tab=feedback');
             }
         } else {
             $result = $this->VLRModel->saveFeedbackWithQuestions($data);
             if ($result) {
-                $this->toastSuccess('Feedback saved successfully!', 'index.php?controller=VLRController&tab=feedback');
+                $this->toastSuccess('Feedback saved successfully!', '/unlockyourskills/vlr?tab=feedback');
             } else {
-                $this->toastError('Failed to save feedback.', 'index.php?controller=VLRController&tab=feedback');
+                $this->toastError('Failed to save feedback.', '/unlockyourskills/vlr?tab=feedback');
             }
         }
     }
@@ -1352,12 +1392,12 @@ public function deleteImagePackage()
             $result = $this->VLRModel->deleteFeedback($id);
 
             if ($result) {
-                $this->toastSuccess('Feedback deleted successfully!', 'index.php?controller=VLRController&tab=feedback');
+                $this->toastSuccess('Feedback deleted successfully!', '/unlockyourskills/vlr?tab=feedback');
             } else {
-                $this->toastError('Failed to delete feedback.', 'index.php?controller=VLRController&tab=feedback');
+                $this->toastError('Failed to delete feedback.', '/unlockyourskills/vlr?tab=feedback');
             }
         } else {
-            $this->toastError('Invalid request.', 'index.php?controller=VLRController&tab=feedback');
+            $this->toastError('Invalid request.', '/unlockyourskills/vlr?tab=feedback');
         }
     }
 
@@ -1366,8 +1406,24 @@ public function deleteImagePackage()
     public function addOrEditInteractiveContent()
     {
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            // Debug logging
+            error_log("Interactive Content: POST request received");
+            error_log("Session data: " . print_r($_SESSION, true));
+            
+            // Validate session (ensure user is logged in)
+            if (!isset($_SESSION['id']) || !isset($_SESSION['user']['client_id'])) {
+                error_log("Interactive Content: Session validation failed");
+                $this->toastError('Unauthorized access. Please log in.', '/unlockyourskills/login');
+                return;
+            }
+            
+            error_log("Interactive Content: Session validation passed");
+            $clientId = $_SESSION['user']['client_id'];
+            error_log("Interactive Content: Client ID = " . $clientId);
+            
             $interactiveId = $_POST['interactive_id'] ?? '';
-
+            error_log("Interactive Content: Interactive ID = " . $interactiveId);
+            
             // Handle file uploads
             $contentFile = null;
             $thumbnailImage = null;
@@ -1377,7 +1433,8 @@ public function deleteImagePackage()
             if (isset($_FILES['content_file']) && $_FILES['content_file']['error'] === UPLOAD_ERR_OK) {
                 $contentFile = $this->handleInteractiveFileUpload($_FILES['content_file'], 'content');
                 if (!$contentFile) {
-                    $this->toastError('Content file upload failed.', 'index.php?controller=VLRController&tab=interactive');
+                    error_log("Interactive Content: Content file upload failed");
+                    $this->toastError('Content file upload failed.', '/unlockyourskills/vlr?tab=interactive');
                     return;
                 }
             } else if (!empty($_POST['existing_content_file'])) {
@@ -1388,7 +1445,8 @@ public function deleteImagePackage()
             if (isset($_FILES['thumbnail_image']) && $_FILES['thumbnail_image']['error'] === UPLOAD_ERR_OK) {
                 $thumbnailImage = $this->handleInteractiveFileUpload($_FILES['thumbnail_image'], 'thumbnail');
                 if (!$thumbnailImage) {
-                    $this->toastError('Thumbnail image upload failed.', 'index.php?controller=VLRController&tab=interactive');
+                    error_log("Interactive Content: Thumbnail image upload failed");
+                    $this->toastError('Thumbnail image upload failed.', '/unlockyourskills/vlr?tab=interactive');
                     return;
                 }
             } else if (!empty($_POST['existing_thumbnail_image'])) {
@@ -1399,7 +1457,8 @@ public function deleteImagePackage()
             if (isset($_FILES['metadata_file']) && $_FILES['metadata_file']['error'] === UPLOAD_ERR_OK) {
                 $metadataFile = $this->handleInteractiveFileUpload($_FILES['metadata_file'], 'metadata');
                 if (!$metadataFile) {
-                    $this->toastError('Metadata file upload failed.', 'index.php?controller=VLRController&tab=interactive');
+                    error_log("Interactive Content: Metadata file upload failed");
+                    $this->toastError('Metadata file upload failed.', '/unlockyourskills/vlr?tab=interactive');
                     return;
                 }
             } else if (!empty($_POST['existing_metadata_file'])) {
@@ -1408,6 +1467,7 @@ public function deleteImagePackage()
 
             // Prepare data
             $data = [
+                'client_id' => $clientId,
                 'title' => $_POST['interactive_title'],
                 'content_type' => $_POST['content_type'],
                 'description' => $_POST['description'] ?? '',
@@ -1420,7 +1480,7 @@ public function deleteImagePackage()
                 'embed_code' => $_POST['embed_code'] ?? '',
                 'ai_model' => $_POST['ai_model'] ?? '',
                 'interaction_type' => $_POST['interaction_type'] ?? '',
-                'difficulty_level' => $_POST['difficulty_level'] ?? '',
+                'difficulty_level' => !empty($_POST['difficulty_level']) ? $_POST['difficulty_level'] : null,
                 'learning_objectives' => $_POST['learning_objectives'] ?? '',
                 'prerequisites' => $_POST['prerequisites'] ?? '',
                 'content_file' => $contentFile,
@@ -1437,26 +1497,35 @@ public function deleteImagePackage()
                 'progress_tracking' => $_POST['interactive_progress_tracking'] ?? 'Yes',
                 'created_by' => $_SESSION['id']
             ];
+            
+            error_log("Interactive Content: Data prepared: " . print_r($data, true));
 
             if ($interactiveId) {
                 // Update existing interactive content
+                error_log("Interactive Content: Updating existing content with ID: " . $interactiveId);
                 $result = $this->VLRModel->updateInteractiveContent($interactiveId, $data);
                 if ($result) {
-                    $this->toastSuccess('Interactive content updated successfully!', 'index.php?controller=VLRController&tab=interactive');
+                    error_log("Interactive Content: Update successful");
+                    $this->toastSuccess('Interactive content updated successfully!', '/unlockyourskills/vlr?tab=interactive');
                 } else {
-                    $this->toastError('Failed to update interactive content.', 'index.php?controller=VLRController&tab=interactive');
+                    error_log("Interactive Content: Update failed");
+                    $this->toastError('Failed to update interactive content.', '/unlockyourskills/vlr?tab=interactive');
                 }
             } else {
                 // Insert new interactive content
+                error_log("Interactive Content: Inserting new content");
                 $result = $this->VLRModel->insertInteractiveContent($data);
                 if ($result) {
-                    $this->toastSuccess('Interactive content added successfully!', 'index.php?controller=VLRController&tab=interactive');
+                    error_log("Interactive Content: Insert successful");
+                    $this->toastSuccess('Interactive content added successfully!', '/unlockyourskills/vlr?tab=interactive');
                 } else {
-                    $this->toastError('Failed to insert interactive content.', 'index.php?controller=VLRController&tab=interactive');
+                    error_log("Interactive Content: Insert failed");
+                    $this->toastError('Failed to insert interactive content.', '/unlockyourskills/vlr?tab=interactive');
                 }
             }
         } else {
-            $this->toastError('Invalid request parameters.', 'index.php?controller=VLRController&tab=interactive');
+            error_log("Interactive Content: Invalid request method");
+            $this->toastError('Invalid request parameters.', '/unlockyourskills/vlr?tab=interactive');
         }
     }
 
@@ -1486,18 +1555,36 @@ public function deleteImagePackage()
         return $uniqueName;
     }
 
-    public function deleteInteractiveContent()
+    public function deleteInteractiveContent($id = null)
     {
-        if (isset($_GET['id'])) {
+        // Validate session (ensure user is logged in)
+        if (!isset($_SESSION['id']) || !isset($_SESSION['user']['client_id'])) {
+            $this->toastError('Unauthorized access. Please log in.', '/unlockyourskills/login');
+            return;
+        }
+
+        $clientId = $_SESSION['user']['client_id'];
+        $currentUser = $_SESSION['user'] ?? null;
+
+        // Accept ID from route parameter or fallback to GET for backward compatibility
+        if ($id === null && isset($_GET['id'])) {
             $id = $_GET['id'];
-            $result = $this->VLRModel->deleteInteractiveContent($id);
-            if ($result) {
-                $this->toastSuccess('Interactive content deleted successfully!', 'index.php?controller=VLRController&tab=interactive');
-            } else {
-                $this->toastError('Failed to delete interactive content.', 'index.php?controller=VLRController&tab=interactive');
-            }
+        }
+
+        if (!$id) {
+            $this->toastError('Invalid request.', '/unlockyourskills/vlr?tab=interactive');
+            return;
+        }
+
+        // Determine client filtering based on user role
+        $filterClientId = ($currentUser && $currentUser['system_role'] === 'admin') ? $clientId : null;
+
+        $result = $this->VLRModel->deleteInteractiveContent($id, $filterClientId);
+
+        if ($result) {
+            $this->toastSuccess('Interactive content deleted successfully!', '/unlockyourskills/vlr?tab=interactive');
         } else {
-            $this->toastError('Invalid request.', 'index.php?controller=VLRController&tab=interactive');
+            $this->toastError('Failed to delete interactive content or access denied.', '/unlockyourskills/vlr?tab=interactive');
         }
     }
 
@@ -1506,6 +1593,7 @@ public function deleteImagePackage()
     public function addOrEditNonScormPackage()
     {
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            $clientId = $_SESSION['user']['client_id'];
             $nonScormId = $_POST['non_scorm_id'] ?? null;
 
             // Handle file uploads
@@ -1515,6 +1603,7 @@ public function deleteImagePackage()
             $manifestFile = $this->handleNonScormFileUpload($_FILES['manifest_file'] ?? null, 'manifest', $_POST['existing_manifest_file'] ?? null);
 
             $data = [
+                'client_id' => $clientId,
                 'title' => $_POST['non_scorm_title'],
                 'content_type' => $_POST['content_type'],
                 'description' => $_POST['description'] ?? '',
@@ -1555,21 +1644,21 @@ public function deleteImagePackage()
                 // Update existing non-scorm content
                 $result = $this->VLRModel->updateNonScormPackage($nonScormId, $data);
                 if ($result) {
-                    $this->toastSuccess('Non-SCORM content updated successfully!', 'index.php?controller=VLRController&tab=non-scorm');
+                    $this->toastSuccess('Non-SCORM content updated successfully!', '/unlockyourskills/vlr?tab=non-scorm');
                 } else {
-                    $this->toastError('Failed to update Non-SCORM content.', 'index.php?controller=VLRController&tab=non-scorm');
+                    $this->toastError('Failed to update Non-SCORM content.', '/unlockyourskills/vlr?tab=non-scorm');
                 }
             } else {
                 // Insert new non-scorm content
                 $result = $this->VLRModel->insertNonScormPackage($data);
                 if ($result) {
-                    $this->toastSuccess('Non-SCORM content added successfully!', 'index.php?controller=VLRController&tab=non-scorm');
+                    $this->toastSuccess('Non-SCORM content added successfully!', '/unlockyourskills/vlr?tab=non-scorm');
                 } else {
-                    $this->toastError('Failed to insert Non-SCORM content.', 'index.php?controller=VLRController&tab=non-scorm');
+                    $this->toastError('Failed to insert Non-SCORM content.', '/unlockyourskills/vlr?tab=non-scorm');
                 }
             }
         } else {
-            $this->toastError('Invalid request parameters.', 'index.php?controller=VLRController');
+            $this->toastError('Invalid request parameters.', '/unlockyourskills/vlr?tab=non-scorm');
         }
     }
 
@@ -1605,19 +1694,228 @@ public function deleteImagePackage()
         return $uniqueName;
     }
 
-    public function deleteNonScormPackage()
+    public function deleteNonScormPackage($id = null)
     {
-        if (isset($_GET['id'])) {
+        // If no ID provided as parameter, check GET (for backward compatibility)
+        if ($id === null && isset($_GET['id'])) {
             $id = $_GET['id'];
-            $result = $this->VLRModel->deleteNonScormPackage($id);
-            if ($result) {
-                $this->toastSuccess('Non-SCORM content deleted successfully!', 'index.php?controller=VLRController&tab=non-scorm');
-            } else {
-                $this->toastError('Failed to delete Non-SCORM content.', 'index.php?controller=VLRController&tab=non-scorm');
-            }
-        } else {
-            $this->toastError('Invalid request.', 'index.php?controller=VLRController&tab=non-scorm');
         }
+        
+        if (!$id) {
+            $this->toastError('Invalid request.', '/unlockyourskills/vlr?tab=non-scorm');
+            return;
+        }
+
+        $result = $this->VLRModel->deleteNonScormPackage($id);
+        if ($result) {
+            $this->toastSuccess('Non-SCORM content deleted successfully!', '/unlockyourskills/vlr?tab=non-scorm');
+        } else {
+            $this->toastError('Failed to delete Non-SCORM content.', '/unlockyourskills/vlr?tab=non-scorm');
+        }
+    }
+
+    public function scormIndex()
+    {
+        // Check if user is logged in and get client_id
+        if (!isset($_SESSION['user']['client_id'])) {
+            $this->toastError('Unauthorized access. Please log in.', '/unlockyourskills/vlr?tab=login');
+            return;
+        }
+
+        $clientId = $_SESSION['user']['client_id'];
+        $currentUser = $_SESSION['user'] ?? null;
+
+        // Determine client filtering based on user role
+        $filterClientId = null;
+        if ($currentUser && $currentUser['system_role'] === 'admin') {
+            $filterClientId = $clientId;
+        }
+
+        // Only fetch SCORM packages for this tab
+        $scormPackages = $this->VLRModel->getScormPackages($filterClientId);
+        $languageList = $this->VLRModel->getLanguages();
+        $activeTab = 'scorm';
+        require 'views/vlr.php';
+    }
+
+    public function audioIndex()
+    {
+        if (!isset($_SESSION['user']['client_id'])) {
+            $this->toastError('Unauthorized access. Please log in.', '/unlockyourskills/login');
+            return;
+        }
+        $clientId = $_SESSION['user']['client_id'];
+        $currentUser = $_SESSION['user'] ?? null;
+        $filterClientId = null;
+        if ($currentUser && $currentUser['system_role'] === 'admin') {
+            $filterClientId = $clientId;
+        }
+        $audioPackages = $this->VLRModel->getAudioPackages($filterClientId);
+        $languageList = $this->VLRModel->getLanguages();
+        $activeTab = 'audio';
+        require 'views/vlr.php';
+    }
+
+    public function videoIndex()
+    {
+        if (!isset($_SESSION['user']['client_id'])) {
+            $this->toastError('Unauthorized access. Please log in.', '/unlockyourskills/login');
+            return;
+        }
+        $clientId = $_SESSION['user']['client_id'];
+        $currentUser = $_SESSION['user'] ?? null;
+        $filterClientId = null;
+        if ($currentUser && $currentUser['system_role'] === 'admin') {
+            $filterClientId = $clientId;
+        }
+        $videoPackages = $this->VLRModel->getVideoPackages($filterClientId);
+        $languageList = $this->VLRModel->getLanguages();
+        $activeTab = 'video';
+        require 'views/vlr.php';
+    }
+
+    public function imageIndex()
+    {
+        if (!isset($_SESSION['user']['client_id'])) {
+            $this->toastError('Unauthorized access. Please log in.', '/unlockyourskills/login');
+            return;
+        }
+        $clientId = $_SESSION['user']['client_id'];
+        $currentUser = $_SESSION['user'] ?? null;
+        $filterClientId = null;
+        if ($currentUser && $currentUser['system_role'] === 'admin') {
+            $filterClientId = $clientId;
+        }
+        $imagePackages = $this->VLRModel->getImagePackages($filterClientId);
+        $languageList = $this->VLRModel->getLanguages();
+        $activeTab = 'image';
+        require 'views/vlr.php';
+    }
+
+    public function externalIndex()
+    {
+        if (!isset($_SESSION['user']['client_id'])) {
+            $this->toastError('Unauthorized access. Please log in.', '/unlockyourskills/login');
+            return;
+        }
+        $clientId = $_SESSION['user']['client_id'];
+        $currentUser = $_SESSION['user'] ?? null;
+        $filterClientId = null;
+        if ($currentUser && $currentUser['system_role'] === 'admin') {
+            $filterClientId = $clientId;
+        }
+        $externalContent = $this->VLRModel->getExternalContent($filterClientId);
+        $languageList = $this->VLRModel->getLanguages();
+        $activeTab = 'external';
+        require 'views/vlr.php';
+    }
+
+    public function documentsIndex()
+    {
+        if (!isset($_SESSION['user']['client_id'])) {
+            $this->toastError('Unauthorized access. Please log in.', '/unlockyourskills/login');
+            return;
+        }
+        $clientId = $_SESSION['user']['client_id'];
+        $currentUser = $_SESSION['user'] ?? null;
+        $filterClientId = null;
+        if ($currentUser && $currentUser['system_role'] === 'admin') {
+            $filterClientId = $clientId;
+        }
+        $documents = $this->VLRModel->getAllDocuments($filterClientId);
+        $languageList = $this->VLRModel->getLanguages();
+        $activeTab = 'documents';
+        require 'views/vlr.php';
+    }
+
+    public function interactiveIndex()
+    {
+        if (!isset($_SESSION['user']['client_id'])) {
+            $this->toastError('Unauthorized access. Please log in.', '/unlockyourskills/login');
+            return;
+        }
+        $clientId = $_SESSION['user']['client_id'];
+        $currentUser = $_SESSION['user'] ?? null;
+        $filterClientId = null;
+        if ($currentUser && $currentUser['system_role'] === 'admin') {
+            $filterClientId = $clientId;
+        }
+        $interactiveContent = $this->VLRModel->getInteractiveContent($filterClientId);
+        $languageList = $this->VLRModel->getLanguages();
+        $activeTab = 'interactive';
+        require 'views/vlr.php';
+    }
+
+    public function assessmentIndex()
+    {
+        if (!isset($_SESSION['user']['client_id'])) {
+            $this->toastError('Unauthorized access. Please log in.', '/unlockyourskills/login');
+            return;
+        }
+        $clientId = $_SESSION['user']['client_id'];
+        $currentUser = $_SESSION['user'] ?? null;
+        $filterClientId = null;
+        if ($currentUser && $currentUser['system_role'] === 'admin') {
+            $filterClientId = $clientId;
+        }
+        $assessmentPackages = $this->VLRModel->getAllAssessments($filterClientId);
+        $languageList = $this->VLRModel->getLanguages();
+        $activeTab = 'assessment';
+        require 'views/vlr.php';
+    }
+
+    public function surveyIndex()
+    {
+        if (!isset($_SESSION['user']['client_id'])) {
+            $this->toastError('Unauthorized access. Please log in.', '/unlockyourskills/login');
+            return;
+        }
+        $clientId = $_SESSION['user']['client_id'];
+        $currentUser = $_SESSION['user'] ?? null;
+        $filterClientId = null;
+        if ($currentUser && $currentUser['system_role'] === 'admin') {
+            $filterClientId = $clientId;
+        }
+        $surveyPackages = $this->VLRModel->getAllSurvey($filterClientId);
+        $languageList = $this->VLRModel->getLanguages();
+        $activeTab = 'survey';
+        require 'views/vlr.php';
+    }
+
+    public function feedbackIndex()
+    {
+        if (!isset($_SESSION['user']['client_id'])) {
+            $this->toastError('Unauthorized access. Please log in.', '/unlockyourskills/login');
+            return;
+        }
+        $clientId = $_SESSION['user']['client_id'];
+        $currentUser = $_SESSION['user'] ?? null;
+        $filterClientId = null;
+        if ($currentUser && $currentUser['system_role'] === 'admin') {
+            $filterClientId = $clientId;
+        }
+        $feedbackPackages = $this->VLRModel->getAllFeedback($filterClientId);
+        $languageList = $this->VLRModel->getLanguages();
+        $activeTab = 'feedback';
+        require 'views/vlr.php';
+    }
+
+    public function nonScormIndex()
+    {
+        if (!isset($_SESSION['user']['client_id'])) {
+            $this->toastError('Unauthorized access. Please log in.', '/unlockyourskills/login');
+            return;
+        }
+        $clientId = $_SESSION['user']['client_id'];
+        $currentUser = $_SESSION['user'] ?? null;
+        $filterClientId = null;
+        if ($currentUser && $currentUser['system_role'] === 'admin') {
+            $filterClientId = $clientId;
+        }
+        $nonScormPackages = $this->VLRModel->getNonScormPackages($filterClientId);
+        $languageList = $this->VLRModel->getLanguages();
+        $activeTab = 'non-scorm';
+        require 'views/vlr.php';
     }
 
 }

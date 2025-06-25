@@ -10,7 +10,7 @@
         <div class="container add-question-container">
 
             <div class="back-arrow-container">
-                <a href="index.php?controller=VLRController&tab=assessment" class="back-link">
+                <a href="/unlockyourskills/vlr?tab=assessment" class="back-link">
                     <i class="fas fa-arrow-left"></i>
                 </a>
                 <span class="divider-line"></span>
@@ -210,8 +210,8 @@
         aria-labelledby="addAssessmentQuestionModalLabel" aria-hidden="true">
         <div class="modal-dialog modal-xl modal-dialog-scrollable">
             <div class="modal-content">
-                <form id="assessmentQuestionForm" enctype="multipart/form-data" method="POST"
-                    action="index.php?controller=QuestionController&action=save">
+                <form id="addAssessmentQuestionForm" method="POST"
+                    action="/unlockyourskills/vlr/questions" novalidate>
 
                     <!-- Hidden ID for editing -->
                     <input type="hidden" name="questionId" id="questionId" value="">
@@ -390,13 +390,13 @@
                                 <div class="card-body text-center">
                                     <p class="text-muted"><?= Localization::translate('objective_template_description'); ?></p>
                                     <div class="d-grid gap-2">
-                                        <a href="index.php?controller=QuestionController&action=downloadTemplate&type=objective&format=csv"
-                                           class="btn btn-outline-theme">
-                                            <i class="fas fa-file-csv me-2"></i>Download CSV (Recommended)
+                                        <a href="/unlockyourskills/vlr/questions/download-template?type=objective&format=csv"
+                                           class="btn btn-sm btn-outline-secondary me-2">
+                                            <i class="fas fa-download me-1"></i> CSV Template
                                         </a>
-                                        <a href="index.php?controller=QuestionController&action=downloadTemplate&type=objective&format=excel"
-                                           class="btn btn-outline-theme">
-                                            <i class="fas fa-file-excel me-2"></i>Download Excel (.xls)
+                                        <a href="/unlockyourskills/vlr/questions/download-template?type=objective&format=excel"
+                                           class="btn btn-sm btn-outline-secondary">
+                                            <i class="fas fa-download me-1"></i> Excel Template
                                         </a>
                                     </div>
                                     <small class="text-muted mt-2 d-block">CSV format is recommended for best compatibility</small>
@@ -411,13 +411,13 @@
                                 <div class="card-body text-center">
                                     <p class="text-muted"><?= Localization::translate('subjective_template_description'); ?></p>
                                     <div class="d-grid gap-2">
-                                        <a href="index.php?controller=QuestionController&action=downloadTemplate&type=subjective&format=csv"
-                                           class="btn btn-outline-theme">
-                                            <i class="fas fa-file-csv me-2"></i>Download CSV (Recommended)
+                                        <a href="/unlockyourskills/vlr/questions/download-template?type=subjective&format=csv"
+                                           class="btn btn-sm btn-outline-secondary me-2">
+                                            <i class="fas fa-download me-1"></i> CSV Template
                                         </a>
-                                        <a href="index.php?controller=QuestionController&action=downloadTemplate&type=subjective&format=excel"
-                                           class="btn btn-outline-theme">
-                                            <i class="fas fa-file-excel me-2"></i>Download Excel (.xls)
+                                        <a href="/unlockyourskills/vlr/questions/download-template?type=subjective&format=excel"
+                                           class="btn btn-sm btn-outline-secondary">
+                                            <i class="fas fa-download me-1"></i> Excel Template
                                         </a>
                                     </div>
                                     <small class="text-muted mt-2 d-block">CSV format is recommended for best compatibility</small>
@@ -427,7 +427,7 @@
                     </div>
 
                     <!-- Upload Form -->
-                    <form id="importAssessmentQuestionForm" action="index.php?controller=QuestionController&action=importQuestions"
+                    <form id="importAssessmentQuestionForm" action="/unlockyourskills/vlr/questions/import"
                           method="POST" enctype="multipart/form-data">
                         <div class="mb-3">
                             <label for="importFile" class="form-label">

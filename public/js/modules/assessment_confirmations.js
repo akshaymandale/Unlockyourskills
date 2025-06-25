@@ -60,7 +60,7 @@ class AssessmentConfirmations {
         return {
             id: button.dataset.id,
             title: button.dataset.title || 'Untitled Question',
-            action: `index.php?controller=QuestionController&action=delete&id=${button.dataset.id}`
+            action: `/unlockyourskills/vlr/questions/${button.dataset.id}`
         };
     }
 
@@ -82,7 +82,7 @@ class AssessmentConfirmations {
 
     // Static helper method
     static deleteQuestion(id, title) {
-        const url = `index.php?controller=QuestionController&action=delete&id=${id}`;
+        const url = `/unlockyourskills/vlr/questions/${id}`;
         const data = { title: title };
         const itemName = AssessmentConfirmations.getStaticTranslatedItemName(data);
 

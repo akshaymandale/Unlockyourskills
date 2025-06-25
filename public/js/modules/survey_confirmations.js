@@ -83,7 +83,7 @@ class SurveyConfirmations {
             type: type,
             id: button.dataset.id,
             title: button.dataset.title || 'Untitled Question',
-            action: `index.php?controller=${controller}&action=delete&id=${button.dataset.id}`
+            action: `/unlockyourskills/surveys/${button.dataset.id}`
         };
     }
 
@@ -104,7 +104,7 @@ class SurveyConfirmations {
 
     // Static helper methods
     static deleteSurveyQuestion(id, title) {
-        const url = `index.php?controller=SurveyQuestionController&action=delete&id=${id}`;
+        const url = `/unlockyourskills/surveys/${id}`;
         const data = { title: title };
         const itemName = SurveyConfirmations.getStaticTranslatedItemName(data);
 
@@ -121,7 +121,7 @@ class SurveyConfirmations {
     }
 
     static deleteFeedbackQuestion(id, title) {
-        const url = `index.php?controller=FeedbackQuestionController&action=delete&id=${id}`;
+        const url = `/unlockyourskills/feedback/${id}`;
         const data = { title: title };
         const replacements = { title: title };
         const itemName = SurveyConfirmations.getStaticTranslation('item.feedback_question', replacements) || `feedback question "${title}"`;

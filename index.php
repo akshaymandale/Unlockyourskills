@@ -11,6 +11,14 @@ require_once 'core/Request.php';
 error_reporting(E_ALL);
 ini_set('display_errors', 1);
 
+// Set session cookie path to match the application path
+session_set_cookie_params([
+    'path' => '/unlockyourskills',
+    'httponly' => true,
+    'secure' => false, // Set to true if using HTTPS
+    'samesite' => 'Lax'
+]);
+
 if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }

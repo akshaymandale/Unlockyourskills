@@ -116,7 +116,7 @@ $languageList = $vlrController->getLanguages();
                                 </div>
                                 <div class="modal-body">
                                     <form id="scormForm"
-                                        action="index.php?controller=VLRController&action=addOrEditScormPackage"
+                                        action="/unlockyourskills/vlr/scorm"
                                         method="POST" enctype="multipart/form-data">
                                         <input type="hidden" id="scorm_id" name="scorm_id">
                                         <input type="hidden" id="existing_zip" name="existing_zip">
@@ -429,7 +429,7 @@ $languageList = $vlrController->getLanguages();
                                 </div>
                                 <div class="modal-body">
                                     <form id="nonScormForm"
-                                        action="index.php?controller=VLRController&action=addOrEditNonScormPackage"
+                                        action="/unlockyourskills/vlr/non-scorm"
                                         method="POST" enctype="multipart/form-data">
                                         <input type="hidden" id="non_scorm_id" name="non_scorm_id">
                                         <input type="hidden" id="existing_content_package" name="existing_content_package">
@@ -966,7 +966,7 @@ $languageList = $vlrController->getLanguages();
                                     </div>
                                     <div class="modal-body">
                                         <form id="assessment_assessmentForm"
-                                            action="index.php?controller=VLRController&action=addOrEditAssessment"
+                                            action="/unlockyourskills/vlr/assessment-packages"
                                             method="POST" enctype="multipart/form-data">
                                             <input type="hidden" name="selected_question_ids"
                                                 id="assessment_selectedQuestionIds">
@@ -1264,7 +1264,7 @@ $languageList = $vlrController->getLanguages();
 
 
 
-                        <a href="index.php?controller=QuestionController&action=index" class="btn btn-sm btn-primary">
+                        <a href="/unlockyourskills/vlr/questions" class="btn btn-sm btn-primary">
                             + <?= Localization::translate('add_questions'); ?>
                         </a>
                     </div>
@@ -1338,20 +1338,20 @@ $languageList = $vlrController->getLanguages();
                 <div class="modal fade" id="audioModal" tabindex="-1" aria-labelledby="audioModalLabel"
                     aria-hidden="true">
                     <div class="modal-dialog modal-lg">
-                        <form id="audioForm" action="index.php?controller=VLRController&action=addOrEditAudioPackage"
-                            method="POST" enctype="multipart/form-data">
-                            <input type="hidden" id="audio_idaudio" name="audio_idaudio">
+                        <div class="modal-content">
+                            <div class="modal-header">
+                                <h5 class="modal-title" id="audioModalLabel">
+                                    <?= Localization::translate('add_audio_package'); ?>
+                                </h5>
+                                <button type="button" class="btn-close" data-bs-dismiss="modal"
+                                    aria-label="Close"></button>
+                            </div>
 
-                            <div class="modal-content">
-                                <div class="modal-header">
-                                    <h5 class="modal-title" id="audioModalLabel">
-                                        <?= Localization::translate('add_audio_package'); ?>
-                                    </h5>
-                                    <button type="button" class="btn-close" data-bs-dismiss="modal"
-                                        aria-label="Close"></button>
-                                </div>
+                            <div class="modal-body">
+                                <form id="audioForm" action="/unlockyourskills/vlr/audio"
+                                    method="POST" enctype="multipart/form-data">
+                                    <input type="hidden" id="audio_idaudio" name="audio_idaudio">
 
-                                <div class="modal-body">
                                     <div class="row g-3">
                                         <!-- Title -->
                                         <div class="col-md-6">
@@ -1449,17 +1449,17 @@ $languageList = $vlrController->getLanguages();
                                             </div>
                                         </div>
                                     </div>
-                                </div>
-
-                                <!-- Modal Footer -->
-                                <div class="modal-footer">
-                                    <button type="submit"
-                                        class="btn btn-primary"><?= Localization::translate('submit'); ?></button>
-                                    <button type="button" class="btn btn-danger"
-                                        id="clearFormaudio"><?= Localization::translate('cancel'); ?></button>
-                                </div>
+                                </form>
                             </div>
-                        </form>
+
+                            <!-- Modal Footer -->
+                            <div class="modal-footer">
+                                <button type="submit" form="audioForm"
+                                    class="btn btn-primary"><?= Localization::translate('submit'); ?></button>
+                                <button type="button" class="btn btn-danger"
+                                    id="clearFormaudio"><?= Localization::translate('cancel'); ?></button>
+                            </div>
+                        </div>
                     </div>
                 </div>
 
@@ -1519,7 +1519,7 @@ $languageList = $vlrController->getLanguages();
                 <div class="modal fade" id="videoModal" tabindex="-1" aria-labelledby="videoModalLabel"
                     aria-hidden="true">
                     <div class="modal-dialog modal-lg">
-                        <form id="videoForm" action="index.php?controller=VLRController&action=addOrEditVideoPackage"
+                        <form id="videoForm" action="/unlockyourskills/vlr/video"
                             method="POST" enctype="multipart/form-data">
                             <input type="hidden" id="video_idvideo" name="video_idvideo">
 
@@ -1714,7 +1714,7 @@ $languageList = $vlrController->getLanguages();
                                 </div>
                                 <div class="modal-body">
                                     <form id="documentForm" method="POST"
-                                        action="index.php?controller=VLRController&action=addOrEditDocument"
+                                        action="/unlockyourskills/vlr/documents"
                                         enctype="multipart/form-data">
                                         <input type="hidden" id="documentId" name="documentId">
                                         <input type="hidden" id="existingDocumentWordExcelPpt"
@@ -2036,7 +2036,7 @@ $languageList = $vlrController->getLanguages();
                 <div class="modal fade" id="imageModal" tabindex="-1" aria-labelledby="imageModalLabel"
                     aria-hidden="true">
                     <div class="modal-dialog modal-lg">
-                        <form id="imageForm" action="index.php?controller=VLRController&action=addOrEditImagePackage"
+                        <form id="imageForm" action="/unlockyourskills/vlr/images"
                             method="POST" enctype="multipart/form-data">
                             <input type="hidden" id="image_idimage" name="image_idimage">
 
@@ -2220,13 +2220,11 @@ $languageList = $vlrController->getLanguages();
                                     <h5 class="modal-title" id="externalModalLabel">
                                         <?= Localization::translate('add_external_content'); ?>
                                     </h5>
-                                    <button type="button" class="close" data-bs-dismiss="modal" aria-label="Close">
-                                        <span aria-hidden="true">&times;</span>
-                                    </button>
+                                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                                 </div>
                                 <div class="modal-body">
                                     <form id="externalContentForm"
-                                        action="index.php?controller=VLRController&action=addOrEditExternalContent"
+                                        action="/unlockyourskills/vlr/external"
                                         method="POST" enctype="multipart/form-data">
                                         <input type="hidden" id="external_id" name="id">
 
@@ -2368,6 +2366,7 @@ $languageList = $vlrController->getLanguages();
                                                         for="thumbnail"><?= Localization::translate('thumbnail_preview'); ?></label>
                                                     <input type="file" class="form-control" id="thumbnail"
                                                         name="thumbnail" accept="image/*">
+                                                    <input type="hidden" id="existing_thumbnail" name="existing_thumbnail">
                                                     <img id="thumbnailPreview" src=""
                                                         alt="<?= Localization::translate('thumbnail_preview'); ?>"
                                                         style="display:none; max-width: 100px; margin-top: 10px;">
@@ -2631,7 +2630,7 @@ $languageList = $vlrController->getLanguages();
                                     </div>
                                     <div class="modal-body">
                                         <form id="survey_surveyForm"
-                                            action="index.php?controller=VLRController&action=addOrEditSurvey"
+                                            action="/unlockyourskills/vlr/surveys"
                                             method="POST" enctype="multipart/form-data">
                                             <input type="hidden" name="selected_survey_question_ids"
                                                 id="survey_selectedSurveyQuestionIds">
@@ -2802,8 +2801,7 @@ $languageList = $vlrController->getLanguages();
                         </div>
 
 
-                        <a href="index.php?controller=SurveyQuestionController&action=index"
-                            class="btn btn-sm btn-primary">
+                        <a href="/unlockyourskills/surveys" class="btn btn-sm btn-primary">
                             + <?= Localization::translate('add_survey_questions'); ?>
                         </a>
                     </div>
@@ -2874,7 +2872,7 @@ $languageList = $vlrController->getLanguages();
                                     </div>
                                     <div class="modal-body">
                                         <form id="feedback_feedbackForm"
-                                            action="index.php?controller=VLRController&action=addOrEditFeedback"
+                                            action="/unlockyourskills/vlr/feedback"
                                             method="POST" enctype="multipart/form-data">
                                             <input type="hidden" name="selected_feedback_question_ids"
                                                 id="feedback_selectedFeedbackQuestionIds">
@@ -3040,8 +3038,7 @@ $languageList = $vlrController->getLanguages();
                             </div>
                         </div>
 
-                        <a href="index.php?controller=FeedbackQuestionController&action=index"
-                            class="btn btn-sm btn-primary">
+                        <a href="/unlockyourskills/feedback" class="btn btn-sm btn-primary">
                             + <?= Localization::translate('add_feedback_questions'); ?>
                         </a>
                     </div>
@@ -3115,7 +3112,7 @@ $languageList = $vlrController->getLanguages();
                                 </div>
                                 <div class="modal-body">
                                     <form id="interactiveForm"
-                                        action="index.php?controller=VLRController&action=addOrEditInteractiveContent"
+                                        action="/unlockyourskills/vlr/interactive"
                                         method="POST" enctype="multipart/form-data">
                                         <input type="hidden" id="interactive_id" name="interactive_id">
                                         <input type="hidden" id="existing_content_file" name="existing_content_file">
@@ -3578,7 +3575,7 @@ $languageList = $vlrController->getLanguages();
 <!-- ✅ VLR Tab Management System -->
 <script src="<?= UrlHelper::url('public/js/vlr_tabs.js') ?>"></script>
 <!-- ✅ VLR Delete Confirmations -->
-<script src="<?= UrlHelper::url('public/js/modules/vlr_confirmations.js') ?>"></script>
+<!-- Removed: vlr_confirmations.js is loaded dynamically by confirmation_loader.js -->
 
 <!-- ✅ Universal Preview Modal -->
 <div class="modal fade" id="previewModal" tabindex="-1" aria-labelledby="previewModalLabel" aria-hidden="true">
