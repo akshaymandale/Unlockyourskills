@@ -254,18 +254,24 @@ class QuestionController extends BaseController {
         }
     }
     
-    
-    
-    public function delete() {
-        if (isset($_GET['id'])) {
-            $id = intval($_GET['id']);
-            $success = $this->questionModel->softDeleteQuestion($id);
+    public function delete($id = null) {
+        error_log("[Assessment Delete] Route param id: " . var_export($id, true));
+        error_log("[Assessment Delete] _GET id: " . var_export($_GET['id'] ?? null, true));
+        $questionId = $id ?? ($_GET['id'] ?? null);
+        error_log("[Assessment Delete] Final questionId: " . var_export($questionId, true));
+        if ($questionId) {
+            $questionId = intval($questionId);
+            $success = $this->questionModel->softDeleteQuestion($questionId);
+            error_log("[Assessment Delete] softDeleteQuestion result for ID $questionId: " . var_export($success, true));
             if ($success) {
+                error_log("[Assessment Delete] Question deleted successfully: $questionId");
                 $this->toastSuccess('Question deleted successfully!', '/unlockyourskills/vlr/questions');
             } else {
+                error_log("[Assessment Delete] Failed to delete question: $questionId");
                 $this->toastError('Failed to delete question.', '/unlockyourskills/vlr/questions');
             }
         } else {
+            error_log("[Assessment Delete] Invalid request triggered.");
             $this->toastError('Invalid request.', '/unlockyourskills/vlr/questions');
         }
     }
@@ -518,8 +524,7 @@ class QuestionController extends BaseController {
         }
     }
 
-    public function getQuestionById() {
-        // Simple test first - just return a basic response
+    public function getQuestionById($id = null) {
         header('Content-Type: application/json');
 
         // Check if user is logged in and get client_id
@@ -530,12 +535,17 @@ class QuestionController extends BaseController {
 
         $clientId = $_SESSION['user']['client_id'];
 
-        if (!isset($_GET['id']) || !is_numeric($_GET['id'])) {
+        // Use the route parameter $id, fallback to $_GET['id']
+        if (!$id && isset($_GET['id'])) {
+            $id = $_GET['id'];
+        }
+
+        if (!$id || !is_numeric($id)) {
             echo json_encode(['error' => 'Invalid question ID']);
             exit;
         }
 
-        $id = (int)$_GET['id'];
+        $id = (int)$id;
 
         try {
             $question = $this->questionModel->getQuestionById($id, $clientId);

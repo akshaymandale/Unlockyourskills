@@ -165,6 +165,12 @@ Router::middleware(['Auth'])->group(function() {
     // Assessment Packages
     Router::get('/vlr/assessment-packages', 'VLRController@assessmentIndex');
     Router::post('/vlr/assessment-packages', 'VLRController@addOrEditAssessment');
+    // Add Assessment modal AJAX endpoints (MUST come before parameterized routes)
+    Router::get('/vlr/assessment-packages/filter-options', 'AssessmentController@getFilterOptions');
+    Router::get('/vlr/assessment-packages/questions', 'AssessmentController@getQuestions');
+    Router::post('/vlr/assessment-packages/selected-questions', 'AssessmentController@getSelectedQuestions');
+    // Parameterized routes (MUST come after specific routes)
+    Router::get('/vlr/assessment-packages/{id}', 'VLRController@getAssessmentById');
     Router::delete('/vlr/assessment-packages/{id}', 'VLRController@deleteAssessment');
     
     // Non-SCORM Content
@@ -177,9 +183,25 @@ Router::middleware(['Auth'])->group(function() {
     Router::post('/vlr/surveys', 'VLRController@addOrEditSurvey');
     Router::delete('/vlr/surveys/{id}', 'VLRController@deleteSurvey');
     
+    // Add Survey modal AJAX endpoints (MUST come before parameterized routes)
+    Router::get('/vlr/surveys/filter-options', 'SurveyQuestionController@getFilterOptions');
+    Router::get('/vlr/surveys/questions', 'SurveyQuestionController@getQuestions');
+    Router::post('/vlr/surveys/selected-questions', 'SurveyQuestionController@getSelectedQuestions');
+    // Parameterized routes (MUST come after specific routes)
+    Router::get('/vlr/surveys/{id}', 'VLRController@getSurveyById');
+    
     // Feedback Packages
     Router::get('/vlr/feedback', 'VLRController@feedbackIndex');
     Router::post('/vlr/feedback', 'VLRController@addOrEditFeedback');
+    Router::delete('/vlr/feedback/{id}', 'VLRController@deleteFeedback');
+
+    // Add Feedback modal AJAX endpoints (MUST come before parameterized routes)
+    Router::get('/vlr/feedback/filter-options', 'FeedbackQuestionController@getFilterOptions');
+    Router::get('/vlr/feedback/questions', 'FeedbackQuestionController@getQuestions');
+    Router::post('/vlr/feedback/selected-questions', 'FeedbackQuestionController@getSelectedQuestions');
+    
+    // Parameterized routes (MUST come after specific routes)
+    Router::get('/vlr/feedback/{id}', 'VLRController@getFeedbackById');
     Router::delete('/vlr/feedback/{id}', 'VLRController@deleteFeedback');
     
     // VLR Assessment Question Management
@@ -189,6 +211,8 @@ Router::middleware(['Auth'])->group(function() {
     Router::get('/vlr/questions/{id}/edit', 'QuestionController@edit');
     Router::put('/vlr/questions/{id}', 'QuestionController@save');
     Router::delete('/vlr/questions/{id}', 'QuestionController@delete');
+    Router::get('/vlr/questions/{id}/delete', 'QuestionController@delete'); // For GET delete links
+    Router::get('/vlr/questions/{id}', 'QuestionController@getQuestionById');
     
     // ===================================
     // SURVEY QUESTIONS
@@ -201,6 +225,7 @@ Router::middleware(['Auth'])->group(function() {
     Router::get('/surveys/{id}/edit', 'SurveyQuestionController@edit');
     Router::put('/surveys/{id}', 'SurveyQuestionController@update');
     Router::delete('/surveys/{id}', 'SurveyQuestionController@delete');
+    Router::get('/surveys/{id}/delete', 'SurveyQuestionController@delete'); // For GET delete links
     
     // Survey AJAX operations
     Router::post('/surveys/ajax/search', 'SurveyQuestionController@ajaxSearch');
@@ -217,6 +242,7 @@ Router::middleware(['Auth'])->group(function() {
     Router::get('/feedback/{id}/edit', 'FeedbackQuestionController@edit');
     Router::put('/feedback/{id}', 'FeedbackQuestionController@update');
     Router::delete('/feedback/{id}', 'FeedbackQuestionController@delete');
+    Router::get('/feedback/{id}', 'FeedbackQuestionController@getQuestionById');
 
     // Feedback AJAX operations
     Router::post('/feedback/ajax/search', 'FeedbackQuestionController@ajaxSearch');
@@ -345,6 +371,9 @@ Router::prefix('api')->middleware(['Auth'])->group(function() {
     Router::get('/export/assessments', 'ExportController@assessments');
     Router::get('/export/surveys', 'ExportController@surveys');
     Router::get('/export/feedback', 'ExportController@feedback');
+    
+    // API endpoint for fetching a single assessment question by ID (for AJAX edit)
+    Router::get('/vlr/questions/{id}', 'QuestionController@getQuestionById');
     
 });
 

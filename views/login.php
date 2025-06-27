@@ -1,12 +1,13 @@
+<?php require_once __DIR__ . '/../core/UrlHelper.php'; ?>
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Login - Unlock Your Skills</title>
-    <link rel="stylesheet" href="public/css/style.css">
+    <link rel="stylesheet" href="<?= UrlHelper::url('public/css/style.css') ?>">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
-    <link rel="icon" type="image/x-icon" href="public/images/favicon.ico">
+    <link rel="icon" type="image/x-icon" href="<?= UrlHelper::url('public/images/favicon.ico') ?>">
 </head>
 <body class="login-body">
 
@@ -14,7 +15,7 @@
     <div class="login-box">
         <!-- Left Section with Logo -->
         <div class="login-left">
-            <img src="public/images/UYSlogo.png" alt="Logo">
+            <img src="<?= UrlHelper::url('public/images/UYSlogo.png') ?>" alt="Logo">
         </div>
 
         <!-- Right Section with Login Form -->
@@ -76,7 +77,6 @@
     </div>
 </div>
 
-<?php require_once __DIR__ . '/../core/UrlHelper.php'; ?>
 <script src="<?= UrlHelper::url('public/js/login.js') ?>"></script>
 
 </body>

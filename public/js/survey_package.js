@@ -74,7 +74,7 @@ document.addEventListener("DOMContentLoaded", function () {
         selectedQuestionsBody.innerHTML = "";
         selectedQuestionIdsInput.value = "";
         selectedQuestionCountInput.value = "";
-        selectedQuestionsWrapper.style.display = "none";
+        if (selectedQuestionsWrapper) selectedQuestionsWrapper.style.display = "none";
 
         surveyModalLabel.textContent = "Add Survey";
         surveyModal.show();
@@ -161,26 +161,14 @@ document.addEventListener("DOMContentLoaded", function () {
         selectedQuestionsBody.innerHTML = "";
         selectedQuestionIdsInput.value = "";
         selectedQuestionCountInput.value = "";
-        selectedQuestionsWrapper.style.display = "none";
-    });
-
-    surveyForm.addEventListener("submit", function (e) {
-        const isValid = validateSurveyForm();
-        if (!isValid) {
-            e.preventDefault();
-            console.log("Form validation failed.");
-            return;
-        }
-
-        // Form is valid, let it submit normally
-        // The form will submit to the action URL specified in the form
+        if (selectedQuestionsWrapper) selectedQuestionsWrapper.style.display = "none";
     });
 
     function showSelectedQuestionsGrid() {
         if (selectedQuestionsBody.children.length > 0) {
-            selectedQuestionsWrapper.style.display = "block";
+            if (selectedQuestionsWrapper) selectedQuestionsWrapper.style.display = "block";
         } else {
-            selectedQuestionsWrapper.style.display = "none";
+            if (selectedQuestionsWrapper) selectedQuestionsWrapper.style.display = "none";
         }
     }
 

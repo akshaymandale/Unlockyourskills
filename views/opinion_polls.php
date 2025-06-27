@@ -1693,7 +1693,6 @@ function initializeEditCharacterCounting() {
 </script>
 
 <!-- Include necessary JavaScript files for proper functionality -->
-<script src="public/js/modules/assessment_confirmations.js"></script>
 <script src="public/js/modules/opinion_poll_confirmations.js"></script>
 <script src="public/js/opinion_poll_validation.js"></script>
 

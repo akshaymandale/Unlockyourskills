@@ -8,24 +8,68 @@
 
     <div class="main-content">
         <div class="container add-question-container">
-
+            <!-- Back Arrow and Title -->
             <div class="back-arrow-container">
                 <a href="/unlockyourskills/vlr?tab=assessment" class="back-link">
                     <i class="fas fa-arrow-left"></i>
                 </a>
                 <span class="divider-line"></span>
-                <h1 class="page-title text-purple"><?= Localization::translate('question_management_title'); ?></h1>
+                <h1 class="page-title text-purple">
+                    <i class="fas fa-question-circle me-2"></i>
+                    <?= Localization::translate('question_management_title'); ?>
+                </h1>
             </div>
-            <!-- ✅ Filters & Search Section -->
-            <div class="filter-section">
-                <div class="container-fluid mb-3">
-                    <!-- First Row: Main Controls -->
-                    <div class="row justify-content-between align-items-center g-3 mb-2">
 
-                        <!-- Filter Dropdowns on the left -->
-                        <div class="col-md-auto">
-                            <div class="row g-2">
-                                <div class="col-auto">
+            <!-- Breadcrumb Navigation (moved below title) -->
+            <nav aria-label="breadcrumb" class="mb-3">
+                <ol class="breadcrumb">
+                    <li class="breadcrumb-item">
+                        <a href="<?= UrlHelper::url('dashboard') ?>"><?= Localization::translate('dashboard'); ?></a>
+                    </li>
+                    <li class="breadcrumb-item">
+                        <a href="<?= UrlHelper::url('vlr') ?>"><?= Localization::translate('vlr'); ?></a>
+                    </li>
+                    <li class="breadcrumb-item active" aria-current="page">
+                        <?= Localization::translate('question_management_title'); ?>
+                    </li>
+                </ol>
+            </nav>
+
+            <!-- Page Description and Add Button -->
+            <div class="row mb-4">
+                <div class="col-12">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <p class="text-muted mb-0">
+                                <?= Localization::translate('assessment_question_page_description'); ?>
+                            </p>
+                        </div>
+                        <button type="button" class="btn theme-btn-primary" data-bs-toggle="modal" data-bs-target="#addAssessmentQuestionModal"
+                            title="<?= Localization::translate('buttons_add_question_tooltip'); ?>">
+                            <i class="fas fa-plus me-2"></i><?= Localization::translate('buttons_add_question'); ?>
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Filters and Search -->
+            <div class="row mb-4">
+                <div class="col-12">
+                    <div class="card">
+                        <div class="card-body">
+                            <div class="row g-3 align-items-center">
+                                <!-- Search -->
+                                <div class="col-md-3">
+                                    <div class="input-group input-group-sm">
+                                        <span class="input-group-text"><i class="fas fa-search"></i></span>
+                                        <input type="text" id="searchInput" class="form-control" placeholder="<?= Localization::translate('filters_search_placeholder'); ?>" title="<?= Localization::translate('filters_search'); ?>">
+                                        <button type="button" id="searchButton" class="btn btn-outline-secondary" title="<?= Localization::translate('filters_search'); ?>">
+                                            <i class="fas fa-search"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                                <!-- Question Type Filter -->
+                                <div class="col-md-2">
                                     <select class="form-select form-select-sm" id="questionTypeFilter">
                                         <option value=""><?= Localization::translate('filters_question_type'); ?></option>
                                         <?php if (!empty($uniqueQuestionTypes)): ?>
@@ -37,7 +81,8 @@
                                         <?php endif; ?>
                                     </select>
                                 </div>
-                                <div class="col-auto">
+                                <!-- Difficulty Filter -->
+                                <div class="col-md-2">
                                     <select class="form-select form-select-sm" id="difficultyFilter">
                                         <option value=""><?= Localization::translate('filters_difficulty'); ?></option>
                                         <?php if (!empty($uniqueDifficultyLevels)): ?>
@@ -49,69 +94,36 @@
                                         <?php endif; ?>
                                     </select>
                                 </div>
-                                <div class="col-auto">
-                                    <input type="text" class="form-control form-control-sm" id="tagsFilter"
-                                        placeholder="<?= Localization::translate('filters_tags'); ?>"
-                                        title="Type to filter by tags">
+                                <!-- Tags Filter -->
+                                <div class="col-md-2">
+                                    <input type="text" class="form-control form-control-sm" id="tagsFilter" placeholder="<?= Localization::translate('filters_tags'); ?>" title="Type to filter by tags">
+                                </div>
+                                <!-- Clear Filters Button -->
+                                <div class="col-md-1">
+                                    <button type="button" class="btn btn-outline-danger w-100 btn-sm" id="clearFiltersBtn" title="Clear all filters">
+                                        <i class="fas fa-times"></i>
+                                    </button>
+                                </div>
+                                <!-- Import Assessment Question Button -->
+                                <div class="col-md-2 text-end">
+                                    <button type="button" class="btn btn-outline-primary btn-sm" data-bs-toggle="modal" data-bs-target="#importAssessmentQuestionModal" title="<?= Localization::translate('import_assessment_questions_tooltip'); ?>">
+                                        <i class="fas fa-upload me-1"></i><?= Localization::translate('import_assessment_questions'); ?>
+                                    </button>
                                 </div>
                             </div>
                         </div>
-
-                        <!-- Search Bar in the middle -->
-                        <div class="col-md-auto">
-                            <div class="input-group input-group-sm">
-                                <input type="text" id="searchInput" class="form-control"
-                                    placeholder="<?= Localization::translate('filters_search_placeholder'); ?>"
-                                    title="<?= Localization::translate('filters_search'); ?>">
-                                <button type="button" id="searchButton" class="btn btn-outline-secondary"
-                                    title="<?= Localization::translate('filters_search'); ?>">
-                                    <i class="fas fa-search"></i>
-                                </button>
-                            </div>
-                        </div>
-
-                        <!-- Add Question Button on the right -->
-                        <div class="col-md-auto">
-                            <button type="button" class="btn btn-sm btn-primary" data-bs-toggle="modal" data-bs-target="#addAssessmentQuestionModal"
-                                title="<?= Localization::translate('buttons_add_question_tooltip'); ?>">
-                                <?= Localization::translate('buttons_add_question'); ?>
-                            </button>
-                        </div>
-
-                    </div>
-
-                    <!-- Second Row: Secondary Controls -->
-                    <div class="row justify-content-between align-items-center g-3">
-
-                        <!-- Clear Filters Button under filters -->
-                        <div class="col-md-auto">
-                            <button type="button" class="btn btn-sm btn-clear-filters" id="clearFiltersBtn"
-                                title="Clear all filters">
-                                <i class="fas fa-times me-1"></i> Clear Filters
-                            </button>
-                        </div>
-
-                        <!-- Empty middle space -->
-                        <div class="col-md-auto">
-                        </div>
-
-                        <!-- Import Assessment Question Button -->
-                        <div class="col-md-auto">
-                            <button type="button" class="btn btn-sm btn-primary" data-bs-toggle="modal"
-                                data-bs-target="#importAssessmentQuestionModal"
-                                title="<?= Localization::translate('import_assessment_questions_tooltip'); ?>">
-                                <i class="fas fa-upload me-1"></i> <?= Localization::translate('import_assessment_questions'); ?>
-                            </button>
-                        </div>
-
                     </div>
                 </div>
             </div>
 
             <!-- Search Results Info -->
-            <div id="searchResultsInfo" class="search-results-info" style="display: none;">
-                <i class="fas fa-info-circle"></i>
-                <span id="resultsText"></span>
+            <div class="row mb-3">
+                <div class="col-12">
+                    <div id="searchResultsInfo" class="search-results-info" style="display: none;">
+                        <i class="fas fa-info-circle"></i>
+                        <span id="resultsText"></span>
+                    </div>
+                </div>
             </div>
 
             <!-- Loading Indicator -->
@@ -151,7 +163,7 @@
 
                                         <a href="#" class="btn theme-btn-danger delete-assessment-question"
                                             data-id="<?= $question['id']; ?>"
-                                            data-title="<?= htmlspecialchars($question['question_text']); ?>"
+                                            data-title="<?= htmlspecialchars($question['title']); ?>"
                                             title="<?= Localization::translate('question_grid_delete'); ?>">
                                             <i class="fas fa-trash-alt"></i>
                                         </a>
@@ -468,9 +480,8 @@
         </div>
     </div>
 
-    <script src="public/js/assessment_question_validation.js"></script>
-    <script src="public/js/assessment_question.js"></script>
-    <!-- ✅ Assessment Question Delete Confirmations -->
-    <script src="public/js/modules/assessment_confirmations.js"></script>
-
-    <?php include 'includes/footer.php'; ?>
+<?php require_once __DIR__ . '/../core/UrlHelper.php'; ?>
+<script src="<?= UrlHelper::url('public/js/assessment_question_validation.js') ?>"></script>
+<script src="<?= UrlHelper::url('public/js/assessment_question.js') ?>"></script>
+<script src="<?= UrlHelper::url('public/js/modules/assessment_confirmations.js') ?>"></script>
+<?php include 'includes/footer.php'; ?>

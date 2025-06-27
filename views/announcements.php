@@ -920,8 +920,6 @@ function getStatusActionButton(announcement) {
     }
 }
 
-
-
 // Utility functions
 function escapeHtml(text) {
     const map = {
@@ -951,74 +949,6 @@ function formatDate(dateString) {
         day: 'numeric',
         year: 'numeric'
     });
-}
-
-// Get urgency CSS class
-function getUrgencyClass(urgency) {
-    switch (urgency) {
-        case 'urgent': return 'text-danger';
-        case 'warning': return 'text-warning';
-        case 'info':
-        default: return 'text-info';
-    }
-}
-
-// Get status badge
-function getStatusBadge(status) {
-    const badges = {
-        'active': '<span class="badge bg-success">Active</span>',
-        'scheduled': '<span class="badge bg-primary">Scheduled</span>',
-        'draft': '<span class="badge bg-secondary">Draft</span>',
-        'expired': '<span class="badge bg-warning">Expired</span>',
-        'archived': '<span class="badge bg-dark">Archived</span>'
-    };
-    return badges[status] || '<span class="badge bg-secondary">Unknown</span>';
-}
-
-// Get audience badge
-function getAudienceBadge(audienceType) {
-    const badges = {
-        'global': '<span class="badge bg-info">Global</span>',
-        'course_specific': '<span class="badge bg-primary">Course</span>',
-        'group_specific': '<span class="badge bg-warning">Group</span>'
-    };
-    return badges[audienceType] || '<span class="badge bg-secondary">Unknown</span>';
-}
-
-// Get status action button
-function getStatusActionButton(announcement) {
-    switch (announcement.status) {
-        case 'draft':
-            return `
-                <button type="button" class="btn btn-sm theme-btn-success activate-announcement-btn"
-                        data-announcement-id="${announcement.id}"
-                        title="Activate Announcement">
-                    <i class="fas fa-play"></i>
-                </button>
-            `;
-        case 'active':
-            return `
-                <button type="button" class="btn btn-sm theme-btn-warning archive-announcement-btn"
-                        data-announcement-id="${announcement.id}"
-                        title="Archive Announcement">
-                    <i class="fas fa-archive"></i>
-                </button>
-            `;
-        case 'scheduled':
-            return `
-                <button type="button" class="btn btn-sm theme-btn-warning cancel-schedule-btn"
-                        data-announcement-id="${announcement.id}"
-                        title="Cancel Schedule">
-                    <i class="fas fa-times"></i>
-                </button>
-            `;
-        default:
-            return `
-                <button type="button" class="btn btn-sm btn-outline-secondary" disabled>
-                    <i class="fas fa-minus"></i>
-                </button>
-            `;
-    }
 }
 
 // Show/hide loading spinner
@@ -1465,7 +1395,7 @@ function debounce(func, wait) {
 </script>
 
 <!-- Include necessary JavaScript files for proper functionality -->
-<script src="public/js/announcement_validation.js"></script>
-<script src="public/js/modules/announcement_confirmations.js"></script>
+<script src="<?= UrlHelper::url('public/js/announcement_validation.js') ?>"></script>
+<script src="<?= UrlHelper::url('public/js/modules/announcement_confirmations.js') ?>"></script>
 
 <?php include 'includes/footer.php'; ?>

@@ -1,5 +1,11 @@
 document.addEventListener("DOMContentLoaded", function () {
     const feedbackForm = document.getElementById("feedback_feedbackForm");
+    
+    // Only proceed if the form exists (we're on the VLR feedback page)
+    if (!feedbackForm) {
+        return;
+    }
+    
     const feedbackTitle = document.getElementById("feedback_feedbackTitle");
     const tagInput = document.getElementById("feedback_feedback_tagInput");
     const tagContainer = document.getElementById("feedback_tagDisplay");
@@ -15,6 +21,27 @@ document.addEventListener("DOMContentLoaded", function () {
     const selectedQuestionCountInput = document.getElementById("feedback_selectedQuestionCount");
 
     let tags = [];
+
+    // Add field-level validation event listeners
+    if (feedbackTitle) {
+        feedbackTitle.addEventListener("blur", function() {
+            validateFeedbackField(this);
+        });
+    }
+
+    if (tagInput) {
+        tagInput.addEventListener("blur", function() {
+            validateTagInput();
+        });
+    }
+
+    // Add observer for selected questions validation
+    if (selectedQuestionIdsInput) {
+        const observer = new MutationObserver(() => {
+            removeSelectedQuestionsError();
+        });
+        observer.observe(selectedQuestionIdsInput, { attributes: true, childList: false, characterData: true, subtree: false });
+    }
 
     function addTag(tagText) {
         if (tagText.trim() === "" || tags.includes(tagText)) return;
@@ -66,21 +93,33 @@ document.addEventListener("DOMContentLoaded", function () {
     });
 
     addFeedbackBtn.addEventListener("click", function () {
-        feedbackForm.reset();
+        if (feedbackForm) {
+            feedbackForm.reset();
+        }
         tags = [];
-        tagContainer.innerHTML = "";
+        if (tagContainer) {
+            tagContainer.innerHTML = "";
+        }
         updateHiddenInput();
 
-        selectedQuestionsBody.innerHTML = "";
-        selectedQuestionIdsInput.value = "";
-        selectedQuestionCountInput.value = "";
-        selectedQuestionsWrapper.style.display = "none";
+        if (selectedQuestionsBody) {
+            selectedQuestionsBody.innerHTML = "";
+        }
+        if (selectedQuestionIdsInput) {
+            selectedQuestionIdsInput.value = "";
+        }
+        if (selectedQuestionCountInput) {
+            selectedQuestionCountInput.value = "";
+        }
+        if (selectedQuestionsWrapper) {
+            selectedQuestionsWrapper.style.display = "none";
+        }
 
-        feedbackModalLabel.textContent = "Add Feedback";
+        if (feedbackModalLabel) {
+            feedbackModalLabel.textContent = "Add Feedback";
+        }
         feedbackModal.show();
     });
-
-
 
     // Edit Feedback Modal Logic (exactly like survey)
     document.querySelectorAll(".edit-feedback").forEach(button => {
@@ -144,37 +183,174 @@ document.addEventListener("DOMContentLoaded", function () {
         });
     });
 
-    document.querySelector('button[data-bs-dismiss="modal"]').addEventListener('click', function () {
-        feedbackForm.reset();
-        tags = [];
-        tagContainer.innerHTML = "";
-        updateHiddenInput();
+    const dismissButton = document.querySelector('button[data-bs-dismiss="modal"]');
+    if (dismissButton) {
+        dismissButton.addEventListener('click', function () {
+            if (feedbackForm) {
+                feedbackForm.reset();
+            }
+            tags = [];
+            if (tagContainer) {
+                tagContainer.innerHTML = "";
+            }
+            updateHiddenInput();
 
-        selectedQuestionsBody.innerHTML = "";
-        selectedQuestionIdsInput.value = "";
-        selectedQuestionCountInput.value = "";
-        selectedQuestionsWrapper.style.display = "none";
-    });
-
-    feedbackForm.addEventListener("submit", function (e) {
-        e.preventDefault();
-
-        const isValid = validateFeedbackForm();
-        if (!isValid) {
-            console.log("Form validation failed.");
-            return;
-        }
-
-        // Submit the form
-        feedbackForm.submit();
-    });
+            if (selectedQuestionsBody) {
+                selectedQuestionsBody.innerHTML = "";
+            }
+            if (selectedQuestionIdsInput) {
+                selectedQuestionIdsInput.value = "";
+            }
+            if (selectedQuestionCountInput) {
+                selectedQuestionCountInput.value = "";
+            }
+            if (selectedQuestionsWrapper) {
+                selectedQuestionsWrapper.style.display = "none";
+            }
+        });
+    }
 
     function showSelectedQuestionsGrid() {
-        if (selectedQuestionsBody.children.length > 0) {
-            selectedQuestionsWrapper.style.display = "block";
-        } else {
-            selectedQuestionsWrapper.style.display = "none";
+        if (selectedQuestionsBody && selectedQuestionsWrapper) {
+            if (selectedQuestionsBody.children.length > 0) {
+                selectedQuestionsWrapper.style.display = "block";
+            } else {
+                selectedQuestionsWrapper.style.display = "none";
+            }
         }
+    }
+
+    // Field-level validation function
+    function validateFeedbackField(field) {
+        if (!field) return true;
+
+        const name = field.getAttribute("id");
+        const value = field.value.trim();
+        let isValid = true;
+
+        switch (name) {
+            case "feedback_feedbackTitle":
+                if (value === "") {
+                    showError(field, 'Feedback title is required.');
+                    isValid = false;
+                } else {
+                    hideError(field);
+                }
+                break;
+
+            default:
+                hideError(field);
+        }
+
+        return isValid;
+    }
+
+    // Tag validation function
+    function validateTagInput() {
+        const tags = hiddenTagList.value.split(",").filter(Boolean);
+        if (tags.length === 0) {
+            showError(tagInput, 'At least one tag is required.');
+            return false;
+        } else {
+            hideError(tagInput);
+            return true;
+        }
+    }
+
+    // Selected questions validation function
+    function validateSelectedQuestions() {
+        const value = selectedQuestionIdsInput?.value?.trim();
+        const errorId = "feedback_selectedQuestionsError";
+
+        // Remove existing error if any
+        removeSelectedQuestionsError();
+
+        if (!value) {
+            const error = document.createElement("span");
+            error.id = errorId;
+            error.className = "error-message";
+            error.textContent = 'At least one question must be selected.';
+            error.style.color = "red";
+            error.style.fontSize = "12px";
+            error.style.marginLeft = "10px";
+
+            const addQuestionBtn = document.getElementById("feedback_addFeedbackQuestionBtn");
+            if (addQuestionBtn && addQuestionBtn.parentNode) {
+                addQuestionBtn.parentNode.appendChild(error);
+            }
+            return false;
+        }
+
+        return true;
+    }
+
+    function removeSelectedQuestionsError() {
+        const errorElement = document.getElementById("feedback_selectedQuestionsError");
+        if (errorElement) {
+            errorElement.remove();
+        }
+    }
+
+    // Error display functions (matching survey validation)
+    function showError(input, message) {
+        if (!input) return;
+        
+        let errorElement = input.parentNode.querySelector(".error-message");
+        if (!errorElement) {
+            errorElement = document.createElement("span");
+            errorElement.classList.add("error-message");
+            input.parentNode.appendChild(errorElement);
+        }
+        errorElement.textContent = message;
+        errorElement.style.color = "red";
+        errorElement.style.fontSize = "12px";
+        input.classList.add("is-invalid");
+    }
+
+    function hideError(input) {
+        if (!input) return;
+        
+        let errorElement = input.parentNode.querySelector(".error-message");
+        if (errorElement) errorElement.textContent = "";
+        input.classList.remove("is-invalid");
+    }
+
+    // Form validation function
+    function validateFeedbackForm() {
+        let isValid = true;
+
+        // Validate title
+        if (!validateFeedbackField(feedbackTitle)) {
+            isValid = false;
+        }
+
+        // Validate tags
+        if (!validateTagInput()) {
+            isValid = false;
+        }
+
+        // Validate selected questions
+        if (!validateSelectedQuestions()) {
+            isValid = false;
+        }
+
+        return isValid;
+    }
+
+    if (feedbackForm) {
+        feedbackForm.addEventListener("submit", function (e) {
+            e.preventDefault();
+            console.log("Feedback form submit event triggered");
+            
+            const isValid = validateFeedbackForm();
+            if (isValid) {
+                console.log("Feedback form valid. Submitting...");
+                // Form is valid, submit it
+                feedbackForm.submit();
+            } else {
+                console.log("Feedback form validation failed.");
+            }
+        });
     }
 
     window.showSelectedQuestionsGrid = showSelectedQuestionsGrid;

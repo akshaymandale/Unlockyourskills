@@ -16,7 +16,7 @@ class SurveyQuestionModel {
                 (:client_id, :title, :type, :media_path, :rating_scale, :rating_symbol, :tags, :created_by, NOW(), :created_by, NOW(), 0)";
 
         $stmt = $this->conn->prepare($sql);
-        $stmt->execute([
+        $result = $stmt->execute([
             'client_id' => $data['client_id'],
             'title' => $data['title'],
             'type' => $data['type'],
@@ -26,8 +26,12 @@ class SurveyQuestionModel {
             'tags' => $data['tags'],
             'created_by' => $data['created_by'],
         ]);
-
-        return $this->conn->lastInsertId();
+        
+        if ($result) {
+            return $this->conn->lastInsertId();
+        } else {
+            return false;
+        }
     }
 
     public function updateQuestion($questionId, $data, $clientId = null) {
@@ -350,17 +354,24 @@ protected function handleUpload(array $file, string $folder)
         return $uniqueTags;
     }
 
-    public function getSelectedQuestions(array $ids) {
+    public function getSelectedQuestions(array $ids, $clientId = null) {
         if (empty($ids)) {
             return [];
         }
 
         $placeholders = implode(',', array_fill(0, count($ids), '?'));
         $sql = "SELECT id, title, type, tags FROM survey_questions WHERE id IN ($placeholders) AND is_deleted = 0";
+        $params = $ids;
+
+        if ($clientId !== null) {
+            $sql .= " AND client_id = ?";
+            $params[] = $clientId;
+        }
 
         $stmt = $this->conn->prepare($sql);
-        foreach ($ids as $index => $id) {
-            $stmt->bindValue($index + 1, $id, PDO::PARAM_INT);
+        foreach ($params as $index => $param) {
+            $typeParam = is_int($param) ? PDO::PARAM_INT : PDO::PARAM_STR;
+            $stmt->bindValue($index + 1, $param, $typeParam);
         }
         $stmt->execute();
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
@@ -400,5 +411,30 @@ protected function handleUpload(array $file, string $folder)
 
         $stmt = $this->conn->prepare($sql);
         return $stmt->execute($params);
+    }
+
+    public function getQuestionById($id, $clientId = null)
+    {
+        $sql = "SELECT * FROM survey_questions WHERE id = :id AND is_deleted = 0";
+        $params = ['id' => $id];
+
+        if ($clientId !== null) {
+            $sql .= " AND client_id = :client_id";
+            $params['client_id'] = $clientId;
+        }
+
+        $stmt = $this->conn->prepare($sql);
+        $stmt->execute($params);
+        $question = $stmt->fetch(PDO::FETCH_ASSOC);
+
+        if ($question) {
+            // Get options for this question
+            $optionsSql = "SELECT * FROM survey_question_options WHERE question_id = :question_id AND is_deleted = 0 ORDER BY id";
+            $optionsStmt = $this->conn->prepare($optionsSql);
+            $optionsStmt->execute(['question_id' => $id]);
+            $question['options'] = $optionsStmt->fetchAll(PDO::FETCH_ASSOC);
+        }
+
+        return $question;
     }
 }

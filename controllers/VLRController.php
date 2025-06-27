@@ -47,15 +47,19 @@ class VLRController extends BaseController
         require 'views/vlr.php';
     }
 
-    public function getAssessmentById()
-    {
-        if (!isset($_GET['id'])) {
+    public function getAssessmentById($id = null) {
+        // Use the route parameter $id, fallback to $_GET['id']
+        if (!$id && isset($_GET['id'])) {
+            $id = $_GET['id'];
+        }
+        
+        if (!$id) {
             http_response_code(400);
             echo json_encode(['error' => 'Assessment ID is required']);
             return;
         }
 
-        $id = intval($_GET['id']);
+        $id = intval($id);
         $assessment = $this->VLRModel->getAssessmentByIdWithQuestions($id);
 
         if (!$assessment) {
@@ -68,16 +72,27 @@ class VLRController extends BaseController
         echo json_encode($assessment);
     }
 
-    public function getSurveyById()
+    public function getSurveyById($id = null)
     {
-        if (!isset($_GET['id'])) {
+        // Use the route parameter $id, fallback to $_GET['id']
+        if (!$id && isset($_GET['id'])) {
+            $id = $_GET['id'];
+        }
+        
+        if (!$id) {
             http_response_code(400);
             echo json_encode(['error' => 'Survey ID is required']);
             return;
         }
 
-        $id = intval($_GET['id']);
-        $survey = $this->VLRModel->getSurveyByIdWithQuestions($id);
+        $id = intval($id);
+        
+        // Get client ID for filtering
+        $clientId = $_SESSION['user']['client_id'] ?? null;
+        $currentUser = $_SESSION['user'] ?? null;
+        $filterClientId = ($currentUser && $currentUser['system_role'] === 'admin') ? $clientId : null;
+        
+        $survey = $this->VLRModel->getSurveyByIdWithQuestions($id, $filterClientId);
 
         if (!$survey) {
             http_response_code(404);
@@ -781,19 +796,23 @@ class VLRController extends BaseController
 
 
 
-    public function deleteAssessment()
+    public function deleteAssessment($id = null)
     {
-        if (isset($_GET['id'])) {
+        if ($id === null && isset($_GET['id'])) {
             $id = $_GET['id'];
-            $result = $this->VLRModel->deleteAssessment($id);
+        }
 
-            if ($result) {
-                $this->toastSuccess('Assessment deleted successfully!', '/unlockyourskills/vlr?tab=assessment');
-            } else {
-                $this->toastError('Failed to delete assessment.', '/unlockyourskills/vlr?tab=assessment');
-            }
-        } else {
+        if (!$id) {
             $this->toastError('Invalid request.', '/unlockyourskills/vlr?tab=assessment');
+            return;
+        }
+
+        $result = $this->VLRModel->deleteAssessment($id);
+
+        if ($result) {
+            $this->toastSuccess('Assessment deleted successfully!', '/unlockyourskills/vlr?tab=assessment');
+        } else {
+            $this->toastError('Failed to delete assessment.', '/unlockyourskills/vlr?tab=assessment');
         }
     }
 
@@ -1277,33 +1296,43 @@ public function deleteImagePackage($id = null)
 
 
     // Survey Delete
-    public function deleteSurvey()
+    public function deleteSurvey($id = null)
     {
-        if (isset($_GET['id'])) {
+        // If no ID provided as parameter, check GET (for backward compatibility)
+        if ($id === null && isset($_GET['id'])) {
             $id = $_GET['id'];
-            $result = $this->VLRModel->deleteSurvey($id);
-
-            if ($result) {
-                $this->toastSuccess('Survey deleted successfully!', '/unlockyourskills/vlr?tab=survey');
-            } else {
-                $this->toastError('Failed to delete survey.', '/unlockyourskills/vlr?tab=survey');
-            }
-        } else {
+        }
+        
+        if (!$id) {
             $this->toastError('Invalid request.', '/unlockyourskills/vlr?tab=survey');
+            return;
+        }
+
+        $result = $this->VLRModel->deleteSurvey($id);
+
+        if ($result) {
+            $this->toastSuccess('Survey deleted successfully!', '/unlockyourskills/vlr?tab=survey');
+        } else {
+            $this->toastError('Failed to delete survey.', '/unlockyourskills/vlr?tab=survey');
         }
     }
 
     // Feedback Package Methods (following survey pattern)
 
-    public function getFeedbackById()
+    public function getFeedbackById($id = null)
     {
-        if (!isset($_GET['id'])) {
+        // Use the route parameter $id, fallback to $_GET['id'] for backward compatibility
+        if (!$id && isset($_GET['id'])) {
+            $id = $_GET['id'];
+        }
+        
+        if (!$id || !is_numeric($id)) {
             http_response_code(400);
             echo json_encode(['error' => 'Feedback ID is required']);
             return;
         }
 
-        $id = intval($_GET['id']);
+        $id = intval($id);
         $feedback = $this->VLRModel->getFeedbackByIdWithQuestions($id);
 
         if (!$feedback) {
@@ -1345,6 +1374,9 @@ public function deleteImagePackage($id = null)
             $errors[] = "Feedback title is required.";
         }
 
+        if (empty($tags)) {
+            $errors[] = "Tags/keywords are required.";
+        }
 
         $questionIds = array_filter(array_map('trim', explode(',', $questionIdsRaw)));
         if (empty($questionIds)) {
@@ -1385,19 +1417,25 @@ public function deleteImagePackage($id = null)
     }
 
     // Feedback Delete
-    public function deleteFeedback()
+    public function deleteFeedback($id = null)
     {
-        if (isset($_GET['id'])) {
+        // Accept ID from route parameter or fallback to GET for backward compatibility
+        if ($id === null && isset($_GET['id'])) {
             $id = $_GET['id'];
-            $result = $this->VLRModel->deleteFeedback($id);
+        }
 
-            if ($result) {
-                $this->toastSuccess('Feedback deleted successfully!', '/unlockyourskills/vlr?tab=feedback');
-            } else {
-                $this->toastError('Failed to delete feedback.', '/unlockyourskills/vlr?tab=feedback');
-            }
-        } else {
+        if (!$id || !is_numeric($id)) {
             $this->toastError('Invalid request.', '/unlockyourskills/vlr?tab=feedback');
+            return;
+        }
+
+        $id = intval($id);
+        $result = $this->VLRModel->deleteFeedback($id);
+
+        if ($result) {
+            $this->toastSuccess('Feedback deleted successfully!', '/unlockyourskills/vlr?tab=feedback');
+        } else {
+            $this->toastError('Failed to delete feedback.', '/unlockyourskills/vlr?tab=feedback');
         }
     }
 
@@ -1465,6 +1503,18 @@ public function deleteImagePackage($id = null)
                 $metadataFile = $_POST['existing_metadata_file'];
             }
 
+            // Validate version field - must be numeric
+            $version = trim($_POST['version'] ?? '');
+            if (empty($version)) {
+                $this->toastError('Version is required.', '/unlockyourskills/vlr?tab=interactive');
+                return;
+            }
+            
+            if (!is_numeric($version)) {
+                $this->toastError('Version must be a number.', '/unlockyourskills/vlr?tab=interactive');
+                return;
+            }
+
             // Prepare data
             $data = [
                 'client_id' => $clientId,
@@ -1472,7 +1522,7 @@ public function deleteImagePackage($id = null)
                 'content_type' => $_POST['content_type'],
                 'description' => $_POST['description'] ?? '',
                 'tags' => $_POST['tagList'] ?? '',
-                'version' => $_POST['version'],
+                'version' => $version,
                 'language' => $_POST['language'] ?? '',
                 'time_limit' => !empty($_POST['timeLimit']) ? (int)$_POST['timeLimit'] : null,
                 'mobile_support' => $_POST['interactive_mobileSupport'],

@@ -1,10 +1,19 @@
 document.addEventListener("DOMContentLoaded", function () {
-    const form = document.getElementById("feedbackQuestionForm");
+    const form = document.getElementById("addFeedbackQuestionForm");
     const titleInput = document.getElementById("feedbackQuestionTitle");
     const typeSelect = document.getElementById("feedbackQuestionType");
     const optionsWrapper = document.getElementById("feedbackOptionsWrapper");
     const tagInput = document.getElementById("feedbackTagInput");
     const tagListInput = document.getElementById("feedbackTagList");
+
+    // Only proceed if the form exists (we're on a feedback question page)
+    if (!form) {
+        return;
+    }
+
+    // Track user interaction with fields
+    let titleInteracted = false;
+    let tagsInteracted = false;
 
     // --- Error helpers ---
     function showError(input, message) {
@@ -26,8 +35,9 @@ document.addEventListener("DOMContentLoaded", function () {
 
     // --- Title validation ---
     function validateTitle() {
+        if (!titleInput) return true;
         const value = titleInput.value.trim();
-        if (!value) {
+        if (!value && titleInteracted) {
             showError(titleInput, translate('js.validation.feedback_question_title_required'));
             return false;
         }
@@ -37,6 +47,7 @@ document.addEventListener("DOMContentLoaded", function () {
 
     // --- Options validation ---
     function validateOptions() {
+        if (!typeSelect || !optionsWrapper) return true;
         const type = typeSelect.value;
         if (["multi_choice", "checkbox", "dropdown"].includes(type)) {
             const optionInputs = optionsWrapper.querySelectorAll("input[type='text']");
@@ -60,8 +71,9 @@ document.addEventListener("DOMContentLoaded", function () {
 
     // --- Tag validation ---
     function validateTags() {
+        if (!tagListInput) return true;
         const tags = tagListInput.value.split(',').filter(tag => tag.trim() !== '');
-        if (tags.length === 0) {
+        if (tags.length === 0 && tagsInteracted) {
             showError(tagInput, translate('js.validation.tags_required'));
             return false;
         }
@@ -70,22 +82,39 @@ document.addEventListener("DOMContentLoaded", function () {
     }
 
     // --- Blur event bindings ---
-    titleInput.addEventListener("blur", validateTitle);
-    tagInput.addEventListener("blur", validateTags);
+    if (titleInput) {
+        titleInput.addEventListener("blur", function() {
+            titleInteracted = true;
+            validateTitle();
+        });
+    }
+    
+    if (tagInput) {
+        tagInput.addEventListener("blur", function() {
+            tagsInteracted = true;
+            validateTags();
+        });
+    }
 
-    optionsWrapper.addEventListener("blur", function (e) {
-        if (e.target && e.target.matches("input[type='text']")) {
-            if (e.target.value.trim() === "") {
-                showError(e.target, translate('js.validation.option_empty'));
-            } else {
-                clearError(e.target);
+    if (optionsWrapper) {
+        optionsWrapper.addEventListener("blur", function (e) {
+            if (e.target && e.target.matches("input[type='text']")) {
+                if (e.target.value.trim() === "") {
+                    showError(e.target, translate('js.validation.option_empty'));
+                } else {
+                    clearError(e.target);
+                }
             }
-        }
-    }, true);
+        }, true);
+    }
 
     // --- Form submit validation ---
     form.addEventListener("submit", function (e) {
         let isValid = true;
+
+        // Mark fields as interacted on form submit
+        titleInteracted = true;
+        tagsInteracted = true;
 
         if (!validateTitle()) isValid = false;
         if (!validateOptions()) isValid = false;

@@ -18,7 +18,7 @@ class ConfirmationHandlers {
     init() {
         // Single event listener for all delete confirmations
         document.addEventListener('click', (e) => {
-            const deleteBtn = e.target.closest('.delete-btn, [class*="delete-"]');
+            const deleteBtn = e.target.closest('.delete-btn');
             if (deleteBtn) {
                 e.preventDefault();
                 this.handleDeleteClick(deleteBtn);

@@ -16,6 +16,7 @@
  * - Feedback packages
  */
 
+if (typeof VLRConfirmations === 'undefined') {
 class VLRConfirmations {
     constructor() {
         this.init();
@@ -295,14 +296,7 @@ class VLRConfirmations {
 }
 
 // Initialize VLR confirmations
-document.addEventListener('DOMContentLoaded', function() {
-    // Initialize VLR confirmations (now directly included in VLR page)
-    window.vlrConfirmationsInstance = new VLRConfirmations();
-});
-
-// Also initialize immediately if DOM is already loaded
 if (document.readyState !== 'loading') {
-    // DOM is already loaded, initialize immediately
     window.vlrConfirmationsInstance = new VLRConfirmations();
 }
 
@@ -314,4 +308,5 @@ window.deleteVLRPackage = function(type, id, title) {
 // Export for module systems
 if (typeof module !== 'undefined' && module.exports) {
     module.exports = VLRConfirmations;
+}
 }
