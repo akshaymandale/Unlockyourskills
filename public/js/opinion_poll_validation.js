@@ -17,6 +17,46 @@ document.addEventListener("DOMContentLoaded", function () {
     $('#createPollModal').on('shown.bs.modal', function () {
         console.log('Create Poll Modal shown, attaching validation');
         attachPollValidation('createPollForm');
+        
+        // Set up the add question button event listener
+        const addQuestionBtn = document.getElementById('addQuestionBtn');
+        if (addQuestionBtn) {
+            console.log('Add Question button found, setting up event listener');
+            // Remove any existing event listeners to prevent duplicates
+            addQuestionBtn.removeEventListener('click', addQuestion);
+            addQuestionBtn.addEventListener('click', function(e) {
+                console.log('Add Question button clicked!');
+                e.preventDefault();
+                if (typeof addQuestion === 'function') {
+                    addQuestion();
+                } else {
+                    console.error('addQuestion function is not available');
+                }
+            });
+        } else {
+            console.error('Add Question button not found!');
+        }
+        
+        // Initialize character counting
+        initializeCharacterCounting();
+        
+        // Initialize the create poll form and add initial question
+        const questionsContainer = document.getElementById('questionsContainer');
+        if (questionsContainer && questionsContainer.children.length === 0) {
+            console.log('Questions container is empty, adding initial question');
+            // Reset counters and add initial question
+            if (typeof questionCounter !== 'undefined') {
+                questionCounter = 0;
+            }
+            if (typeof optionCounter !== 'undefined') {
+                optionCounter = 0;
+            }
+            if (typeof addQuestion === 'function') {
+                addQuestion();
+            } else {
+                console.error('addQuestion function is not available');
+            }
+        }
     });
 
     // Reset form when modal is hidden
@@ -470,6 +510,21 @@ document.addEventListener("DOMContentLoaded", function () {
             form.querySelectorAll('.question-error').forEach(error => {
                 error.style.display = 'none';
             });
+
+            // Clear questions container for create form
+            if (formId === 'createPollForm') {
+                const questionsContainer = document.getElementById('questionsContainer');
+                if (questionsContainer) {
+                    questionsContainer.innerHTML = '';
+                }
+                // Reset counters
+                if (typeof questionCounter !== 'undefined') {
+                    questionCounter = 0;
+                }
+                if (typeof optionCounter !== 'undefined') {
+                    optionCounter = 0;
+                }
+            }
         }
     }
 

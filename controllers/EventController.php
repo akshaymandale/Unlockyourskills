@@ -134,6 +134,10 @@ class EventController extends BaseController {
         }
 
         try {
+            error_log('--- EventController::create() called ---');
+            error_log('POST data: ' . print_r($_POST, true));
+            error_log('SESSION data: ' . print_r($_SESSION, true));
+
             $clientId = $_SESSION['user']['client_id'];
             $userId = $_SESSION['user']['id'];
 
@@ -184,6 +188,8 @@ class EventController extends BaseController {
                 $sendReminderBefore = 0;
             }
 
+            error_log('Validation errors: ' . print_r($errors, true));
+
             if (!empty($errors)) {
                 if ($this->isAjaxRequest()) {
                     header('Content-Type: application/json');
@@ -191,6 +197,7 @@ class EventController extends BaseController {
                         'success' => false,
                         'message' => implode(' ', $errors)
                     ]);
+                    error_log('Returning validation errors: ' . implode(' ', $errors));
                     exit;
                 } else {
                     $this->toastError(implode(' ', $errors), 'index.php?controller=EventController');
@@ -206,7 +213,7 @@ class EventController extends BaseController {
                 'event_type' => $eventType,
                 'event_link' => trim($_POST['event_link'] ?? ''),
                 'start_datetime' => $startDatetime,
-                'end_datetime' => $endDatetime,
+                'end_datetime' => !empty($endDatetime) ? $endDatetime : null,
                 'audience_type' => $audienceType,
                 'location' => trim($_POST['location'] ?? ''),
                 'enable_rsvp' => isset($_POST['enable_rsvp']) ? 1 : 0,
@@ -215,13 +222,17 @@ class EventController extends BaseController {
                 'created_by' => $userId
             ];
 
+            error_log('Event data to insert: ' . print_r($eventData, true));
+
             // Create event
             $eventId = $this->eventModel->createEvent($eventData);
+            error_log('EventModel::createEvent() returned: ' . print_r($eventId, true));
 
             if ($eventId) {
                 // Handle course/group specific audiences
                 if ($audienceType === 'course_specific' && !empty($_POST['target_courses'])) {
                     $targetCourses = $_POST['target_courses'];
+                    error_log('Adding course-specific audiences: ' . print_r($targetCourses, true));
                     foreach ($targetCourses as $courseId) {
                         $this->eventModel->addEventAudience($eventId, 'course', $courseId, $clientId);
                     }
@@ -233,6 +244,7 @@ class EventController extends BaseController {
                         'success' => true,
                         'message' => 'Event created successfully!'
                     ]);
+                    error_log('Event created successfully!');
                     exit;
                 } else {
                     $this->toastSuccess('Event created successfully!', 'index.php?controller=EventController');
@@ -244,6 +256,7 @@ class EventController extends BaseController {
                         'success' => false,
                         'message' => 'Failed to create event. Please try again.'
                     ]);
+                    error_log('Failed to create event.');
                     exit;
                 } else {
                     $this->toastError('Failed to create event. Please try again.', 'index.php?controller=EventController');
@@ -252,7 +265,7 @@ class EventController extends BaseController {
 
         } catch (Exception $e) {
             error_log("Event creation error: " . $e->getMessage());
-
+            error_log("Stack trace: " . $e->getTraceAsString());
             if ($this->isAjaxRequest()) {
                 header('Content-Type: application/json');
                 echo json_encode([
@@ -328,6 +341,10 @@ class EventController extends BaseController {
         }
 
         try {
+            error_log('--- EventController::update() called ---');
+            error_log('POST data: ' . print_r($_POST, true));
+            error_log('SESSION data: ' . print_r($_SESSION, true));
+
             $clientId = $_SESSION['user']['client_id'];
             $userId = $_SESSION['user']['id'];
             $eventId = $_POST['event_id'] ?? null;
@@ -387,6 +404,8 @@ class EventController extends BaseController {
                 $sendReminderBefore = 0;
             }
 
+            error_log('Validation errors: ' . print_r($errors, true));
+
             if (!empty($errors)) {
                 if ($this->isAjaxRequest()) {
                     header('Content-Type: application/json');
@@ -394,6 +413,7 @@ class EventController extends BaseController {
                         'success' => false,
                         'message' => implode(' ', $errors)
                     ]);
+                    error_log('Returning validation errors: ' . implode(' ', $errors));
                     exit;
                 } else {
                     $this->toastError(implode(' ', $errors), 'index.php?controller=EventController');
@@ -409,7 +429,7 @@ class EventController extends BaseController {
                 'event_type' => $eventType,
                 'event_link' => trim($_POST['event_link'] ?? ''),
                 'start_datetime' => $startDatetime,
-                'end_datetime' => $endDatetime,
+                'end_datetime' => !empty($endDatetime) ? $endDatetime : null,
                 'audience_type' => $audienceType,
                 'location' => trim($_POST['location'] ?? ''),
                 'enable_rsvp' => isset($_POST['enable_rsvp']) ? 1 : 0,
@@ -418,8 +438,11 @@ class EventController extends BaseController {
                 'updated_by' => $userId
             ];
 
+            error_log('Event data to update: ' . print_r($eventData, true));
+
             // Update event
             $result = $this->eventModel->updateEvent($eventId, $eventData);
+            error_log('EventModel::updateEvent() returned: ' . print_r($result, true));
 
             if ($result) {
                 // Update audiences
@@ -427,6 +450,7 @@ class EventController extends BaseController {
 
                 if ($audienceType === 'course_specific' && !empty($_POST['target_courses'])) {
                     $targetCourses = $_POST['target_courses'];
+                    error_log('Adding course-specific audiences: ' . print_r($targetCourses, true));
                     foreach ($targetCourses as $courseId) {
                         $this->eventModel->addEventAudience($eventId, 'course', $courseId, $clientId);
                     }
@@ -438,6 +462,7 @@ class EventController extends BaseController {
                         'success' => true,
                         'message' => 'Event updated successfully!'
                     ]);
+                    error_log('Event updated successfully!');
                     exit;
                 } else {
                     $this->toastSuccess('Event updated successfully!', 'index.php?controller=EventController');
@@ -449,6 +474,7 @@ class EventController extends BaseController {
                         'success' => false,
                         'message' => 'Failed to update event. Please try again.'
                     ]);
+                    error_log('Failed to update event.');
                     exit;
                 } else {
                     $this->toastError('Failed to update event. Please try again.', 'index.php?controller=EventController');
@@ -457,6 +483,109 @@ class EventController extends BaseController {
 
         } catch (Exception $e) {
             error_log("Event update error: " . $e->getMessage());
+            error_log("Stack trace: " . $e->getTraceAsString());
+            if ($this->isAjaxRequest()) {
+                header('Content-Type: application/json');
+                echo json_encode([
+                    'success' => false,
+                    'message' => 'An unexpected error occurred. Please try again.'
+                ]);
+                exit;
+            } else {
+                $this->toastError('An unexpected error occurred. Please try again.', 'index.php?controller=EventController');
+            }
+        }
+    }
+
+    /**
+     * Update event status only
+     */
+    public function updateStatus() {
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+            if ($this->isAjaxRequest()) {
+                header('Content-Type: application/json');
+                echo json_encode(['success' => false, 'message' => 'Invalid request method']);
+                exit;
+            }
+            $this->toastError('Invalid request method.', 'index.php?controller=EventController');
+            return;
+        }
+
+        // Check if user is logged in
+        if (!isset($_SESSION['user']['client_id'])) {
+            if ($this->isAjaxRequest()) {
+                header('Content-Type: application/json');
+                echo json_encode(['success' => false, 'message' => 'Unauthorized access']);
+                exit;
+            }
+            $this->toastError('Unauthorized access. Please log in.', 'index.php?controller=LoginController');
+            return;
+        }
+
+        try {
+            $clientId = $_SESSION['user']['client_id'];
+            $eventId = $_POST['event_id'] ?? null;
+            $status = $_POST['status'] ?? null;
+
+            if (!$eventId) {
+                if ($this->isAjaxRequest()) {
+                    header('Content-Type: application/json');
+                    echo json_encode(['success' => false, 'message' => 'Event ID is required']);
+                    exit;
+                }
+                $this->toastError('Event ID is required.', 'index.php?controller=EventController');
+                return;
+            }
+
+            if (!$status || !in_array($status, ['active', 'draft', 'cancelled', 'completed', 'archived'])) {
+                if ($this->isAjaxRequest()) {
+                    header('Content-Type: application/json');
+                    echo json_encode(['success' => false, 'message' => 'Invalid status']);
+                    exit;
+                }
+                $this->toastError('Invalid status.', 'index.php?controller=EventController');
+                return;
+            }
+
+            // Update event status
+            $result = $this->eventModel->updateEventStatus($eventId, $status, $clientId);
+
+            if ($result) {
+                $statusMessages = [
+                    'active' => 'Event activated successfully!',
+                    'draft' => 'Event saved as draft successfully!',
+                    'cancelled' => 'Event cancelled successfully!',
+                    'completed' => 'Event marked as completed successfully!',
+                    'archived' => 'Event archived successfully!'
+                ];
+
+                $message = $statusMessages[$status] ?? 'Event status updated successfully!';
+
+                if ($this->isAjaxRequest()) {
+                    header('Content-Type: application/json');
+                    echo json_encode([
+                        'success' => true,
+                        'message' => $message
+                    ]);
+                    exit;
+                } else {
+                    $this->toastSuccess($message, 'index.php?controller=EventController');
+                }
+            } else {
+                if ($this->isAjaxRequest()) {
+                    header('Content-Type: application/json');
+                    echo json_encode([
+                        'success' => false,
+                        'message' => 'Failed to update event status. Please try again.'
+                    ]);
+                    exit;
+                } else {
+                    $this->toastError('Failed to update event status. Please try again.', 'index.php?controller=EventController');
+                }
+            }
+
+        } catch (Exception $e) {
+            error_log("Event status update error: " . $e->getMessage());
 
             if ($this->isAjaxRequest()) {
                 header('Content-Type: application/json');

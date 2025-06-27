@@ -29,7 +29,8 @@ class OpinionPollConfirmations {
                 '.activate-poll-btn',
                 '.pause-poll-btn', 
                 '.resume-poll-btn',
-                '.archive-poll-btn'
+                '.archive-poll-btn',
+                '.unarchive-poll-btn'
             ];
             
             const target = e.target.closest(statusButtons.join(', '));
@@ -78,6 +79,10 @@ class OpinionPollConfirmations {
             action = 'archive';
             status = 'archived';
             actionText = 'archive';
+        } else if (button.classList.contains('unarchive-poll-btn')) {
+            action = 'unarchive';
+            status = 'active';
+            actionText = 'unarchive';
         }
 
         if (!pollId || !action) {
@@ -132,6 +137,11 @@ class OpinionPollConfirmations {
                 subtext = 'This will permanently close the poll and preserve results.';
                 confirmClass = 'theme-btn-secondary';
                 icon = 'fas fa-archive';
+                break;
+            case 'unarchive':
+                subtext = 'This will make the poll available to users again.';
+                confirmClass = 'theme-btn-success';
+                icon = 'fas fa-play-circle';
                 break;
         }
 
@@ -188,7 +198,7 @@ class OpinionPollConfirmations {
                 }
                 // Reload polls
                 if (typeof loadPolls === 'function') {
-                    loadPolls(typeof currentPage !== 'undefined' ? currentPage : 1);
+                    loadPolls(typeof window.opinionPollsState !== 'undefined' ? window.opinionPollsState.currentPage : 1);
                 }
             } else {
                 if (typeof showSimpleToast === 'function') {
@@ -233,7 +243,7 @@ class OpinionPollConfirmations {
                 }
                 // Reload polls
                 if (typeof loadPolls === 'function') {
-                    loadPolls(typeof currentPage !== 'undefined' ? currentPage : 1);
+                    loadPolls(typeof window.opinionPollsState !== 'undefined' ? window.opinionPollsState.currentPage : 1);
                 }
             } else {
                 if (typeof showSimpleToast === 'function') {
@@ -313,7 +323,7 @@ class OpinionPollConfirmations {
                 }
                 // Reload polls
                 if (typeof loadPolls === 'function') {
-                    loadPolls(typeof currentPage !== 'undefined' ? currentPage : 1);
+                    loadPolls(typeof window.opinionPollsState !== 'undefined' ? window.opinionPollsState.currentPage : 1);
                 }
             } else {
                 if (typeof showSimpleToast === 'function') {

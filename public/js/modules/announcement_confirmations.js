@@ -22,7 +22,8 @@ class AnnouncementConfirmations {
             const statusButtons = [
                 '.activate-announcement-btn',
                 '.archive-announcement-btn', 
-                '.cancel-schedule-btn'
+                '.cancel-schedule-btn',
+                '.unarchive-announcement-btn'
             ];
             
             const target = e.target.closest(statusButtons.join(', '));
@@ -67,6 +68,10 @@ class AnnouncementConfirmations {
             action = 'cancel_schedule';
             status = 'draft';
             actionText = 'cancel schedule for';
+        } else if (button.classList.contains('unarchive-announcement-btn')) {
+            action = 'activate';
+            status = 'active';
+            actionText = 'unarchive';
         }
 
         if (!announcementId || !action) {
@@ -116,6 +121,11 @@ class AnnouncementConfirmations {
                 subtext = 'This will cancel the scheduled publication and save as draft.';
                 confirmClass = 'theme-btn-warning';
                 icon = 'fas fa-times-circle';
+                break;
+            case 'unarchive':
+                subtext = 'This will make the announcement visible to users.';
+                confirmClass = 'theme-btn-success';
+                icon = 'fas fa-play-circle';
                 break;
         }
 
@@ -173,7 +183,7 @@ class AnnouncementConfirmations {
                 }
                 // Reload announcements
                 if (typeof loadAnnouncements === 'function') {
-                    loadAnnouncements(typeof currentPage !== 'undefined' ? currentPage : 1);
+                    loadAnnouncements(typeof window.announcementState !== 'undefined' ? window.announcementState.currentPage : 1);
                 }
             } else {
                 if (typeof showSimpleToast === 'function') {
@@ -218,7 +228,7 @@ class AnnouncementConfirmations {
                 }
                 // Reload announcements
                 if (typeof loadAnnouncements === 'function') {
-                    loadAnnouncements(typeof currentPage !== 'undefined' ? currentPage : 1);
+                    loadAnnouncements(typeof window.announcementState !== 'undefined' ? window.announcementState.currentPage : 1);
                 }
             } else {
                 if (typeof showSimpleToast === 'function') {
@@ -298,7 +308,7 @@ class AnnouncementConfirmations {
                 }
                 // Reload announcements
                 if (typeof loadAnnouncements === 'function') {
-                    loadAnnouncements(typeof currentPage !== 'undefined' ? currentPage : 1);
+                    loadAnnouncements(typeof window.announcementState !== 'undefined' ? window.announcementState.currentPage : 1);
                 }
             } else {
                 if (typeof showSimpleToast === 'function') {

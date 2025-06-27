@@ -406,6 +406,42 @@ window.confirmAction = function(actionType, itemName, onConfirm, customMessage =
             subtext: customSubtext || getTranslation('confirmation.archive.subtext', {}) || 'This will permanently close the item and preserve its data.',
             confirmText: getTranslation('confirmation.archive.button', {}) || 'Archive',
             confirmClass: 'theme-btn-secondary'
+        },
+        'unarchive': {
+            title: getTranslation('confirmation.unarchive.title', {}) || 'Unarchive Confirmation',
+            icon: 'fas fa-play-circle',
+            iconColor: '#28a745',
+            message: customMessage || getTranslation('confirmation.unarchive.message', {item: itemName}) || `Are you sure you want to unarchive this ${itemName}?`,
+            subtext: customSubtext || getTranslation('confirmation.unarchive.subtext', {}) || 'This will make the item available to users again.',
+            confirmText: getTranslation('confirmation.unarchive.button', {}) || 'Unarchive',
+            confirmClass: 'theme-btn-success'
+        },
+        'cancel': {
+            title: getTranslation('confirmation.cancel.event.title', {}) || 'Cancel Event',
+            icon: 'fas fa-times-circle',
+            iconColor: '#ffc107',
+            message: customMessage || getTranslation('confirmation.cancel.event.message', {item: itemName, title: itemName}) || `Are you sure you want to cancel this ${itemName}?`,
+            subtext: customSubtext || getTranslation('confirmation.cancel.event.subtext', {}) || 'Participants will be notified about the cancellation. You can reactivate the event later if needed.',
+            confirmText: getTranslation('confirmation.cancel.event.button', {}) || 'Cancel Event',
+            confirmClass: 'theme-btn-warning'
+        },
+        'complete': {
+            title: getTranslation('confirmation.complete.event.title', {}) || 'Mark Event as Completed',
+            icon: 'fas fa-check-circle',
+            iconColor: '#28a745',
+            message: customMessage || getTranslation('confirmation.complete.event.message', {item: itemName, title: itemName}) || `Mark the event as completed?`,
+            subtext: customSubtext || getTranslation('confirmation.complete.event.subtext', {}) || 'This will change the event status to completed and it will appear in the past events section.',
+            confirmText: getTranslation('confirmation.complete.event.button', {}) || 'Mark Complete',
+            confirmClass: 'theme-btn-success'
+        },
+        'reactivate': {
+            title: getTranslation('confirmation.reactivate.event.title', {}) || 'Reactivate Event',
+            icon: 'fas fa-play-circle',
+            iconColor: '#28a745',
+            message: customMessage || getTranslation('confirmation.reactivate.event.message', {item: itemName, title: itemName}) || `Reactivate the event?`,
+            subtext: customSubtext || getTranslation('confirmation.reactivate.event.subtext', {}) || 'This will change the event status back to active and make it available to participants.',
+            confirmText: getTranslation('confirmation.reactivate.event.button', {}) || 'Reactivate',
+            confirmClass: 'theme-btn-success'
         }
     };
 

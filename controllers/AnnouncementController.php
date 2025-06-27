@@ -799,4 +799,58 @@ class AnnouncementController extends BaseController {
         return !empty($_SERVER['HTTP_X_REQUESTED_WITH']) &&
                strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) === 'xmlhttprequest';
     }
+
+    /**
+     * Manually trigger expiration updates for testing and admin purposes
+     */
+    public function updateExpired() {
+        // Check if user is logged in
+        if (!isset($_SESSION['user']['client_id'])) {
+            $this->toastError('Unauthorized access. Please log in.', 'index.php?controller=LoginController');
+            return;
+        }
+
+        // Check user role permissions - only admins can trigger this
+        $systemRole = $_SESSION['user']['system_role'] ?? '';
+        if (!in_array($systemRole, ['super_admin', 'admin'])) {
+            $this->toastError('Access denied. Insufficient permissions.', 'index.php?controller=DashboardController');
+            return;
+        }
+
+        try {
+            $clientId = $_SESSION['user']['client_id'];
+            
+            // Update expired announcements
+            $result = $this->announcementModel->updateExpiredAnnouncements($clientId);
+            
+            // Get statistics
+            $stats = $this->announcementModel->getExpiredAnnouncementsStats($clientId);
+            
+            if ($this->isAjaxRequest()) {
+                header('Content-Type: application/json');
+                echo json_encode([
+                    'success' => true,
+                    'message' => 'Expired announcements updated successfully!',
+                    'stats' => $stats
+                ]);
+                exit;
+            } else {
+                $this->toastSuccess('Expired announcements updated successfully!', 'index.php?controller=AnnouncementController');
+            }
+
+        } catch (Exception $e) {
+            error_log("Expiration update error: " . $e->getMessage());
+
+            if ($this->isAjaxRequest()) {
+                header('Content-Type: application/json');
+                echo json_encode([
+                    'success' => false,
+                    'message' => 'An unexpected error occurred. Please try again.'
+                ]);
+                exit;
+            } else {
+                $this->toastError('An unexpected error occurred. Please try again.', 'index.php?controller=AnnouncementController');
+            }
+        }
+    }
 }

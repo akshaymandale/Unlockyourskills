@@ -778,6 +778,28 @@
     "item.survey_question": "survey question \"{title}\"",
     "item.feedback_question": "feedback question \"{title}\"",
     "item.organization": "organization \"{name}\"",
+    "item.event": "event \"{title}\"",
+
+    "_comment_event_confirmations": "Event Confirmation Messages",
+    "confirmation.cancel.event.title": "Cancel Event",
+    "confirmation.cancel.event.message": "Are you sure you want to cancel the event \"{title}\"?",
+    "confirmation.cancel.event.subtext": "Participants will be notified about the cancellation. You can reactivate the event later if needed.",
+    "confirmation.cancel.event.button": "Cancel Event",
+    
+    "confirmation.complete.event.title": "Mark Event as Completed",
+    "confirmation.complete.event.message": "Mark the event \"{title}\" as completed?",
+    "confirmation.complete.event.subtext": "This will change the event status to completed and it will appear in the past events section.",
+    "confirmation.complete.event.button": "Mark Complete",
+    
+    "confirmation.reactivate.event.title": "Reactivate Event",
+    "confirmation.reactivate.event.message": "Reactivate the event \"{title}\"?",
+    "confirmation.reactivate.event.subtext": "This will change the event status back to active and make it available to participants.",
+    "confirmation.reactivate.event.button": "Reactivate",
+
+    "confirmation.archive.event.title": "Archive Event",
+    "confirmation.archive.event.message": "Archive the event \"{title}\"?",
+    "confirmation.archive.event.subtext": "This will permanently archive the event. It will be hidden from the main events list but can be restored later.",
+    "confirmation.archive.event.button": "Archive",
 
     "organization_management": "Organization Management",
     "add_organization": "Add Organization",
