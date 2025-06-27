@@ -75,9 +75,67 @@ class AnnouncementModel {
     }
 
     /**
+     * Update expired announcements automatically
+     * This method should be called before fetching announcements to ensure proper status
+     */
+    public function updateExpiredAnnouncements($clientId = null) {
+        $sql = "UPDATE announcements 
+                SET status = 'expired', 
+                    updated_at = NOW() 
+                WHERE status = 'active' 
+                AND end_datetime IS NOT NULL 
+                AND end_datetime < NOW()";
+        
+        $params = [];
+        
+        if ($clientId) {
+            $sql .= " AND client_id = ?";
+            $params[] = $clientId;
+        }
+        
+        $stmt = $this->conn->prepare($sql);
+        return $stmt->execute($params);
+    }
+
+    /**
+     * Update expired announcements for all clients
+     * Useful for admin maintenance tasks or cron jobs
+     */
+    public function updateAllExpiredAnnouncements() {
+        return $this->updateExpiredAnnouncements(null);
+    }
+
+    /**
+     * Get expired announcements statistics
+     */
+    public function getExpiredAnnouncementsStats($clientId = null) {
+        $sql = "SELECT 
+                    COUNT(*) as total_expired,
+                    COUNT(CASE WHEN end_datetime < DATE_SUB(NOW(), INTERVAL 1 DAY) THEN 1 END) as expired_yesterday,
+                    COUNT(CASE WHEN end_datetime < DATE_SUB(NOW(), INTERVAL 7 DAY) THEN 1 END) as expired_this_week,
+                    COUNT(CASE WHEN end_datetime < DATE_SUB(NOW(), INTERVAL 30 DAY) THEN 1 END) as expired_this_month
+                FROM announcements 
+                WHERE status = 'expired' AND is_deleted = 0";
+        
+        $params = [];
+        
+        if ($clientId) {
+            $sql .= " AND client_id = ?";
+            $params[] = $clientId;
+        }
+        
+        $stmt = $this->conn->prepare($sql);
+        $stmt->execute($params);
+        return $stmt->fetch(PDO::FETCH_ASSOC);
+    }
+
+    /**
      * Get announcements with pagination and filters
      */
     public function getAnnouncements($clientId, $filters = [], $page = 1, $limit = 10) {
+        // First, update any expired announcements
+        $this->updateExpiredAnnouncements($clientId);
+        
         $offset = ($page - 1) * $limit;
         
         $sql = "SELECT a.*,
@@ -150,6 +208,9 @@ class AnnouncementModel {
      * Get total count for pagination
      */
     public function getAnnouncementsCount($clientId, $filters = []) {
+        // First, update any expired announcements to ensure accurate count
+        $this->updateExpiredAnnouncements($clientId);
+        
         $sql = "SELECT COUNT(*) FROM announcements a WHERE a.client_id = ? AND a.is_deleted = 0";
         $params = [$clientId];
 
@@ -200,6 +261,9 @@ class AnnouncementModel {
      * Get announcement by ID
      */
     public function getAnnouncementById($id, $clientId) {
+        // First, update any expired announcements to ensure accurate status
+        $this->updateExpiredAnnouncements($clientId);
+        
         $sql = "SELECT a.*,
                        up.full_name as creator_name,
                        up.email as creator_email

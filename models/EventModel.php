@@ -176,6 +176,15 @@ class EventModel {
     }
 
     /**
+     * Update event status only
+     */
+    public function updateEventStatus($id, $status, $clientId) {
+        $sql = "UPDATE events SET status = ?, updated_at = NOW() WHERE id = ? AND client_id = ?";
+        $stmt = $this->conn->prepare($sql);
+        return $stmt->execute([$status, $id, $clientId]);
+    }
+
+    /**
      * Get event RSVP responses
      */
     public function getEventRSVPs($eventId, $clientId = null) {

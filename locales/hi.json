@@ -689,6 +689,28 @@
     "item.survey_question": "सर्वेक्षण प्रश्न \"{title}\"",
     "item.feedback_question": "फीडबैक प्रश्न \"{title}\"",
     "item.organization": "संगठन \"{name}\"",
+    "item.event": "कार्यक्रम \"{title}\"",
+
+    "_comment_event_confirmations": "कार्यक्रम पुष्टिकरण संदेश",
+    "confirmation.cancel.event.title": "कार्यक्रम रद्द करें",
+    "confirmation.cancel.event.message": "क्या आप वाकई कार्यक्रम \"{title}\" को रद्द करना चाहते हैं?",
+    "confirmation.cancel.event.subtext": "प्रतिभागियों को रद्दीकरण के बारे में सूचित किया जाएगा। आप बाद में कार्यक्रम को पुनः सक्रिय कर सकते हैं।",
+    "confirmation.cancel.event.button": "कार्यक्रम रद्द करें",
+    
+    "confirmation.complete.event.title": "कार्यक्रम को पूर्ण के रूप में चिह्नित करें",
+    "confirmation.complete.event.message": "कार्यक्रम \"{title}\" को पूर्ण के रूप में चिह्नित करें?",
+    "confirmation.complete.event.subtext": "यह कार्यक्रम की स्थिति को पूर्ण में बदल देगा और यह पिछले कार्यक्रमों के खंड में दिखाई देगा।",
+    "confirmation.complete.event.button": "पूर्ण चिह्नित करें",
+    
+    "confirmation.reactivate.event.title": "कार्यक्रम पुनः सक्रिय करें",
+    "confirmation.reactivate.event.message": "कार्यक्रम \"{title}\" को पुनः सक्रिय करें?",
+    "confirmation.reactivate.event.subtext": "यह कार्यक्रम की स्थिति को वापस सक्रिय में बदल देगा और इसे प्रतिभागियों के लिए उपलब्ध कराएगा।",
+    "confirmation.reactivate.event.button": "पुनः सक्रिय करें",
+
+    "confirmation.archive.event.title": "कार्यक्रम संग्रहित करें",
+    "confirmation.archive.event.message": "कार्यक्रम \"{title}\" को संग्रहित करें?",
+    "confirmation.archive.event.subtext": "यह कार्यक्रम को स्थायी रूप से संग्रहित करेगा। यह मुख्य कार्यक्रम सूची से छिप जाएगा लेकिन बाद में पुनर्स्थापित किया जा सकता है।",
+    "confirmation.archive.event.button": "संग्रहित करें",
 
     "organization_management": "संगठन प्रबंधन",
     "add_organization": "संगठन जोड़ें",

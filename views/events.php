@@ -85,6 +85,7 @@ include 'includes/sidebar.php';
                                     <option value="draft">Draft</option>
                                     <option value="cancelled">Cancelled</option>
                                     <option value="completed">Completed</option>
+                                    <option value="archived">Archived</option>
                                 </select>
                             </div>
 
@@ -469,6 +470,7 @@ include 'includes/sidebar.php';
                                 <option value="draft">Draft</option>
                                 <option value="cancelled">Cancelled</option>
                                 <option value="completed">Completed</option>
+                                <option value="archived">Archived</option>
                             </select>
                             <div class="invalid-feedback"></div>
                         </div>
@@ -509,17 +511,19 @@ include 'includes/sidebar.php';
 </div>
 
 <script>
-// Global variables
-let currentPage = 1;
-let currentSearch = '';
-let currentFilters = {
-    status: '',
-    event_type: '',
-    audience_type: '',
-    date_from: '',
-    date_to: ''
+// Namespace for event state
+window.eventState = {
+    currentPage: 1,
+    currentSearch: '',
+    currentFilters: {
+        status: '',
+        event_type: '',
+        audience_type: '',
+        date_from: '',
+        date_to: ''
+    },
+    isLoading: false
 };
-let isLoading = false;
 
 document.addEventListener('DOMContentLoaded', function() {
     // Initialize event management functionality
@@ -583,7 +587,7 @@ function initializeFilters() {
     // Search with debounce
     if (searchInput) {
         const debouncedSearch = debounce((searchValue) => {
-            currentSearch = searchValue;
+            window.eventState.currentSearch = searchValue;
             loadEvents(1);
         }, 500);
 
@@ -595,21 +599,21 @@ function initializeFilters() {
     // Filter dropdowns
     if (statusFilter) {
         statusFilter.addEventListener('change', function() {
-            currentFilters.status = this.value;
+            window.eventState.currentFilters.status = this.value;
             loadEvents(1);
         });
     }
 
     if (eventTypeFilter) {
         eventTypeFilter.addEventListener('change', function() {
-            currentFilters.event_type = this.value;
+            window.eventState.currentFilters.event_type = this.value;
             loadEvents(1);
         });
     }
 
     if (audienceFilter) {
         audienceFilter.addEventListener('change', function() {
-            currentFilters.audience_type = this.value;
+            window.eventState.currentFilters.audience_type = this.value;
             loadEvents(1);
         });
     }
@@ -628,8 +632,8 @@ function initializeFilters() {
             const dateFrom = document.getElementById('dateFrom').value;
             const dateTo = document.getElementById('dateTo').value;
 
-            if (dateFrom) currentFilters.date_from = dateFrom;
-            if (dateTo) currentFilters.date_to = dateTo;
+            if (dateFrom) window.eventState.currentFilters.date_from = dateFrom;
+            if (dateTo) window.eventState.currentFilters.date_to = dateTo;
 
             loadEvents(1);
         });
@@ -640,8 +644,8 @@ function initializeFilters() {
         clearDateFilter.addEventListener('click', function() {
             document.getElementById('dateFrom').value = '';
             document.getElementById('dateTo').value = '';
-            delete currentFilters.date_from;
-            delete currentFilters.date_to;
+            delete window.eventState.currentFilters.date_from;
+            delete window.eventState.currentFilters.date_to;
             loadEvents(1);
         });
     }
@@ -652,7 +656,7 @@ function initializeFilters() {
             // Clear search
             if (searchInput) {
                 searchInput.value = '';
-                currentSearch = '';
+                window.eventState.currentSearch = '';
             }
 
             // Clear filter dropdowns
@@ -671,7 +675,7 @@ function initializeFilters() {
             if (dateRangeInputs) dateRangeInputs.classList.add('d-none');
 
             // Reset filter object
-            currentFilters = {
+            window.eventState.currentFilters = {
                 status: '',
                 event_type: '',
                 audience_type: '',
@@ -849,10 +853,9 @@ function debounce(func, wait) {
 
 // Load events with filters and pagination
 function loadEvents(page = 1) {
-    if (isLoading) return;
+    if (window.eventState.isLoading) return;
 
-    isLoading = true;
-    currentPage = page;
+    window.eventState.currentPage = page;
 
     // Show loading spinner
     showLoading(true);
@@ -861,8 +864,8 @@ function loadEvents(page = 1) {
     const params = new URLSearchParams({
         page: page,
         limit: 10,
-        search: currentSearch,
-        ...currentFilters
+        search: window.eventState.currentSearch,
+        ...window.eventState.currentFilters
     });
 
     fetch(`index.php?controller=EventController&action=getEvents&${params}`, {
@@ -887,7 +890,7 @@ function loadEvents(page = 1) {
         showError('Network error. Please check your connection and try again.');
     })
     .finally(() => {
-        isLoading = false;
+        window.eventState.isLoading = false;
         showLoading(false);
     });
 }
@@ -996,6 +999,7 @@ function createEventCard(event) {
                             <i class="fas fa-users"></i>
                         </button>
                         ` : ''}
+                        ${getStatusActionButtons(event)}
                         <button type="button" class="btn btn-sm theme-btn-danger delete-event-btn"
                                 data-event-id="${event.id}"
                                 data-event-title="${escapeHtml(event.title)}"
@@ -1028,7 +1032,8 @@ function getStatusBadge(status) {
         'active': '<span class="badge bg-success">Active</span>',
         'draft': '<span class="badge bg-secondary">Draft</span>',
         'cancelled': '<span class="badge bg-danger">Cancelled</span>',
-        'completed': '<span class="badge bg-dark">Completed</span>'
+        'completed': '<span class="badge bg-dark">Completed</span>',
+        'archived': '<span class="badge bg-secondary">Archived</span>'
     };
     return badges[status] || '<span class="badge bg-secondary">Unknown</span>';
 }
@@ -1101,9 +1106,12 @@ function showLoading(show) {
 
 // Show error message
 function showError(message) {
-    // You can implement a toast notification system here
-    console.error(message);
-    alert(message); // Temporary fallback
+    if (typeof showSimpleToast === 'function') {
+        showSimpleToast(message, 'error');
+    } else {
+        console.error(message);
+        alert('Error: ' + message); // Fallback
+    }
 }
 
 // Update pagination
@@ -1176,6 +1184,13 @@ function handleCreateSubmit(e) {
     e.preventDefault();
 
     const form = e.target;
+    
+    // Check client-side validation before submission
+    if (typeof EventValidation !== 'undefined' && !EventValidation.validateForm(form, false)) {
+        // Validation failed, don't submit to server
+        return;
+    }
+    
     const formData = new FormData(form);
 
     // Add AJAX flag
@@ -1204,7 +1219,13 @@ function handleCreateSubmit(e) {
             // Show success message
             showSuccess(data.message);
         } else {
-            showError(data.message);
+            // Only show toast for non-validation errors (server errors, etc.)
+            if (data.message && !data.message.includes('required') && !data.message.includes('Invalid') && !data.message.includes('must be')) {
+                showError(data.message);
+            } else {
+                // For validation errors, let client-side validation handle them
+                console.log('Server validation error:', data.message);
+            }
         }
     })
     .catch(error => {
@@ -1218,6 +1239,13 @@ function handleEditSubmit(e) {
     e.preventDefault();
 
     const form = e.target;
+    
+    // Check client-side validation before submission
+    if (typeof EventValidation !== 'undefined' && !EventValidation.validateForm(form, true)) {
+        // Validation failed, don't submit to server
+        return;
+    }
+    
     const formData = new FormData(form);
 
     // Add AJAX flag
@@ -1238,12 +1266,18 @@ function handleEditSubmit(e) {
             modal.hide();
 
             // Reload events
-            loadEvents(currentPage);
+            loadEvents(window.eventState.currentPage);
 
             // Show success message
             showSuccess(data.message);
         } else {
-            showError(data.message);
+            // Only show toast for non-validation errors (server errors, etc.)
+            if (data.message && !data.message.includes('required') && !data.message.includes('Invalid') && !data.message.includes('must be')) {
+                showError(data.message);
+            } else {
+                // For validation errors, let client-side validation handle them
+                console.log('Server validation error:', data.message);
+            }
         }
     })
     .catch(error => {
@@ -1301,9 +1335,12 @@ function populateEditForm(event, audiences) {
 
 // Show success message
 function showSuccess(message) {
-    // You can implement a toast notification system here
-    console.log(message);
-    alert(message); // Temporary fallback
+    if (typeof showSimpleToast === 'function') {
+        showSimpleToast(message, 'success');
+    } else {
+        console.log(message);
+        alert(message); // Fallback
+    }
 }
 
 // View event attendees
@@ -1334,7 +1371,94 @@ function displayAttendeesModal(rsvps) {
     console.log('Attendees:', rsvps);
     alert(`Total RSVPs: ${rsvps.length}`); // Temporary fallback
 }
+
+// Add status action buttons based on event status
+function getStatusActionButtons(event) {
+    let buttons = '';
+
+    // Check event timing
+    const isUpcoming = new Date(event.start_datetime) > new Date();
+    const isPast = !isUpcoming;
+    const hasEndDate = event.end_datetime && event.end_datetime !== '';
+    const isPastEndDate = hasEndDate && new Date(event.end_datetime) < new Date();
+    
+    if (isUpcoming) {
+        if (event.status === 'active') {
+            // Active events can be cancelled or marked as completed
+            buttons += `
+                <button type="button" class="btn btn-sm btn-outline-warning cancel-event-btn"
+                        data-event-id="${event.id}"
+                        data-event-title="${escapeHtml(event.title)}"
+                        title="Cancel Event">
+                    <i class="fas fa-times-circle"></i>
+                </button>
+                <button type="button" class="btn btn-sm btn-outline-success complete-event-btn"
+                        data-event-id="${event.id}"
+                        data-event-title="${escapeHtml(event.title)}"
+                        title="Mark as Completed">
+                    <i class="fas fa-check-circle"></i>
+                </button>
+            `;
+        } else if (event.status === 'cancelled') {
+            // Cancelled events can be reactivated
+            buttons += `
+                <button type="button" class="btn btn-sm btn-outline-success reactivate-event-btn"
+                        data-event-id="${event.id}"
+                        data-event-title="${escapeHtml(event.title)}"
+                        title="Reactivate Event">
+                    <i class="fas fa-play-circle"></i>
+                </button>
+            `;
+        } else if (event.status === 'completed') {
+            // Completed events can be reactivated
+            buttons += `
+                <button type="button" class="btn btn-sm btn-outline-success reactivate-event-btn"
+                        data-event-id="${event.id}"
+                        data-event-title="${escapeHtml(event.title)}"
+                        title="Reactivate Event">
+                    <i class="fas fa-play-circle"></i>
+                </button>
+            `;
+        }
+    } else {
+        // For past events
+        if (event.status === 'active') {
+            // Past active events can be marked as completed
+            buttons += `
+                <button type="button" class="btn btn-sm btn-outline-success complete-event-btn"
+                        data-event-id="${event.id}"
+                        data-event-title="${escapeHtml(event.title)}"
+                        title="Mark as Completed">
+                    <i class="fas fa-check-circle"></i>
+                </button>
+            `;
+        }
+        
+        // Archive button for:
+        // 1. Past events that have ended (past end date)
+        // 2. Completed events
+        // 3. Draft events that are past their start date
+        if (isPastEndDate || event.status === 'completed' || 
+            (event.status === 'draft' && isPast)) {
+            buttons += `
+                <button type="button" class="btn btn-sm btn-outline-secondary archive-event-btn"
+                        data-event-id="${event.id}"
+                        data-event-title="${escapeHtml(event.title)}"
+                        title="Archive Event">
+                    <i class="fas fa-archive"></i>
+                </button>
+            `;
+        }
+    }
+
+    return buttons;
+}
 </script>
+
+<!-- Toast Container -->
+<div class="toast-container position-fixed bottom-0 end-0 p-3" id="toastContainer">
+    <!-- Toast notifications will be added here -->
+</div>
 
 <!-- Include event validation and confirmation scripts -->
 <script src="js/event_validation.js"></script>

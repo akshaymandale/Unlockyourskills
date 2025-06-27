@@ -1,7 +1,61 @@
 /**
  * Event Management Confirmation System
  * Handles delete confirmations and status changes for events
+ * Updated to use global confirmation system for consistency
  */
+
+// Translation function (fallback if not available)
+function translate(key, replacements = {}) {
+    // Use global translations object if available
+    if (typeof window.translations === 'object' && window.translations[key]) {
+        let translation = window.translations[key];
+        
+        // Apply replacements if provided
+        if (replacements && typeof replacements === 'object') {
+            Object.keys(replacements).forEach(placeholder => {
+                const regex = new RegExp(`{${placeholder}}`, 'g');
+                translation = translation.replace(regex, replacements[placeholder]);
+            });
+        }
+        
+        return translation;
+    }
+
+    // Fallback to English messages if no translation found
+    const fallbacks = {
+        'confirmation.cancel.event.title': 'Cancel Event',
+        'confirmation.cancel.event.message': 'Are you sure you want to cancel the event "{title}"?',
+        'confirmation.cancel.event.subtext': 'Participants will be notified about the cancellation. You can reactivate the event later if needed.',
+        'confirmation.cancel.event.button': 'Cancel Event',
+        
+        'confirmation.complete.event.title': 'Mark Event as Completed',
+        'confirmation.complete.event.message': 'Mark the event "{title}" as completed?',
+        'confirmation.complete.event.subtext': 'This will change the event status to completed and it will appear in the past events section.',
+        'confirmation.complete.event.button': 'Mark Complete',
+        
+        'confirmation.reactivate.event.title': 'Reactivate Event',
+        'confirmation.reactivate.event.message': 'Reactivate the event "{title}"?',
+        'confirmation.reactivate.event.subtext': 'This will change the event status back to active and make it available to participants.',
+        'confirmation.reactivate.event.button': 'Reactivate',
+        
+        'confirmation.archive.event.title': 'Archive Event',
+        'confirmation.archive.event.message': 'Archive the event "{title}"?',
+        'confirmation.archive.event.subtext': 'This will permanently archive the event. It will be hidden from the main events list but can be restored later.',
+        'confirmation.archive.event.button': 'Archive'
+    };
+
+    let fallback = fallbacks[key] || key;
+    
+    // Apply replacements to fallback
+    if (replacements && typeof replacements === 'object') {
+        Object.keys(replacements).forEach(placeholder => {
+            const regex = new RegExp(`{${placeholder}}`, 'g');
+            fallback = fallback.replace(regex, replacements[placeholder]);
+        });
+    }
+    
+    return fallback;
+}
 
 document.addEventListener('DOMContentLoaded', function() {
     initializeEventConfirmations();
@@ -24,9 +78,12 @@ function initializeEventConfirmations() {
     document.addEventListener('click', function(e) {
         if (e.target.closest('.cancel-event-btn')) {
             e.preventDefault();
+            e.stopPropagation();
+            console.log('🛑 Cancel event button clicked');
             const button = e.target.closest('.cancel-event-btn');
             const eventId = button.dataset.eventId;
             const eventTitle = button.dataset.eventTitle;
+            console.log(`📋 Event ID: ${eventId}, Title: ${eventTitle}`);
             
             showCancelConfirmation(eventId, eventTitle);
         }
@@ -36,105 +93,227 @@ function initializeEventConfirmations() {
     document.addEventListener('click', function(e) {
         if (e.target.closest('.complete-event-btn')) {
             e.preventDefault();
+            e.stopPropagation();
+            console.log('✅ Complete event button clicked');
             const button = e.target.closest('.complete-event-btn');
             const eventId = button.dataset.eventId;
             const eventTitle = button.dataset.eventTitle;
+            console.log(`📋 Event ID: ${eventId}, Title: ${eventTitle}`);
             
             showCompleteConfirmation(eventId, eventTitle);
+        }
+    });
+
+    // Reactivate event confirmation
+    document.addEventListener('click', function(e) {
+        if (e.target.closest('.reactivate-event-btn')) {
+            e.preventDefault();
+            e.stopPropagation();
+            console.log('🔄 Reactivate event button clicked');
+            const button = e.target.closest('.reactivate-event-btn');
+            const eventId = button.dataset.eventId;
+            const eventTitle = button.dataset.eventTitle;
+            console.log(`📋 Event ID: ${eventId}, Title: ${eventTitle}`);
+            
+            showReactivateConfirmation(eventId, eventTitle);
+        }
+    });
+
+    // Archive event confirmation
+    document.addEventListener('click', function(e) {
+        if (e.target.closest('.archive-event-btn')) {
+            e.preventDefault();
+            e.stopPropagation();
+            console.log('📦 Archive event button clicked');
+            const button = e.target.closest('.archive-event-btn');
+            const eventId = button.dataset.eventId;
+            const eventTitle = button.dataset.eventTitle;
+            console.log(`📋 Event ID: ${eventId}, Title: ${eventTitle}`);
+            
+            showArchiveConfirmation(eventId, eventTitle);
         }
     });
 }
 
 function showDeleteConfirmation(eventId, eventTitle) {
-    const modal = createConfirmationModal({
-        title: 'Delete Event',
-        message: `Are you sure you want to delete the event "${eventTitle}"?`,
-        details: 'This action cannot be undone. All associated RSVPs and data will be permanently removed.',
-        confirmText: 'Delete Event',
-        confirmClass: 'btn-danger',
-        icon: 'fas fa-trash-alt',
-        onConfirm: () => deleteEvent(eventId)
-    });
-    
-    modal.show();
+    const itemName = `event "${eventTitle}"`;
+
+    // Use global confirmDelete if available, otherwise fallback to browser confirm
+    if (typeof window.confirmDelete === 'function') {
+        window.confirmDelete(itemName, () => {
+            deleteEvent(eventId);
+        });
+    } else {
+        const fallbackMessage = `Are you sure you want to delete the event "${eventTitle}"?\n\nThis action cannot be undone. All associated RSVPs and data will be permanently removed.`;
+        if (confirm(fallbackMessage)) {
+            deleteEvent(eventId);
+        }
+    }
 }
 
 function showCancelConfirmation(eventId, eventTitle) {
-    const modal = createConfirmationModal({
-        title: 'Cancel Event',
-        message: `Are you sure you want to cancel the event "${eventTitle}"?`,
-        details: 'Participants will be notified about the cancellation. You can reactivate the event later if needed.',
-        confirmText: 'Cancel Event',
-        confirmClass: 'btn-warning',
-        icon: 'fas fa-times-circle',
-        onConfirm: () => updateEventStatus(eventId, 'cancelled')
-    });
+    console.log('🛑 Showing cancel confirmation for event:', eventId, eventTitle);
     
-    modal.show();
+    const message = translate('confirmation.cancel.event.message', {title: eventTitle}) || `Are you sure you want to cancel the event "${eventTitle}"?`;
+    const subtext = translate('confirmation.cancel.event.subtext') || 'Participants will be notified about the cancellation. You can reactivate the event later if needed.';
+
+    console.log('📝 Cancel message:', message);
+    console.log('📝 Cancel subtext:', subtext);
+
+    // Use global confirmAction if available, otherwise fallback to browser confirm
+    if (typeof window.confirmAction === 'function') {
+        console.log('🎯 Using global confirmAction');
+        window.confirmAction('cancel', 'event', () => {
+            console.log('✅ Cancel confirmed, updating status...');
+            updateEventStatus(eventId, 'cancelled');
+        }, message, subtext);
+    } else if (typeof window.showConfirmation === 'function') {
+        console.log('🎯 Using showConfirmation fallback');
+        // Fallback to showConfirmation if confirmAction not available
+        window.showConfirmation({
+            title: translate('confirmation.cancel.event.title') || 'Cancel Event',
+            message: message,
+            subtext: subtext,
+            confirmText: translate('confirmation.cancel.event.button') || 'Cancel Event',
+            confirmClass: 'btn-warning',
+            icon: 'fas fa-times-circle',
+            onConfirm: () => {
+                console.log('✅ Cancel confirmed, updating status...');
+                updateEventStatus(eventId, 'cancelled');
+            },
+            onCancel: () => {
+                console.log('❌ Cancel event action cancelled');
+            }
+        });
+    } else {
+        console.log('🎯 Using browser confirm fallback');
+        // Final fallback to browser confirm
+        if (confirm(`${message}\n\n${subtext}`)) {
+            console.log('✅ Cancel confirmed, updating status...');
+            updateEventStatus(eventId, 'cancelled');
+        }
+    }
 }
 
 function showCompleteConfirmation(eventId, eventTitle) {
-    const modal = createConfirmationModal({
-        title: 'Mark Event as Completed',
-        message: `Mark the event "${eventTitle}" as completed?`,
-        details: 'This will change the event status to completed and it will appear in the past events section.',
-        confirmText: 'Mark Complete',
-        confirmClass: 'btn-success',
-        icon: 'fas fa-check-circle',
-        onConfirm: () => updateEventStatus(eventId, 'completed')
-    });
+    console.log('✅ Showing complete confirmation for event:', eventId, eventTitle);
     
-    modal.show();
+    const message = translate('confirmation.complete.event.message', {title: eventTitle}) || `Mark the event "${eventTitle}" as completed?`;
+    const subtext = translate('confirmation.complete.event.subtext') || 'This will change the event status to completed and it will appear in the past events section.';
+
+    console.log('📝 Complete message:', message);
+    console.log('📝 Complete subtext:', subtext);
+
+    // Use global confirmAction if available, otherwise fallback to browser confirm
+    if (typeof window.confirmAction === 'function') {
+        console.log('🎯 Using global confirmAction');
+        window.confirmAction('complete', 'event', () => {
+            console.log('✅ Complete confirmed, updating status...');
+            updateEventStatus(eventId, 'completed');
+        }, message, subtext);
+    } else if (typeof window.showConfirmation === 'function') {
+        console.log('🎯 Using showConfirmation fallback');
+        // Fallback to showConfirmation if confirmAction not available
+        window.showConfirmation({
+            title: translate('confirmation.complete.event.title') || 'Mark Event as Completed',
+            message: message,
+            subtext: subtext,
+            confirmText: translate('confirmation.complete.event.button') || 'Mark Complete',
+            confirmClass: 'btn-success',
+            icon: 'fas fa-check-circle',
+            onConfirm: () => {
+                console.log('✅ Complete confirmed, updating status...');
+                updateEventStatus(eventId, 'completed');
+            },
+            onCancel: () => {
+                console.log('❌ Mark complete action cancelled');
+            }
+        });
+    } else {
+        console.log('🎯 Using browser confirm fallback');
+        // Final fallback to browser confirm
+        if (confirm(`${message}\n\n${subtext}`)) {
+            console.log('✅ Complete confirmed, updating status...');
+            updateEventStatus(eventId, 'completed');
+        }
+    }
 }
 
-function createConfirmationModal(options) {
-    const modalId = 'confirmationModal_' + Date.now();
+function showReactivateConfirmation(eventId, eventTitle) {
+    const message = translate('confirmation.reactivate.event.message', {title: eventTitle}) || `Reactivate the event "${eventTitle}"?`;
+    const subtext = translate('confirmation.reactivate.event.subtext') || 'This will change the event status back to active and make it available to participants.';
+
+    // Use global confirmAction if available, otherwise fallback to browser confirm
+    if (typeof window.confirmAction === 'function') {
+        window.confirmAction('activate', 'event', () => {
+            updateEventStatus(eventId, 'active');
+        }, message, subtext);
+    } else if (typeof window.showConfirmation === 'function') {
+        // Fallback to showConfirmation if confirmAction not available
+        window.showConfirmation({
+            title: translate('confirmation.reactivate.event.title') || 'Reactivate Event',
+            message: message,
+            subtext: subtext,
+            confirmText: translate('confirmation.reactivate.event.button') || 'Reactivate',
+            confirmClass: 'btn-success',
+            icon: 'fas fa-play-circle',
+            onConfirm: () => {
+                updateEventStatus(eventId, 'active');
+            },
+            onCancel: () => {
+                console.log('Reactivate action cancelled');
+            }
+        });
+    } else {
+        // Final fallback to browser confirm
+        if (confirm(`${message}\n\n${subtext}`)) {
+            updateEventStatus(eventId, 'active');
+        }
+    }
+}
+
+function showArchiveConfirmation(eventId, eventTitle) {
+    console.log('📦 Showing archive confirmation for event:', eventId, eventTitle);
     
-    const modalHTML = `
-        <div class="modal fade" id="${modalId}" tabindex="-1" aria-hidden="true">
-            <div class="modal-dialog modal-dialog-centered">
-                <div class="modal-content">
-                    <div class="modal-header">
-                        <h5 class="modal-title">
-                            <i class="${options.icon} me-2"></i>${options.title}
-                        </h5>
-                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                    </div>
-                    <div class="modal-body">
-                        <div class="alert alert-warning">
-                            <strong>${options.message}</strong>
-                        </div>
-                        <p class="text-muted">${options.details}</p>
-                    </div>
-                    <div class="modal-footer">
-                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                        <button type="button" class="btn ${options.confirmClass}" id="confirmAction_${modalId}">
-                            <i class="${options.icon} me-2"></i>${options.confirmText}
-                        </button>
-                    </div>
-                </div>
-            </div>
-        </div>
-    `;
-    
-    // Add modal to DOM
-    document.body.insertAdjacentHTML('beforeend', modalHTML);
-    
-    const modalElement = document.getElementById(modalId);
-    const modal = new bootstrap.Modal(modalElement);
-    
-    // Add confirm button event listener
-    document.getElementById(`confirmAction_${modalId}`).addEventListener('click', function() {
-        modal.hide();
-        options.onConfirm();
-    });
-    
-    // Clean up modal after it's hidden
-    modalElement.addEventListener('hidden.bs.modal', function() {
-        modalElement.remove();
-    });
-    
-    return modal;
+    const message = translate('confirmation.archive.event.message', {title: eventTitle}) || `Archive the event "${eventTitle}"?`;
+    const subtext = translate('confirmation.archive.event.subtext') || 'This will permanently archive the event. It will be hidden from the main events list but can be restored later.';
+
+    console.log('📝 Archive message:', message);
+    console.log('📝 Archive subtext:', subtext);
+
+    // Use global confirmAction if available, otherwise fallback to browser confirm
+    if (typeof window.confirmAction === 'function') {
+        console.log('🎯 Using global confirmAction');
+        window.confirmAction('archive', 'event', () => {
+            console.log('✅ Archive confirmed, updating status...');
+            updateEventStatus(eventId, 'archived');
+        }, message, subtext);
+    } else if (typeof window.showConfirmation === 'function') {
+        console.log('🎯 Using showConfirmation fallback');
+        // Fallback to showConfirmation if confirmAction not available
+        window.showConfirmation({
+            title: translate('confirmation.archive.event.title') || 'Archive Event',
+            message: message,
+            subtext: subtext,
+            confirmText: translate('confirmation.archive.event.button') || 'Archive',
+            confirmClass: 'btn-secondary',
+            icon: 'fas fa-archive',
+            onConfirm: () => {
+                console.log('✅ Archive confirmed, updating status...');
+                updateEventStatus(eventId, 'archived');
+            },
+            onCancel: () => {
+                console.log('❌ Archive action cancelled');
+            }
+        });
+    } else {
+        console.log('🎯 Using browser confirm fallback');
+        // Final fallback to browser confirm
+        if (confirm(`${message}\n\n${subtext}`)) {
+            console.log('✅ Archive confirmed, updating status...');
+            updateEventStatus(eventId, 'archived');
+        }
+    }
 }
 
 function deleteEvent(eventId) {
@@ -159,7 +338,7 @@ function deleteEvent(eventId) {
             showToast('success', data.message || 'Event deleted successfully!');
             // Reload events if the loadEvents function exists
             if (typeof loadEvents === 'function') {
-                loadEvents(typeof currentPage !== 'undefined' ? currentPage : 1);
+                loadEvents(typeof window.eventState !== 'undefined' ? window.eventState.currentPage : 1);
             } else {
                 // Fallback: reload the page
                 setTimeout(() => {
@@ -180,9 +359,11 @@ function deleteEvent(eventId) {
 }
 
 function updateEventStatus(eventId, status) {
+    console.log(`🔄 Updating event ${eventId} status to ${status}`);
+    
     const formData = new FormData();
     formData.append('controller', 'EventController');
-    formData.append('action', 'update');
+    formData.append('action', 'updateStatus');
     formData.append('event_id', eventId);
     formData.append('status', status);
     formData.append('ajax', '1');
@@ -198,12 +379,12 @@ function updateEventStatus(eventId, status) {
     })
     .then(response => response.json())
     .then(data => {
+        console.log('📡 Server response:', data);
         if (data.success) {
-            const statusText = status.charAt(0).toUpperCase() + status.slice(1);
-            showToast('success', data.message || `Event ${statusText.toLowerCase()} successfully!`);
+            showToast('success', data.message || 'Event status updated successfully!');
             // Reload events if the loadEvents function exists
             if (typeof loadEvents === 'function') {
-                loadEvents(typeof currentPage !== 'undefined' ? currentPage : 1);
+                loadEvents(typeof window.eventState !== 'undefined' ? window.eventState.currentPage : 1);
             } else {
                 // Fallback: reload the page
                 setTimeout(() => {
@@ -215,8 +396,8 @@ function updateEventStatus(eventId, status) {
         }
     })
     .catch(error => {
-        console.error('Error:', error);
-        showToast('error', 'An error occurred while updating the event.');
+        console.error('❌ Error:', error);
+        showToast('error', 'An error occurred while updating the event status.');
     })
     .finally(() => {
         showLoadingState(false);
@@ -224,58 +405,27 @@ function updateEventStatus(eventId, status) {
 }
 
 function showLoadingState(show) {
-    // Disable all action buttons during loading
-    const actionButtons = document.querySelectorAll('.delete-event-btn, .cancel-event-btn, .complete-event-btn, .edit-event-btn');
-    actionButtons.forEach(button => {
-        button.disabled = show;
+    // Show/hide loading spinner or disable buttons
+    const buttons = document.querySelectorAll('.delete-event-btn, .cancel-event-btn, .complete-event-btn, .reactivate-event-btn, .archive-event-btn');
+    buttons.forEach(button => {
         if (show) {
-            button.classList.add('loading');
+            button.disabled = true;
+            button.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Processing...';
         } else {
-            button.classList.remove('loading');
+            button.disabled = false;
+            // Restore original button content (you might need to store this in data attributes)
+            const originalText = button.dataset.originalText || 'Delete';
+            const originalIcon = button.dataset.originalIcon || 'fas fa-trash-alt';
+            button.innerHTML = `<i class="${originalIcon}"></i> ${originalText}`;
         }
     });
 }
 
 function showToast(type, message) {
-    // Check if a toast container exists, if not create one
-    let toastContainer = document.getElementById('toastContainer');
-    if (!toastContainer) {
-        toastContainer = document.createElement('div');
-        toastContainer.id = 'toastContainer';
-        toastContainer.className = 'toast-container position-fixed top-0 end-0 p-3';
-        toastContainer.style.zIndex = '9999';
-        document.body.appendChild(toastContainer);
+    if (typeof showSimpleToast === 'function') {
+        showSimpleToast(message, type);
+    } else {
+        console.log(`${type.toUpperCase()}: ${message}`);
+        alert(message); // Fallback
     }
-    
-    const toastId = 'toast_' + Date.now();
-    const bgClass = type === 'success' ? 'bg-success' : 'bg-danger';
-    const icon = type === 'success' ? 'fas fa-check-circle' : 'fas fa-exclamation-triangle';
-    
-    const toastHTML = `
-        <div id="${toastId}" class="toast ${bgClass} text-white" role="alert" aria-live="assertive" aria-atomic="true">
-            <div class="toast-header ${bgClass} text-white border-0">
-                <i class="${icon} me-2"></i>
-                <strong class="me-auto">${type === 'success' ? 'Success' : 'Error'}</strong>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="toast" aria-label="Close"></button>
-            </div>
-            <div class="toast-body">
-                ${message}
-            </div>
-        </div>
-    `;
-    
-    toastContainer.insertAdjacentHTML('beforeend', toastHTML);
-    
-    const toastElement = document.getElementById(toastId);
-    const toast = new bootstrap.Toast(toastElement, {
-        autohide: true,
-        delay: 5000
-    });
-    
-    toast.show();
-    
-    // Clean up toast after it's hidden
-    toastElement.addEventListener('hidden.bs.toast', function() {
-        toastElement.remove();
-    });
 }

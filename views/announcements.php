@@ -456,10 +456,12 @@ include 'includes/sidebar.php';
 </div>
 
 <script>
-// Global variables
-let currentPage = 1;
-let currentFilters = {};
-let isLoading = false;
+// Namespace for announcement state
+window.announcementState = {
+    currentPage: 1,
+    currentFilters: {},
+    isLoading: false
+};
 
 // Initialize page
 document.addEventListener('DOMContentLoaded', function() {
@@ -492,7 +494,7 @@ function initializeFilters() {
     // Search with debounce
     if (searchInput) {
         const debouncedSearch = debounce((searchValue) => {
-            currentFilters.search = searchValue;
+            window.announcementState.currentFilters.search = searchValue;
             loadAnnouncements(1);
         }, 500);
 
@@ -504,21 +506,21 @@ function initializeFilters() {
     // Filter dropdowns
     if (statusFilter) {
         statusFilter.addEventListener('change', function() {
-            currentFilters.status = this.value;
+            window.announcementState.currentFilters.status = this.value;
             loadAnnouncements(1);
         });
     }
 
     if (audienceFilter) {
         audienceFilter.addEventListener('change', function() {
-            currentFilters.audience_type = this.value;
+            window.announcementState.currentFilters.audience_type = this.value;
             loadAnnouncements(1);
         });
     }
 
     if (urgencyFilter) {
         urgencyFilter.addEventListener('change', function() {
-            currentFilters.urgency = this.value;
+            window.announcementState.currentFilters.urgency = this.value;
             loadAnnouncements(1);
         });
     }
@@ -537,8 +539,8 @@ function initializeFilters() {
             const dateFrom = document.getElementById('dateFrom').value;
             const dateTo = document.getElementById('dateTo').value;
 
-            if (dateFrom) currentFilters.date_from = dateFrom;
-            if (dateTo) currentFilters.date_to = dateTo;
+            if (dateFrom) window.announcementState.currentFilters.date_from = dateFrom;
+            if (dateTo) window.announcementState.currentFilters.date_to = dateTo;
 
             loadAnnouncements(1);
         });
@@ -549,8 +551,8 @@ function initializeFilters() {
         clearDateFilter.addEventListener('click', function() {
             document.getElementById('dateFrom').value = '';
             document.getElementById('dateTo').value = '';
-            delete currentFilters.date_from;
-            delete currentFilters.date_to;
+            delete window.announcementState.currentFilters.date_from;
+            delete window.announcementState.currentFilters.date_to;
             loadAnnouncements(1);
         });
     }
@@ -579,7 +581,7 @@ function initializeFilters() {
             if (dateRangeInputs) dateRangeInputs.classList.add('d-none');
 
             // Reset filter object
-            currentFilters = {};
+            window.announcementState.currentFilters = {};
 
             // Reload announcements
             loadAnnouncements(1);
@@ -709,10 +711,9 @@ function loadCourses(selectElement) {
 
 // Load announcements with filters and pagination
 function loadAnnouncements(page = 1) {
-    if (isLoading) return;
+    if (window.announcementState.isLoading) return;
 
-    isLoading = true;
-    currentPage = page;
+    window.announcementState.currentPage = page;
 
     // Show loading spinner
     showLoading(true);
@@ -721,7 +722,7 @@ function loadAnnouncements(page = 1) {
     const params = new URLSearchParams({
         page: page,
         limit: 10,
-        ...currentFilters
+        ...window.announcementState.currentFilters
     });
 
     fetch(`index.php?controller=AnnouncementController&action=getAnnouncements&${params}`, {
@@ -746,7 +747,7 @@ function loadAnnouncements(page = 1) {
         showError('Network error. Please check your connection and try again.');
     })
     .finally(() => {
-        isLoading = false;
+        window.announcementState.isLoading = false;
         showLoading(false);
     });
 }
@@ -896,11 +897,10 @@ function getStatusActionButton(announcement) {
                 </button>
             `;
         case 'active':
+            // Active announcements should not have action buttons - they are live and visible
             return `
-                <button type="button" class="btn btn-sm theme-btn-warning pause-announcement-btn"
-                        data-announcement-id="${announcement.id}"
-                        title="Archive Announcement">
-                    <i class="fas fa-archive"></i>
+                <button type="button" class="btn btn-sm btn-outline-secondary" disabled title="Active - No actions available">
+                    <i class="fas fa-check"></i>
                 </button>
             `;
         case 'scheduled':
@@ -909,6 +909,22 @@ function getStatusActionButton(announcement) {
                         data-announcement-id="${announcement.id}"
                         title="Cancel Schedule">
                     <i class="fas fa-times"></i>
+                </button>
+            `;
+        case 'expired':
+            return `
+                <button type="button" class="btn btn-sm theme-btn-secondary archive-announcement-btn"
+                        data-announcement-id="${announcement.id}"
+                        title="Archive Announcement">
+                    <i class="fas fa-archive"></i>
+                </button>
+            `;
+        case 'archived':
+            return `
+                <button type="button" class="btn btn-sm theme-btn-success unarchive-announcement-btn"
+                        data-announcement-id="${announcement.id}"
+                        title="Unarchive Announcement">
+                    <i class="fas fa-box-open"></i>
                 </button>
             `;
         default:
@@ -1132,7 +1148,7 @@ function handleCreateSubmit(e) {
             document.getElementById('courseSelectionRow').classList.add('d-none');
 
             // Reload announcements
-            loadAnnouncements(currentPage);
+            loadAnnouncements(window.announcementState.currentPage);
         } else {
             showError(data.message);
         }
@@ -1178,7 +1194,7 @@ function handleEditSubmit(e) {
             modal.hide();
 
             // Reload announcements
-            loadAnnouncements(currentPage);
+            loadAnnouncements(window.announcementState.currentPage);
         } else {
             showError(data.message);
         }
@@ -1316,7 +1332,7 @@ function executeAnnouncementDelete(announcementId) {
     .then(data => {
         if (data.success) {
             showSuccess(data.message);
-            loadAnnouncements(currentPage);
+            loadAnnouncements(window.announcementState.currentPage);
         } else {
             showError(data.message);
         }
@@ -1369,7 +1385,7 @@ function executeStatusUpdate(announcementId, status) {
     .then(data => {
         if (data.success) {
             showSuccess(data.message);
-            loadAnnouncements(currentPage);
+            loadAnnouncements(window.announcementState.currentPage);
         } else {
             showError(data.message);
         }
