@@ -961,8 +961,9 @@ public function deleteImagePackage($id)
             $this->conn->beginTransaction();
 
             // Insert into survey_package
-            $stmt = $this->conn->prepare("INSERT INTO survey_package (title, tags, created_by, created_at, is_deleted) VALUES (?, ?, ?, NOW(), 0)");
+            $stmt = $this->conn->prepare("INSERT INTO survey_package (client_id, title, tags, created_by, created_at, is_deleted) VALUES (?, ?, ?, ?, NOW(), 0)");
             $stmt->execute([
+                $data['client_id'],
                 $data['title'],
                 $data['tags'],
                 $data['created_by']
@@ -994,8 +995,9 @@ public function deleteImagePackage($id)
             $this->conn->beginTransaction();
 
             // Update survey_package table
-            $stmt = $this->conn->prepare("UPDATE survey_package SET title = ?, tags = ?, updated_by = ?, updated_at = NOW() WHERE id = ?");
+            $stmt = $this->conn->prepare("UPDATE survey_package SET client_id = ?, title = ?, tags = ?, updated_by = ?, updated_at = NOW() WHERE id = ?");
             $stmt->execute([
+                $data['client_id'],
                 $data['title'],
                 $data['tags'],
                 $data['created_by'],
@@ -1023,19 +1025,29 @@ public function deleteImagePackage($id)
 
 
     //Get All Surveys (excluding deleted)
-    public function getAllSurvey()
+    public function getAllSurvey($clientId = null)
     {
-        $stmt = $this->conn->prepare("SELECT * FROM survey_package WHERE is_deleted = 0 ORDER BY created_at DESC");
-        $stmt->execute();
+        if ($clientId) {
+            $stmt = $this->conn->prepare("SELECT * FROM survey_package WHERE client_id = ? AND is_deleted = 0 ORDER BY created_at DESC");
+            $stmt->execute([$clientId]);
+        } else {
+            $stmt = $this->conn->prepare("SELECT * FROM survey_package WHERE is_deleted = 0 ORDER BY created_at DESC");
+            $stmt->execute();
+        }
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
 
     //Get Survey by ID with Questions
-    public function getSurveyByIdWithQuestions($surveyId)
+    public function getSurveyByIdWithQuestions($surveyId, $clientId = null)
     {
         // Get survey basic info
-        $stmt = $this->conn->prepare("SELECT * FROM survey_package WHERE id = ? AND is_deleted = 0");
-        $stmt->execute([$surveyId]);
+        if ($clientId) {
+            $stmt = $this->conn->prepare("SELECT * FROM survey_package WHERE id = ? AND client_id = ? AND is_deleted = 0");
+            $stmt->execute([$surveyId, $clientId]);
+        } else {
+            $stmt = $this->conn->prepare("SELECT * FROM survey_package WHERE id = ? AND is_deleted = 0");
+            $stmt->execute([$surveyId]);
+        }
         $survey = $stmt->fetch(PDO::FETCH_ASSOC);
 
         if (!$survey) {
@@ -1068,10 +1080,15 @@ public function deleteImagePackage($id)
     // Feedback Package Methods (following survey pattern)
 
     //Get All Feedback Packages (excluding deleted)
-    public function getAllFeedback()
+    public function getAllFeedback($clientId = null)
     {
-        $stmt = $this->conn->prepare("SELECT * FROM feedback_package WHERE is_deleted = 0 ORDER BY created_at DESC");
-        $stmt->execute();
+        if ($clientId) {
+            $stmt = $this->conn->prepare("SELECT * FROM feedback_package WHERE client_id = ? AND is_deleted = 0 ORDER BY created_at DESC");
+            $stmt->execute([$clientId]);
+        } else {
+            $stmt = $this->conn->prepare("SELECT * FROM feedback_package WHERE is_deleted = 0 ORDER BY created_at DESC");
+            $stmt->execute();
+        }
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
 
@@ -1110,8 +1127,9 @@ public function deleteImagePackage($id)
             $this->conn->beginTransaction();
 
             // Insert into feedback_package
-            $stmt = $this->conn->prepare("INSERT INTO feedback_package (title, tags, created_by, created_at, is_deleted) VALUES (?, ?, ?, NOW(), 0)");
+            $stmt = $this->conn->prepare("INSERT INTO feedback_package (client_id, title, tags, created_by, created_at, is_deleted) VALUES (?, ?, ?, ?, NOW(), 0)");
             $stmt->execute([
+                $data['client_id'],
                 $data['title'],
                 $data['tags'],
                 $data['created_by']
@@ -1142,8 +1160,9 @@ public function deleteImagePackage($id)
             $this->conn->beginTransaction();
 
             // Update feedback_package table
-            $stmt = $this->conn->prepare("UPDATE feedback_package SET title = ?, tags = ?, updated_by = ?, updated_at = NOW() WHERE id = ?");
+            $stmt = $this->conn->prepare("UPDATE feedback_package SET client_id = ?, title = ?, tags = ?, updated_by = ?, updated_at = NOW() WHERE id = ?");
             $stmt->execute([
+                $data['client_id'],
                 $data['title'],
                 $data['tags'],
                 $data['created_by'],

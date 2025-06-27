@@ -728,5 +728,5 @@ include 'includes/sidebar.php';
 
 <?php require_once 'includes/footer.php'; ?>
 
-<script src="public/js/social_feed_validation.js"></script>
-<script src="public/js/social_feed.js"></script> 
+<script src="<?= UrlHelper::url('public/js/social_feed_validation.js') ?>"></script>
+<script src="<?= UrlHelper::url('public/js/social_feed.js') ?>"></script> 

@@ -3595,4 +3595,6 @@ $languageList = $vlrController->getLanguages();
     </div>
 </div>
 
+<script src="<?= UrlHelper::url('public/js/modules/assessment_confirmations.js') ?>"></script>
+<script src="<?= UrlHelper::url('public/js/modules/vlr_confirmations.js') ?>"></script>
 <?php include 'includes/footer.php'; ?>

@@ -1,3 +1,4 @@
+console.log('[assessment_question.js] loaded');
 document.addEventListener('DOMContentLoaded', function () {
     // ✅ Assessment Question Search and Filter Functionality
     // Global variables to track current state
@@ -490,15 +491,18 @@ document.addEventListener('DOMContentLoaded', function () {
         }
     }
     function loadQuestionForEdit(questionId) {
-        // Fetch question data via AJAX
-        fetch(`/unlockyourskills/vlr/questions/${questionId}`)
+        const url = `/unlockyourskills/vlr/questions/${questionId}`;
+        console.log('[Edit] Fetching question for edit:', url);
+        fetch(url)
             .then(response => {
+                console.log('[Edit] Response status:', response.status);
                 if (!response.ok) {
-                    throw new Error(`HTTP error! status: ${response.status}`);
+                    throw new Error('HTTP error! status: ' + response.status);
                 }
                 return response.json();
             })
             .then(data => {
+                console.log('[Edit] Fetched question data:', data);
                 if (data.success && data.question) {
                     populateEditForm(data.question, data.options);
                 } else if (data.error) {
@@ -508,8 +512,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 }
             })
             .catch(error => {
-                console.error('Error loading question:', error);
-                alert('Error loading question data. Please try again.');
+                console.error('[Edit] Error loading question:', error);
             });
     }
 
@@ -656,13 +659,14 @@ document.addEventListener('DOMContentLoaded', function () {
         previewContainer.appendChild(fileInfo);
     }
 
-
-
     function populateTagContainer(containerId, hiddenId, tags) {
         const container = document.getElementById(containerId);
         const hidden = document.getElementById(hiddenId);
 
-        if (container && hidden && tags.length > 0) {
+        if (!window.tagArrays) window.tagArrays = {};
+        window.tagArrays[containerId] = tags.slice(); // <-- update the global tag array
+
+        if (container && hidden) {
             container.innerHTML = '';
             tags.forEach((tag, index) => {
                 const tagEl = document.createElement('div');
@@ -965,6 +969,65 @@ document.addEventListener('DOMContentLoaded', function () {
                 }
             }
         });
+    }
+
+    // Re-initialize modal JS when shown
+    const addAssessmentModal = document.getElementById('addAssessmentQuestionModal');
+    if (addAssessmentModal) {
+        // Reset as soon as the modal is hidden
+        addAssessmentModal.addEventListener('hidden.bs.modal', function () {
+            resetAddAssessmentQuestionModal();
+        });
+        // Also reset and re-initialize when the modal is about to be shown
+        addAssessmentModal.addEventListener('show.bs.modal', function () {
+            resetAddAssessmentQuestionModal();
+            if (typeof initializeAssessmentForm === 'function') {
+                initializeAssessmentForm();
+            }
+        });
+    }
+
+    function resetAddAssessmentQuestionModal() {
+        // Reset the form fields
+        const form = document.getElementById('addAssessmentQuestionForm');
+        if (form) form.reset();
+
+        // Reset tags and skills containers
+        if (window.tagArrays) {
+            if (window.tagArrays['tagsContainer']) window.tagArrays['tagsContainer'] = [];
+            if (window.tagArrays['skillsContainer']) window.tagArrays['skillsContainer'] = [];
+        }
+        if (document.getElementById('tagsContainer') && document.getElementById('tagsContainer').resetTags) {
+            document.getElementById('tagsContainer').resetTags();
+        }
+        if (document.getElementById('skillsContainer') && document.getElementById('skillsContainer').resetTags) {
+            document.getElementById('skillsContainer').resetTags();
+        }
+
+        // Reset character counts
+        for (let i = 1; i <= 10; i++) {
+            const charCount = document.getElementById('charCount_' + i);
+            if (charCount) charCount.innerText = '0';
+        }
+
+        // Hide all validation errors
+        document.querySelectorAll('.is-invalid').forEach(el => el.classList.remove('is-invalid'));
+        document.querySelectorAll('.invalid-feedback').forEach(el => el.remove());
+
+        // Reset answer options to default (show only first, hide others)
+        document.querySelectorAll('.option-block').forEach((block, idx) => {
+            if (idx === 0) block.classList.remove('d-none');
+            else block.classList.add('d-none');
+            // Clear textarea and checkbox
+            const textarea = block.querySelector('textarea');
+            if (textarea) textarea.value = '';
+            const checkbox = block.querySelector('input[type="checkbox"]');
+            if (checkbox) checkbox.checked = false;
+        });
+
+        // Reset media preview
+        const mediaPreview = document.getElementById('mediaPreview');
+        if (mediaPreview) mediaPreview.innerHTML = '';
     }
 
 });

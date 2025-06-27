@@ -278,11 +278,6 @@ document.addEventListener("DOMContentLoaded", function () {
             parentModalEl.style.display = "block";
             parentModalEl.removeAttribute("aria-hidden");
             parentModalEl.setAttribute("aria-modal", "true");
-
-            setTimeout(() => {
-                const focusable = parentModalEl.querySelector("button, [tabindex]:not([tabindex='-1'])");
-                if (focusable) focusable.focus();
-            }, 200);
         }
     });
 

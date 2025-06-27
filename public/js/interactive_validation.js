@@ -97,6 +97,9 @@ document.addEventListener("DOMContentLoaded", function () {
                 if (value === "") {
                     showError(field, translate('js.validation.interactive_version_required') || 'Version is required.');
                     isValid = false;
+                } else if (!isNumeric(value)) {
+                    showError(field, translate('js.validation.interactive_version_numeric') || 'Version must be a number.');
+                    isValid = false;
                 } else {
                     hideError(field);
                 }

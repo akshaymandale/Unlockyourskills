@@ -1,5 +1,5 @@
 document.addEventListener("DOMContentLoaded", function () {
-    const form = document.getElementById("surveyQuestionForm");
+    const form = document.getElementById("addSurveyQuestionForm");
     const titleInput = document.getElementById("surveyQuestionTitle");
     const typeSelect = document.getElementById("surveyQuestionType");
     const optionsWrapper = document.getElementById("surveyOptionsWrapper");

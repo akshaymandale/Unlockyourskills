@@ -246,8 +246,25 @@ class QuestionModel {
 
     // Soft delete a question (mark as deleted)
     public function softDeleteQuestion($id) {
-        $stmt = $this->conn->prepare("UPDATE assessment_questions SET is_deleted = 1 WHERE id = :id");
-        return $stmt->execute([':id' => $id]);
+        error_log("[QuestionModel] Attempting to soft delete question ID: $id");
+        
+        try {
+            $stmt = $this->conn->prepare("UPDATE assessment_questions SET is_deleted = 1 WHERE id = :id");
+            $result = $stmt->execute([':id' => $id]);
+            
+            error_log("[QuestionModel] Soft delete query executed. Result: " . var_export($result, true));
+            error_log("[QuestionModel] Rows affected: " . $stmt->rowCount());
+            
+            if (!$result) {
+                $errorInfo = $stmt->errorInfo();
+                error_log("[QuestionModel] Soft delete failed. Error info: " . print_r($errorInfo, true));
+            }
+            
+            return $result;
+        } catch (PDOException $e) {
+            error_log("[QuestionModel] Soft delete exception: " . $e->getMessage());
+            return false;
+        }
     }
 
     // Get a specific question by ID

@@ -70,41 +70,67 @@ class SurveyConfirmations {
         
         let type = 'question';
         let controller = '';
+        let action = '';
         
         if (isSurvey) {
             type = 'survey question';
             controller = 'SurveyQuestionController';
+            action = `/unlockyourskills/surveys/${button.dataset.id}/delete`;
         } else if (isFeedback) {
             type = 'feedback question';
             controller = 'FeedbackQuestionController';
+            action = `/unlockyourskills/feedback/${button.dataset.id}`;
         }
 
         return {
             type: type,
             id: button.dataset.id,
             title: button.dataset.title || 'Untitled Question',
-            action: `/unlockyourskills/surveys/${button.dataset.id}`
+            action: action
         };
     }
 
     showSurveyFeedbackConfirmation(data) {
         const itemName = this.getTranslatedItemName(data);
 
-        if (typeof window.confirmDelete === 'function') {
-            window.confirmDelete(itemName, () => {
+        const doDelete = () => {
+            if (data.type === 'feedback question') {
+                // Submit a hidden form with _method=DELETE for feedback question
+                const form = document.createElement('form');
+                form.method = 'POST';
+                form.action = data.action;
+                form.style.display = 'none';
+
+                // Add the _method=DELETE hidden input
+                const methodInput = document.createElement('input');
+                methodInput.type = 'hidden';
+                methodInput.name = '_method';
+                methodInput.value = 'DELETE';
+                form.appendChild(methodInput);
+
+                // Add CSRF token here if required by your app
+
+                document.body.appendChild(form);
+                form.submit();
+            } else {
+                // For survey question, just redirect (existing behavior)
                 window.location.href = data.action;
-            });
+            }
+        };
+
+        if (typeof window.confirmDelete === 'function') {
+            window.confirmDelete(itemName, doDelete);
         } else {
             const fallbackMessage = this.getTranslation('confirmation.delete.message', {item: itemName}) || `Are you sure you want to delete ${itemName}?`;
             if (confirm(fallbackMessage)) {
-                window.location.href = data.action;
+                doDelete();
             }
         }
     }
 
     // Static helper methods
     static deleteSurveyQuestion(id, title) {
-        const url = `/unlockyourskills/surveys/${id}`;
+        const url = `/unlockyourskills/surveys/${id}/delete`;
         const data = { title: title };
         const itemName = SurveyConfirmations.getStaticTranslatedItemName(data);
 

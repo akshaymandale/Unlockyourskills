@@ -216,7 +216,7 @@ class FeedbackQuestionController extends BaseController
     }
 
     // Delete question by id
-    public function delete()
+    public function delete($id = null)
     {
         // Check if user is logged in and get client_id
         if (!isset($_SESSION['user']['client_id'])) {
@@ -227,12 +227,17 @@ class FeedbackQuestionController extends BaseController
         $clientId = $_SESSION['user']['client_id'];
         $currentUser = $_SESSION['user'] ?? null;
 
-        if (!isset($_GET['id']) || !is_numeric($_GET['id'])) {
+        // Use the route parameter $id, fallback to $_GET['id']
+        if (!$id && isset($_GET['id'])) {
+            $id = $_GET['id'];
+        }
+
+        if (!$id || !is_numeric($id)) {
             $this->toastError('Invalid request parameters.', '/unlockyourskills/feedback');
             return;
         }
 
-        $id = (int)$_GET['id'];
+        $id = (int)$id;
 
         // Determine client filtering based on user role
         $filterClientId = ($currentUser && $currentUser['system_role'] === 'admin') ? $clientId : null;
@@ -340,15 +345,20 @@ class FeedbackQuestionController extends BaseController
     }
 
     // AJAX: get single question details for editing
-    public function getQuestionById()
+    public function getQuestionById($id = null)
     {
-        if (!isset($_GET['id']) || !is_numeric($_GET['id'])) {
+        // Use the route parameter $id, fallback to $_GET['id']
+        if (!$id && isset($_GET['id'])) {
+            $id = $_GET['id'];
+        }
+        
+        if (!$id || !is_numeric($id)) {
             http_response_code(400);
             echo json_encode(['error' => 'Invalid question ID']);
             return;
         }
 
-        $id = (int)$_GET['id'];
+        $id = (int)$id;
         $question = $this->feedbackQuestionModel->getQuestionById($id);
 
         if (!$question) {

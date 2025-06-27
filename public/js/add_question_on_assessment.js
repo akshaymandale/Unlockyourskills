@@ -5,7 +5,11 @@ document.addEventListener("DOMContentLoaded", function () {
 
     let questionModal;
     try {
-        questionModal = new bootstrap.Modal(questionModalEl, { backdrop: 'static' });
+        questionModal = new bootstrap.Modal(questionModalEl, { 
+            backdrop: 'static',
+            keyboard: false,
+            focus: false
+        });
     } catch (e) {
         console.error("Failed to create question modal:", e);
     }
@@ -30,13 +34,14 @@ document.addEventListener("DOMContentLoaded", function () {
         const selectAllCheckbox = document.getElementById("assessment_selectAllQuestions");
         if (!selectAllCheckbox) return;
 
-        const currentPageQuestionIds = questionsData.map(q => normalizeId(q.id));
-        const allCurrentPageSelected = currentPageQuestionIds.length > 0 &&
-            currentPageQuestionIds.every(id => temporarySelections.has(id));
-        const someCurrentPageSelected = currentPageQuestionIds.some(id => temporarySelections.has(id));
-
-        selectAllCheckbox.checked = allCurrentPageSelected;
-        selectAllCheckbox.indeterminate = someCurrentPageSelected && !allCurrentPageSelected;
+        // If any question is selected, keep the header checkbox checked
+        if (temporarySelections.size > 0) {
+            selectAllCheckbox.checked = true;
+            selectAllCheckbox.indeterminate = false;
+        } else {
+            selectAllCheckbox.checked = false;
+            selectAllCheckbox.indeterminate = false;
+        }
     }
 
     // Function to handle select all checkbox
@@ -74,29 +79,36 @@ document.addEventListener("DOMContentLoaded", function () {
     }
 
     async function fetchQuestions(page = 1) {
+        currentPage = page;
         const search = document.getElementById("assessment_questionSearch").value;
         const marks = document.getElementById("assessment_filterMarks").value;
         const type = document.getElementById("assessment_filterType").value;
         const limit = document.getElementById("assessment_showEntries").value;
 
-        currentPage = page;
-
-        const params = new URLSearchParams({ search, marks, type, limit, page });
-        const url = `/unlockyourskills/vlr/assessment-packages/questions?${params.toString()}`;
+        const params = new URLSearchParams({
+            search: search,
+            marks: marks,
+            type: type,
+            limit: limit,
+            page: page
+        });
 
         try {
-            const response = await fetch(url);
+            const response = await fetch(`/unlockyourskills/vlr/assessment-packages/questions?${params}`, {
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest'
+                }
+            });
             const data = await response.json();
-
-            questionsData = data.questions;
-            renderQuestionsTable();
+            renderQuestionsTable(data.questions);
             renderPagination(data.totalPages);
         } catch (error) {
             console.error("Error fetching questions:", error);
+            questionTableBody.innerHTML = '<tr><td colspan="5" class="text-center text-danger">Error loading questions</td></tr>';
         }
     }
 
-    function renderQuestionsTable() {
+    function renderQuestionsTable(questions) {
         if (!questionTableBody) {
             console.error("questionTableBody element not found!");
             return;
@@ -104,13 +116,13 @@ document.addEventListener("DOMContentLoaded", function () {
 
         questionTableBody.innerHTML = "";
 
-        if (questionsData.length === 0) {
+        if (questions.length === 0) {
             questionTableBody.innerHTML = '<tr><td colspan="5" class="text-center">No questions found</td></tr>';
             updateSelectAllCheckbox();
             return;
         }
 
-        questionsData.forEach((q) => {
+        questions.forEach((q) => {
             const qid = normalizeId(q.id);
             const checked = temporarySelections.has(qid) ? "checked" : "";
             const row = `
@@ -141,7 +153,11 @@ document.addEventListener("DOMContentLoaded", function () {
     }
 
     async function loadFilterOptions() {
-        const response = await fetch(`/unlockyourskills/vlr/assessment-packages/filter-options`);
+        const response = await fetch(`/unlockyourskills/vlr/assessment-packages/filter-options`, {
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest'
+            }
+        });
         const data = await response.json();
 
         const marksSelect = document.getElementById("assessment_filterMarks");
@@ -166,7 +182,10 @@ document.addEventListener("DOMContentLoaded", function () {
         try {
             const response = await fetch(`/unlockyourskills/vlr/assessment-packages/selected-questions`, {
                 method: "POST",
-                headers: { "Content-Type": "application/json" },
+                headers: { 
+                    "Content-Type": "application/json",
+                    "X-Requested-With": "XMLHttpRequest"
+                },
                 body: JSON.stringify({ ids: Array.from(temporarySelections) })
             });
 
@@ -217,30 +236,33 @@ document.addEventListener("DOMContentLoaded", function () {
         }
     });
 
-    addQuestionBtn.addEventListener("click", function () {
-        if (!questionModal) {
-            console.error("Question modal not initialized!");
-            return;
-        }
+    // Fix: Prevent infinite recursion by ensuring only one modal is open
+    if (addQuestionBtn && questionModal && parentModalEl) {
+        addQuestionBtn.addEventListener('click', function() {
+            // Don't hide parent modal - just show question modal with different configuration
+            questionModal.show();
+            
+            // Reset filters when opening modal
+            resetFilters();
 
-        // Reset filters when opening modal
-        resetFilters();
+            // Load existing selected questions from the assessment form (for edit mode)
+            const existingSelectedIds = document.getElementById("assessment_selectedQuestionIds").value;
+            if (existingSelectedIds && existingSelectedIds.trim() !== "") {
+                const selectedIds = existingSelectedIds.split(',').map(id => normalizeId(id.trim())).filter(id => id);
+                persistentSelectedQuestions = new Set(selectedIds);
+                console.log("Loaded existing selected questions for edit:", selectedIds);
+            }
 
-        // Load existing selected questions from the assessment form (for edit mode)
-        const existingSelectedIds = document.getElementById("assessment_selectedQuestionIds").value;
-        if (existingSelectedIds && existingSelectedIds.trim() !== "") {
-            const selectedIds = existingSelectedIds.split(',').map(id => normalizeId(id.trim())).filter(id => id);
-            persistentSelectedQuestions = new Set(selectedIds);
-            console.log("Loaded existing selected questions for edit:", selectedIds);
-        }
+            // Load persistent selections (previously looped questions + existing assessment questions)
+            temporarySelections = new Set(persistentSelectedQuestions);
+            
+            // Reset filters and load data after modal is shown
+            loadFilterOptions();
+            fetchQuestions(1);
+        });
 
-        // Load persistent selections (previously looped questions + existing assessment questions)
-        temporarySelections = new Set(persistentSelectedQuestions);
-
-        questionModal.show();
-        loadFilterOptions();
-        fetchQuestions(1); // Start from page 1
-    });
+        // Remove the hidden.bs.modal event listener that was re-showing parent modal
+    }
 
     // Handle individual question checkbox changes
     questionTableBody.addEventListener("change", function (e) {
