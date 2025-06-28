@@ -82,6 +82,11 @@ $languageList = $vlrController->getLanguages();
                     <?= Localization::translate('interactive_ai_content'); ?>
                 </a>
             </li>
+            <li class="nav-item">
+                <a class="nav-link <?= $activeTab === 'assignment' ? 'active' : ''; ?>" data-bs-toggle="tab" href="#assignment">
+                    <?= Localization::translate('assignment'); ?>
+                </a>
+            </li>
         </ul>
 
         <!-- ✅ Tab Content Section -->
@@ -3538,6 +3543,290 @@ $languageList = $vlrController->getLanguages();
             </div>
 
 
+               <!-- ✅ Assignment -->
+               <div class="tab-pane <?= $activeTab === 'assignment' ? 'show active' : ''; ?>" id="assignment">
+                <div class="d-flex justify-content-between align-items-center">
+                    <h3><?= Localization::translate('assignment'); ?></h3>
+
+                    <!-- ✅ Assignment "Add" Button -->
+                    <button class="btn btn-primary mb-3" data-bs-toggle="modal" id="addAssignmentBtn"
+                        data-bs-target="#assignmentModal">
+                        + <?= Localization::translate('add_assignment'); ?>
+                    </button>
+                </div>
+
+                <!-- ✅ Assignment Modal -->
+                <div class="modal fade" id="assignmentModal" tabindex="-1" aria-labelledby="assignmentModalLabel"
+                    aria-hidden="true">
+                    <div class="modal-dialog modal-xl">
+                        <div class="modal-content">
+                            <div class="modal-header">
+                                <h5 class="modal-title" id="assignmentModalLabel">
+                                    <?= Localization::translate('add_assignment_package'); ?>
+                                </h5>
+                                <button type="button" class="btn-close" data-bs-dismiss="modal"
+                                    aria-label="Close"></button>
+                            </div>
+
+                            <div class="modal-body">
+                                <form id="assignmentForm" action="/unlockyourskills/vlr/assignment"
+                                    method="POST" enctype="multipart/form-data">
+                                    <input type="hidden" id="assignment_idassignment" name="assignment_idassignment">
+
+                                    <div class="row g-3">
+                                        <!-- Title -->
+                                        <div class="col-md-6">
+                                            <label for="assignment_titleassignment" class="form-label"><?= Localization::translate('assignment.field.title'); ?> <span
+                                                    class="text-danger">*</span></label>
+                                            <input type="text" class="form-control" id="assignment_titleassignment"
+                                                name="assignment_titleassignment">
+                                        </div>
+
+                                        <!-- Upload Assignment -->
+                                        <div class="col-md-6">
+                                            <label for="assignmentFileassignment" class="form-label"><?= Localization::translate('assignment.upload_assignment_file'); ?> <span
+                                                    class="text-danger">*</span></label>
+                                            <input type="file" class="form-control" id="assignmentFileassignment"
+                                                name="assignmentFileassignment" accept=".pdf,.doc,.docx,.txt,.rtf">
+                                            <small class="text-muted">Max size: 50MB. Formats: PDF, DOC, DOCX, TXT, RTF.</small>
+                                            <input type="hidden" id="existing_assignmentassignment" name="existing_assignment">
+                                            <div id="existingAssignmentDisplayassignment" class="mt-2"></div>
+                                        </div>
+
+                                        <!-- Assignment Type -->
+                                        <div class="col-md-4">
+                                            <label for="assignmentTypeassignment" class="form-label"><?= Localization::translate('assignment_type'); ?></label>
+                                            <select class="form-select" id="assignmentTypeassignment" name="assignmentTypeassignment">
+                                                <option value="individual"><?= Localization::translate('individual'); ?></option>
+                                                <option value="group"><?= Localization::translate('group'); ?></option>
+                                                <option value="project"><?= Localization::translate('project'); ?></option>
+                                                <option value="case_study"><?= Localization::translate('case_study'); ?></option>
+                                                <option value="research"><?= Localization::translate('research'); ?></option>
+                                            </select>
+                                        </div>
+
+                                        <!-- Difficulty Level -->
+                                        <div class="col-md-4">
+                                            <label for="difficultyLevelassignment" class="form-label"><?= Localization::translate('difficulty_level'); ?></label>
+                                            <select class="form-select" id="difficultyLevelassignment" name="difficultyLevelassignment">
+                                                <option value="Beginner"><?= Localization::translate('beginner'); ?></option>
+                                                <option value="Intermediate"><?= Localization::translate('intermediate'); ?></option>
+                                                <option value="Advanced"><?= Localization::translate('advanced'); ?></option>
+                                            </select>
+                                        </div>
+
+                                        <!-- Submission Format -->
+                                        <div class="col-md-4">
+                                            <label for="submissionFormatassignment" class="form-label"><?= Localization::translate('submission_format'); ?></label>
+                                            <select class="form-select" id="submissionFormatassignment" name="submissionFormatassignment">
+                                                <option value="file_upload"><?= Localization::translate('file_upload'); ?></option>
+                                                <option value="text_entry"><?= Localization::translate('text_entry'); ?></option>
+                                                <option value="url_submission"><?= Localization::translate('url_submission'); ?></option>
+                                                <option value="mixed"><?= Localization::translate('mixed'); ?></option>
+                                            </select>
+                                        </div>
+
+                                        <!-- Tags -->
+                                        <div class="row">
+                                            <div class="col-md-12">
+                                                <div class="form-group">
+                                                    <label
+                                                        for="tagsassignment"><?= Localization::translate('tags_keywords'); ?>
+                                                        <span class="text-danger">*</span></label>
+                                                    <div class="tag-input-container form-control">
+                                                        <span id="tagDisplayassignment"></span>
+                                                        <input type="text" id="tagInputassignment"
+                                                            placeholder="<?= Localization::translate('add_tag_placeholder'); ?>">
+                                                    </div>
+                                                    <input type="hidden" name="tagListassignment" id="tagListassignment">
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <!-- Description -->
+                                        <div class="col-md-12">
+                                            <label for="descriptionassignment" class="form-label"><?= Localization::translate('description'); ?></label>
+                                            <textarea class="form-control" id="descriptionassignment" name="descriptionassignment"
+                                                rows="3"></textarea>
+                                        </div>
+
+                                        <!-- Instructions -->
+                                        <div class="col-md-12">
+                                            <label for="instructionsassignment" class="form-label"><?= Localization::translate('instructions'); ?></label>
+                                            <textarea class="form-control" id="instructionsassignment" name="instructionsassignment"
+                                                rows="4" placeholder="<?= Localization::translate('assignment.instructions_placeholder'); ?>"></textarea>
+                                        </div>
+
+                                        <!-- Requirements -->
+                                        <div class="col-md-12">
+                                            <label for="requirementsassignment" class="form-label"><?= Localization::translate('requirements'); ?></label>
+                                            <textarea class="form-control" id="requirementsassignment" name="requirementsassignment"
+                                                rows="3" placeholder="<?= Localization::translate('assignment.requirements_placeholder'); ?>"></textarea>
+                                        </div>
+
+                                        <!-- Learning Objectives -->
+                                        <div class="col-md-12">
+                                            <label for="learningObjectivesassignment" class="form-label"><?= Localization::translate('learning_objectives'); ?></label>
+                                            <textarea class="form-control" id="learningObjectivesassignment" name="learningObjectivesassignment"
+                                                rows="3" placeholder="<?= Localization::translate('assignment.learning_objectives_placeholder'); ?>"></textarea>
+                                        </div>
+
+                                        <!-- Prerequisites -->
+                                        <div class="col-md-12">
+                                            <label for="prerequisitesassignment" class="form-label"><?= Localization::translate('prerequisites'); ?></label>
+                                            <textarea class="form-control" id="prerequisitesassignment" name="prerequisitesassignment"
+                                                rows="2" placeholder="<?= Localization::translate('assignment.prerequisites_placeholder'); ?>"></textarea>
+                                        </div>
+
+                                        <!-- Version -->
+                                        <div class="col-md-3">
+                                            <label for="versionassignment" class="form-label"><?= Localization::translate('version_number'); ?> <span
+                                                    class="text-danger">*</span></label>
+                                            <input type="number" class="form-control" id="versionassignment"
+                                                name="versionassignment" min="0" step="any" pattern="\d*">
+                                        </div>
+
+                                        <!-- Language Support -->
+                                        <div class="col-md-3">
+                                            <label for="languageassignment" class="form-label"><?= Localization::translate('language'); ?></label>
+                                            <select class="form-select" id="languageassignment" name="languageassignment">
+                                                <option value=""><?= Localization::translate('select_language'); ?></option>
+                                                <?php
+                                                if (!empty($languageList) && is_array($languageList)) {
+                                                    foreach ($languageList as $lang) {
+                                                        if (isset($lang['id']) && isset($lang['language_name'])) {
+                                                            $langId = htmlspecialchars($lang['id'], ENT_QUOTES, 'UTF-8');
+                                                            $langName = htmlspecialchars($lang['language_name'], ENT_QUOTES, 'UTF-8');
+                                                            echo "<option value=\"$langId\">$langName</option>";
+                                                        }
+                                                    }
+                                                } else {
+                                                    echo '<option value="">' . Localization::translate('no_languages_available') . '</option>';
+                                                }
+                                                ?>
+                                            </select>
+                                        </div>
+
+                                        <!-- Time Limit -->
+                                        <div class="col-md-3">
+                                            <label for="timeLimitassignment" class="form-label"><?= Localization::translate('time_limit'); ?></label>
+                                            <input type="number" class="form-control" id="timeLimitassignment"
+                                                name="timeLimitassignment" min="1" pattern="\d*">
+                                        </div>
+
+                                        <!-- Estimated Duration -->
+                                        <div class="col-md-3">
+                                            <label for="estimatedDurationassignment" class="form-label"><?= Localization::translate('estimated_duration'); ?></label>
+                                            <input type="number" class="form-control" id="estimatedDurationassignment"
+                                                name="estimatedDurationassignment" min="1" pattern="\d*">
+                                        </div>
+
+                                        <!-- Max Attempts -->
+                                        <div class="col-md-3">
+                                            <label for="maxAttemptsassignment" class="form-label"><?= Localization::translate('max_attempts'); ?></label>
+                                            <input type="number" class="form-control" id="maxAttemptsassignment"
+                                                name="maxAttemptsassignment" min="1" value="1" pattern="\d*">
+                                        </div>
+
+                                        <!-- Passing Score -->
+                                        <div class="col-md-3">
+                                            <label for="passingScoreassignment" class="form-label"><?= Localization::translate('passing_score'); ?></label>
+                                            <input type="number" class="form-control" id="passingScoreassignment"
+                                                name="passingScoreassignment" min="0" max="100" pattern="\d*">
+                                        </div>
+
+                                        <!-- Allow Late Submission -->
+                                        <div class="col-md-3">
+                                            <label class="form-label"><?= Localization::translate('allow_late_submission'); ?></label>
+                                            <div>
+                                                <div class="form-check form-check-inline">
+                                                    <input class="form-check-input" type="radio"
+                                                        name="allowLateSubmissionassignment" id="allowLateYesassignment" value="Yes">
+                                                    <label class="form-check-label" for="allowLateYesassignment"><?= Localization::translate('yes'); ?></label>
+                                                </div>
+                                                <div class="form-check form-check-inline">
+                                                    <input class="form-check-input" type="radio"
+                                                        name="allowLateSubmissionassignment" id="allowLateNoassignment" value="No" checked>
+                                                    <label class="form-check-label" for="allowLateNoassignment"><?= Localization::translate('no'); ?></label>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <!-- Late Submission Penalty -->
+                                        <div class="col-md-3">
+                                            <label for="lateSubmissionPenaltyassignment" class="form-label"><?= Localization::translate('late_submission_penalty'); ?></label>
+                                            <input type="number" class="form-control" id="lateSubmissionPenaltyassignment"
+                                                name="lateSubmissionPenaltyassignment" min="0" max="100" value="0" pattern="\d*">
+                                        </div>
+
+                                        <!-- Mobile & Tablet Support -->
+                                        <div class="col-md-12">
+                                            <label class="form-label"><?= Localization::translate('mobile_tablet_support'); ?></label>
+                                            <div>
+                                                <div class="form-check form-check-inline">
+                                                    <input class="form-check-input" type="radio"
+                                                        name="mobileSupportassignment" id="mobileYesassignment" value="Yes">
+                                                    <label class="form-check-label" for="mobileYesassignment"><?= Localization::translate('yes'); ?></label>
+                                                </div>
+                                                <div class="form-check form-check-inline">
+                                                    <input class="form-check-input" type="radio"
+                                                        name="mobileSupportassignment" id="mobileNoassignment" value="No" checked>
+                                                    <label class="form-check-label" for="mobileNoassignment"><?= Localization::translate('no'); ?></label>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </form>
+                            </div>
+
+                            <!-- Modal Footer -->
+                            <div class="modal-footer">
+                                <button type="submit" form="assignmentForm"
+                                    class="btn btn-primary"><?= Localization::translate('submit'); ?></button>
+                                <button type="button" class="btn btn-danger"
+                                    id="clearFormassignment"><?= Localization::translate('cancel'); ?></button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ✅ Assignment Display -->
+                <div class="assignment-wrapper mt-4">
+                    <div class="assignment-wrapper-border">
+                        <div class="row">
+                            <?php if (!empty($assignmentPackages)): ?>
+                                <?php foreach ($assignmentPackages as $assignment): ?>
+                                    <div class="col-md-4">
+                                        <div class="assignment-card">
+                                            <div class="card-body">
+                                                <div class="assignment-icon">
+                                                    <i class="fas fa-tasks"></i>
+                                                </div>
+                                                <h5 class="assignment-title" title="<?= htmlspecialchars($assignment['title']) ?>">
+                                                    <?= htmlspecialchars(strlen($assignment['title']) > 20 ? substr($assignment['title'], 0, 17) . '...' : $assignment['title']) ?>
+                                                </h5>
+                                                <div class="assignment-actions">
+                                                    <a href="#" class="edit-assignment" data-assignment='<?= json_encode($assignment); ?>'>
+                                                        <i class="fas fa-edit edit-icon"
+                                                            title="<?= Localization::translate('edit'); ?>"></i>
+                                                    </a>
+                                                    <a href="#" class="delete-assignment" data-id="<?= $assignment['id'] ?>" data-title="<?= htmlspecialchars($assignment['title']) ?>">
+                                                        <i class="fas fa-trash-alt delete-icon"
+                                                            title="<?= Localization::translate('delete'); ?>"></i>
+                                                    </a>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                <?php endforeach; ?>
+                            <?php else: ?>
+                                <p><?= Localization::translate('no_assignment_found'); ?></p>
+                            <?php endif; ?>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
         </div>
     </div>
 </div>
@@ -3571,6 +3860,8 @@ $languageList = $vlrController->getLanguages();
 <script src="<?= UrlHelper::url('public/js/interactive_package.js') ?>"></script>
 <script src="<?= UrlHelper::url('public/js/non_scorm_validation.js') ?>"></script>
 <script src="<?= UrlHelper::url('public/js/non_scorm_package.js') ?>"></script>
+<script src="<?= UrlHelper::url('public/js/assignment_validation.js') ?>"></script>
+<script src="<?= UrlHelper::url('public/js/assignment_package.js') ?>"></script>
 
 <!-- ✅ VLR Tab Management System -->
 <script src="<?= UrlHelper::url('public/js/vlr_tabs.js') ?>"></script>

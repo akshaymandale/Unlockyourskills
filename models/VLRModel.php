@@ -1543,4 +1543,161 @@ public function deleteImagePackage($id)
         return $stmt->execute([$id]);
     }
 
+    // ✅ Insert Assignment Package
+    public function insertAssignmentPackage($data)
+    {
+        // Validate required fields
+        $requiredFields = ['client_id', 'title', 'assignment_file', 'version', 'mobile_support', 'tags', 'created_by'];
+        foreach ($requiredFields as $field) {
+            if (empty($data[$field])) {
+                return false;
+            }
+        }
+
+        $stmt = $this->conn->prepare("
+            INSERT INTO assignment_package
+            (client_id, title, assignment_file, version, language, time_limit, description, tags, mobile_support, 
+             assignment_type, difficulty_level, estimated_duration, max_attempts, passing_score, submission_format,
+             allow_late_submission, late_submission_penalty, instructions, requirements, rubric, learning_objectives,
+             prerequisites, thumbnail_image, sample_solution, supporting_materials, created_by, is_deleted, created_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, NOW())
+        ");
+
+        return $stmt->execute([
+            $data['client_id'],
+            $data['title'],
+            $data['assignment_file'],
+            $data['version'],
+            $data['language'] ?? null,
+            $data['time_limit'] ?? null,
+            $data['description'] ?? null,
+            $data['tags'],
+            $data['mobile_support'],
+            $data['assignment_type'] ?? 'individual',
+            $data['difficulty_level'] ?? 'Beginner',
+            $data['estimated_duration'] ?? null,
+            $data['max_attempts'] ?? 1,
+            $data['passing_score'] ?? null,
+            $data['submission_format'] ?? 'file_upload',
+            $data['allow_late_submission'] ?? 'No',
+            $data['late_submission_penalty'] ?? 0,
+            $data['instructions'] ?? null,
+            $data['requirements'] ?? null,
+            $data['rubric'] ?? null,
+            $data['learning_objectives'] ?? null,
+            $data['prerequisites'] ?? null,
+            $data['thumbnail_image'] ?? null,
+            $data['sample_solution'] ?? null,
+            $data['supporting_materials'] ?? null,
+            $data['created_by']
+        ]);
+    }
+
+    // ✅ Update Assignment Package
+    public function updateAssignmentPackage($id, $data)
+    {
+        if (empty($id)) {
+            return false;
+        }
+
+        $stmt = $this->conn->prepare("
+            UPDATE assignment_package SET
+                title = ?,
+                assignment_file = ?,
+                version = ?,
+                language = ?,
+                time_limit = ?,
+                description = ?,
+                tags = ?,
+                mobile_support = ?,
+                assignment_type = ?,
+                difficulty_level = ?,
+                estimated_duration = ?,
+                max_attempts = ?,
+                passing_score = ?,
+                submission_format = ?,
+                allow_late_submission = ?,
+                late_submission_penalty = ?,
+                instructions = ?,
+                requirements = ?,
+                rubric = ?,
+                learning_objectives = ?,
+                prerequisites = ?,
+                thumbnail_image = ?,
+                sample_solution = ?,
+                supporting_materials = ?,
+                updated_by = ?,
+                updated_at = NOW()
+            WHERE id = ?
+        ");
+
+        return $stmt->execute([
+            $data['title'],
+            $data['assignment_file'],
+            $data['version'],
+            $data['language'] ?? null,
+            $data['time_limit'] ?? null,
+            $data['description'] ?? null,
+            $data['tags'],
+            $data['mobile_support'],
+            $data['assignment_type'] ?? 'individual',
+            $data['difficulty_level'] ?? 'Beginner',
+            $data['estimated_duration'] ?? null,
+            $data['max_attempts'] ?? 1,
+            $data['passing_score'] ?? null,
+            $data['submission_format'] ?? 'file_upload',
+            $data['allow_late_submission'] ?? 'No',
+            $data['late_submission_penalty'] ?? 0,
+            $data['instructions'] ?? null,
+            $data['requirements'] ?? null,
+            $data['rubric'] ?? null,
+            $data['learning_objectives'] ?? null,
+            $data['prerequisites'] ?? null,
+            $data['thumbnail_image'] ?? null,
+            $data['sample_solution'] ?? null,
+            $data['supporting_materials'] ?? null,
+            $data['updated_by'] ?? $data['created_by'], // fallback to creator if editor not set
+            $id
+        ]);
+    }
+
+    // ✅ Get Assignment Packages (non-deleted) with Language Names
+    public function getAssignmentPackages($clientId = null)
+    {
+        try {
+            if ($clientId) {
+                $stmt = $this->conn->prepare("
+                    SELECT a.*, l.language_name
+                    FROM assignment_package a
+                    LEFT JOIN languages l ON a.language = l.id
+                    WHERE a.client_id = ? AND a.is_deleted = 0
+                    ORDER BY a.created_at DESC
+                ");
+                $stmt->execute([$clientId]);
+            } else {
+                $stmt = $this->conn->prepare("
+                    SELECT a.*, l.language_name
+                    FROM assignment_package a
+                    LEFT JOIN languages l ON a.language = l.id
+                    WHERE a.is_deleted = 0
+                    ORDER BY a.created_at DESC
+                ");
+                $stmt->execute();
+            }
+            $data = $stmt->fetchAll(PDO::FETCH_ASSOC);
+            error_log("VLRModel getAssignmentPackages - Client ID: " . ($clientId ?? 'null') . ", Count: " . count($data));
+            return $data;
+        } catch (Exception $e) {
+            error_log("Error fetching Assignment packages: " . $e->getMessage());
+            return [];
+        }
+    }
+
+    // ✅ Soft Delete Assignment Package
+    public function deleteAssignmentPackage($id)
+    {
+        $stmt = $this->conn->prepare("UPDATE assignment_package SET is_deleted = 1 WHERE id = ?");
+        return $stmt->execute([$id]);
+    }
+
 }
