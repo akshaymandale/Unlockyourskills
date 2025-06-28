@@ -73,6 +73,12 @@ class LoginController extends BaseController {
         $clientCode = $_GET['client_code'] ?? '';
         $ssoEnabled = false;
         $ssoProviders = [];
+        
+        // Check for timeout message
+        $timeoutMessage = '';
+        if (isset($_GET['timeout']) && $_GET['timeout'] == '1') {
+            $timeoutMessage = 'Your session has expired due to inactivity. Please log in again.';
+        }
 
         if (!empty($clientCode)) {
             $ssoEnabled = $this->authModel->isSSOEnabled($clientCode);
@@ -105,6 +111,9 @@ class LoginController extends BaseController {
             'client_name' => $user['client_name'] ?? 'Unknown Client',
             'profile_picture' => $user['profile_picture'] ?? '',
         ];
+        
+        // Set initial session activity timestamp
+        $_SESSION['last_activity'] = time();
     }
 
     private function returnJsonError($message) {
@@ -127,6 +136,15 @@ class LoginController extends BaseController {
     }
 
     public function logout() {
+        // Log logout event
+        if (isset($_SESSION['id']) && isset($_SESSION['user'])) {
+            error_log("User logout: " . json_encode([
+                'user_id' => $_SESSION['id'],
+                'client_id' => $_SESSION['user']['client_id'] ?? null,
+                'logout_time' => time()
+            ]));
+        }
+        
         session_destroy();
         UrlHelper::redirect('login');
     }

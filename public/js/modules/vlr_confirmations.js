@@ -55,6 +55,7 @@ class VLRConfirmations {
             'SCORM package': 'item.scorm_package',
             'non-SCORM package': 'item.non_scorm_package',
             'assessment': 'item.assessment',
+            'assignment': 'item.assignment',
             'audio package': 'item.audio_package',
             'video package': 'item.video_package',
             'image package': 'item.image_package',
@@ -76,6 +77,7 @@ class VLRConfirmations {
             '.delete-scorm',
             '.delete-non-scorm', 
             '.delete-assessment',
+            '.delete-assignment',
             '.delete-audio',
             '.delete-video', 
             '.delete-image',
@@ -113,6 +115,9 @@ class VLRConfirmations {
         } else if (classList.contains('delete-assessment')) {
             type = 'assessment';
             action = '/unlockyourskills/vlr/assessment-packages/';
+        } else if (classList.contains('delete-assignment')) {
+            type = 'assignment';
+            action = '/unlockyourskills/vlr/assignment/';
         } else if (classList.contains('delete-audio')) {
             type = 'audio package';
             action = '/unlockyourskills/vlr/audio/';
@@ -198,6 +203,7 @@ class VLRConfirmations {
             'scorm': '/unlockyourskills/vlr/scorm/',
             'non-scorm': '/unlockyourskills/vlr/non-scorm/',
             'assessment': '/unlockyourskills/vlr/assessment-packages/',
+            'assignment': '/unlockyourskills/vlr/assignment/',
             'audio': '/unlockyourskills/vlr/audio/',
             'video': '/unlockyourskills/vlr/video/',
             'image': '/unlockyourskills/vlr/images/',
@@ -278,6 +284,7 @@ class VLRConfirmations {
             'scorm': 'item.scorm_package',
             'non-scorm': 'item.non_scorm_package',
             'assessment': 'item.assessment',
+            'assignment': 'item.assignment',
             'audio': 'item.audio_package',
             'video': 'item.video_package',
             'image': 'item.image_package',

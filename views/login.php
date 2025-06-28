@@ -22,6 +22,14 @@
         <div class="login-right">
             <h2 class="login-title">Unlock Your Skills</h2>
 
+            <!-- Session Timeout Message -->
+            <?php if (isset($timeoutMessage) && !empty($timeoutMessage)): ?>
+            <div class="alert alert-warning" style="background-color: #fff3cd; border: 1px solid #ffeaa7; color: #856404; padding: 12px; border-radius: 4px; margin-bottom: 20px; text-align: center;">
+                <i class="fas fa-exclamation-triangle"></i>
+                <?= htmlspecialchars($timeoutMessage) ?>
+            </div>
+            <?php endif; ?>
+
             <!-- Login Form -->
             <form id="loginForm" action="index.php?controller=LoginController&action=login" method="POST">
                 <div class="form-group">

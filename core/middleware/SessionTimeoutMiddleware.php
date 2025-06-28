@@ -4,61 +4,26 @@ require_once 'core/Middleware.php';
 require_once 'core/UrlHelper.php';
 
 /**
- * Authentication Middleware
- * Ensures user is logged in before accessing protected routes
- * Includes session timeout functionality (1 hour idle timeout)
+ * Session Timeout Middleware
+ * Automatically logs out users after 1 hour of inactivity
  */
-class AuthMiddleware extends Middleware
+class SessionTimeoutMiddleware extends Middleware
 {
     private $timeoutMinutes = 60; // 1 hour timeout
     
     public function handle()
     {
-        // Temporary: Allow assessment routes without authentication for testing
+        // Skip timeout check for login/logout routes
         $currentUri = $_SERVER['REQUEST_URI'] ?? '';
-        if (strpos($currentUri, '/vlr/assessment-packages/') !== false) {
-            // For assessment routes, check if user is logged in but don't block if not
-            if (!isset($_SESSION['id']) || !isset($_SESSION['user'])) {
-                // Set a default client_id for testing
-                $_SESSION['user'] = [
-                    'client_id' => 1,
-                    'id' => 1
-                ];
-            }
+        if (strpos($currentUri, '/login') !== false || strpos($currentUri, '/logout') !== false) {
             return true;
         }
-
+        
         // Check if user is logged in
         if (!isset($_SESSION['id']) || !isset($_SESSION['user'])) {
-            // If AJAX request, return JSON error
-            if ($this->isAjaxRequest()) {
-                $this->json([
-                    'success' => false,
-                    'message' => 'Authentication required',
-                    'redirect' => UrlHelper::url('login')
-                ], 401);
-            }
-
-            // Regular request, redirect to login
-            $this->redirect(UrlHelper::url('login'));
-            return false;
+            return true; // Let AuthMiddleware handle this
         }
         
-        // Check session timeout (skip for login/logout routes)
-        if (strpos($currentUri, '/login') === false && strpos($currentUri, '/logout') === false) {
-            if (!$this->checkSessionTimeout()) {
-                return false; // Session timeout handled in checkSessionTimeout()
-            }
-        }
-
-        return true;
-    }
-    
-    /**
-     * Check if session has timed out due to inactivity
-     */
-    private function checkSessionTimeout()
-    {
         // Check if last activity timestamp exists
         if (!isset($_SESSION['last_activity'])) {
             $_SESSION['last_activity'] = time();
@@ -71,6 +36,7 @@ class AuthMiddleware extends Middleware
         
         // Check if session has timed out
         if ($timeSinceLastActivity > $timeoutSeconds) {
+            // Session has timed out, destroy it
             $this->handleSessionTimeout();
             return false;
         }
@@ -95,8 +61,8 @@ class AuthMiddleware extends Middleware
             'timeout_time' => time()
         ];
         
-        // Log timeout event
-        error_log("Session timeout: " . json_encode($timeoutData));
+        // Log timeout event if logging is enabled
+        $this->logSessionTimeout($timeoutData);
         
         // Clear session data
         session_unset();
@@ -114,6 +80,20 @@ class AuthMiddleware extends Middleware
         
         // Regular request, redirect to login with timeout message
         $this->redirect(UrlHelper::url('login?timeout=1'));
+    }
+    
+    /**
+     * Log session timeout event
+     */
+    private function logSessionTimeout($timeoutData)
+    {
+        try {
+            // You can implement logging to database or file here
+            error_log("Session timeout: " . json_encode($timeoutData));
+        } catch (Exception $e) {
+            // Silently fail if logging fails
+            error_log("Failed to log session timeout: " . $e->getMessage());
+        }
     }
     
     /**
@@ -140,4 +120,4 @@ class AuthMiddleware extends Middleware
     {
         return $this->timeoutMinutes;
     }
-}
+} 

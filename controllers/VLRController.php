@@ -32,6 +32,9 @@ class VLRController extends BaseController
         }
         // Super admin can see all content (no client filtering)
 
+        // Debug output
+        error_log("VLR Index - Client ID: " . $clientId . ", Filter Client ID: " . ($filterClientId ?? 'null') . ", User Role: " . ($currentUser['system_role'] ?? 'unknown'));
+
         $scormPackages = $this->VLRModel->getScormPackages($filterClientId);
         $nonScormPackages = $this->VLRModel->getNonScormPackages($filterClientId);
         $externalContent = $this->VLRModel->getExternalContent($filterClientId);
@@ -42,6 +45,14 @@ class VLRController extends BaseController
         $audioPackages = $this->VLRModel->getAudioPackages($filterClientId);
         $videoPackages = $this->VLRModel->getVideoPackages($filterClientId);
         $imagePackages = $this->VLRModel->getImagePackages($filterClientId);
+        $assignmentPackages = $this->VLRModel->getAssignmentPackages($filterClientId);
+        
+        // Debug assignment packages
+        error_log("VLR Index - Assignment Packages Count: " . count($assignmentPackages));
+        if (!empty($assignmentPackages)) {
+            error_log("VLR Index - First Assignment: " . json_encode($assignmentPackages[0]));
+        }
+        
         $interactiveContent = $this->VLRModel->getInteractiveContent($filterClientId);
         $languageList = $this->VLRModel->getLanguages();
         require 'views/vlr.php';
@@ -1966,6 +1977,172 @@ public function deleteImagePackage($id = null)
         $languageList = $this->VLRModel->getLanguages();
         $activeTab = 'non-scorm';
         require 'views/vlr.php';
+    }
+
+    public function assignmentIndex()
+    {
+        if (!isset($_SESSION['user']['client_id'])) {
+            $this->toastError('Unauthorized access. Please log in.', '/unlockyourskills/login');
+            return;
+        }
+        $clientId = $_SESSION['user']['client_id'];
+        $currentUser = $_SESSION['user'] ?? null;
+        $filterClientId = null;
+        if ($currentUser && $currentUser['system_role'] === 'admin') {
+            $filterClientId = $clientId;
+        }
+        $assignmentPackages = $this->VLRModel->getAssignmentPackages($filterClientId);
+        $languageList = $this->VLRModel->getLanguages();
+        $activeTab = 'assignment';
+        require 'views/vlr.php';
+    }
+
+    // Add or Edit Assignment Package
+    public function addOrEditAssignmentPackage()
+    {
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+            $this->toastError('Invalid request parameters.', '/unlockyourskills/vlr?tab=assignment');
+            return;
+        }
+
+        // ✅ Ensure session is valid
+        if (!isset($_SESSION['id'])) {
+            $this->toastError('Unauthorized access. Please log in.', '/unlockyourskills/login');
+            return;
+        }
+
+        // ✅ Get client ID from session
+        $clientId = $_SESSION['user']['client_id'];
+
+        // ✅ Extract POST and FILES data (with fallbacks for suffixed names)
+        $assignmentId    = $_POST['assignment_id'] ?? $_POST['assignment_idassignment'] ?? null;
+        $title          = trim($_POST['assignment_title'] ?? $_POST['assignment_titleassignment'] ?? '');
+        $version        = $_POST['version'] ?? $_POST['versionassignment'] ?? '';
+        $tags           = $_POST['tagList'] ?? $_POST['tagListassignment'] ?? '';
+        $timeLimit      = trim($_POST['timeLimit'] ?? $_POST['timeLimitassignment'] ?? '');
+        $assignmentFile = $_FILES['assignmentFile'] ?? $_FILES['assignmentFileassignment'] ?? null;
+        $existingAssignment = $_POST['existing_assignment'] ?? $_POST['existing_assignmentassignment'] ?? null;
+
+        // ✅ Initialize error list
+        $errors = [];
+
+        // ✅ Validation
+        if (empty($title)) {
+            $errors[] = "Title is required.";
+        }
+
+        if (!$assignmentId && empty($assignmentFile['name'])) {
+            // Only required on "add"
+            $errors[] = "Assignment file is required.";
+        } elseif (!empty($assignmentFile['name']) && $assignmentFile['size'] > 50 * 1024 * 1024) {
+            $errors[] = "Assignment file size cannot exceed 50MB.";
+        }
+
+        if (empty($version) || !is_numeric($version)) {
+            $errors[] = "Version must be a valid number.";
+        }
+
+        if (empty($tags)) {
+            $errors[] = "Tags are required.";
+        }
+
+        if ($timeLimit !== '' && !is_numeric($timeLimit)) {
+            $errors[] = "Time limit must be numeric.";
+        }
+
+        // ✅ Handle validation failure
+        if (!empty($errors)) {
+            $errorMessage = implode(', ', $errors);
+            $this->toastError($errorMessage, '/unlockyourskills/vlr?tab=assignment');
+            return;
+        }
+
+        // ✅ Handle assignment file upload (only if a new file is provided)
+        $assignmentFileName = $existingAssignment;
+        if (!empty($assignmentFile['name'])) {
+            $uploadDir = "uploads/assignments/";
+
+            // ✅ Create directory if it doesn't exist
+            if (!is_dir($uploadDir)) {
+                mkdir($uploadDir, 0777, true);
+                chmod($uploadDir, 0777); // Ensure proper permissions
+            }
+
+            $ext = pathinfo($assignmentFile['name'], PATHINFO_EXTENSION);
+            $uniqueName = uniqid("assignment_") . "." . $ext;
+            $targetPath = $uploadDir . $uniqueName;
+
+            if (!move_uploaded_file($assignmentFile['tmp_name'], $targetPath)) {
+                $this->toastError('Assignment upload failed.', '/unlockyourskills/vlr?tab=assignment');
+                return;
+            }
+
+            $assignmentFileName = $uniqueName;
+        }
+
+        // ✅ Prepare clean data for DB
+        $data = [
+            'client_id'      => $clientId,
+            'title'          => $title,
+            'assignment_file' => $assignmentFileName,
+            'description'    => trim($_POST['description'] ?? $_POST['descriptionassignment'] ?? '') ?: null,
+            'tags'           => $tags,
+            'version'        => $version,
+            'language'       => trim($_POST['language'] ?? $_POST['languageassignment'] ?? '') ?: null,
+            'time_limit'     => $timeLimit !== '' ? $timeLimit : null,
+            'mobile_support' => $_POST['mobileSupport'] ?? $_POST['mobileSupportassignment'] ?? 0,
+            'assignment_type' => $_POST['assignmentType'] ?? $_POST['assignmentTypeassignment'] ?? 'individual',
+            'difficulty_level' => $_POST['difficultyLevel'] ?? $_POST['difficultyLevelassignment'] ?? 'Beginner',
+            'estimated_duration' => trim($_POST['estimatedDuration'] ?? $_POST['estimatedDurationassignment'] ?? '') ?: null,
+            'max_attempts'   => trim($_POST['maxAttempts'] ?? $_POST['maxAttemptsassignment'] ?? '1') ?: 1,
+            'passing_score'  => trim($_POST['passingScore'] ?? $_POST['passingScoreassignment'] ?? '') ?: null,
+            'submission_format' => $_POST['submissionFormat'] ?? $_POST['submissionFormatassignment'] ?? 'file_upload',
+            'allow_late_submission' => $_POST['allowLateSubmission'] ?? $_POST['allowLateSubmissionassignment'] ?? 'No',
+            'late_submission_penalty' => trim($_POST['lateSubmissionPenalty'] ?? $_POST['lateSubmissionPenaltyassignment'] ?? '0') ?: 0,
+            'instructions'   => trim($_POST['instructions'] ?? $_POST['instructionsassignment'] ?? '') ?: null,
+            'requirements'   => trim($_POST['requirements'] ?? $_POST['requirementsassignment'] ?? '') ?: null,
+            'rubric'         => trim($_POST['rubric'] ?? $_POST['rubricassignment'] ?? '') ?: null,
+            'learning_objectives' => trim($_POST['learningObjectives'] ?? $_POST['learningObjectivesassignment'] ?? '') ?: null,
+            'prerequisites'  => trim($_POST['prerequisites'] ?? $_POST['prerequisitesassignment'] ?? '') ?: null,
+            'created_by'     => $_SESSION['id']
+        ];
+
+        // ✅ Insert or update logic
+        if ($assignmentId) {
+            $success = $this->VLRModel->updateAssignmentPackage($assignmentId, $data);
+            $message = $success ? "Assignment package updated successfully." : "Failed to update Assignment package.";
+        } else {
+            $success = $this->VLRModel->insertAssignmentPackage($data);
+            $message = $success ? "Assignment package added successfully." : "Failed to add Assignment package.";
+        }
+
+        if ($success) {
+            $this->toastSuccess($assignmentId ? 'Assignment package updated successfully!' : 'Assignment package added successfully!', '/unlockyourskills/vlr?tab=assignment');
+        } else {
+            $this->toastError($assignmentId ? 'Failed to update assignment package.' : 'Failed to add assignment package.', '/unlockyourskills/vlr?tab=assignment');
+        }
+    }
+
+    // Delete Assignment Package
+    public function deleteAssignmentPackage($id = null)
+    {
+        // If no ID provided as parameter, check GET (for backward compatibility)
+        if ($id === null && isset($_GET['id'])) {
+            $id = $_GET['id'];
+        }
+        
+        if (!$id) {
+            $this->toastError('Invalid request.', '/unlockyourskills/vlr?tab=assignment');
+            return;
+        }
+
+        $success = $this->VLRModel->deleteAssignmentPackage($id);
+
+        if ($success) {
+            $this->toastSuccess('Assignment package deleted successfully!', '/unlockyourskills/vlr?tab=assignment');
+        } else {
+            $this->toastError('Failed to delete assignment package.', '/unlockyourskills/vlr?tab=assignment');
+        }
     }
 
 }

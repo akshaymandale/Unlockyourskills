@@ -24,6 +24,9 @@ Router::post('/api/locations/states', 'LocationController@getStatesByCountry');
 Router::post('/api/locations/cities', 'LocationController@getCitiesByState');
 Router::post('/api/locations/timezones', 'LocationController@getTimezonesByCountry');
 
+// Session Activity API (for timeout management)
+Router::post('/api/session/activity', 'SessionController@activity');
+
 // ===================================
 // AUTHENTICATED ROUTES
 // ===================================
@@ -146,6 +149,11 @@ Router::middleware(['Auth'])->group(function() {
     Router::get('/vlr/audio', 'VLRController@audioIndex');
     Router::post('/vlr/audio', 'VLRController@addOrEditAudioPackage');
     Router::delete('/vlr/audio/{id}', 'VLRController@deleteAudioPackage');
+    
+    // Assignment Packages
+    Router::get('/vlr/assignment', 'VLRController@assignmentIndex');
+    Router::post('/vlr/assignment', 'VLRController@addOrEditAssignmentPackage');
+    Router::delete('/vlr/assignment/{id}', 'VLRController@deleteAssignmentPackage');
     
     // Video Packages
     Router::get('/vlr/video', 'VLRController@videoIndex');

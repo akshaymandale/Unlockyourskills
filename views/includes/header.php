@@ -16,7 +16,9 @@ require_once __DIR__ . '/../../core/UrlHelper.php';
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Unlock Your Skills</title>
-
+    
+    <!-- Session timeout meta tag -->
+    <meta name="session-start" content="<?= (isset($_SESSION['last_activity']) ? $_SESSION['last_activity'] * 1000 : time() * 1000) ?>">
 
     <!-- ✅ FontAwesome for Icons -->
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
@@ -43,6 +45,7 @@ require_once __DIR__ . '/../../core/UrlHelper.php';
                         return strpos($key, 'js.') === 0 ||
                                strpos($key, 'validation.') === 0 ||
                                strpos($key, 'assessment.validation.') === 0 ||
+                               strpos($key, 'assignment.validation.') === 0 ||
                                strpos($key, 'scorm.modal.') === 0 ||
                                strpos($key, 'document.modal.') === 0 ||
                                strpos($key, 'document.category.') === 0 ||
@@ -73,6 +76,8 @@ require_once __DIR__ . '/../../core/UrlHelper.php';
         <script src="<?= UrlHelper::url('public/js/confirmation_modal.js') ?>"></script>
         <script src="<?= UrlHelper::url('public/js/confirmation_handlers.js') ?>"></script>
         <script src="<?= UrlHelper::url('public/js/confirmation_loader.js') ?>"></script>
+        <!-- Session Timeout Management -->
+        <script src="<?= UrlHelper::url('public/js/session-timeout.js') ?>"></script>
 </head>
 <body>
 
