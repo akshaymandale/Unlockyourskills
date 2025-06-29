@@ -994,3 +994,4 @@ window.addUserSubmitUrl = '<?= UrlHelper::url('users/modal/submit-add') ?>';
 </script>
 <script src="<?= UrlHelper::url('public/js/add_user_modal_validation.js') ?>"></script>
 <script src="<?= UrlHelper::url('public/js/edit_user_validation.js') ?>"></script>
+<script src="<?= UrlHelper::url('public/js/user_management.js') ?>"></script>

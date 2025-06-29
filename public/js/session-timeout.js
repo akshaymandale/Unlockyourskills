@@ -3,6 +3,13 @@
  * Handles client-side session timeout warnings and activity tracking
  */
 
+// Helper function to generate project URLs (if not already defined)
+function getProjectUrl(path) {
+    // Get the base URL from the current location
+    const baseUrl = window.location.origin + window.location.pathname.replace(/\/[^\/]*$/, '');
+    return baseUrl + '/' + path.replace(/^\//, '');
+}
+
 class SessionTimeoutManager {
     constructor() {
         this.timeoutMinutes = 60; // 1 hour (should match server-side)
@@ -84,7 +91,7 @@ class SessionTimeoutManager {
      */
     sendActivityPing() {
         // Update last activity timestamp in session
-        fetch('/unlockyourskills/api/session/activity', {
+        fetch(getProjectUrl('api/session/activity'), {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -198,7 +205,7 @@ class SessionTimeoutManager {
      * Logout now
      */
     logoutNow() {
-        window.location.href = '/unlockyourskills/logout';
+        window.location.href = getProjectUrl('logout');
     }
     
     /**
@@ -206,7 +213,7 @@ class SessionTimeoutManager {
      */
     handleSessionTimeout() {
         // Redirect to login with timeout message
-        window.location.href = '/unlockyourskills/login?timeout=1';
+        window.location.href = getProjectUrl('login?timeout=1');
     }
     
     /**

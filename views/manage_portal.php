@@ -78,10 +78,10 @@ require_once 'core/UrlHelper.php';
                     </div>
                 </div>
 
-                <h3 class="text-purple mt-4"><?= Localization::translate('course_categories'); ?></h3>
+                <h3 class="text-purple mt-4"><?= Localization::translate('course_categories.title'); ?></h3>
                 <div class="row">
                     <div class="col-md-6">
-                        <div class="card user-box shadow-sm" onclick="location.href='index.php?controller=CourseCategoryController'">
+                        <div class="card user-box shadow-sm" onclick="location.href='<?= UrlHelper::url('course-categories') ?>'">
                             <h5><i class="fas fa-tags"></i> <?= Localization::translate('category'); ?></h5>
                             <p><small class="text-muted"><?= Localization::translate('manage_categories'); ?></small></p>
                         </div>

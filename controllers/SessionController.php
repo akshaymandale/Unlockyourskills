@@ -21,12 +21,18 @@ class SessionController extends BaseController
      */
     public function activity()
     {
+        // Debug logging
+        error_log("SessionController::activity called");
+        error_log("Request method: " . $_SERVER['REQUEST_METHOD']);
+        error_log("Session data: " . print_r($_SESSION, true));
+        
         // Set headers for JSON response
         header('Content-Type: application/json');
         header('X-Requested-With: XMLHttpRequest');
         
         // Only allow POST requests
         if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+            error_log("SessionController::activity - Method not allowed: " . $_SERVER['REQUEST_METHOD']);
             http_response_code(405);
             echo json_encode([
                 'success' => false,
@@ -37,6 +43,7 @@ class SessionController extends BaseController
         
         // Check if user is logged in
         if (!isset($_SESSION['id']) || !isset($_SESSION['user'])) {
+            error_log("SessionController::activity - User not authenticated");
             http_response_code(401);
             echo json_encode([
                 'success' => false,

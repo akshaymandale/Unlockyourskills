@@ -6,6 +6,9 @@ if (session_status() === PHP_SESSION_NONE) {
 // Load UrlHelper for generating correct asset paths
 require_once __DIR__ . '/../../core/UrlHelper.php';
 
+// Load Localization class for translations
+require_once __DIR__ . '/../../config/Localization.php';
+
 ?>
 
 
@@ -35,13 +38,33 @@ require_once __DIR__ . '/../../core/UrlHelper.php';
         <?php
         // Load translations for JavaScript - use current language
         try {
-            $currentLang = Localization::getCurrentLanguage();
+            // Initialize Localization with current language from session
+            $currentLang = $_SESSION['lang'] ?? 'en';
+            Localization::loadLanguage($currentLang);
+            
             $translationsFile = __DIR__ . "/../../locales/{$currentLang}.json";
             if (file_exists($translationsFile)) {
                 $translations = json_decode(file_get_contents($translationsFile), true);
                 if ($translations) {
+                    // Function to flatten nested arrays with dot notation
+                    function flattenTranslations($array, $prefix = '') {
+                        $result = [];
+                        foreach ($array as $key => $value) {
+                            $newKey = $prefix ? $prefix . '.' . $key : $key;
+                            if (is_array($value)) {
+                                $result = array_merge($result, flattenTranslations($value, $newKey));
+                            } else {
+                                $result[$newKey] = $value;
+                            }
+                        }
+                        return $result;
+                    }
+                    
+                    // Flatten the translations
+                    $flattenedTranslations = flattenTranslations($translations);
+                    
                     // Filter JavaScript translations including confirmations
-                    $jsTranslations = array_filter($translations, function($key) {
+                    $jsTranslations = array_filter($flattenedTranslations, function($key) {
                         return strpos($key, 'js.') === 0 ||
                                strpos($key, 'validation.') === 0 ||
                                strpos($key, 'assessment.validation.') === 0 ||
@@ -52,6 +75,7 @@ require_once __DIR__ . '/../../core/UrlHelper.php';
                                strpos($key, 'error.') === 0 ||
                                strpos($key, 'confirmation.') === 0 ||
                                strpos($key, 'item.') === 0 ||
+                               strpos($key, 'course_categories.') === 0 ||
                                in_array($key, [
                                    'buttons_cancel', 'buttons_close', 'buttons_submit_feedback_question',
                                    'buttons_submit_survey_question', 'add_tag', 'upload_image_video_pdf'
@@ -112,5 +136,4 @@ window.currentUserId = <?= json_encode($_SESSION['id'] ?? null) ?>;
 
 <!-- GLOBAL SCRIPTS -->
 <script src="<?= UrlHelper::url('public/bootstrap/js/bootstrap.bundle.min.js') ?>"></script>
-<script src="<?= UrlHelper::url('public/js/user_management.js') ?>"></script>
 

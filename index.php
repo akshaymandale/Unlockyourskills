@@ -13,7 +13,7 @@ ini_set('display_errors', 1);
 
 // Set session cookie path to match the application path
 session_set_cookie_params([
-    'path' => '/unlockyourskills',
+    'path' => '/Unlockyourskills',
     'httponly' => true,
     'secure' => false, // Set to true if using HTTPS
     'samesite' => 'Lax'
@@ -124,8 +124,8 @@ if (isset($_GET['controller']) || isset($_POST['controller'])) {
         }
 
         // Regular request - redirect to login
-        header('Location: /login');
-        exit();
+        require_once 'core/UrlHelper.php';
+        UrlHelper::redirect('login');
     }
 }
 

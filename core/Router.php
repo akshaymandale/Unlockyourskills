@@ -1,5 +1,7 @@
 <?php
 
+require_once 'core/UrlHelper.php';
+
 /**
  * Router Class - Laravel-style routing for PHP MVC
  * Handles URL routing, middleware, and request dispatching
@@ -149,6 +151,10 @@ class Router
         $requestUri = $this->getRequestUri();
         $requestMethod = $_SERVER['REQUEST_METHOD'];
 
+        // Debug logging
+        error_log("Router::dispatch - Request URI: $requestUri, Method: $requestMethod");
+        error_log("Router::dispatch - Available routes: " . print_r(self::$routes, true));
+
         // Handle method override for forms
         if ($requestMethod === 'POST' && isset($_POST['_method'])) {
             $requestMethod = strtoupper($_POST['_method']);
@@ -158,15 +164,19 @@ class Router
         $matchedRoute = $this->findRoute($requestMethod, $requestUri);
 
         if (!$matchedRoute) {
+            error_log("Router::dispatch - No route found for $requestMethod $requestUri");
             $this->handleNotFound();
             return;
         }
-        
+
+        error_log("Router::dispatch - Matched route: " . print_r($matchedRoute, true));
+
         // Execute middleware
         if (!$this->executeMiddleware($matchedRoute['middleware'])) {
+            error_log("Router::dispatch - Middleware failed");
             return;
         }
-        
+
         // Execute controller action
         $this->executeAction($matchedRoute);
     }
@@ -177,6 +187,9 @@ class Router
     private function getRequestUri()
     {
         $uri = $_SERVER['REQUEST_URI'];
+
+        // Debug logging
+        error_log("Router::getRequestUri - Original URI: $uri");
 
         // Remove query string
         if (($pos = strpos($uri, '?')) !== false) {
@@ -190,6 +203,8 @@ class Router
         // Normalize script directory
         $scriptDir = rtrim($scriptDir, '/');
 
+        error_log("Router::getRequestUri - Script name: $scriptName, Script dir: $scriptDir");
+
         // If URI starts with script directory, remove it
         if ($scriptDir !== '' && $scriptDir !== '/' && strpos($uri, $scriptDir) === 0) {
             $uri = substr($uri, strlen($scriptDir));
@@ -199,7 +214,11 @@ class Router
         $uri = '/' . ltrim($uri, '/');
 
         // Handle root case
-        return $uri === '/' ? '/' : rtrim($uri, '/');
+        $finalUri = $uri === '/' ? '/' : rtrim($uri, '/');
+        
+        error_log("Router::getRequestUri - Final URI: $finalUri");
+        
+        return $finalUri;
     }
     
     /**
@@ -211,17 +230,12 @@ class Router
             if ($route['method'] !== $method) {
                 continue;
             }
-            
             $pattern = $this->convertToRegex($route['uri']);
-
-            // Safely test the pattern
             $matchResult = @preg_match($pattern, $uri, $matches);
-
             if ($matchResult === false) {
                 error_log("Regex error with pattern: $pattern for URI: {$route['uri']} testing against: $uri");
-                continue; // Skip this route
+                continue;
             }
-
             if ($matchResult === 1) {
                 // Extract parameters
                 $parameters = [];
@@ -232,12 +246,10 @@ class Router
                         }
                     }
                 }
-                
                 $route['parameters'] = $parameters;
                 return $route;
             }
         }
-        
         return null;
     }
     
@@ -355,8 +367,8 @@ class Router
      */
     private function handleNotFound()
     {
-        http_response_code(404);
-        echo "404 - Page Not Found";
+        // Redirect to login page for 404 errors
+        UrlHelper::redirect('index.php?controller=LoginController');
     }
     
     /**
