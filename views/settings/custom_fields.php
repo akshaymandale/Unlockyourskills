@@ -36,98 +36,115 @@ require_once 'core/IdEncryption.php';
             </ol>
         </nav>
 
-        <!-- ✅ Filters & Search Section -->
-        <div class="filter-section">
-            <div class="container-fluid">
-                <!-- Single Compact Row -->
-                <div class="row align-items-center g-2">
-
-                    <!-- Client Filter for Super Admin -->
-                    <?php if ($currentUser['system_role'] === 'super_admin'): ?>
-                    <div class="col-auto">
-                        <select id="clientFilter" class="form-select form-select-sm compact-filter" onchange="filterByClient(this.value)">
-                            <option value=""><?= Localization::translate('all_clients'); ?></option>
-                            <?php foreach ($clients as $clientOption): ?>
-                                <option value="<?= IdEncryption::encrypt($clientOption['id']) ?>"
-                                        <?= ($client && $client['id'] == $clientOption['id']) ? 'selected' : '' ?>>
-                                    <?= htmlspecialchars($clientOption['client_name']) ?>
-                                </option>
-                            <?php endforeach; ?>
-                        </select>
+        <!-- Page Description -->
+        <div class="row mb-4">
+            <div class="col-12">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <p class="text-muted mb-0"><?= Localization::translate('custom_fields_description'); ?></p>
                     </div>
-                    <?php endif; ?>
+                    <button type="button" class="btn theme-btn-primary"
+                            data-bs-toggle="modal"
+                            data-bs-target="#createCustomFieldModal">
+                        <i class="fas fa-plus me-2"></i>
+                        <?= Localization::translate('custom_fields_create_button'); ?>
+                    </button>
+                </div>
+            </div>
+        </div>
 
-                    <!-- Type Filter -->
-                    <div class="col-auto">
-                        <select id="typeFilter" class="form-select form-select-sm compact-filter" onchange="filterFields()">
-                            <option value=""><?= Localization::translate('all_types'); ?></option>
-                            <option value="text"><?= Localization::translate('custom_fields_field_type_text'); ?></option>
-                            <option value="textarea"><?= Localization::translate('custom_fields_field_type_textarea'); ?></option>
-                            <option value="select"><?= Localization::translate('custom_fields_field_type_select'); ?></option>
-                            <option value="radio"><?= Localization::translate('custom_fields_field_type_radio'); ?></option>
-                            <option value="checkbox"><?= Localization::translate('custom_fields_field_type_checkbox'); ?></option>
-                            <option value="file"><?= Localization::translate('custom_fields_field_type_file'); ?></option>
-                            <option value="date"><?= Localization::translate('custom_fields_field_type_date'); ?></option>
-                            <option value="number"><?= Localization::translate('custom_fields_field_type_number'); ?></option>
-                            <option value="email"><?= Localization::translate('custom_fields_field_type_email'); ?></option>
-                            <option value="phone"><?= Localization::translate('custom_fields_field_type_phone'); ?></option>
-                        </select>
-                    </div>
+        <!-- Filters and Search -->
+        <div class="row mb-4">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-body">
+                        <div class="row g-3 align-items-center">
+                            <!-- Search -->
+                            <div class="col-md-3">
+                                <div class="input-group input-group-sm">
+                                    <span class="input-group-text"><i class="fas fa-search"></i></span>
+                                    <input type="text" id="searchFields" class="form-control"
+                                        placeholder="<?= Localization::translate('search_custom_fields'); ?>"
+                                        title="<?= Localization::translate('search_custom_fields'); ?>"
+                                        onkeyup="filterFields()">
+                                    <button type="button" class="btn btn-outline-secondary"
+                                        title="<?= Localization::translate('search_custom_fields'); ?>">
+                                        <i class="fas fa-search"></i>
+                                    </button>
+                                </div>
+                            </div>
 
-                    <!-- Status Filter -->
-                    <div class="col-auto">
-                        <select id="statusFilter" class="form-select form-select-sm compact-filter" onchange="filterFields()">
-                            <option value=""><?= Localization::translate('all_status'); ?></option>
-                            <option value="required"><?= Localization::translate('required_fields'); ?></option>
-                            <option value="optional"><?= Localization::translate('optional_fields'); ?></option>
-                            <option value="used"><?= Localization::translate('fields_in_use'); ?></option>
-                            <option value="unused"><?= Localization::translate('unused_fields'); ?></option>
-                        </select>
-                    </div>
+                            <!-- Client Filter for Super Admin -->
+                            <?php if ($currentUser['system_role'] === 'super_admin'): ?>
+                            <div class="col-md-2">
+                                <select id="clientFilter" class="form-select form-select-sm" onchange="filterByClient(this.value)">
+                                    <option value=""><?= Localization::translate('all_clients'); ?></option>
+                                    <?php foreach ($clients as $clientOption): ?>
+                                        <option value="<?= IdEncryption::encrypt($clientOption['id']) ?>"
+                                                <?= ($client && $client['id'] == $clientOption['id']) ? 'selected' : '' ?>>
+                                            <?= htmlspecialchars($clientOption['client_name']) ?>
+                                        </option>
+                                    <?php endforeach; ?>
+                                </select>
+                            </div>
+                            <?php endif; ?>
 
-                    <!-- Active/Inactive Filter -->
-                    <div class="col-auto">
-                        <select id="activeFilter" class="form-select form-select-sm compact-filter" onchange="filterFields()">
-                            <option value=""><?= Localization::translate('all_fields'); ?></option>
-                            <option value="active"><?= Localization::translate('active_fields'); ?></option>
-                            <option value="inactive"><?= Localization::translate('inactive_fields'); ?></option>
-                        </select>
-                    </div>
+                            <!-- Type Filter -->
+                            <div class="col-md-2">
+                                <select id="typeFilter" class="form-select form-select-sm" onchange="filterFields()">
+                                    <option value=""><?= Localization::translate('all_types'); ?></option>
+                                    <option value="text"><?= Localization::translate('custom_fields_field_type_text'); ?></option>
+                                    <option value="textarea"><?= Localization::translate('custom_fields_field_type_textarea'); ?></option>
+                                    <option value="select"><?= Localization::translate('custom_fields_field_type_select'); ?></option>
+                                    <option value="radio"><?= Localization::translate('custom_fields_field_type_radio'); ?></option>
+                                    <option value="checkbox"><?= Localization::translate('custom_fields_field_type_checkbox'); ?></option>
+                                    <option value="file"><?= Localization::translate('custom_fields_field_type_file'); ?></option>
+                                    <option value="date"><?= Localization::translate('custom_fields_field_type_date'); ?></option>
+                                    <option value="number"><?= Localization::translate('custom_fields_field_type_number'); ?></option>
+                                    <option value="email"><?= Localization::translate('custom_fields_field_type_email'); ?></option>
+                                    <option value="phone"><?= Localization::translate('custom_fields_field_type_phone'); ?></option>
+                                </select>
+                            </div>
 
-                    <!-- Search -->
-                    <div class="col-auto">
-                        <div class="input-group input-group-sm compact-search">
-                            <input type="text" id="searchFields" class="form-control"
-                                placeholder="<?= Localization::translate('search_custom_fields'); ?>"
-                                title="<?= Localization::translate('search_custom_fields'); ?>"
-                                onkeyup="filterFields()">
-                            <button type="button" class="btn btn-outline-secondary"
-                                title="<?= Localization::translate('search_custom_fields'); ?>">
-                                <i class="fas fa-search"></i>
-                            </button>
+                            <!-- Status Filter -->
+                            <div class="col-md-2">
+                                <select id="statusFilter" class="form-select form-select-sm" onchange="filterFields()">
+                                    <option value=""><?= Localization::translate('all_status'); ?></option>
+                                    <option value="required"><?= Localization::translate('required_fields'); ?></option>
+                                    <option value="optional"><?= Localization::translate('optional_fields'); ?></option>
+                                    <option value="used"><?= Localization::translate('fields_in_use'); ?></option>
+                                    <option value="unused"><?= Localization::translate('unused_fields'); ?></option>
+                                </select>
+                            </div>
+
+                            <!-- Active/Inactive Filter -->
+                            <div class="col-md-2">
+                                <select id="activeFilter" class="form-select form-select-sm" onchange="filterFields()">
+                                    <option value=""><?= Localization::translate('all_fields'); ?></option>
+                                    <option value="active"><?= Localization::translate('active_fields'); ?></option>
+                                    <option value="inactive"><?= Localization::translate('inactive_fields'); ?></option>
+                                </select>
+                            </div>
+
+                            <!-- Clear Filters Button -->
+                            <div class="col-md-1">
+                                <button type="button" class="btn btn-outline-danger w-100 btn-sm" onclick="clearFilters()"
+                                    title="Clear all filters">
+                                    <i class="fas fa-times"></i>
+                                </button>
+                            </div>
                         </div>
                     </div>
+                </div>
+            </div>
+        </div>
 
-                    <!-- Clear Filters -->
-                    <div class="col-auto">
-                        <button type="button" class="btn btn-sm btn-secondary" onclick="clearFilters()"
-                            title="Clear all filters">
-                            <i class="fas fa-times me-1"></i> Clear
-                        </button>
-                    </div>
-
-                    <!-- Action Buttons -->
-                    <div class="col-auto ms-auto">
-                        <div class="d-flex gap-2 align-items-center">
-                            <button type="button" class="btn btn-sm btn-primary"
-                                    data-bs-toggle="modal"
-                                    data-bs-target="#createCustomFieldModal">
-                                <i class="fas fa-plus me-1"></i>
-                                <?= Localization::translate('custom_fields_create_button'); ?>
-                            </button>
-                        </div>
-                    </div>
-
+        <!-- Search Results Info -->
+        <div class="row mb-3">
+            <div class="col-12">
+                <div id="searchResultsInfo" class="search-results-info" style="display: none;">
+                    <i class="fas fa-info-circle"></i>
+                    <span id="resultsText"></span>
                 </div>
             </div>
         </div>
@@ -147,7 +164,7 @@ require_once 'core/IdEncryption.php';
         </div>
         <?php endif; ?>
 
-        <!-- ✅ Custom Fields Grid View -->
+        <!-- Custom Fields Grid View -->
         <div id="customFieldsContainer" class="fade-transition">
             <?php if (empty($customFields)): ?>
                 <div class="text-center py-5">
@@ -162,154 +179,112 @@ require_once 'core/IdEncryption.php';
                     </button>
                 </div>
             <?php else: ?>
-                <table class="table table-bordered" id="customFieldsTable">
-                    <thead class="question-grid">
-                        <tr>
-                            <th><?= Localization::translate('field_name'); ?></th>
-                            <th><?= Localization::translate('field_label'); ?></th>
-                            <th><?= Localization::translate('field_type'); ?></th>
-                            <th><?= Localization::translate('required'); ?></th>
-                            <th><?= Localization::translate('status'); ?></th>
-                            <th><?= Localization::translate('usage'); ?></th>
-                            <?php if ($currentUser['system_role'] === 'super_admin'): ?>
-                            <th><?= Localization::translate('client'); ?></th>
-                            <?php endif; ?>
-                            <th><?= Localization::translate('created'); ?></th>
-                            <th><?= Localization::translate('actions'); ?></th>
-                        </tr>
-                    </thead>
-                    <tbody id="customFieldsTableBody">
-                        <?php foreach ($customFields as $field): ?>
-                            <tr data-field-name="<?= strtolower($field['field_name']) ?>"
-                                data-field-label="<?= strtolower($field['field_label']) ?>"
-                                data-field-type="<?= $field['field_type'] ?>"
-                                data-required="<?= $field['is_required'] ? 'required' : 'optional' ?>"
-                                data-active="<?= $field['is_active'] ? 'active' : 'inactive' ?>"
-                                data-usage="<?= $field['usage_count'] > 0 ? 'used' : 'unused' ?>">
-                                <td>
-                                    <code><?= htmlspecialchars($field['field_name']) ?></code>
-                                </td>
-                                <td>
-                                    <strong><?= htmlspecialchars($field['field_label']) ?></strong>
-                                    <?php if (!$field['is_active']): ?>
-                                        <small class="text-muted d-block">(<?= Localization::translate('inactive'); ?>)</small>
-                                    <?php endif; ?>
-                                </td>
-                                <td>
-                                    <span class="badge bg-info">
-                                        <?= Localization::translate('custom_fields_field_type_' . $field['field_type']) ?>
-                                    </span>
-                                </td>
-                                <td>
-                                    <?php if ($field['is_required']): ?>
-                                        <span class="badge bg-warning">
-                                            <i class="fas fa-asterisk me-1"></i>
-                                            <?= Localization::translate('required'); ?>
-                                        </span>
-                                    <?php else: ?>
-                                        <span class="badge bg-secondary">
-                                            <?= Localization::translate('optional'); ?>
-                                        </span>
-                                    <?php endif; ?>
-                                </td>
-                                <td>
-                                    <?php if ($field['is_active']): ?>
-                                        <span class="badge bg-success">
-                                            <i class="fas fa-check-circle me-1"></i>
-                                            <?= Localization::translate('active'); ?>
-                                        </span>
-                                    <?php else: ?>
-                                        <span class="badge bg-danger">
-                                            <i class="fas fa-times-circle me-1"></i>
-                                            <?= Localization::translate('inactive'); ?>
-                                        </span>
-                                    <?php endif; ?>
-                                </td>
-                                <td>
-                                    <?php if ($field['usage_count'] > 0): ?>
-                                        <span class="badge bg-success">
-                                            <i class="fas fa-users me-1"></i>
-                                            <?= $field['usage_count'] ?> <?= Localization::translate('users'); ?>
-                                        </span>
-                                    <?php else: ?>
-                                        <span class="badge bg-light text-dark">
-                                            <?= Localization::translate('unused'); ?>
-                                        </span>
-                                    <?php endif; ?>
-                                </td>
+                <div class="table-responsive">
+                    <table class="table table-bordered table-hover" id="customFieldsTable">
+                        <thead class="table-light">
+                            <tr>
+                                <th><?= Localization::translate('field_name'); ?></th>
+                                <th><?= Localization::translate('field_label'); ?></th>
+                                <th><?= Localization::translate('field_type'); ?></th>
+                                <th><?= Localization::translate('required'); ?></th>
+                                <th><?= Localization::translate('status'); ?></th>
+                                <th><?= Localization::translate('usage'); ?></th>
                                 <?php if ($currentUser['system_role'] === 'super_admin'): ?>
-                                <td>
-                                    <small class="text-muted">
-                                        <?= htmlspecialchars($field['client_name'] ?? 'Unknown') ?>
-                                    </small>
-                                </td>
+                                <th><?= Localization::translate('client'); ?></th>
                                 <?php endif; ?>
-                                <td>
-                                    <small class="text-muted">
-                                        <?= date('M j, Y', strtotime($field['created_at'])) ?>
-                                    </small>
-                                </td>
-                                <td>
-                                    <!-- ✅ Edit Button -->
-                                    <button type="button"
-                                            class="btn theme-btn-primary edit-field-btn"
-                                            data-id="<?= $field['id'] ?>"
-                                            data-field-name="<?= htmlspecialchars($field['field_name']) ?>"
-                                            data-field-label="<?= htmlspecialchars($field['field_label']) ?>"
-                                            data-field-type="<?= $field['field_type'] ?>"
-                                            data-field-options="<?= htmlspecialchars(json_encode($field['field_options'] ?? [])) ?>"
-                                            data-is-required="<?= $field['is_required'] ? '1' : '0' ?>"
-                                            title="<?= Localization::translate('edit_custom_field'); ?>">
-                                        <i class="fas fa-edit"></i>
-                                    </button>
-
-                                    <!-- ✅ Activate/Deactivate Button -->
-                                    <?php if ($field['is_active']): ?>
-                                        <button type="button"
-                                                class="btn theme-btn-warning deactivate-field"
-                                                data-id="<?= $field['id'] ?>"
-                                                data-name="<?= htmlspecialchars($field['field_label']) ?>"
-                                                title="<?= Localization::translate('deactivate_custom_field'); ?>">
-                                            <i class="fas fa-eye-slash"></i>
-                                        </button>
-                                    <?php else: ?>
-                                        <button type="button"
-                                                class="btn theme-btn-success activate-field"
-                                                data-id="<?= $field['id'] ?>"
-                                                data-name="<?= htmlspecialchars($field['field_label']) ?>"
-                                                title="<?= Localization::translate('activate_custom_field'); ?>">
-                                            <i class="fas fa-eye"></i>
-                                        </button>
-                                    <?php endif; ?>
-
-                                    <!-- ✅ Delete Button (enabled for all inactive fields) -->
-                                    <?php if (!$field['is_active']): ?>
-                                        <button type="button"
-                                                class="btn theme-btn-danger delete-field"
-                                                data-id="<?= $field['id'] ?>"
-                                                data-name="<?= htmlspecialchars($field['field_label']) ?>"
-                                                data-usage-count="<?= $field['usage_count'] ?>"
-                                                title="<?= Localization::translate('delete_custom_field'); ?>">
-                                            <i class="fas fa-trash-alt"></i>
-                                        </button>
-                                    <?php else: ?>
-                                        <button class="btn btn-secondary"
-                                                disabled
-                                                title="<?= Localization::translate('deactivate_before_delete'); ?>">
-                                            <i class="fas fa-trash-alt"></i>
-                                        </button>
-                                    <?php endif; ?>
-                                </td>
+                                <th><?= Localization::translate('created'); ?></th>
+                                <th><?= Localization::translate('actions'); ?></th>
                             </tr>
-                        <?php endforeach; ?>
-                    </tbody>
-                </table>
+                        </thead>
+                        <tbody id="customFieldsTableBody">
+                            <?php foreach ($customFields as $field): ?>
+                                <tr data-field-name="<?= strtolower($field['field_name']) ?>"
+                                    data-field-label="<?= strtolower($field['field_label']) ?>"
+                                    data-field-type="<?= $field['field_type'] ?>"
+                                    data-required="<?= $field['is_required'] ? 'required' : 'optional' ?>"
+                                    data-active="<?= $field['is_active'] ? 'active' : 'inactive' ?>"
+                                    data-usage="<?= $field['usage_count'] > 0 ? 'used' : 'unused' ?>">
+                                    <td>
+                                        <code><?= htmlspecialchars($field['field_name']) ?></code>
+                                    </td>
+                                    <td>
+                                        <strong><?= htmlspecialchars($field['field_label']) ?></strong>
+                                        <?php if (!$field['is_active']): ?>
+                                            <small class="text-muted d-block">(<?= Localization::translate('inactive'); ?>)</small>
+                                        <?php endif; ?>
+                                    </td>
+                                    <td>
+                                        <span class="badge bg-info">
+                                            <?= Localization::translate('custom_fields_field_type_' . $field['field_type']) ?>
+                                        </span>
+                                    </td>
+                                    <td>
+                                        <span class="badge <?= $field['is_required'] ? 'bg-danger' : 'bg-secondary' ?>">
+                                            <?= $field['is_required'] ? Localization::translate('required') : Localization::translate('optional') ?>
+                                        </span>
+                                    </td>
+                                    <td>
+                                        <span class="badge <?= $field['is_active'] ? 'bg-success' : 'bg-warning' ?>">
+                                            <?= $field['is_active'] ? Localization::translate('active') : Localization::translate('inactive') ?>
+                                        </span>
+                                    </td>
+                                    <td>
+                                        <span class="badge <?= $field['usage_count'] > 0 ? 'bg-primary' : 'bg-light text-dark' ?>">
+                                            <?= $field['usage_count'] ?> <?= Localization::translate('usage_count') ?>
+                                        </span>
+                                    </td>
+                                    <?php if ($currentUser['system_role'] === 'super_admin'): ?>
+                                    <td>
+                                        <small class="text-muted"><?= htmlspecialchars($field['client_name'] ?? 'N/A') ?></small>
+                                    </td>
+                                    <?php endif; ?>
+                                    <td>
+                                        <small class="text-muted">
+                                            <?= date('M j, Y', strtotime($field['created_at'])) ?>
+                                        </small>
+                                    </td>
+                                    <td>
+                                        <div class="btn-group btn-group-sm" role="group">
+                                            <button type="button" class="btn btn-outline-primary btn-sm edit-field-btn"
+                                                    data-id="<?= $field['id'] ?>"
+                                                    data-field-name="<?= htmlspecialchars($field['field_name']) ?>"
+                                                    data-field-label="<?= htmlspecialchars($field['field_label']) ?>"
+                                                    data-field-type="<?= $field['field_type'] ?>"
+                                                    data-field-options='<?= json_encode($field['field_options'] ?? []) ?>'
+                                                    data-is-required="<?= $field['is_required'] ? '1' : '0' ?>"
+                                                    title="<?= Localization::translate('edit_field'); ?>">
+                                                <i class="fas fa-edit"></i>
+                                            </button>
+                                            <?php if ($field['is_active']): ?>
+                                            <button type="button" class="btn btn-outline-warning btn-sm deactivate-field"
+                                                    data-id="<?= $field['id'] ?>"
+                                                    data-name="<?= htmlspecialchars($field['field_name']) ?>"
+                                                    title="<?= Localization::translate('deactivate_field'); ?>">
+                                                <i class="fas fa-toggle-off"></i>
+                                            </button>
+                                            <?php else: ?>
+                                            <button type="button" class="btn btn-outline-success btn-sm activate-field"
+                                                    data-id="<?= $field['id'] ?>"
+                                                    data-name="<?= htmlspecialchars($field['field_name']) ?>"
+                                                    title="<?= Localization::translate('activate_field'); ?>">
+                                                <i class="fas fa-toggle-on"></i>
+                                            </button>
+                                            <?php endif; ?>
+                                            <button type="button" class="btn btn-outline-danger btn-sm delete-field"
+                                                    data-id="<?= $field['id'] ?>"
+                                                    data-name="<?= htmlspecialchars($field['field_name']) ?>"
+                                                    data-usage-count="<?= $field['usage_count'] ?>"
+                                                    title="<?= Localization::translate('delete_field'); ?>">
+                                                <i class="fas fa-trash"></i>
+                                            </button>
+                                        </div>
+                                    </td>
+                                </tr>
+                            <?php endforeach; ?>
+                        </tbody>
+                    </table>
+                </div>
             <?php endif; ?>
-        </div>
-
-        <!-- ✅ Results Count -->
-        <div class="text-center text-muted small mt-3" id="resultsCount">
-            Showing <?= count($customFields) ?> custom field<?= count($customFields) != 1 ? 's' : '' ?>
         </div>
     </div>
 </div>
@@ -537,8 +512,6 @@ require_once 'core/IdEncryption.php';
     </div>
 </div>
 
-
-
 <script>
 // getProjectUrl function is now handled by script.js
 
@@ -601,8 +574,30 @@ function filterFields() {
         if (show) visibleCount++;
     });
 
-    // Update count
-    document.getElementById('resultsCount').textContent = `Showing ${visibleCount} custom field${visibleCount != 1 ? 's' : ''}`;
+    // Update search results info
+    const searchResultsInfo = document.getElementById('searchResultsInfo');
+    const resultsText = document.getElementById('resultsText');
+    
+    if (searchResultsInfo && resultsText) {
+        const hasFilters = searchTerm || typeFilter || statusFilter || activeFilter;
+        
+        if (hasFilters) {
+            let infoText = `Showing ${visibleCount} result(s)`;
+            
+            if (searchTerm) {
+                infoText += ` for search: "<strong>${searchTerm}</strong>"`;
+            }
+            
+            if (typeFilter || statusFilter || activeFilter) {
+                infoText += ' with filters applied';
+            }
+            
+            resultsText.innerHTML = infoText;
+            searchResultsInfo.style.display = 'block';
+        } else {
+            searchResultsInfo.style.display = 'none';
+        }
+    }
 }
 
 // Clear filters
