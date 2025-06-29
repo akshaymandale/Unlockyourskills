@@ -105,6 +105,35 @@ Router::middleware(['Auth'])->group(function() {
     Router::delete('/users/custom-fields/{id}', 'CustomFieldController@delete');
 
     // ===================================
+    // COURSE SUBCATEGORIES
+    // ===================================
+    
+    // Course Subcategories
+    Router::get('/course-subcategories', 'CourseSubcategoryController@index');
+    
+    // Course Subcategories AJAX operations
+    Router::post('/course-subcategories/ajax/search', 'CourseSubcategoryController@ajaxSearch');
+    Router::post('/course-subcategories/ajax/toggle-status', 'CourseSubcategoryController@toggleStatus');
+    Router::post('/course-subcategories/submit', 'CourseSubcategoryController@submitSubcategory');
+    
+    // Course Subcategories CRUD operations
+    Router::get('/course-subcategories/create', 'CourseSubcategoryController@create');
+    Router::post('/course-subcategories', 'CourseSubcategoryController@create');
+    Router::get('/course-subcategories/{id}/edit', 'CourseSubcategoryController@edit');
+    Router::post('/course-subcategories/{id}', 'CourseSubcategoryController@edit');
+    Router::delete('/course-subcategories/{id}', 'CourseSubcategoryController@delete');
+    Router::post('/course-subcategories/{id}/delete', 'CourseSubcategoryController@delete'); // POST fallback for delete
+    Router::get('/course-subcategories/{id}/delete', 'CourseSubcategoryController@delete'); // For GET delete links
+    
+    // Course Subcategories API (more specific routes after general ones)
+    Router::get('/course-subcategories/get/{id}', 'CourseSubcategoryController@get');
+    Router::get('/api/course-subcategories/dropdown', 'CourseSubcategoryController@getSubcategoriesForDropdown');
+    
+    // Course Subcategories Modal operations (more specific routes after general ones)
+    Router::post('/course-subcategories/modal/add', 'CourseSubcategoryController@loadAddModal');
+    Router::post('/course-subcategories/modal/edit', 'CourseSubcategoryController@loadEditModal');
+
+    // ===================================
     // SETTINGS ROUTES
     // ===================================
 

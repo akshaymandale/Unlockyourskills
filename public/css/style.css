@@ -4429,3 +4429,111 @@ body select:focus,
 #assignmentModal .form-control, #assignmentModal .form-select {
     margin-bottom: 1rem;
 }
+
+/* Course Subcategories Module Styles */
+
+/* Card and Table Consistency */
+.card {
+    border-radius: 0.5rem;
+    box-shadow: 0 2px 8px rgba(106, 13, 173, 0.05);
+}
+
+.table th, .table td {
+    vertical-align: middle;
+}
+
+/* Theme Buttons */
+.theme-btn-primary {
+    background: #6a0dad;
+    color: #fff;
+    border: none;
+    border-radius: 0.3rem;
+    transition: background 0.2s;
+}
+.theme-btn-primary:hover, .theme-btn-primary:focus {
+    background: #4b076b;
+    color: #fff;
+}
+.theme-btn-danger {
+    background: #e74c3c;
+    color: #fff;
+    border: none;
+    border-radius: 0.3rem;
+}
+.theme-btn-danger:hover, .theme-btn-danger:focus {
+    background: #c0392b;
+    color: #fff;
+}
+
+/* Modal Styles */
+.theme-modal-header {
+    background: #6a0dad;
+    color: #fff;
+    border-bottom: none;
+}
+.theme-modal-footer {
+    border-top: none;
+}
+.theme-modal-message {
+    font-size: 1.1rem;
+    color: #333;
+}
+.theme-modal-subtext {
+    font-size: 0.95rem;
+    color: #888;
+}
+
+/* Search Results Info */
+.search-results-info {
+    background: #f3eaff;
+    color: #6a0dad;
+    border-radius: 0.3rem;
+    padding: 0.5rem 1rem;
+    font-size: 1rem;
+    margin-bottom: 0.5rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+/* Pagination */
+.pagination-container {
+    margin-top: 1.5rem;
+}
+.pagination .page-item.active .page-link {
+    background: #6a0dad;
+    border-color: #6a0dad;
+    color: #fff;
+}
+.pagination .page-link {
+    color: #6a0dad;
+}
+.pagination .page-link:hover {
+    background: #f3eaff;
+    color: #4b076b;
+}
+
+/* No Results Message */
+#noResultsMessage .alert-info {
+    background: #f3eaff;
+    color: #6a0dad;
+    border: none;
+}
+
+/* Misc */
+.back-arrow-container .back-link {
+    color: #6a0dad;
+    font-size: 1.3rem;
+    margin-right: 0.5rem;
+}
+.back-arrow-container .divider-line {
+    border-left: 2px solid #6a0dad;
+    height: 1.5rem;
+    margin: 0 0.7rem;
+    display: inline-block;
+    vertical-align: middle;
+}
+.page-title.text-purple {
+    color: #6a0dad;
+    font-weight: 600;
+}

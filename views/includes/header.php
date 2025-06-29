@@ -76,6 +76,7 @@ require_once __DIR__ . '/../../config/Localization.php';
                                strpos($key, 'confirmation.') === 0 ||
                                strpos($key, 'item.') === 0 ||
                                strpos($key, 'course_categories.') === 0 ||
+                               strpos($key, 'course_subcategories.') === 0 ||
                                in_array($key, [
                                    'buttons_cancel', 'buttons_close', 'buttons_submit_feedback_question',
                                    'buttons_submit_survey_question', 'add_tag', 'upload_image_video_pdf'
