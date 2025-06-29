@@ -1,0 +1,47 @@
+-- Course Subcategories Table
+CREATE TABLE IF NOT EXISTS `course_subcategories` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `client_id` int(11) NOT NULL,
+  `category_id` int(11) NOT NULL,
+  `name` varchar(100) NOT NULL,
+  `description` text,
+  `sort_order` int(11) DEFAULT 0,
+  `is_active` tinyint(1) NOT NULL DEFAULT '1',
+  `created_by` int(11) NOT NULL,
+  `updated_by` int(11) DEFAULT NULL,
+  `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` timestamp NULL DEFAULT NULL ON UPDATE CURRENT_TIMESTAMP,
+  `is_deleted` tinyint(1) NOT NULL DEFAULT '0',
+  PRIMARY KEY (`id`),
+  KEY `idx_client_id` (`client_id`),
+  KEY `idx_category_id` (`category_id`),
+  KEY `idx_is_active` (`is_active`),
+  KEY `idx_is_deleted` (`is_deleted`),
+  KEY `idx_sort_order` (`sort_order`),
+  KEY `idx_created_by` (`created_by`),
+  KEY `idx_created_at` (`created_at`),
+  FOREIGN KEY (`client_id`) REFERENCES `clients`(`id`) ON DELETE CASCADE,
+  FOREIGN KEY (`category_id`) REFERENCES `course_categories`(`id`) ON DELETE CASCADE,
+  FOREIGN KEY (`created_by`) REFERENCES `user_profiles`(`id`),
+  FOREIGN KEY (`updated_by`) REFERENCES `user_profiles`(`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='Course subcategories table';
+
+-- Insert default subcategories
+INSERT INTO `course_subcategories` (`client_id`, `category_id`, `name`, `description`, `sort_order`, `is_active`, `created_by`) VALUES
+(1, 1, 'Web Development', 'Frontend and backend web development', 1, 1, 44),
+(1, 1, 'Mobile Development', 'iOS and Android app development', 2, 1, 44),
+(1, 1, 'Backend Development', 'Server-side programming and databases', 3, 1, 44),
+(1, 1, 'Data Science', 'Machine learning, AI, and data analysis', 4, 1, 44),
+(1, 1, 'DevOps', 'Development operations and deployment', 5, 1, 44),
+(1, 2, 'Leadership', 'Management and leadership skills', 1, 1, 44),
+(1, 2, 'Project Management', 'Project planning and execution', 2, 1, 44),
+(1, 2, 'Human Resources', 'HR management and employee relations', 3, 1, 44),
+(1, 3, 'UI/UX Design', 'User interface and user experience design', 1, 1, 44),
+(1, 3, 'Graphic Design', 'Visual design and creative arts', 2, 1, 44),
+(1, 3, 'Digital Art', 'Digital illustration and animation', 3, 1, 44),
+(1, 4, 'Digital Marketing', 'Online marketing strategies', 1, 1, 44),
+(1, 4, 'Social Media Marketing', 'Social media management and advertising', 2, 1, 44),
+(1, 4, 'Content Marketing', 'Content creation and strategy', 3, 1, 44),
+(1, 5, 'Cybersecurity', 'Information security and protection', 1, 1, 44),
+(1, 5, 'Cloud Computing', 'Cloud platforms and services', 2, 1, 44),
+(1, 5, 'Network Administration', 'Network management and infrastructure', 3, 1, 44); 

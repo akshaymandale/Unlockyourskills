@@ -88,7 +88,7 @@ require_once 'core/UrlHelper.php';
                     </div>
                     
                     <div class="col-md-6">
-                        <div class="card user-box shadow-sm" onclick="location.href='index.php?controller=SubCategoryController'">
+                        <div class="card user-box shadow-sm" onclick="location.href='<?php echo UrlHelper::url('/course-subcategories'); ?>'">
                             <h5><i class="fas fa-layer-group"></i> <?= Localization::translate('sub_category'); ?></h5>
                             <p><small class="text-muted"><?= Localization::translate('define_sub_categories'); ?></small></p>
                         </div>
