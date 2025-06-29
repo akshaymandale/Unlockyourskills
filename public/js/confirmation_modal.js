@@ -442,6 +442,15 @@ window.confirmAction = function(actionType, itemName, onConfirm, customMessage =
             subtext: customSubtext || getTranslation('confirmation.reactivate.event.subtext', {}) || 'This will change the event status back to active and make it available to participants.',
             confirmText: getTranslation('confirmation.reactivate.event.button', {}) || 'Reactivate',
             confirmClass: 'theme-btn-success'
+        },
+        'toggle': {
+            title: getTranslation('confirmation.toggle.title', {}) || 'Toggle Status',
+            icon: 'fas fa-toggle-on',
+            iconColor: '#007bff',
+            message: customMessage || getTranslation('confirmation.toggle.message', {item: itemName}) || `Are you sure you want to change the status of this ${itemName}?`,
+            subtext: customSubtext || getTranslation('confirmation.toggle.subtext', {}) || 'This will change the current status of the item.',
+            confirmText: getTranslation('confirmation.toggle.button', {}) || 'Toggle Status',
+            confirmClass: 'theme-btn-primary'
         }
     };
 

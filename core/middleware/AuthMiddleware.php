@@ -14,6 +14,11 @@ class AuthMiddleware extends Middleware
     
     public function handle()
     {
+        // Debug logging
+        error_log("AuthMiddleware::handle called for URI: " . ($_SERVER['REQUEST_URI'] ?? 'unknown'));
+        error_log("Session data: " . print_r($_SESSION, true));
+        error_log("Is AJAX request: " . ($this->isAjaxRequest() ? 'yes' : 'no'));
+        
         // Temporary: Allow assessment routes without authentication for testing
         $currentUri = $_SERVER['REQUEST_URI'] ?? '';
         if (strpos($currentUri, '/vlr/assessment-packages/') !== false) {
@@ -30,6 +35,7 @@ class AuthMiddleware extends Middleware
 
         // Check if user is logged in
         if (!isset($_SESSION['id']) || !isset($_SESSION['user'])) {
+            error_log("AuthMiddleware::handle - User not logged in, redirecting");
             // If AJAX request, return JSON error
             if ($this->isAjaxRequest()) {
                 $this->json([
@@ -47,10 +53,12 @@ class AuthMiddleware extends Middleware
         // Check session timeout (skip for login/logout routes)
         if (strpos($currentUri, '/login') === false && strpos($currentUri, '/logout') === false) {
             if (!$this->checkSessionTimeout()) {
+                error_log("AuthMiddleware::handle - Session timeout detected");
                 return false; // Session timeout handled in checkSessionTimeout()
             }
         }
 
+        error_log("AuthMiddleware::handle - Authentication successful");
         return true;
     }
     
@@ -59,9 +67,13 @@ class AuthMiddleware extends Middleware
      */
     private function checkSessionTimeout()
     {
+        error_log("AuthMiddleware::checkSessionTimeout called");
+        error_log("Last activity: " . ($_SESSION['last_activity'] ?? 'not set'));
+        
         // Check if last activity timestamp exists
         if (!isset($_SESSION['last_activity'])) {
             $_SESSION['last_activity'] = time();
+            error_log("AuthMiddleware::checkSessionTimeout - Set initial last_activity to: " . time());
             return true;
         }
         
@@ -69,14 +81,18 @@ class AuthMiddleware extends Middleware
         $timeSinceLastActivity = time() - $_SESSION['last_activity'];
         $timeoutSeconds = $this->timeoutMinutes * 60;
         
+        error_log("AuthMiddleware::checkSessionTimeout - Time since last activity: {$timeSinceLastActivity}s, Timeout: {$timeoutSeconds}s");
+        
         // Check if session has timed out
         if ($timeSinceLastActivity > $timeoutSeconds) {
+            error_log("AuthMiddleware::checkSessionTimeout - Session timed out!");
             $this->handleSessionTimeout();
             return false;
         }
         
         // Update last activity timestamp
         $_SESSION['last_activity'] = time();
+        error_log("AuthMiddleware::checkSessionTimeout - Updated last_activity to: " . time());
         
         return true;
     }
@@ -86,18 +102,6 @@ class AuthMiddleware extends Middleware
      */
     private function handleSessionTimeout()
     {
-        // Store timeout information for potential logging
-        $timeoutData = [
-            'user_id' => $_SESSION['id'] ?? null,
-            'client_id' => $_SESSION['user']['client_id'] ?? null,
-            'timeout_duration' => $this->timeoutMinutes,
-            'last_activity' => $_SESSION['last_activity'] ?? null,
-            'timeout_time' => time()
-        ];
-        
-        // Log timeout event
-        error_log("Session timeout: " . json_encode($timeoutData));
-        
         // Clear session data
         session_unset();
         session_destroy();
@@ -121,8 +125,55 @@ class AuthMiddleware extends Middleware
      */
     private function isAjaxRequest()
     {
-        return !empty($_SERVER['HTTP_X_REQUESTED_WITH']) && 
-               strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) === 'xmlhttprequest';
+        // Debug logging
+        error_log("AuthMiddleware::isAjaxRequest - Checking headers:");
+        error_log("HTTP_X_REQUESTED_WITH: " . ($_SERVER['HTTP_X_REQUESTED_WITH'] ?? 'not set'));
+        error_log("HTTP_CONTENT_TYPE: " . ($_SERVER['HTTP_CONTENT_TYPE'] ?? 'not set'));
+        error_log("HTTP_ACCEPT: " . ($_SERVER['HTTP_ACCEPT'] ?? 'not set'));
+        error_log("REQUEST_URI: " . ($_SERVER['REQUEST_URI'] ?? 'not set'));
+        
+        // Check for X-Requested-With header (standard AJAX indicator)
+        if (!empty($_SERVER['HTTP_X_REQUESTED_WITH']) && 
+            strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) === 'xmlhttprequest') {
+            error_log("AuthMiddleware::isAjaxRequest - Detected via X-Requested-With header");
+            return true;
+        }
+        
+        // Check for Content-Type header that indicates AJAX
+        if (!empty($_SERVER['HTTP_CONTENT_TYPE'])) {
+            $contentType = strtolower($_SERVER['HTTP_CONTENT_TYPE']);
+            // Check for multipart/form-data (FormData submissions)
+            if (strpos($contentType, 'multipart/form-data') !== false) {
+                error_log("AuthMiddleware::isAjaxRequest - Detected via multipart/form-data Content-Type");
+                return true;
+            }
+            // Check for application/json
+            if (strpos($contentType, 'application/json') !== false) {
+                error_log("AuthMiddleware::isAjaxRequest - Detected via application/json Content-Type");
+                return true;
+            }
+        }
+        
+        // Check for Accept header that indicates AJAX
+        if (!empty($_SERVER['HTTP_ACCEPT'])) {
+            $accept = strtolower($_SERVER['HTTP_ACCEPT']);
+            if (strpos($accept, 'application/json') !== false) {
+                error_log("AuthMiddleware::isAjaxRequest - Detected via Accept header");
+                return true;
+            }
+        }
+        
+        // Check if the request is coming from a modal or specific AJAX endpoint
+        $currentUri = $_SERVER['REQUEST_URI'] ?? '';
+        if (strpos($currentUri, '/modal/') !== false || 
+            strpos($currentUri, '/ajax/') !== false ||
+            strpos($currentUri, '/api/') !== false) {
+            error_log("AuthMiddleware::isAjaxRequest - Detected via URI pattern");
+            return true;
+        }
+        
+        error_log("AuthMiddleware::isAjaxRequest - Not detected as AJAX request");
+        return false;
     }
     
     /**

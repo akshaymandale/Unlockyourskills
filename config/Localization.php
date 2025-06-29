@@ -32,10 +32,31 @@ class Localization {
     }
 
     public static function translate($key, $replacements = []) {
-        $text = self::$langData[$key] ?? $key;
-        foreach ($replacements as $placeholder => $value) {
-            $text = str_replace("{" . $placeholder . "}", $value, $text);
+        // Handle nested keys with dot notation (e.g., 'course_categories.title')
+        $keys = explode('.', $key);
+        $text = self::$langData;
+        
+        // Navigate through nested structure
+        foreach ($keys as $k) {
+            if (is_array($text) && isset($text[$k])) {
+                $text = $text[$k];
+            } else {
+                // Key not found, return the original key
+                $text = $key;
+                break;
+            }
         }
+        
+        // Apply replacements if text is a string
+        if (is_string($text)) {
+            foreach ($replacements as $placeholder => $value) {
+                $text = str_replace("{" . $placeholder . "}", $value, $text);
+            }
+        } else {
+            // If text is not a string (e.g., still an array), return the key
+            $text = $key;
+        }
+        
         return $text;
     }
 

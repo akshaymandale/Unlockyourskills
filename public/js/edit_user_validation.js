@@ -602,6 +602,13 @@ function handleEditModalFieldBlur(event) {
     }
 }
 
+// Helper function to generate project URLs (if not already defined)
+function getProjectUrl(path) {
+    // Get the base URL from the current location
+    const baseUrl = window.location.origin + window.location.pathname.replace(/\/[^\/]*$/, '');
+    return baseUrl + '/' + path.replace(/^\//, '');
+}
+
 // ✅ Function to submit edit user modal form
 function submitEditUserModal() {
     const form = document.getElementById('editUserModalForm');
@@ -620,8 +627,11 @@ function submitEditUserModal() {
         submitButton.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Updating...';
     }
 
-    fetch('/Unlockyourskills/users/modal/edit', {
+    fetch(getProjectUrl('users/modal/edit'), {
         method: 'POST',
+        headers: {
+            'X-Requested-With': 'XMLHttpRequest'
+        },
         body: formData
     })
     .then(response => response.json())

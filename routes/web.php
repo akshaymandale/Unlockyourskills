@@ -70,6 +70,35 @@ Router::middleware(['Auth'])->group(function() {
     Router::get('/users/{id}/lock', 'UserManagementController@lock'); // For GET lock links
     Router::get('/users/{id}/unlock', 'UserManagementController@unlock'); // For GET unlock links
     
+    // ===================================
+    // COURSE CATEGORIES
+    // ===================================
+    
+    // Course Categories
+    Router::get('/course-categories', 'CourseCategoryController@index');
+    
+    // Course Categories AJAX operations
+    Router::post('/course-categories/ajax/search', 'CourseCategoryController@ajaxSearch');
+    Router::post('/course-categories/ajax/toggle-status', 'CourseCategoryController@toggleStatus');
+    Router::post('/course-categories/submit', 'CourseCategoryController@submitCategory');
+    
+    // Course Categories CRUD operations
+    Router::get('/course-categories/create', 'CourseCategoryController@create');
+    Router::post('/course-categories', 'CourseCategoryController@create');
+    Router::get('/course-categories/{id}/edit', 'CourseCategoryController@edit');
+    Router::post('/course-categories/{id}', 'CourseCategoryController@edit');
+    Router::delete('/course-categories/{id}', 'CourseCategoryController@delete');
+    Router::post('/course-categories/{id}/delete', 'CourseCategoryController@delete'); // POST fallback for delete
+    Router::get('/course-categories/{id}/delete', 'CourseCategoryController@delete'); // For GET delete links
+    
+    // Course Categories API (more specific routes after general ones)
+    Router::get('/course-categories/get/{id}', 'CourseCategoryController@get');
+    Router::get('/api/course-categories/dropdown', 'CourseCategoryController@getCategoriesForDropdown');
+    
+    // Course Categories Modal operations (more specific routes after general ones)
+    Router::post('/course-categories/modal/add', 'CourseCategoryController@loadAddModal');
+    Router::post('/course-categories/modal/edit', 'CourseCategoryController@loadEditModal');
+    
     // Custom Fields for Users (legacy routes)
     Router::get('/users/custom-fields', 'CustomFieldController@index');
     Router::post('/users/custom-fields', 'CustomFieldController@save');

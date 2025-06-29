@@ -175,6 +175,20 @@ function updateUsersTable(users) {
         const userStatusBadge = user.user_status === 'Active' ? `<span class="badge bg-success">${user.user_status}</span>` : `<span class="badge bg-danger">${user.user_status}</span>`;
         const lockedStatusBadge = user.locked_status === '1' ? `<span class="badge bg-warning">Locked</span>` : `<span class="badge bg-secondary">Unlocked</span>`;
         
+        // Check if user is super admin (disable actions)
+        const isSuperAdmin = (user.system_role === 'super_admin' || user.user_role === 'Super Admin');
+        const disabledClass = isSuperAdmin ? 'disabled' : '';
+        const disabledStyle = isSuperAdmin ? 'style="pointer-events: none; opacity: 0.5; cursor: not-allowed;"' : '';
+        
+        // Generate lock/unlock button based on current status
+        const lockUnlockButton = (user.locked_status == '1') ?
+            `<button class="btn btn-sm btn-outline-warning unlock-user ${disabledClass}" ${disabledStyle} data-id="${user.encrypted_id}" data-name="${escapeHtml(user.full_name || '')}" data-email="${escapeHtml(user.email || '')}" title="${isSuperAdmin ? 'Unlock disabled for Super Admin' : 'Unlock User'}">
+                <i class="fas fa-lock-open"></i>
+            </button>` :
+            `<button class="btn btn-sm btn-outline-danger lock-user ${disabledClass}" ${disabledStyle} data-id="${user.encrypted_id}" data-name="${escapeHtml(user.full_name || '')}" data-email="${escapeHtml(user.email || '')}" title="${isSuperAdmin ? 'Lock disabled for Super Admin' : 'Lock User'}">
+                <i class="fas fa-lock"></i>
+            </button>`;
+        
         const row = `
             <tr>
                 <td>${escapeHtml(user.profile_id || '')}</td>
@@ -187,7 +201,8 @@ function updateUsersTable(users) {
                     <button class="btn btn-sm btn-outline-primary edit-user-btn" data-user-id="${user.encrypted_id}" title="Edit User">
                     <i class="fas fa-edit"></i>
                 </button>
-                    <button class="btn btn-sm btn-outline-danger delete-user-btn" data-user-id="${user.id}" title="Delete User">
+                    ${lockUnlockButton}
+                    <button class="btn btn-sm btn-outline-danger delete-user" data-id="${user.encrypted_id}" data-name="${escapeHtml(user.full_name || '')}" data-email="${escapeHtml(user.email || '')}" title="Delete User">
                         <i class="fas fa-trash"></i>
                     </button>
             </td>
