@@ -204,13 +204,13 @@ if (isset($_GET['client_id'])) {
             </div>
         </div>
 
-        <!-- Results Info -->
+        <!-- Search Results Info -->
         <div class="row mb-3">
             <div class="col-12">
-                <div class="search-results-info">
-            <i class="fas fa-info-circle"></i>
-                    <span id="resultsInfo">Loading users...</span>
-        </div>
+                <div id="searchResultsInfo" class="search-results-info" style="display: none;">
+                    <i class="fas fa-info-circle"></i>
+                    <span id="resultsText"></span>
+                </div>
             </div>
         </div>
 
@@ -330,9 +330,7 @@ function initializeUserManagement() {
     const searchInput = document.getElementById('searchInput');
     if (searchInput) {
         const debouncedSearch = debounce(() => {
-            currentSearch = searchInput.value.trim();
-            currentPage = 1;
-            loadUsers();
+            searchUsers();
         }, 500);
         
         searchInput.addEventListener('input', debouncedSearch);
@@ -345,41 +343,25 @@ function initializeUserManagement() {
     const genderFilter = document.getElementById('genderFilter');
 
     if (userStatusFilter) {
-        userStatusFilter.addEventListener('change', () => {
-            currentFilters.user_status = userStatusFilter.value;
-            currentPage = 1;
-            loadUsers();
-        });
+        userStatusFilter.addEventListener('change', searchUsers);
     }
 
     if (lockedStatusFilter) {
-        lockedStatusFilter.addEventListener('change', () => {
-            currentFilters.locked_status = lockedStatusFilter.value;
-            currentPage = 1;
-            loadUsers();
-        });
+        lockedStatusFilter.addEventListener('change', searchUsers);
     }
 
     if (userRoleFilter) {
-        userRoleFilter.addEventListener('change', () => {
-            currentFilters.user_role = userRoleFilter.value;
-            currentPage = 1;
-            loadUsers();
-        });
+        userRoleFilter.addEventListener('change', searchUsers);
     }
 
     if (genderFilter) {
-        genderFilter.addEventListener('change', () => {
-            currentFilters.gender = genderFilter.value;
-            currentPage = 1;
-            loadUsers();
-        });
+        genderFilter.addEventListener('change', searchUsers);
     }
 
     // Clear filters functionality
     const clearFiltersBtn = document.getElementById('clearFiltersBtn');
     if (clearFiltersBtn) {
-        clearFiltersBtn.addEventListener('click', clearAllFilters);
+        clearFiltersBtn.addEventListener('click', resetFilters);
     }
 
     // Pagination functionality

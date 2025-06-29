@@ -142,7 +142,6 @@ require_once 'config/Localization.php';
                 <table class="table table-bordered table-hover" id="categoriesTable">
                     <thead class="table-light">
                         <tr>
-                            <th><?php echo Localization::translate('course_categories.id'); ?></th>
                             <th><?php echo Localization::translate('course_categories.name'); ?></th>
                             <th><?php echo Localization::translate('course_categories.description'); ?></th>
                             <th><?php echo Localization::translate('course_categories.sort_order'); ?></th>

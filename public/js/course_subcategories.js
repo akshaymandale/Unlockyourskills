@@ -173,7 +173,6 @@ function createSubcategoryRow(subcategory, index) {
     
     return `
         <tr>
-            <td>${subcategory.id}</td>
             <td><strong>${escapeHtml(subcategory.name)}</strong></td>
             <td><span class="badge bg-info">${escapeHtml(subcategory.category_name)}</span></td>
             <td>${description}</td>

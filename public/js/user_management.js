@@ -113,14 +113,19 @@ function loadUsers(page = 1) {
     const userRole = document.getElementById('userRoleFilter').value;
     const gender = document.getElementById('genderFilter').value;
     
+    // Update current search and filters
+    currentSearch = searchInput;
+    currentFilters.user_status = userStatus;
+    currentFilters.locked_status = lockedStatus;
+    currentFilters.user_role = userRole;
+    currentFilters.gender = gender;
+    
     const loadingIndicator = document.getElementById('loadingIndicator');
     const usersTableBody = document.getElementById('usersTableBody');
     const paginationContainer = document.getElementById('paginationContainer');
-    const resultsInfo = document.getElementById('resultsInfo');
 
     loadingIndicator.style.display = 'block';
     usersTableBody.innerHTML = '';
-    resultsInfo.textContent = 'Loading...';
 
     // Determine if we are in client management mode
     const urlParams = new URLSearchParams(window.location.search);
@@ -151,11 +156,10 @@ function loadUsers(page = 1) {
     .then(data => {
         updateUsersTable(data.users);
         updatePagination(data.pagination);
-        updateSearchInfo(data.pagination.total_users);
+        updateSearchInfo(data.pagination.totalUsers);
     })
     .catch(error => {
         console.error('Error fetching users:', error);
-        resultsInfo.textContent = 'Error loading users.';
     })
     .finally(() => {
         loadingIndicator.style.display = 'none';
@@ -216,21 +220,22 @@ function updatePagination(pagination) {
     const paginationContainer = document.getElementById('paginationContainer');
     paginationContainer.innerHTML = ''; // Clear existing pagination
 
-    if (pagination.total_pages <= 1) return;
+    // Only show pagination if there are more than 10 records (more than 1 page with 10 per page)
+    if (pagination.totalUsers <= 10) return;
 
     let paginationHtml = '<nav><ul class="pagination justify-content-center">';
 
     // Previous button
     paginationHtml += `
-        <li class="page-item ${pagination.current_page === 1 ? 'disabled' : ''}">
-            <a class="page-link" href="#" onclick="event.preventDefault(); loadUsers(${pagination.current_page - 1});">Previous</a>
+        <li class="page-item ${pagination.currentPage === 1 ? 'disabled' : ''}">
+            <a class="page-link" href="#" onclick="event.preventDefault(); loadUsers(${pagination.currentPage - 1});">Previous</a>
             </li>
         `;
 
     // Page numbers
-    for (let i = 1; i <= pagination.total_pages; i++) {
+    for (let i = 1; i <= pagination.totalPages; i++) {
         paginationHtml += `
-            <li class="page-item ${pagination.current_page === i ? 'active' : ''}">
+            <li class="page-item ${pagination.currentPage === i ? 'active' : ''}">
                 <a class="page-link" href="#" onclick="event.preventDefault(); loadUsers(${i});">${i}</a>
             </li>
         `;
@@ -238,8 +243,8 @@ function updatePagination(pagination) {
 
     // Next button
     paginationHtml += `
-        <li class="page-item ${pagination.current_page === pagination.total_pages ? 'disabled' : ''}">
-            <a class="page-link" href="#" onclick="event.preventDefault(); loadUsers(${pagination.current_page + 1});">Next</a>
+        <li class="page-item ${pagination.currentPage === pagination.totalPages ? 'disabled' : ''}">
+            <a class="page-link" href="#" onclick="event.preventDefault(); loadUsers(${pagination.currentPage + 1});">Next</a>
             </li>
         `;
 
@@ -248,8 +253,32 @@ function updatePagination(pagination) {
 }
 
 function updateSearchInfo(totalUsers) {
-    const resultsInfo = document.getElementById('resultsInfo');
-    resultsInfo.textContent = `Showing ${totalUsers > 0 ? currentPage * 10 - 9 : 0} - ${Math.min(currentPage * 10, totalUsers)} of ${totalUsers} users.`;
+    const searchInfo = document.getElementById('searchResultsInfo');
+    const resultsText = document.getElementById('resultsText');
+    
+    if (!searchInfo || !resultsText) return;
+
+    // Check if there are any active filters or search
+    const hasFilters = currentSearch || currentFilters.user_status || currentFilters.locked_status || currentFilters.user_role || currentFilters.gender;
+    
+    if (hasFilters) {
+        // Handle undefined/null values
+        const count = totalUsers || 0;
+        let infoText = `Showing ${count} result(s)`;
+        
+        if (currentSearch) {
+            infoText += ` for search: "<strong>${escapeHtml(currentSearch)}</strong>"`;
+        }
+        
+        if (currentFilters.user_status || currentFilters.locked_status || currentFilters.user_role || currentFilters.gender) {
+            infoText += ' with filters applied';
+        }
+        
+        resultsText.innerHTML = infoText;
+        searchInfo.style.display = 'block';
+    } else {
+        searchInfo.style.display = 'none';
+    }
 }
 
 function escapeHtml(text) {
@@ -647,4 +676,63 @@ function loadTimezonesByCountry(countryId, timezoneSelect) {
         // Fallback to default timezones
         loadTimezones(timezoneSelect);
     });
+}
+
+/**
+ * Search users
+ */
+function searchUsers() {
+    console.log('searchUsers called');
+    
+    // Get all filter values
+    const searchInput = document.getElementById('searchInput');
+    const userStatusFilter = document.getElementById('userStatusFilter');
+    const lockedStatusFilter = document.getElementById('lockedStatusFilter');
+    const userRoleFilter = document.getElementById('userRoleFilter');
+    const genderFilter = document.getElementById('genderFilter');
+    
+    // Update current filters
+    currentSearch = searchInput ? searchInput.value.trim() : '';
+    currentFilters.user_status = userStatusFilter ? userStatusFilter.value : '';
+    currentFilters.locked_status = lockedStatusFilter ? lockedStatusFilter.value : '';
+    currentFilters.user_role = userRoleFilter ? userRoleFilter.value : '';
+    currentFilters.gender = genderFilter ? genderFilter.value : '';
+    currentFilters.page = 1;
+    
+    console.log('Updated filters:', currentFilters);
+    console.log('Current search:', currentSearch);
+    
+    loadUsers(1);
+}
+
+/**
+ * Reset filters
+ */
+function resetFilters() {
+    console.log('resetFilters called');
+    
+    // Reset all filter inputs
+    const searchInput = document.getElementById('searchInput');
+    const userStatusFilter = document.getElementById('userStatusFilter');
+    const lockedStatusFilter = document.getElementById('lockedStatusFilter');
+    const userRoleFilter = document.getElementById('userRoleFilter');
+    const genderFilter = document.getElementById('genderFilter');
+    
+    if (searchInput) searchInput.value = '';
+    if (userStatusFilter) userStatusFilter.value = '';
+    if (lockedStatusFilter) lockedStatusFilter.value = '';
+    if (userRoleFilter) userRoleFilter.value = '';
+    if (genderFilter) genderFilter.value = '';
+    
+    // Reset current filters
+    currentSearch = '';
+    currentFilters.user_status = '';
+    currentFilters.locked_status = '';
+    currentFilters.user_role = '';
+    currentFilters.gender = '';
+    currentFilters.page = 1;
+    
+    console.log('Filters reset:', currentFilters);
+    
+    loadUsers(1);
 }

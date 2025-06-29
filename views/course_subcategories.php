@@ -135,7 +135,6 @@
                 <table class="table table-bordered table-hover" id="subcategoriesTable">
                     <thead class="table-light">
                         <tr>
-                            <th><?php echo Localization::translate('course_subcategories.id'); ?></th>
                             <th><?php echo Localization::translate('course_subcategories.name'); ?></th>
                             <th><?php echo Localization::translate('course_subcategories.category'); ?></th>
                             <th><?php echo Localization::translate('course_subcategories.description'); ?></th>
