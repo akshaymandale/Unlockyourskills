@@ -138,7 +138,6 @@ function createCategoryRow(category, index) {
 
     return `
         <tr>
-            <td>${category.id}</td>
             <td><strong>${escapeHtml(category.name)}</strong></td>
             <td>${description}</td>
             <td>${category.sort_order}</td>
