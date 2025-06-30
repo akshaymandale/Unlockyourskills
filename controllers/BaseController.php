@@ -123,5 +123,15 @@ class BaseController {
             return 'info';
         }
     }
+
+    /**
+     * Check if the current request is an AJAX request
+     * 
+     * @return bool True if AJAX request, false otherwise
+     */
+    protected function isAjaxRequest() {
+        return !empty($_SERVER['HTTP_X_REQUESTED_WITH']) && 
+               strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) === 'xmlhttprequest';
+    }
 }
 ?>
