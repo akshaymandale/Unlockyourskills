@@ -134,6 +134,18 @@ Router::middleware(['Auth'])->group(function() {
     Router::post('/course-subcategories/modal/edit', 'CourseSubcategoryController@loadEditModal');
 
     // ===================================
+    // COURSE CREATION
+    // ===================================
+    
+    // Course Creation
+    Router::get('/course-creation', 'CourseCreationController@index');
+    Router::post('/course-creation', 'CourseCreationController@create');
+    
+    // Course Creation AJAX operations
+    Router::post('/course-creation/subcategories', 'CourseCreationController@getSubcategories');
+    Router::post('/course-creation/vlr-content', 'CourseCreationController@getVLRContent');
+
+    // ===================================
     // SETTINGS ROUTES
     // ===================================
 
@@ -397,6 +409,16 @@ Router::middleware(['Auth'])->group(function() {
     Router::get('/feed/statistics', 'SocialFeedController@statistics');
     Router::post('/feed/poll-vote', 'SocialFeedController@pollVote');
     Router::get('/feed/notifications', 'SocialFeedController@notifications');
+
+    // Course Management Routes
+    Router::get('/course-management', [CourseCreationController::class, 'courseManagement']);
+    Router::get('/api/courses', [CourseCreationController::class, 'getCourses']);
+    Router::post('/api/courses/{id}/publish', [CourseCreationController::class, 'publishCourse']);
+    Router::post('/api/courses/{id}/unpublish', [CourseCreationController::class, 'unpublishCourse']);
+    Router::delete('/api/courses/{id}', [CourseCreationController::class, 'deleteCourse']);
+    Router::get('/course-edit/{id}', [CourseCreationController::class, 'editCourse']);
+    Router::get('/course-preview/{id}', [CourseCreationController::class, 'previewCourse']);
+    Router::get('/course-analytics/{id}', [CourseCreationController::class, 'courseAnalytics']);
 
 });
 

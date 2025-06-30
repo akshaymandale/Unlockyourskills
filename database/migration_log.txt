@@ -1,0 +1,109 @@
+[2025-06-29 19:06:52] Checking Course Tables Migration Status...
+[2025-06-29 19:07:22] Checking Course Tables Migration Status...
+[2025-06-29 19:07:22] Migration Status:
+[2025-06-29 19:07:22] Existing tables: 2/17
+[2025-06-29 19:07:22] Missing tables: 15
+[2025-06-29 19:07:22] ✗ Migration is incomplete - missing tables: courses, course_modules, course_module_content, course_prerequisites, course_assessments, course_feedback, course_surveys, course_enrollments, module_progress, content_progress, assessment_results, feedback_responses, survey_responses, course_analytics, course_settings
+[2025-06-29 19:07:34] Starting Course Tables Migration...
+[2025-06-29 19:07:34] Timestamp: 2025-06-29 19:07:34
+[2025-06-29 19:07:34] Migration file: /Applications/XAMPP/xamppfiles/htdocs/Unlockyourskills/database/create_course_tables.sql
+[2025-06-29 19:07:34] ERROR: Migration file not found: /Applications/XAMPP/xamppfiles/htdocs/Unlockyourskills/database/create_course_tables.sql
+[2025-06-29 19:07:34] Migration failed!
+[2025-06-29 19:08:14] Starting Course Tables Migration...
+[2025-06-29 19:08:14] Timestamp: 2025-06-29 19:08:14
+[2025-06-29 19:08:14] Migration file: /Applications/XAMPP/xamppfiles/htdocs/Unlockyourskills/database/migrations/create_course_tables.sql
+[2025-06-29 19:08:14] Migration file loaded successfully
+[2025-06-29 19:08:14] Found 23 SQL statements to execute
+[2025-06-29 19:08:14] Executing statement 1: CREATE TABLE IF NOT EXISTS course_categories (
+    id INT PRIMARY KEY AUTO_INCREMENT,
+    client_id ...
+[2025-06-29 19:08:14] ✓ Statement 1 executed successfully
+[2025-06-29 19:08:14] Executing statement 2: CREATE TABLE IF NOT EXISTS course_subcategories (
+    id INT PRIMARY KEY AUTO_INCREMENT,
+    categor...
+[2025-06-29 19:08:14] ✓ Statement 2 executed successfully
+[2025-06-29 19:08:14] Executing statement 3: CREATE TABLE IF NOT EXISTS courses (
+    id INT PRIMARY KEY AUTO_INCREMENT,
+    client_id INT NOT NU...
+[2025-06-29 19:08:14] ✓ Statement 3 executed successfully
+[2025-06-29 19:08:14] Executing statement 4: CREATE TABLE IF NOT EXISTS course_modules (
+    id INT PRIMARY KEY AUTO_INCREMENT,
+    course_id INT...
+[2025-06-29 19:08:14] ✓ Statement 4 executed successfully
+[2025-06-29 19:08:14] Executing statement 5: CREATE TABLE IF NOT EXISTS course_module_content (
+    id INT PRIMARY KEY AUTO_INCREMENT,
+    module...
+[2025-06-29 19:08:14] ✓ Statement 5 executed successfully
+[2025-06-29 19:08:14] Executing statement 6: CREATE TABLE IF NOT EXISTS course_prerequisites (
+    id INT PRIMARY KEY AUTO_INCREMENT,
+    course_...
+[2025-06-29 19:08:14] ✓ Statement 6 executed successfully
+[2025-06-29 19:08:14] Executing statement 7: CREATE TABLE IF NOT EXISTS course_assessments (
+    id INT PRIMARY KEY AUTO_INCREMENT,
+    course_id...
+[2025-06-29 19:08:14] ✓ Statement 7 executed successfully
+[2025-06-29 19:08:14] Executing statement 8: CREATE TABLE IF NOT EXISTS course_feedback (
+    id INT PRIMARY KEY AUTO_INCREMENT,
+    course_id IN...
+[2025-06-29 19:08:14] ✓ Statement 8 executed successfully
+[2025-06-29 19:08:14] Executing statement 9: CREATE TABLE IF NOT EXISTS course_surveys (
+    id INT PRIMARY KEY AUTO_INCREMENT,
+    course_id INT...
+[2025-06-29 19:08:14] ✓ Statement 9 executed successfully
+[2025-06-29 19:08:14] Executing statement 10: CREATE TABLE IF NOT EXISTS course_enrollments (
+    id INT PRIMARY KEY AUTO_INCREMENT,
+    course_id...
+[2025-06-29 19:08:14] ✓ Statement 10 executed successfully
+[2025-06-29 19:08:14] Executing statement 11: CREATE TABLE IF NOT EXISTS module_progress (
+    id INT PRIMARY KEY AUTO_INCREMENT,
+    enrollment_i...
+[2025-06-29 19:08:14] ✓ Statement 11 executed successfully
+[2025-06-29 19:08:14] Executing statement 12: CREATE TABLE IF NOT EXISTS content_progress (
+    id INT PRIMARY KEY AUTO_INCREMENT,
+    enrollment_...
+[2025-06-29 19:08:14] ✓ Statement 12 executed successfully
+[2025-06-29 19:08:14] Executing statement 13: CREATE TABLE IF NOT EXISTS assessment_results (
+    id INT PRIMARY KEY AUTO_INCREMENT,
+    enrollmen...
+[2025-06-29 19:08:14] ✓ Statement 13 executed successfully
+[2025-06-29 19:08:14] Executing statement 14: CREATE TABLE IF NOT EXISTS feedback_responses (
+    id INT PRIMARY KEY AUTO_INCREMENT,
+    enrollmen...
+[2025-06-29 19:08:14] ✓ Statement 14 executed successfully
+[2025-06-29 19:08:14] Executing statement 15: CREATE TABLE IF NOT EXISTS survey_responses (
+    id INT PRIMARY KEY AUTO_INCREMENT,
+    enrollment_...
+[2025-06-29 19:08:14] ✓ Statement 15 executed successfully
+[2025-06-29 19:08:14] Executing statement 16: CREATE TABLE IF NOT EXISTS course_analytics (
+    id INT PRIMARY KEY AUTO_INCREMENT,
+    course_id I...
+[2025-06-29 19:08:14] ✓ Statement 16 executed successfully
+[2025-06-29 19:08:14] Executing statement 17: CREATE TABLE IF NOT EXISTS course_settings (
+    id INT PRIMARY KEY AUTO_INCREMENT,
+    course_id IN...
+[2025-06-29 19:08:14] ✓ Statement 17 executed successfully
+[2025-06-29 19:08:14] Executing statement 18: INSERT IGNORE INTO course_categories (client_id, name, description, icon, color, sort_order, created...
+[2025-06-29 19:08:14] ✗ Statement 18 failed: SQLSTATE[42S22]: Column not found: 1054 Unknown column 'icon' in 'field list'
+[2025-06-29 19:08:14] Executing statement 19: INSERT IGNORE INTO course_subcategories (category_id, client_id, name, description, icon, sort_order...
+[2025-06-29 19:08:14] ✗ Statement 19 failed: SQLSTATE[42S22]: Column not found: 1054 Unknown column 'icon' in 'field list'
+[2025-06-29 19:08:14] Executing statement 20: INSERT IGNORE INTO course_subcategories (category_id, client_id, name, description, icon, sort_order...
+[2025-06-29 19:08:14] ✗ Statement 20 failed: SQLSTATE[42S22]: Column not found: 1054 Unknown column 'icon' in 'field list'
+[2025-06-29 19:08:14] Executing statement 21: INSERT IGNORE INTO course_settings (course_id, setting_key, setting_value, setting_type, description...
+[2025-06-29 19:08:14] ✓ Statement 21 executed successfully
+[2025-06-29 19:08:14] Executing statement 22: CREATE OR REPLACE VIEW course_overview AS
+SELECT 
+    c.id,
+    c.client_id,
+    c.name,
+    c.descr...
+[2025-06-29 19:08:14] ✓ Statement 22 executed successfully
+[2025-06-29 19:08:14] Executing statement 23: CREATE OR REPLACE VIEW course_analytics_view AS
+SELECT 
+    c.id as course_id,
+    c.name as course_...
+[2025-06-29 19:08:14] ✓ Statement 23 executed successfully
+[2025-06-29 19:08:14] Migration completed!
+[2025-06-29 19:08:14] Successful statements: 20
+[2025-06-29 19:08:14] Failed statements: 3
+[2025-06-29 19:08:14] Total statements: 23
+[2025-06-29 19:08:14] WARNING: Some statements failed. Check the log for details.
