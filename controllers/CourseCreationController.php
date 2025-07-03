@@ -456,12 +456,13 @@ class CourseCreationController extends BaseController
         $clientId = $_SESSION['user']['client_id'] ?? null;
         $courses = $this->courseModel->getAllCourses($clientId);
         $categories = $this->courseCategoryModel->getAllCategories($clientId);
+        $subcategories = $this->courseSubcategoryModel->getAllSubcategories($clientId);
         
         require 'views/course_management.php';
     }
 
     /**
-     * Get all courses for API
+     * Get all courses for API with search, filtering, and pagination
      */
     public function getCourses() {
         if (!isset($_SESSION['id'])) {
@@ -471,11 +472,53 @@ class CourseCreationController extends BaseController
         
         try {
             $clientId = $_SESSION['user']['client_id'] ?? null;
-            $courses = $this->courseModel->getAllCourses($clientId);
+            
+            // Get search and filter parameters
+            $search = $_GET['search'] ?? '';
+            $courseStatus = $_GET['course_status'] ?? '';
+            $category = $_GET['category'] ?? '';
+            $subcategory = $_GET['subcategory'] ?? '';
+            $page = max(1, intval($_GET['page'] ?? 1));
+            $perPage = 10; // Items per page
+            $offset = ($page - 1) * $perPage;
+            
+            // Build filters array
+            $filters = [
+                'search' => $search,
+                'course_status' => $courseStatus,
+                'category' => $category,
+                'subcategory' => $subcategory,
+                'limit' => $perPage,
+                'offset' => $offset
+            ];
+            
+            // Get courses with filters
+            $courses = $this->courseModel->getCourses($clientId, $filters);
+            
+            // Get total count for pagination
+            $totalFilters = [
+                'search' => $search,
+                'course_status' => $courseStatus,
+                'category' => $category,
+                'subcategory' => $subcategory
+            ];
+            $totalCourses = $this->courseModel->getCoursesCount($clientId, $totalFilters);
+            
+            // Calculate pagination info
+            $totalPages = ceil($totalCourses / $perPage);
+            $filteredCount = count($courses);
             
             $this->jsonResponse([
                 'success' => true,
-                'courses' => $courses
+                'courses' => $courses,
+                'pagination' => [
+                    'current_page' => $page,
+                    'total_pages' => $totalPages,
+                    'total_records' => $totalCourses,
+                    'per_page' => $perPage
+                ],
+                'total' => $totalCourses,
+                'filtered' => $filteredCount
             ]);
         } catch (Exception $e) {
             $this->jsonResponse([
@@ -672,6 +715,55 @@ class CourseCreationController extends BaseController
     private function jsonResponse($data) {
         header('Content-Type: application/json');
         echo json_encode($data);
+        exit;
+    }
+
+    /**
+     * Load Add Course Modal Content (AJAX)
+     */
+    public function loadAddCourseModal() {
+        error_log('[DEBUG] loadAddCourseModal called');
+        if (!isset($_SESSION['id'])) {
+            $this->jsonResponse([
+                'success' => false,
+                'message' => 'Authentication required',
+                'redirect' => '/Unlockyourskills/login'
+            ]);
+            return;
+        }
+        $clientId = $_SESSION['user']['client_id'] ?? null;
+        $categories = $this->courseCategoryModel->getAllCategories($clientId);
+        $vlrContent = $this->courseModel->getAvailableVLRContent($clientId);
+        // Flatten the array for the modal
+        $flatVlrContent = [];
+        foreach ($vlrContent as $type => $items) {
+            foreach ($items as $item) {
+                $flatVlrContent[] = $item;
+            }
+        }
+        $vlrContent = $flatVlrContent;
+        // Get existing courses for prerequisites
+        $existingCourses = $this->courseModel->getAllCourses($clientId);
+        error_log('[DEBUG] $vlrContent (flattened) in controller: ' . print_r($vlrContent, true));
+        require 'views/modals/add_course_modal_content.php';
+    }
+
+    // Handle form POST (standard submit)
+    public function createCourse() {
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST' || !isset($_SESSION['id'])) {
+            header('Location: /course-management');
+            exit;
+        }
+        $clientId = $_SESSION['user']['client_id'] ?? null;
+        $userId = $_SESSION['id'];
+        $result = $this->courseModel->createCourse($_POST, $_FILES, $userId, $clientId);
+        if ($result['success']) {
+            $_SESSION['toast'] = ['type' => 'success', 'message' => 'Course created successfully!'];
+            header('Location: /course-management');
+        } else {
+            $_SESSION['toast'] = ['type' => 'error', 'message' => $result['message'] ?? 'Failed to create course.'];
+            header('Location: /course-management');
+        }
         exit;
     }
 } 

@@ -89,9 +89,10 @@ class OpinionPollController extends BaseController {
                 'polls' => $polls,
                 'totalPolls' => $totalPolls,
                 'pagination' => [
-                    'currentPage' => $page,
-                    'totalPages' => $totalPages,
-                    'totalPolls' => $totalPolls
+                    'current_page' => $page,
+                    'total_pages' => $totalPages,
+                    'total_count' => $totalPolls,
+                    'per_page' => $limit
                 ]
             ];
 
@@ -797,7 +798,7 @@ class OpinionPollController extends BaseController {
     /**
      * Check if the current request is an AJAX request
      */
-    private function isAjaxRequest() {
+    protected function isAjaxRequest() {
         return !empty($_SERVER['HTTP_X_REQUESTED_WITH']) &&
                strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) === 'xmlhttprequest';
     }

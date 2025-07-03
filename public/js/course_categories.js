@@ -448,8 +448,8 @@ function submitCategoryForm() {
 function toggleCategoryStatus(categoryId) {
     // Get the category name and current status for better confirmation message
     const categoryRow = document.querySelector(`[data-category-id="${categoryId}"]`).closest('tr');
-    const categoryName = categoryRow ? categoryRow.querySelector('td:nth-child(2) strong').textContent : 'category';
-    const currentStatus = categoryRow ? categoryRow.querySelector('td:nth-child(6) .badge').textContent.trim() : '';
+    const categoryName = categoryRow ? categoryRow.querySelector('td:nth-child(1) strong').textContent : 'category';
+    const currentStatus = categoryRow ? categoryRow.querySelector('td:nth-child(5) .badge').textContent.trim() : '';
     const newStatus = currentStatus === 'Active' ? 'inactive' : 'active';
     
     // Use the centralized confirmation system

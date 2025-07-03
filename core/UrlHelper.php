@@ -4,6 +4,10 @@
  * URL Helper Class
  * Handles URL generation relative to project directory
  */
+
+// Prevent multiple inclusions
+if (!class_exists('UrlHelper')) {
+
 class UrlHelper
 {
     /**
@@ -107,3 +111,5 @@ class UrlHelper
         return $requestUri === $basePath;
     }
 }
+
+} // End of class_exists check

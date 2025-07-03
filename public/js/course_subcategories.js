@@ -9,7 +9,7 @@ let currentSearch = '';
 let currentFilters = {
     status: '',
     category: '',
-    sort_order: ''
+    sort_order: 'asc'
 };
 
 // Debounce function for search
@@ -329,7 +329,7 @@ function resetFilters() {
     currentFilters = {
         status: '',
         category: '',
-        sort_order: ''
+        sort_order: 'asc'
     };
     
     console.log('Filters reset');
@@ -568,8 +568,8 @@ function displayFieldErrors(errors, mode) {
 function toggleSubcategoryStatus(subcategoryId) {
     // Get the subcategory name and current status for better confirmation message
     const subcategoryRow = document.querySelector(`[data-subcategory-id="${subcategoryId}"]`).closest('tr');
-    const subcategoryName = subcategoryRow ? subcategoryRow.querySelector('td:nth-child(2) strong').textContent : 'subcategory';
-    const currentStatus = subcategoryRow ? subcategoryRow.querySelector('td:nth-child(6) .badge').textContent.trim() : '';
+    const subcategoryName = subcategoryRow ? subcategoryRow.querySelector('td:nth-child(1) strong').textContent : 'subcategory';
+    const currentStatus = subcategoryRow ? subcategoryRow.querySelector('td:nth-child(5) .badge').textContent.trim() : '';
     const newStatus = currentStatus === 'Active' ? 'inactive' : 'active';
     
     // Use the centralized confirmation system
@@ -801,6 +801,11 @@ function setupEventListeners() {
 
 // Initialize when DOM is ready
 document.addEventListener('DOMContentLoaded', function() {
+    const sortOrderFilter = document.getElementById('sortOrderFilter');
+    if (sortOrderFilter) {
+        sortOrderFilter.value = 'asc';
+    }
+    currentFilters.sort_order = 'asc';
+    loadSubcategories(1);
     setupEventListeners();
-    loadSubcategories();
 }); 

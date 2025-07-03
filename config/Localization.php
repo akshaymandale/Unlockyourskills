@@ -32,21 +32,23 @@ class Localization {
     }
 
     public static function translate($key, $replacements = []) {
-        // Handle nested keys with dot notation (e.g., 'course_categories.title')
-        $keys = explode('.', $key);
-        $text = self::$langData;
-        
-        // Navigate through nested structure
-        foreach ($keys as $k) {
-            if (is_array($text) && isset($text[$k])) {
-                $text = $text[$k];
-            } else {
-                // Key not found, return the original key
-                $text = $key;
-                break;
+        // First, try the full key as-is (for flat JSON)
+        if (isset(self::$langData[$key])) {
+            $text = self::$langData[$key];
+        } else {
+            // Handle nested keys with dot notation (for nested JSON)
+            $keys = explode('.', $key);
+            $text = self::$langData;
+            foreach ($keys as $k) {
+                if (is_array($text) && isset($text[$k])) {
+                    $text = $text[$k];
+                } else {
+                    // Key not found, return the original key
+                    $text = $key;
+                    break;
+                }
             }
         }
-        
         // Apply replacements if text is a string
         if (is_string($text)) {
             foreach ($replacements as $placeholder => $value) {
@@ -56,7 +58,6 @@ class Localization {
             // If text is not a string (e.g., still an array), return the key
             $text = $key;
         }
-        
         return $text;
     }
 

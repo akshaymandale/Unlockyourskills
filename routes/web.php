@@ -140,6 +140,8 @@ Router::middleware(['Auth'])->group(function() {
     // Course Creation
     Router::get('/course-creation', 'CourseCreationController@index');
     Router::post('/course-creation', 'CourseCreationController@create');
+    // Modal route for Add Course
+    Router::get('/course-creation/modal/add', 'CourseCreationController@loadAddCourseModal');
     
     // Course Creation AJAX operations
     Router::post('/course-creation/subcategories', 'CourseCreationController@getSubcategories');
@@ -411,14 +413,18 @@ Router::middleware(['Auth'])->group(function() {
     Router::get('/feed/notifications', 'SocialFeedController@notifications');
 
     // Course Management Routes
-    Router::get('/course-management', [CourseCreationController::class, 'courseManagement']);
-    Router::get('/api/courses', [CourseCreationController::class, 'getCourses']);
-    Router::post('/api/courses/{id}/publish', [CourseCreationController::class, 'publishCourse']);
-    Router::post('/api/courses/{id}/unpublish', [CourseCreationController::class, 'unpublishCourse']);
-    Router::delete('/api/courses/{id}', [CourseCreationController::class, 'deleteCourse']);
-    Router::get('/course-edit/{id}', [CourseCreationController::class, 'editCourse']);
-    Router::get('/course-preview/{id}', [CourseCreationController::class, 'previewCourse']);
-    Router::get('/course-analytics/{id}', [CourseCreationController::class, 'courseAnalytics']);
+    Router::get('/course-management', 'CourseCreationController@courseManagement');
+    Router::get('/api/courses', 'CourseCreationController@getCourses');
+    Router::get('/courses/ajax/get', 'CourseCreationController@getCourses');
+    Router::post('/api/courses/{id}/publish', 'CourseCreationController@publishCourse');
+    Router::post('/api/courses/{id}/unpublish', 'CourseCreationController@unpublishCourse');
+    Router::delete('/api/courses/{id}', 'CourseCreationController@deleteCourse');
+    Router::get('/course-edit/{id}', 'CourseCreationController@editCourse');
+    Router::get('/course-preview/{id}', 'CourseCreationController@previewCourse');
+    Router::get('/course-analytics/{id}', 'CourseCreationController@courseAnalytics');
+
+    // New route for loading the add course modal content via AJAX
+    Router::get('/courses/modal/add', 'CourseCreationController@loadAddCourseModal');
 
 });
 

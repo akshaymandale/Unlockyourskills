@@ -5092,3 +5092,338 @@ body select:focus,
         align-self: flex-end;
     }
 }
+
+/* VLR Selection Modal Styles */
+#vlrSelectionModal .modal-xl {
+    max-width: 1200px;
+}
+
+#vlrSelectionModal .nav-tabs {
+    border-bottom: 2px solid #dee2e6;
+}
+
+#vlrSelectionModal .nav-tabs .nav-link {
+    border: none;
+    border-bottom: 3px solid transparent;
+    color: #6c757d;
+    font-weight: 500;
+    padding: 0.75rem 1rem;
+    transition: all 0.2s ease;
+}
+
+#vlrSelectionModal .nav-tabs .nav-link:hover {
+    border-color: #4b0082;
+    color: #4b0082;
+    background-color: #f8f9fa;
+}
+
+#vlrSelectionModal .nav-tabs .nav-link.active {
+    border-color: #4b0082;
+    color: #4b0082;
+    background-color: #fff;
+}
+
+#vlrSelectionModal .nav-tabs .badge {
+    font-size: 0.75rem;
+    padding: 0.25rem 0.5rem;
+}
+
+#vlrSelectionModal .vlr-selection-card {
+    border: 1px solid #dee2e6;
+    transition: all 0.2s ease;
+    cursor: pointer;
+}
+
+#vlrSelectionModal .vlr-selection-card:hover {
+    border-color: #4b0082;
+    box-shadow: 0 0.125rem 0.25rem rgba(75, 0, 130, 0.075);
+    transform: translateY(-1px);
+}
+
+#vlrSelectionModal .vlr-selection-card .card-title {
+    font-size: 0.9rem;
+    font-weight: 600;
+    line-height: 1.3;
+    margin-bottom: 0.5rem;
+}
+
+#vlrSelectionModal .vlr-selection-card .card-text {
+    font-size: 0.8rem;
+    line-height: 1.4;
+}
+
+#vlrSelectionModal .vlr-selection-card .card-footer {
+    border-top: 1px solid #f8f9fa;
+    padding: 0.75rem 1rem;
+}
+
+#vlrSelectionModal .form-check-input:checked {
+    background-color: #4b0082;
+    border-color: #4b0082;
+}
+
+#vlrSelectionModal .form-check-label {
+    font-size: 0.8rem;
+    color: #6c757d;
+    cursor: pointer;
+}
+
+#vlrSelectionModal .vlr-content-item {
+    transition: opacity 0.2s ease;
+}
+
+#vlrSelectionModal .vlr-content-item[style*="display: none"] {
+    opacity: 0;
+}
+
+/* Search bar styling */
+#vlrSearchInput {
+    border-right: none;
+}
+
+#vlrSearchInput:focus {
+    border-color: #4b0082;
+    box-shadow: 0 0 0 0.2rem rgba(75, 0, 130, 0.25);
+}
+
+#clearSearchBtn {
+    border-left: none;
+    border-color: #ced4da;
+}
+
+#clearSearchBtn:hover {
+    background-color: #e9ecef;
+    border-color: #4b0082;
+}
+
+/* Empty state styling */
+#vlrSelectionModal .text-center.py-4 {
+    min-height: 200px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+}
+
+#vlrSelectionModal .text-center.py-4 i {
+    color: #dee2e6;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    #vlrSelectionModal .modal-xl {
+        max-width: 95%;
+        margin: 1rem auto;
+    }
+    
+    #vlrSelectionModal .nav-tabs .nav-link {
+        padding: 0.5rem 0.75rem;
+        font-size: 0.875rem;
+    }
+    
+    #vlrSelectionModal .col-md-6.col-lg-4 {
+        flex: 0 0 100%;
+        max-width: 100%;
+    }
+}
+
+/* Module Card Styles */
+.module-card.card {
+    border-radius: 0.75rem;
+    border: 1px solid #e0e0e0;
+    box-shadow: 0 2px 8px rgba(75,0,130,0.04);
+    transition: box-shadow 0.2s, border-color 0.2s;
+}
+.module-card.card:hover {
+    box-shadow: 0 4px 16px rgba(75,0,130,0.10);
+    border-color: #4b0082;
+}
+.module-card .card-header {
+    border-radius: 0.75rem 0.75rem 0 0;
+    background: #f8f9fa;
+    border-bottom: 1px solid #e0e0e0;
+}
+.module-card .badge.bg-primary {
+    font-size: 1rem;
+    padding: 0.5em 0.9em;
+    background: #4b0082;
+}
+.module-actions .btn {
+    padding: 0.25rem 0.5rem;
+    font-size: 0.95em;
+}
+.module-actions .fa-grip-vertical {
+    cursor: grab;
+    color: #bdbdbd;
+    font-size: 1.2em;
+    margin-left: 0.5em;
+}
+.module-actions .fa-grip-vertical:hover {
+    color: #4b0082;
+}
+.module-actions .btn-outline-danger {
+    border: 1px solid #f8d7da;
+    color: #dc3545;
+    background: #fff;
+    border-radius: 1em;
+    padding: 0.2em 0.7em;
+    transition: background 0.2s, color 0.2s, border-color 0.2s;
+}
+.module-actions .btn-outline-danger:hover {
+    background: #f8d7da;
+    color: #a71d2a;
+    border-color: #f5c2c7;
+}
+
+/* VLR Chips */
+.vlr-chip.card {
+    border-radius: 1.5em;
+    border: 1px solid #e0e0e0;
+    background: #fff;
+    box-shadow: 0 1px 3px rgba(75,0,130,0.04);
+    transition: box-shadow 0.2s, border-color 0.2s;
+    min-height: 38px;
+    margin-right: 0.5em;
+    margin-bottom: 0.5em;
+    cursor: pointer;
+}
+.vlr-chip.card:hover {
+    border-color: #4b0082;
+    box-shadow: 0 2px 8px rgba(75,0,130,0.10);
+}
+.vlr-chip .vlr-content-title {
+    font-size: 0.95em;
+    font-weight: 500;
+    color: #333;
+    margin-right: 0.5em;
+}
+.vlr-chip .badge {
+    font-size: 0.8em;
+    background: #f3e6fa;
+    color: #4b0082;
+    border-radius: 0.75em;
+    padding: 0.3em 0.7em;
+}
+.vlr-chip .btn-outline-danger {
+    border: 1px solid #f8d7da;
+    color: #dc3545;
+    background: #fff;
+    border-radius: 1em;
+    padding: 0.2em 0.7em;
+    transition: background 0.2s, color 0.2s, border-color 0.2s;
+}
+.vlr-chip .btn-outline-danger:hover {
+    background: #f8d7da;
+    color: #a71d2a;
+    border-color: #f5c2c7;
+}
+.vlr-chip .fa-grip-lines {
+    cursor: grab;
+    color: #bdbdbd;
+    font-size: 1.1em;
+    margin-left: 0.5em;
+}
+.vlr-chip .fa-grip-lines:hover {
+    color: #4b0082;
+}
+
+/* Add Module Button */
+#addModuleBtnTop, #addModuleBtnBottom {
+    min-width: 160px;
+    font-weight: 500;
+    border-radius: 2em;
+}
+#addModuleBtnTop i, #addModuleBtnBottom i {
+    color: #4b0082;
+}
+
+/* Module Content Section */
+.module-content-section {
+    background: #f9f9fb;
+    border-radius: 0.5em;
+    padding: 1em;
+    margin-top: 1em;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    .module-card .card-header, .module-card .card-body {
+        padding: 1em 0.5em;
+    }
+    .vlr-chip.card {
+        min-width: 120px;
+        max-width: 100%;
+    }
+}
+
+/* --- VLR Content List Container --- */
+.vlr-content-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5em;
+  width: 100%;
+  max-width: 100%;
+  overflow-x: hidden;
+}
+
+/* --- VLR Chip Card --- */
+.vlr-chip.card {
+  width: 100%;
+  min-width: 0;
+  margin-right: 0;
+  margin-bottom: 0.5em;
+  box-sizing: border-box;
+  display: block;
+  float: none;
+  overflow: hidden;
+  transition: box-shadow 0.2s, border-color 0.2s, background 0.2s;
+}
+.vlr-chip.card:hover, .vlr-chip.card:focus {
+  box-shadow: 0 0 0 0.2rem #b197fc33;
+  border-color: #4b0082;
+  background: #f3f0ff;
+  width: 100%;
+  overflow: hidden;
+}
+
+/* Module Card Improvements */
+.module-card.card {
+  margin-bottom: 2.2rem;
+}
+.module-card .card-header,
+.module-card .card-body {
+  padding: 1.5rem 1.5rem 1.2rem 1.5rem;
+}
+
+/* Module Content Section */
+.module-content-section {
+  background: #f7f7fb;
+  border-radius: 0.7em;
+  padding: 1.3em 1.2em 1.1em 1.2em;
+  margin-top: 1.2em;
+}
+
+/* VLR Chips */
+.vlr-content-list {
+  gap: 0.7em;
+}
+.vlr-chip.card {
+  width: 100%;
+  min-width: 0;
+  margin-bottom: 0.7em;
+  padding: 0.7em 1.1em;
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  gap: 0.6em;
+  background: #fff;
+  border-radius: 1.2em;
+  border: 1px solid #e0e0e0;
+  overflow: hidden;
+}
+.vlr-chip .btn {
+  margin-left: 0.25em;
+}
+.add-item-btn {
+  margin-top: 1.1em;
+}

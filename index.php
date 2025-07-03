@@ -1,4 +1,8 @@
 <?php
+error_log('[INDEX.PHP] Request: ' . (
+    $_SERVER['REQUEST_URI'] ?? '') . ' | Method: ' . (
+    $_SERVER['REQUEST_METHOD'] ?? '') . ' | POST: ' . json_encode($_POST));
+
 require_once 'config/autoload.php';
 require_once 'config/Localization.php';
 
@@ -13,7 +17,7 @@ ini_set('display_errors', 1);
 
 // Set session cookie path to match the application path
 session_set_cookie_params([
-    'path' => '/Unlockyourskills',
+    'path' => '/',
     'httponly' => true,
     'secure' => false, // Set to true if using HTTPS
     'samesite' => 'Lax'
@@ -56,6 +60,9 @@ error_log("Language file loaded for: " . $lang);
 // ✅ Load language file
 Localization::loadLanguage($lang);
 
+error_log('[INDEX DEBUG] Request URI: ' . ($_SERVER['REQUEST_URI'] ?? ''));
+error_log('[INDEX DEBUG] Request Method: ' . ($_SERVER['REQUEST_METHOD'] ?? ''));
+error_log('[INDEX DEBUG] POST: ' . json_encode($_POST));
 
 // ===================================
 // ROUTING SYSTEM
