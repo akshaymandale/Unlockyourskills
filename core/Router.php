@@ -153,7 +153,7 @@ class Router
 
         // Debug logging
         error_log("Router::dispatch - Request URI: $requestUri, Method: $requestMethod");
-        error_log("Router::dispatch - Available routes: " . print_r(self::$routes, true));
+        error_log("Router::dispatch - Available routes count: " . count(self::$routes));
 
         // Handle method override for forms
         if ($requestMethod === 'POST' && isset($_POST['_method'])) {
@@ -165,6 +165,7 @@ class Router
 
         if (!$matchedRoute) {
             error_log("Router::dispatch - No route found for $requestMethod $requestUri");
+            error_log("Router::dispatch - All available routes: " . print_r(self::$routes, true));
             $this->handleNotFound();
             return;
         }

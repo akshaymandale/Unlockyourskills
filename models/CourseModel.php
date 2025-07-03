@@ -12,99 +12,10 @@ class CourseModel
     }
 
     // Create a new course
-    public function createCourse($data)
+    public function createCourse($data, $files, $userId, $clientId)
     {
-        try {
-            $this->conn->beginTransaction();
-
-            // Insert course
-            $sql = "INSERT INTO courses (
-                client_id, title, description, short_description, category_id, subcategory_id,
-                course_type, difficulty_level, duration_hours, duration_minutes, max_attempts,
-                passing_score, is_self_paced, is_featured, is_published, thumbnail_image,
-                banner_image, tags, learning_objectives, prerequisites, target_audience,
-                certificate_template, completion_criteria, created_by
-            ) VALUES (
-                :client_id, :title, :description, :short_description, :category_id, :subcategory_id,
-                :course_type, :difficulty_level, :duration_hours, :duration_minutes, :max_attempts,
-                :passing_score, :is_self_paced, :is_featured, :is_published, :thumbnail_image,
-                :banner_image, :tags, :learning_objectives, :prerequisites, :target_audience,
-                :certificate_template, :completion_criteria, :created_by
-            )";
-
-            $stmt = $this->conn->prepare($sql);
-            $stmt->execute([
-                ':client_id' => $data['client_id'],
-                ':title' => $data['title'],
-                ':description' => $data['description'],
-                ':short_description' => $data['short_description'],
-                ':category_id' => $data['category_id'],
-                ':subcategory_id' => $data['subcategory_id'],
-                ':course_type' => $data['course_type'],
-                ':difficulty_level' => $data['difficulty_level'],
-                ':duration_hours' => $data['duration_hours'],
-                ':duration_minutes' => $data['duration_minutes'],
-                ':max_attempts' => $data['max_attempts'],
-                ':passing_score' => $data['passing_score'],
-                ':is_self_paced' => $data['is_self_paced'],
-                ':is_featured' => $data['is_featured'],
-                ':is_published' => $data['is_published'],
-                ':thumbnail_image' => $data['thumbnail_image'],
-                ':banner_image' => $data['banner_image'],
-                ':tags' => $data['tags'],
-                ':learning_objectives' => $data['learning_objectives'],
-                ':prerequisites' => $data['prerequisites'],
-                ':target_audience' => $data['target_audience'],
-                ':certificate_template' => $data['certificate_template'],
-                ':completion_criteria' => $data['completion_criteria'],
-                ':created_by' => $data['created_by']
-            ]);
-
-            $courseId = $this->conn->lastInsertId();
-
-            // Insert modules if provided
-            if (!empty($data['modules'])) {
-                foreach ($data['modules'] as $module) {
-                    $this->createModule($courseId, $module);
-                }
-            }
-
-            // Insert prerequisites if provided
-            if (!empty($data['prerequisite_courses'])) {
-                foreach ($data['prerequisite_courses'] as $prerequisite) {
-                    $this->addPrerequisite($courseId, $prerequisite);
-                }
-            }
-
-            // Insert assessments if provided
-            if (!empty($data['assessments'])) {
-                foreach ($data['assessments'] as $assessment) {
-                    $this->addAssessment($courseId, $assessment);
-                }
-            }
-
-            // Insert feedback if provided
-            if (!empty($data['feedback'])) {
-                foreach ($data['feedback'] as $feedback) {
-                    $this->addFeedback($courseId, $feedback);
-                }
-            }
-
-            // Insert surveys if provided
-            if (!empty($data['surveys'])) {
-                foreach ($data['surveys'] as $survey) {
-                    $this->addSurvey($courseId, $survey);
-                }
-            }
-
-            $this->conn->commit();
-            return $courseId;
-
-        } catch (Exception $e) {
-            $this->conn->rollBack();
-            error_log("Course creation error: " . $e->getMessage());
-            return false;
-        }
+        // Validate $data, handle file uploads, use transactions, save course, modules, etc.
+        // Return ['success' => true] or ['success' => false, 'message' => '...']
     }
 
     // Create a module
@@ -306,18 +217,121 @@ class CourseModel
             $params[] = $filters['is_published'];
         }
 
+        // New filters for course management
+        if (!empty($filters['course_status'])) {
+            if ($filters['course_status'] === 'published') {
+                $sql .= " AND c.is_published = 1";
+            } elseif ($filters['course_status'] === 'draft') {
+                $sql .= " AND c.is_published = 0";
+            } elseif ($filters['course_status'] === 'archived') {
+                $sql .= " AND c.is_deleted = 1";
+            }
+        }
+
+        if (!empty($filters['category'])) {
+            $sql .= " AND cc.name = ?";
+            $params[] = $filters['category'];
+        }
+
+        if (!empty($filters['subcategory'])) {
+            $sql .= " AND csc.name = ?";
+            $params[] = $filters['subcategory'];
+        }
+
         if (!empty($filters['search'])) {
-            $sql .= " AND (c.title LIKE ? OR c.description LIKE ?)";
+            $sql .= " AND (c.title LIKE ? OR c.description LIKE ? OR c.short_description LIKE ?)";
             $searchTerm = '%' . $filters['search'] . '%';
+            $params[] = $searchTerm;
             $params[] = $searchTerm;
             $params[] = $searchTerm;
         }
 
         $sql .= " ORDER BY c.created_at DESC";
 
+        // Add pagination (inject as integer literals, not placeholders)
+        if (isset($filters['limit']) && is_numeric($filters['limit'])) {
+            $limit = (int)$filters['limit'];
+            $offset = isset($filters['offset']) && is_numeric($filters['offset']) ? (int)$filters['offset'] : 0;
+            $sql .= " LIMIT $limit OFFSET $offset";
+        }
+
         $stmt = $this->conn->prepare($sql);
         $stmt->execute($params);
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
+
+    /**
+     * Get total count of courses with filters (for pagination)
+     */
+    public function getCoursesCount($clientId = null, $filters = [])
+    {
+        $sql = "SELECT COUNT(*) as total
+                FROM courses c
+                LEFT JOIN course_categories cc ON c.category_id = cc.id
+                LEFT JOIN course_subcategories csc ON c.subcategory_id = csc.id
+                WHERE c.is_deleted = 0";
+        
+        $params = [];
+
+        if ($clientId !== null) {
+            $sql .= " AND c.client_id = ?";
+            $params[] = $clientId;
+        }
+
+        // Apply filters (same as getCourses but without pagination)
+        if (!empty($filters['category_id'])) {
+            $sql .= " AND c.category_id = ?";
+            $params[] = $filters['category_id'];
+        }
+
+        if (!empty($filters['course_type'])) {
+            $sql .= " AND c.course_type = ?";
+            $params[] = $filters['course_type'];
+        }
+
+        if (!empty($filters['difficulty_level'])) {
+            $sql .= " AND c.difficulty_level = ?";
+            $params[] = $filters['difficulty_level'];
+        }
+
+        if (!empty($filters['is_published'])) {
+            $sql .= " AND c.is_published = ?";
+            $params[] = $filters['is_published'];
+        }
+
+        // New filters for course management
+        if (!empty($filters['course_status'])) {
+            if ($filters['course_status'] === 'published') {
+                $sql .= " AND c.is_published = 1";
+            } elseif ($filters['course_status'] === 'draft') {
+                $sql .= " AND c.is_published = 0";
+            } elseif ($filters['course_status'] === 'archived') {
+                $sql .= " AND c.is_deleted = 1";
+            }
+        }
+
+        if (!empty($filters['category'])) {
+            $sql .= " AND cc.name = ?";
+            $params[] = $filters['category'];
+        }
+
+        if (!empty($filters['subcategory'])) {
+            $sql .= " AND csc.name = ?";
+            $params[] = $filters['subcategory'];
+        }
+
+        if (!empty($filters['search'])) {
+            $sql .= " AND (c.title LIKE ? OR c.description LIKE ? OR c.short_description LIKE ?)";
+            $searchTerm = '%' . $filters['search'] . '%';
+            $params[] = $searchTerm;
+            $params[] = $searchTerm;
+            $params[] = $searchTerm;
+        }
+
+        $stmt = $this->conn->prepare($sql);
+        $stmt->execute($params);
+        $result = $stmt->fetch(PDO::FETCH_ASSOC);
+        return $result['total'] ?? 0;
     }
 
     // Get course by ID with all related data
@@ -529,119 +543,162 @@ class CourseModel
     }
 
     // Get available VLR content for course creation
-    public function getAvailableVLRContent($clientId = null)
+    public function getAvailableVLRContent($clientId)
     {
-        $content = [];
+        try {
+            $vlrContent = [];
 
-        // Get SCORM packages
-        $sql = "SELECT id, title, 'scorm' as content_type FROM scorm_packages WHERE is_deleted = 0";
-        if ($clientId !== null) {
-            $sql .= " AND client_id = ?";
+            // SCORM
+            try {
+                $sql = "SELECT id, title, COALESCE(description, '') as description, 'scorm' as type FROM scorm_packages WHERE client_id = ? AND is_deleted = 0";
+                $stmt = $this->conn->prepare($sql);
+                $stmt->execute([$clientId]);
+                $vlrContent['scorm'] = $stmt->fetchAll(PDO::FETCH_ASSOC);
+                error_log("Fetched " . count($vlrContent['scorm']) . " SCORM packages");
+            } catch (PDOException $e) {
+                error_log("Error fetching SCORM packages: " . $e->getMessage());
+                $vlrContent['scorm'] = [];
+            }
+
+            // External
+            try {
+                $sql = "SELECT id, title, COALESCE(description, '') as description, 'external' as type FROM external_content WHERE client_id = ? AND is_deleted = 0";
+                $stmt = $this->conn->prepare($sql);
+                $stmt->execute([$clientId]);
+                $vlrContent['external'] = $stmt->fetchAll(PDO::FETCH_ASSOC);
+                error_log("Fetched " . count($vlrContent['external']) . " External content");
+            } catch (PDOException $e) {
+                error_log("Error fetching External content: " . $e->getMessage());
+                $vlrContent['external'] = [];
+            }
+
+            // Document
+            try {
+                $sql = "SELECT id, title, COALESCE(description, '') as description, 'document' as type FROM documents WHERE client_id = ? AND is_deleted = 0";
+                $stmt = $this->conn->prepare($sql);
+                $stmt->execute([$clientId]);
+                $vlrContent['documents'] = $stmt->fetchAll(PDO::FETCH_ASSOC);
+                error_log("Fetched " . count($vlrContent['documents']) . " Documents");
+            } catch (PDOException $e) {
+                error_log("Error fetching Documents: " . $e->getMessage());
+                $vlrContent['documents'] = [];
+            }
+
+            // Assessment
+            try {
+                $sql = "SELECT id, title, '' as description, 'assessment' as type FROM assessment_package WHERE client_id = ? AND is_deleted = 0";
+                $stmt = $this->conn->prepare($sql);
+                $stmt->execute([$clientId]);
+                $vlrContent['assessment'] = $stmt->fetchAll(PDO::FETCH_ASSOC);
+                error_log("Fetched " . count($vlrContent['assessment']) . " Assessments");
+            } catch (PDOException $e) {
+                error_log("Error fetching Assessments: " . $e->getMessage());
+                $vlrContent['assessment'] = [];
+            }
+
+            // Audio
+            try {
+                $sql = "SELECT id, title, COALESCE(description, '') as description, 'audio' as type FROM audio_package WHERE client_id = ? AND is_deleted = 0";
+                $stmt = $this->conn->prepare($sql);
+                $stmt->execute([$clientId]);
+                $vlrContent['audio'] = $stmt->fetchAll(PDO::FETCH_ASSOC);
+                error_log("Fetched " . count($vlrContent['audio']) . " Audio packages");
+            } catch (PDOException $e) {
+                error_log("Error fetching Audio packages: " . $e->getMessage());
+                $vlrContent['audio'] = [];
+            }
+
+            // Video
+            try {
+                $sql = "SELECT id, title, COALESCE(description, '') as description, 'video' as type FROM video_package WHERE client_id = ? AND is_deleted = 0";
+                $stmt = $this->conn->prepare($sql);
+                $stmt->execute([$clientId]);
+                $vlrContent['video'] = $stmt->fetchAll(PDO::FETCH_ASSOC);
+                error_log("Fetched " . count($vlrContent['video']) . " Video packages");
+            } catch (PDOException $e) {
+                error_log("Error fetching Video packages: " . $e->getMessage());
+                $vlrContent['video'] = [];
+            }
+
+            // Image
+            try {
+                $sql = "SELECT id, title, COALESCE(description, '') as description, 'image' as type FROM image_package WHERE client_id = ? AND is_deleted = 0";
+                $stmt = $this->conn->prepare($sql);
+                $stmt->execute([$clientId]);
+                $vlrContent['images'] = $stmt->fetchAll(PDO::FETCH_ASSOC);
+                error_log("Fetched " . count($vlrContent['images']) . " Image packages");
+            } catch (PDOException $e) {
+                error_log("Error fetching Image packages: " . $e->getMessage());
+                $vlrContent['images'] = [];
+            }
+
+            // Interactive
+            try {
+                $sql = "SELECT id, title, COALESCE(description, '') as description, 'interactive' as type FROM interactive_ai_content_package WHERE client_id = ? AND is_deleted = 0";
+                $stmt = $this->conn->prepare($sql);
+                $stmt->execute([$clientId]);
+                $vlrContent['interactive'] = $stmt->fetchAll(PDO::FETCH_ASSOC);
+                error_log("Fetched " . count($vlrContent['interactive']) . " Interactive packages");
+            } catch (PDOException $e) {
+                error_log("Error fetching Interactive packages: " . $e->getMessage());
+                $vlrContent['interactive'] = [];
+            }
+
+            // Non-SCORM
+            try {
+                $sql = "SELECT id, title, COALESCE(description, '') as description, 'non_scorm' as type FROM non_scorm_package WHERE client_id = ? AND is_deleted = 0";
+                $stmt = $this->conn->prepare($sql);
+                $stmt->execute([$clientId]);
+                $vlrContent['non_scorm'] = $stmt->fetchAll(PDO::FETCH_ASSOC);
+                error_log("Fetched " . count($vlrContent['non_scorm']) . " Non-SCORM packages");
+            } catch (PDOException $e) {
+                error_log("Error fetching Non-SCORM packages: " . $e->getMessage());
+                $vlrContent['non_scorm'] = [];
+            }
+
+            // Assignment
+            try {
+                $sql = "SELECT id, title, COALESCE(description, '') as description, 'assignment' as type FROM assignment_package WHERE client_id = ? AND is_deleted = 0";
+                $stmt = $this->conn->prepare($sql);
+                $stmt->execute([$clientId]);
+                $vlrContent['assignments'] = $stmt->fetchAll(PDO::FETCH_ASSOC);
+                error_log("Fetched " . count($vlrContent['assignments']) . " Assignment packages");
+            } catch (PDOException $e) {
+                error_log("Error fetching Assignment packages: " . $e->getMessage());
+                $vlrContent['assignments'] = [];
+            }
+
+            // Survey
+            try {
+                $sql = "SELECT id, title, COALESCE(description, '') as description, 'survey' as type FROM survey_package WHERE client_id = ? AND is_deleted = 0";
+                $stmt = $this->conn->prepare($sql);
+                $stmt->execute([$clientId]);
+                $vlrContent['surveys'] = $stmt->fetchAll(PDO::FETCH_ASSOC);
+                error_log("Fetched " . count($vlrContent['surveys']) . " Survey packages");
+            } catch (PDOException $e) {
+                error_log("Error fetching Survey packages: " . $e->getMessage());
+                $vlrContent['surveys'] = [];
+            }
+
+            // Feedback
+            try {
+                $sql = "SELECT id, title, COALESCE(description, '') as description, 'feedback' as type FROM feedback_package WHERE client_id = ? AND is_deleted = 0";
+                $stmt = $this->conn->prepare($sql);
+                $stmt->execute([$clientId]);
+                $vlrContent['feedback'] = $stmt->fetchAll(PDO::FETCH_ASSOC);
+                error_log("Fetched " . count($vlrContent['feedback']) . " Feedback packages");
+            } catch (PDOException $e) {
+                error_log("Error fetching Feedback packages: " . $e->getMessage());
+                $vlrContent['feedback'] = [];
+            }
+
+            error_log('[DEBUG] $vlrContent before return: ' . print_r($vlrContent, true));
+            return $vlrContent;
+
+        } catch (PDOException $e) {
+            error_log("Error getting VLR content: " . $e->getMessage());
+            return [];
         }
-        $stmt = $this->conn->prepare($sql);
-        $stmt->execute($clientId !== null ? [$clientId] : []);
-        $content['scorm'] = $stmt->fetchAll(PDO::FETCH_ASSOC);
-
-        // Get non-SCORM packages
-        $sql = "SELECT id, title, 'non_scorm' as content_type FROM non_scorm_package WHERE is_deleted = 0";
-        if ($clientId !== null) {
-            $sql .= " AND client_id = ?";
-        }
-        $stmt = $this->conn->prepare($sql);
-        $stmt->execute($clientId !== null ? [$clientId] : []);
-        $content['non_scorm'] = $stmt->fetchAll(PDO::FETCH_ASSOC);
-
-        // Get assessment packages
-        $sql = "SELECT id, title, 'assessment' as content_type FROM assessment_package WHERE is_deleted = 0";
-        if ($clientId !== null) {
-            $sql .= " AND client_id = ?";
-        }
-        $stmt = $this->conn->prepare($sql);
-        $stmt->execute($clientId !== null ? [$clientId] : []);
-        $content['assessment'] = $stmt->fetchAll(PDO::FETCH_ASSOC);
-
-        // Get audio packages
-        $sql = "SELECT id, title, 'audio' as content_type FROM audio_package WHERE is_deleted = 0";
-        if ($clientId !== null) {
-            $sql .= " AND client_id = ?";
-        }
-        $stmt = $this->conn->prepare($sql);
-        $stmt->execute($clientId !== null ? [$clientId] : []);
-        $content['audio'] = $stmt->fetchAll(PDO::FETCH_ASSOC);
-
-        // Get video packages
-        $sql = "SELECT id, title, 'video' as content_type FROM video_package WHERE is_deleted = 0";
-        if ($clientId !== null) {
-            $sql .= " AND client_id = ?";
-        }
-        $stmt = $this->conn->prepare($sql);
-        $stmt->execute($clientId !== null ? [$clientId] : []);
-        $content['video'] = $stmt->fetchAll(PDO::FETCH_ASSOC);
-
-        // Get document packages
-        $sql = "SELECT id, title, 'document' as content_type FROM documents WHERE is_deleted = 0";
-        if ($clientId !== null) {
-            $sql .= " AND client_id = ?";
-        }
-        $stmt = $this->conn->prepare($sql);
-        $stmt->execute($clientId !== null ? [$clientId] : []);
-        $content['document'] = $stmt->fetchAll(PDO::FETCH_ASSOC);
-
-        // Get image packages
-        $sql = "SELECT id, title, 'image' as content_type FROM image_package WHERE is_deleted = 0";
-        if ($clientId !== null) {
-            $sql .= " AND client_id = ?";
-        }
-        $stmt = $this->conn->prepare($sql);
-        $stmt->execute($clientId !== null ? [$clientId] : []);
-        $content['image'] = $stmt->fetchAll(PDO::FETCH_ASSOC);
-
-        // Get external content
-        $sql = "SELECT id, title, 'external' as content_type FROM external_content WHERE is_deleted = 0";
-        if ($clientId !== null) {
-            $sql .= " AND client_id = ?";
-        }
-        $stmt = $this->conn->prepare($sql);
-        $stmt->execute($clientId !== null ? [$clientId] : []);
-        $content['external'] = $stmt->fetchAll(PDO::FETCH_ASSOC);
-
-        // Get survey packages
-        $sql = "SELECT id, title, 'survey' as content_type FROM survey_package WHERE is_deleted = 0";
-        if ($clientId !== null) {
-            $sql .= " AND client_id = ?";
-        }
-        $stmt = $this->conn->prepare($sql);
-        $stmt->execute($clientId !== null ? [$clientId] : []);
-        $content['survey'] = $stmt->fetchAll(PDO::FETCH_ASSOC);
-
-        // Get feedback packages
-        $sql = "SELECT id, title, 'feedback' as content_type FROM feedback_package WHERE is_deleted = 0";
-        if ($clientId !== null) {
-            $sql .= " AND client_id = ?";
-        }
-        $stmt = $this->conn->prepare($sql);
-        $stmt->execute($clientId !== null ? [$clientId] : []);
-        $content['feedback'] = $stmt->fetchAll(PDO::FETCH_ASSOC);
-
-        // Get interactive content
-        $sql = "SELECT id, title, 'interactive' as content_type FROM interactive_ai_content_package WHERE is_deleted = 0";
-        if ($clientId !== null) {
-            $sql .= " AND client_id = ?";
-        }
-        $stmt = $this->conn->prepare($sql);
-        $stmt->execute($clientId !== null ? [$clientId] : []);
-        $content['interactive'] = $stmt->fetchAll(PDO::FETCH_ASSOC);
-
-        // Get assignment packages
-        $sql = "SELECT id, title, 'assignment' as content_type FROM assignment_package WHERE is_deleted = 0";
-        if ($clientId !== null) {
-            $sql .= " AND client_id = ?";
-        }
-        $stmt = $this->conn->prepare($sql);
-        $stmt->execute($clientId !== null ? [$clientId] : []);
-        $content['assignment'] = $stmt->fetchAll(PDO::FETCH_ASSOC);
-
-        return $content;
     }
 
     // Get course statistics

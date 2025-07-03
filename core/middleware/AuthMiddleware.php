@@ -14,10 +14,15 @@ class AuthMiddleware extends Middleware
     
     public function handle()
     {
+        error_log('AuthMiddleware::handle - session_id: ' . session_id());
+        error_log('AuthMiddleware::handle - \\$_SESSION: ' . print_r($_SESSION, true));
+        
         // Debug logging
         error_log("AuthMiddleware::handle called for URI: " . ($_SERVER['REQUEST_URI'] ?? 'unknown'));
         error_log("Session data: " . print_r($_SESSION, true));
         error_log("Is AJAX request: " . ($this->isAjaxRequest() ? 'yes' : 'no'));
+        error_log("Session ID exists: " . (isset($_SESSION['id']) ? 'yes' : 'no'));
+        error_log("Session user exists: " . (isset($_SESSION['user']) ? 'yes' : 'no'));
         
         // Temporary: Allow assessment routes without authentication for testing
         $currentUri = $_SERVER['REQUEST_URI'] ?? '';
@@ -36,8 +41,12 @@ class AuthMiddleware extends Middleware
         // Check if user is logged in
         if (!isset($_SESSION['id']) || !isset($_SESSION['user'])) {
             error_log("AuthMiddleware::handle - User not logged in, redirecting");
+            error_log("SESSION['id']: " . ($_SESSION['id'] ?? 'NOT SET'));
+            error_log("SESSION['user']: " . (isset($_SESSION['user']) ? 'SET' : 'NOT SET'));
+            
             // If AJAX request, return JSON error
             if ($this->isAjaxRequest()) {
+                error_log("AuthMiddleware::handle - Returning JSON error for AJAX request");
                 $this->json([
                     'success' => false,
                     'message' => 'Authentication required',

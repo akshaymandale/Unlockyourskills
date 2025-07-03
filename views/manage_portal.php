@@ -64,7 +64,7 @@ require_once 'core/UrlHelper.php';
                 
                 <div class="row">
                     <div class="col-md-6">
-                        <div class="card user-box shadow-sm" onclick="location.href='index.php?controller=CourseCreationController'">
+                        <div class="card user-box shadow-sm" onclick="location.href='<?= UrlHelper::url('course-management') ?>'">
                             <h5><i class="fas fa-chalkboard-teacher"></i> <?= Localization::translate('course_creation'); ?></h5>
                             <p><small class="text-muted"><?= Localization::translate('create_courses'); ?></small></p>
                         </div>

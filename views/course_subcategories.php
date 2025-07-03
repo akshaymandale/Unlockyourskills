@@ -95,7 +95,7 @@
                             <div class="col-md-2">
                                 <select class="form-select form-select-sm" id="sortOrderFilter">
                                     <option value=""><?php echo Localization::translate('course_subcategories.all_sort_orders'); ?></option>
-                                    <option value="asc"><?php echo Localization::translate('course_subcategories.sort_asc'); ?></option>
+                                    <option value="asc" selected><?php echo Localization::translate('course_subcategories.sort_asc'); ?></option>
                                     <option value="desc"><?php echo Localization::translate('course_subcategories.sort_desc'); ?></option>
                                 </select>
                             </div>

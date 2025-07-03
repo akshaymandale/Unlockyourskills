@@ -1,3 +1,5 @@
+<?php error_log('[LOGIN VIEW] login.php rendered'); ?>
+<!-- [LOGIN VIEW] login.php rendered -->
 <?php require_once __DIR__ . '/../core/UrlHelper.php'; ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -8,6 +10,7 @@
     <link rel="stylesheet" href="<?= UrlHelper::url('public/css/style.css') ?>">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <link rel="icon" type="image/x-icon" href="<?= UrlHelper::url('public/images/favicon.ico') ?>">
+    <script src="<?= UrlHelper::url('public/js/login.js') ?>" defer onload="console.log('[LOGIN VIEW] login.js loaded')" onerror="console.error('[LOGIN VIEW] login.js failed to load')"></script>
 </head>
 <body class="login-body">
 
@@ -22,16 +25,11 @@
         <div class="login-right">
             <h2 class="login-title">Unlock Your Skills</h2>
 
-            <!-- Session Timeout Message -->
-            <?php if (isset($timeoutMessage) && !empty($timeoutMessage)): ?>
-            <div class="alert alert-warning" style="background-color: #fff3cd; border: 1px solid #ffeaa7; color: #856404; padding: 12px; border-radius: 4px; margin-bottom: 20px; text-align: center;">
-                <i class="fas fa-exclamation-triangle"></i>
-                <?= htmlspecialchars($timeoutMessage) ?>
-            </div>
-            <?php endif; ?>
-
             <!-- Login Form -->
-            <form id="loginForm" action="index.php?controller=LoginController&action=login" method="POST">
+            <form id="loginForm" method="POST" action="/Unlockyourskills/login">
+            <script>
+            console.log('[LOGIN VIEW] loginForm element present:', document.getElementById('loginForm'));
+            </script>
                 <div class="form-group">
                     <input type="text" id="client_code" name="client_code" class="login-input"
                            placeholder="Enter Client Code (e.g., ACME_CORP)">
@@ -85,7 +83,9 @@
     </div>
 </div>
 
-<script src="<?= UrlHelper::url('public/js/login.js') ?>"></script>
+<script>
+console.log('[LOGIN VIEW] login.php loaded');
+</script>
 
 </body>
 </html>

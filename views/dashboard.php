@@ -3,8 +3,8 @@
 if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
-
-if (!isset($_SESSION['loggedin']) || $_SESSION['loggedin'] !== true) {
+error_log('[DASHBOARD VIEW] SESSION: ' . print_r($_SESSION, true));
+if (!isset($_SESSION['id']) || !isset($_SESSION['user'])) {
     header('Location: index.php');
     exit();
 }

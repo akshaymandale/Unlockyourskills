@@ -1,336 +1,815 @@
 <?php
-require_once '../config/autoload.php';
-require_once '../core/middleware/AuthMiddleware.php';
+// ✅ Fix session issue: Start session only if not already started
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+}
 
-// Check authentication
-$auth = new AuthMiddleware();
-if (!$auth->isAuthenticated()) {
-    header('Location: /login');
+if (!isset($_SESSION['id'])) {
+    header('Location: index.php');
+    exit();
+}
+
+include 'core/UrlHelper.php';
+include 'views/includes/header.php';
+include 'views/includes/navbar.php';
+include 'views/includes/sidebar.php';
+
+// Get user info - these variables are already set by the controller
+$user = $_SESSION['user'] ?? null;
+$clientId = $_SESSION['user']['client_id'] ?? null;
+
+// $courses and $categories are already provided by the controller
+// No need to instantiate models here
+
+// Check if user is logged in
+if (!isset($_SESSION['user']['client_id'])) {
+    header('Location: index.php?controller=LoginController');
     exit;
 }
 
-// Get user info
-$user = $_SESSION['user'] ?? null;
-$clientId = $_SESSION['client_id'] ?? null;
+require_once 'core/UrlHelper.php';
+require_once 'core/IdEncryption.php';
+require_once 'config/Localization.php';
 
-// Load courses
-$courseModel = new CourseModel();
-$courses = $courseModel->getAllCourses($clientId);
+$systemRole = $_SESSION['user']['system_role'] ?? '';
+$canManageAll = in_array($systemRole, ['super_admin', 'admin']);
 
-// Load categories for filtering
-$categoryModel = new CourseCategoryModel();
-$categories = $categoryModel->getAllCategories($clientId);
+// Set default client name from session (current user's client)
+$clientName = $_SESSION['user']['client_name'] ?? 'DEFAULT';
+
+// If in client management mode, override with the managed client's name
+if (isset($_GET['client_id'])) {
+    $clientName = 'Unknown Client';
+    if (isset($client) && $client) {
+        $clientName = $client['client_name'];
+    } elseif (isset($clients) && !empty($clients)) {
+        foreach ($clients as $clientItem) {
+            if ($clientItem['id'] == $_GET['client_id']) {
+                $clientName = $clientItem['client_name'];
+                break;
+            }
+        }
+    }
+}
 ?>
 
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Course Management - Unlock Your Skills</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
-    <link href="/public/css/style.css" rel="stylesheet">
-</head>
-<body>
-    <?php include 'includes/header.php'; ?>
-    <?php include 'includes/navbar.php'; ?>
+<div class="main-content">
+    <div class="container mt-4 course-management" data-course-page="true">
+        <!-- Back Arrow and Title -->
+        <div class="back-arrow-container">
+            <a href="<?= UrlHelper::url('manage-portal') ?>" class="back-link">
+                <i class="fas fa-arrow-left"></i>
+            </a>
+            <span class="divider-line"></span>
+            <h1 class="page-title text-purple">
+                <i class="fas fa-graduation-cap me-2"></i>
+                Course Management
+            </h1>
+        </div>
 
-    <div class="container-fluid">
-        <div class="row">
-            <?php include 'includes/sidebar.php'; ?>
-            
-            <main class="col-md-9 ms-sm-auto col-lg-10 px-md-4">
-                <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
-                    <h1 class="h2 text-purple">
-                        <i class="fas fa-graduation-cap me-2"></i>
-                        Course Management
-                    </h1>
-                    <div class="btn-toolbar mb-2 mb-md-0">
-                        <a href="/course-creation" class="btn btn-primary">
-                            <i class="fas fa-plus me-1"></i>
-                            Create New Course
+        <!-- Breadcrumb Navigation -->
+        <nav aria-label="breadcrumb" class="mb-3">
+            <ol class="breadcrumb">
+                <li class="breadcrumb-item">
+                    <a href="<?= UrlHelper::url('dashboard') ?>"><?= Localization::translate('dashboard'); ?></a>
+                </li>
+                <li class="breadcrumb-item">
+                    <a href="<?= UrlHelper::url('manage-portal') ?>"><?= Localization::translate('manage_portal'); ?></a>
+                </li>
+                <li class="breadcrumb-item active" aria-current="page">Course Management</li>
+            </ol>
+        </nav>
+
+        <?php if (isset($_GET['client_id'])): ?>
+            <div class="alert alert-info mb-3">
+                <i class="fas fa-building"></i>
+                <strong>Client Management Mode:</strong> Managing courses for client <strong><?= htmlspecialchars($clientName); ?></strong>
+                <a href="<?= UrlHelper::url('courses') ?>" class="btn btn-sm btn-outline-secondary ms-2">
+                    <i class="fas fa-arrow-left"></i> Back to All Courses
+                </a>
+            </div>
+        <?php endif; ?>
+
+        <!-- Page Description -->
+        <div class="row mb-4">
+            <div class="col-12">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <p class="text-muted mb-0">Manage course content, modules, and learning resources</p>
+                    </div>
+                    <div class="d-flex gap-2 align-items-center">
+                        <button type="button" class="btn btn-outline-primary" id="importCourseBtn" title="Import Courses">
+                            <i class="fas fa-upload me-2"></i>Import Courses
+                        </button>
+                        <a href="<?= UrlHelper::url('course-categories') ?>" class="btn btn-outline-secondary" title="Manage Course Categories">
+                            <i class="fas fa-tags me-2"></i>Manage Categories
                         </a>
+                        <?php
+                        // Preserve client_id parameter if present (for super admin client management)
+                        $addCourseUrl = UrlHelper::url('course-creation');
+                        if (isset($_GET['client_id'])) {
+                            $addCourseUrl .= '?client_id=' . urlencode($_GET['client_id']);
+                        }
+                        ?>
+                        <button type="button" class="btn theme-btn-primary" title="Add New Course" id="addCourseBtn">
+                            <i class="fas fa-plus me-2"></i>Add Course
+                        </button>
                     </div>
                 </div>
+            </div>
+        </div>
 
-                <!-- Filter Section -->
-                <div class="filter-section mb-4">
-                    <div class="row g-3 align-items-center">
-                        <div class="col-md-4">
-                            <div class="input-group">
-                                <span class="input-group-text">
-                                    <i class="fas fa-search"></i>
-                                </span>
-                                <input type="text" class="form-control" id="searchInput" placeholder="Search courses...">
+        <!-- Filters and Search -->
+        <div class="row mb-4">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-body">
+                        <div class="row g-3">
+                            <!-- Search -->
+                            <div class="col-md-3">
+                                <div class="input-group">
+                                    <span class="input-group-text">
+                                        <i class="fas fa-search"></i>
+                                    </span>
+                                    <input type="text" id="searchInput" class="form-control"
+                                        placeholder="Search courses..."
+                                        title="Search courses">
+                                </div>
                             </div>
-                        </div>
-                        <div class="col-md-3">
-                            <select class="form-select" id="categoryFilter">
-                                <option value="">All Categories</option>
-                                <?php foreach ($categories as $category): ?>
-                                    <option value="<?= htmlspecialchars($category['name']) ?>">
-                                        <?= htmlspecialchars($category['name']) ?>
-                                    </option>
-                                <?php endforeach; ?>
-                            </select>
-                        </div>
-                        <div class="col-md-3">
-                            <select class="form-select" id="statusFilter">
-                                <option value="">All Status</option>
-                                <option value="draft">Draft</option>
-                                <option value="published">Published</option>
-                                <option value="archived">Archived</option>
-                            </select>
-                        </div>
-                        <div class="col-md-2">
-                            <button type="button" class="btn btn-outline-secondary w-100" id="clearFilters">
-                                <i class="fas fa-times me-1"></i>
-                                Clear
-                            </button>
-                        </div>
-                    </div>
-                </div>
 
-                <!-- Statistics Cards -->
-                <div class="row mb-4">
-                    <div class="col-md-3">
-                        <div class="card bg-primary text-white">
-                            <div class="card-body">
-                                <div class="d-flex justify-content-between">
-                                    <div>
-                                        <h4 class="mb-0"><?= count($courses) ?></h4>
-                                        <small>Total Courses</small>
-                                    </div>
-                                    <div class="align-self-center">
-                                        <i class="fas fa-graduation-cap fa-2x"></i>
-                                    </div>
-                                </div>
+                            <!-- Course Status Filter -->
+                            <div class="col-md-2">
+                                <select class="form-select" id="courseStatusFilter">
+                                    <option value="">Course Status</option>
+                                    <option value="draft">Draft</option>
+                                    <option value="published">Published</option>
+                                    <option value="archived">Archived</option>
+                                </select>
                             </div>
-                        </div>
-                    </div>
-                    <div class="col-md-3">
-                        <div class="card bg-success text-white">
-                            <div class="card-body">
-                                <div class="d-flex justify-content-between">
-                                    <div>
-                                        <h4 class="mb-0"><?= count(array_filter($courses, fn($c) => $c['status'] === 'published')) ?></h4>
-                                        <small>Published</small>
-                                    </div>
-                                    <div class="align-self-center">
-                                        <i class="fas fa-check-circle fa-2x"></i>
-                                    </div>
-                                </div>
+
+                            <!-- Category Filter -->
+                            <div class="col-md-2">
+                                <select class="form-select" id="categoryFilter">
+                                    <option value="">All Categories</option>
+                                    <?php if (!empty($categories)): ?>
+                                        <?php foreach ($categories as $category): ?>
+                                            <option value="<?= htmlspecialchars($category['name']); ?>">
+                                                <?= htmlspecialchars($category['name']); ?>
+                                            </option>
+                                        <?php endforeach; ?>
+                                    <?php endif; ?>
+                                </select>
                             </div>
-                        </div>
-                    </div>
-                    <div class="col-md-3">
-                        <div class="card bg-warning text-white">
-                            <div class="card-body">
-                                <div class="d-flex justify-content-between">
-                                    <div>
-                                        <h4 class="mb-0"><?= count(array_filter($courses, fn($c) => $c['status'] === 'draft')) ?></h4>
-                                        <small>Drafts</small>
-                                    </div>
-                                    <div class="align-self-center">
-                                        <i class="fas fa-edit fa-2x"></i>
-                                    </div>
-                                </div>
+
+                            <!-- Subcategory Filter -->
+                            <div class="col-md-2">
+                                <select class="form-select" id="subcategoryFilter">
+                                    <option value="">All Subcategories</option>
+                                    <?php if (!empty($subcategories)): ?>
+                                        <?php foreach ($subcategories as $subcategory): ?>
+                                            <option value="<?= htmlspecialchars($subcategory['name']); ?>">
+                                                <?= htmlspecialchars($subcategory['name']); ?>
+                                            </option>
+                                        <?php endforeach; ?>
+                                    <?php endif; ?>
+                                </select>
                             </div>
-                        </div>
-                    </div>
-                    <div class="col-md-3">
-                        <div class="card bg-info text-white">
-                            <div class="card-body">
-                                <div class="d-flex justify-content-between">
-                                    <div>
-                                        <h4 class="mb-0"><?= array_sum(array_column($courses, 'enrollment_count')) ?></h4>
-                                        <small>Total Enrollments</small>
-                                    </div>
-                                    <div class="align-self-center">
-                                        <i class="fas fa-users fa-2x"></i>
-                                    </div>
-                                </div>
+
+                            <!-- Clear All Filters -->
+                            <div class="col-md-1">
+                                <button type="button" class="btn btn-outline-danger w-100" id="clearFiltersBtn" title="Clear all filters">
+                                    <i class="fas fa-times"></i>
+                                </button>
                             </div>
                         </div>
                     </div>
                 </div>
+            </div>
+        </div>
 
-                <!-- Courses Grid -->
-                <div id="coursesGrid">
-                    <?php if (empty($courses)): ?>
-                        <div class="text-center py-5">
-                            <i class="fas fa-graduation-cap fa-3x text-muted mb-3"></i>
-                            <h4 class="text-muted">No courses found</h4>
-                            <p class="text-muted">Create your first course to get started</p>
-                            <a href="/course-creation" class="btn btn-primary">
-                                <i class="fas fa-plus me-1"></i>
-                                Create Course
-                            </a>
-                        </div>
-                    <?php else: ?>
-                        <div class="row" id="coursesContainer">
-                            <?php foreach ($courses as $course): ?>
-                                <div class="col-lg-4 col-md-6 mb-4 course-card" 
-                                     data-name="<?= htmlspecialchars(strtolower($course['name'])) ?>"
-                                     data-category="<?= htmlspecialchars(strtolower($course['category_name'])) ?>"
-                                     data-status="<?= htmlspecialchars($course['status']) ?>">
-                                    <div class="card h-100 course-card-inner">
-                                        <div class="card-header d-flex justify-content-between align-items-center">
-                                            <span class="badge bg-<?= $course['status'] === 'published' ? 'success' : ($course['status'] === 'draft' ? 'warning' : 'secondary') ?>">
-                                                <?= ucfirst($course['status']) ?>
-                                            </span>
-                                            <div class="dropdown">
-                                                <button class="btn btn-sm btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown">
-                                                    <i class="fas fa-ellipsis-v"></i>
-                                                </button>
-                                                <ul class="dropdown-menu">
-                                                    <li>
-                                                        <a class="dropdown-item" href="/course-edit/<?= $course['id'] ?>">
-                                                            <i class="fas fa-edit me-2"></i>
-                                                            Edit
-                                                        </a>
-                                                    </li>
-                                                    <li>
-                                                        <a class="dropdown-item" href="/course-preview/<?= $course['id'] ?>">
-                                                            <i class="fas fa-eye me-2"></i>
-                                                            Preview
-                                                        </a>
-                                                    </li>
-                                                    <li>
-                                                        <a class="dropdown-item" href="/course-analytics/<?= $course['id'] ?>">
-                                                            <i class="fas fa-chart-bar me-2"></i>
-                                                            Analytics
-                                                        </a>
-                                                    </li>
-                                                    <li><hr class="dropdown-divider"></li>
-                                                    <?php if ($course['status'] === 'draft'): ?>
-                                                        <li>
-                                                            <a class="dropdown-item text-success" href="#" onclick="publishCourse(<?= $course['id'] ?>)">
-                                                                <i class="fas fa-check me-2"></i>
-                                                                Publish
-                                                            </a>
-                                                        </li>
-                                                    <?php elseif ($course['status'] === 'published'): ?>
-                                                        <li>
-                                                            <a class="dropdown-item text-warning" href="#" onclick="unpublishCourse(<?= $course['id'] ?>)">
-                                                                <i class="fas fa-pause me-2"></i>
-                                                                Unpublish
-                                                            </a>
-                                                        </li>
-                                                    <?php endif; ?>
-                                                    <li>
-                                                        <a class="dropdown-item text-danger" href="#" onclick="deleteCourse(<?= $course['id'] ?>)">
-                                                            <i class="fas fa-trash me-2"></i>
-                                                            Delete
-                                                        </a>
-                                                    </li>
-                                                </ul>
-                                            </div>
-                                        </div>
-                                        <div class="card-body">
-                                            <h5 class="card-title"><?= htmlspecialchars($course['name']) ?></h5>
-                                            <p class="card-text text-muted">
-                                                <?= htmlspecialchars(substr($course['description'], 0, 100)) ?>
-                                                <?= strlen($course['description']) > 100 ? '...' : '' ?>
-                                            </p>
-                                            
-                                            <div class="course-meta mb-3">
-                                                <div class="row text-center">
-                                                    <div class="col-4">
-                                                        <div class="course-stat">
-                                                            <div class="stat-number"><?= $course['module_count'] ?></div>
-                                                            <div class="stat-label">Modules</div>
-                                                        </div>
-                                                    </div>
-                                                    <div class="col-4">
-                                                        <div class="course-stat">
-                                                            <div class="stat-number"><?= $course['enrollment_count'] ?></div>
-                                                            <div class="stat-label">Enrolled</div>
-                                                        </div>
-                                                    </div>
-                                                    <div class="col-4">
-                                                        <div class="course-stat">
-                                                            <div class="stat-number"><?= $course['completion_rate'] ?>%</div>
-                                                            <div class="stat-label">Complete</div>
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                            </div>
-
-                                            <div class="course-tags">
-                                                <span class="badge bg-light text-dark me-1">
-                                                    <i class="fas fa-folder me-1"></i>
-                                                    <?= htmlspecialchars($course['category_name']) ?>
-                                                </span>
-                                                <?php if ($course['subcategory_name']): ?>
-                                                    <span class="badge bg-light text-dark">
-                                                        <i class="fas fa-tag me-1"></i>
-                                                        <?= htmlspecialchars($course['subcategory_name']) ?>
-                                                    </span>
-                                                <?php endif; ?>
-                                            </div>
-                                        </div>
-                                        <div class="card-footer">
-                                            <small class="text-muted">
-                                                <i class="fas fa-calendar me-1"></i>
-                                                Created: <?= date('M j, Y', strtotime($course['created_at'])) ?>
-                                            </small>
-                                            <?php if ($course['updated_at'] !== $course['created_at']): ?>
-                                                <br>
-                                                <small class="text-muted">
-                                                    <i class="fas fa-edit me-1"></i>
-                                                    Updated: <?= date('M j, Y', strtotime($course['updated_at'])) ?>
-                                                </small>
-                                            <?php endif; ?>
-                                        </div>
-                                    </div>
-                                </div>
-                            <?php endforeach; ?>
-                        </div>
-                    <?php endif; ?>
+        <!-- Search Results Info -->
+        <div class="row mb-3">
+            <div class="col-12">
+                <div id="searchResultsInfo" class="search-results-info" style="display: none;">
+                    <i class="fas fa-info-circle"></i>
+                    <span id="resultsText"></span>
                 </div>
+            </div>
+        </div>
 
-                <!-- Loading Indicator -->
-                <div id="loadingIndicator" class="text-center py-4" style="display: none;">
-                    <div class="spinner-border text-primary" role="status">
-                        <span class="visually-hidden">Loading...</span>
-                    </div>
-                    <p class="mt-2 text-muted">Loading courses...</p>
-                </div>
+        <!-- Courses Grid -->
+        <div id="coursesContainer">
+            <table class="table table-bordered" id="courseGrid">
+                <thead class="question-grid">
+                    <tr>
+                        <th>Course ID</th>
+                        <th>Course Name</th>
+                        <th>Category</th>
+                        <th>Subcategory</th>
+                        <th>Status</th>
+                        <th>Enrollment Count</th>
+                        <th>Created Date</th>
+                        <th>Action</th>
+                    </tr>
+                </thead>
+                <tbody id="coursesTableBody">
+                    <!-- Courses will be loaded here via AJAX -->
+                </tbody>
+            </table>
+        </div>
 
-                <!-- No Results Message -->
-                <div id="noResultsMessage" class="text-center py-5" style="display: none;">
-                    <i class="fas fa-search fa-3x text-muted mb-3"></i>
-                    <h4 class="text-muted">No courses found</h4>
-                    <p class="text-muted">Try adjusting your search criteria</p>
+        <!-- Pagination -->
+        <div class="row">
+            <div class="col-12">
+                <div id="paginationContainer">
+                    <!-- Pagination will be loaded here -->
                 </div>
-            </main>
+            </div>
+        </div>
+
+        <!-- Loading Spinner -->
+        <div class="row" id="loadingIndicator" style="display: none;">
+            <div class="col-12 text-center py-5">
+                <div class="spinner-border text-primary" role="status">
+                    <span class="visually-hidden">Loading...</span>
+                </div>
+                <p class="mt-2 text-muted">Loading courses...</p>
+            </div>
         </div>
     </div>
+</div>
 
-    <!-- Confirmation Modal -->
-    <div class="modal fade" id="confirmationModal" tabindex="-1">
-        <div class="modal-dialog modal-dialog-centered">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title" id="confirmationModalTitle">Confirm Action</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                </div>
-                <div class="modal-body" id="confirmationModalBody">
-                    Are you sure you want to perform this action?
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                    <button type="button" class="btn btn-danger" id="confirmationModalConfirm">Confirm</button>
+<!-- ✅ Edit Course Modal -->
+<div class="modal fade" id="editCourseModal" tabindex="-1" aria-labelledby="editCourseModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-xl">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="editCourseModalLabel">
+                    <i class="fas fa-edit me-2"></i>Edit Course
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div id="editCourseModalContent">
+                    <!-- Content will be loaded dynamically -->
+                    <div class="text-center py-4">
+                        <div class="spinner-border text-primary" role="status">
+                            <span class="visually-hidden">Loading...</span>
+                        </div>
+                        <p class="mt-2">Loading form...</p>
+                    </div>
                 </div>
             </div>
         </div>
     </div>
+</div>
 
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
-    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-    <script src="/public/js/toast_notifications.js"></script>
-    <script src="/public/js/course_management.js"></script>
+<!-- ✅ Delete Course Confirmation Modal -->
+<div class="modal fade" id="deleteCourseModal" tabindex="-1" aria-labelledby="deleteCourseModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="deleteCourseModalLabel">
+                    <i class="fas fa-exclamation-triangle text-danger me-2"></i>Confirm Delete
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p>Are you sure you want to delete this course? This action cannot be undone.</p>
+                <p class="text-muted"><strong>Course:</strong> <span id="deleteCourseName"></span></p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-danger" id="confirmDeleteCourse">Delete Course</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ✅ Add Course Modal -->
+<div class="modal fade" id="addCourseModal" tabindex="-1" aria-labelledby="addCourseModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-xl">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="addCourseModalLabel">
+                    <i class="fas fa-plus me-2"></i>Add Course
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div id="addCourseModalContent">
+                    <!-- Content will be loaded dynamically -->
+                    <div class="text-center py-4">
+                        <div class="spinner-border text-primary" role="status">
+                            <span class="visually-hidden">Loading...</span>
+                        </div>
+                        <p class="mt-2">Loading form...</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ✅ Modal Initialization Script -->
+<script>
+// Pass backend data to JavaScript
+const currentUserRole = '<?= $_SESSION['user']['system_role'] ?? 'guest'; ?>';
+
+document.addEventListener('DOMContentLoaded', function() {
+    console.log('🔥 Course Management: DOM loaded');
+    
+    // Initialize search and filter functionality
+    initializeCourseManagement();
+
+    // Load initial courses
+    if (document.getElementById('coursesTableBody')) {
+        console.log('🔥 Course Management: Loading initial courses');
+        loadCourses(1);
+    } else {
+        console.error('🔥 Course Management: coursesTableBody not found');
+    }
+
+    // Add Course Modal: Open and load form
+    const addCourseBtn = document.getElementById('addCourseBtn');
+    if (addCourseBtn) {
+        addCourseBtn.addEventListener('click', function() {
+            const modal = new bootstrap.Modal(document.getElementById('addCourseModal'));
+            document.getElementById('addCourseModalContent').innerHTML = `<div class='text-center py-4'><div class='spinner-border text-primary' role='status'><span class='visually-hidden'>Loading...</span></div><p class='mt-2'>Loading form...</p></div>`;
+            fetch('/Unlockyourskills/course-creation/modal/add', {
+                method: 'GET',
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'Content-Type': 'application/json'
+                }
+            })
+            .then(response => {
+                console.log('[DEBUG] Response status:', response.status);
+                console.log('[DEBUG] Response headers:', response.headers);
+                console.log('[DEBUG] Response ok:', response.ok);
+                return response.text();
+            })
+            .then(html => {
+                console.log('[DEBUG] Response content length:', html.length);
+                console.log('[DEBUG] Response content preview:', html.substring(0, 200));
+                
+                // Check if response is JSON error
+                if (html.trim().startsWith('{')) {
+                    try {
+                        const jsonResponse = JSON.parse(html);
+                        console.error('[DEBUG] JSON error response:', jsonResponse);
+                        if (jsonResponse.redirect) {
+                            console.error('[DEBUG] Redirecting to:', jsonResponse.redirect);
+                            window.location.href = jsonResponse.redirect;
+                            return;
+                        }
+                    } catch (e) {
+                        console.log('[DEBUG] Not a JSON response, proceeding with HTML');
+                    }
+                }
+                
+                document.getElementById('addCourseModalContent').innerHTML = html;
+                // Extract VLR content from the data attribute
+                const vlrDiv = document.getElementById('vlrContentData');
+                if (vlrDiv) {
+                    window.vlrContent = JSON.parse(vlrDiv.getAttribute('data-vlr-content'));
+                    console.log('[DEBUG] window.vlrContent set from data attribute:', window.vlrContent);
+                } else {
+                    console.error('[DEBUG] vlrContentData div not found in modal!');
+                }
+                const modal = new bootstrap.Modal(document.getElementById('addCourseModal'));
+                modal.show();
+                if (window.CourseCreationManager) {
+                    window.courseManager = new window.CourseCreationManager();
+                }
+            })
+            .catch(error => {
+                console.error('[DEBUG] Fetch error:', error);
+            });
+        });
+    }
+});
+
+function initializeCourseManagement() {
+    // Search functionality with debounce
+    const searchInput = document.getElementById('searchInput');
+    if (searchInput) {
+        const debouncedSearch = debounce(() => {
+            searchCourses();
+        }, 500);
+        
+        searchInput.addEventListener('input', debouncedSearch);
+    }
+
+    // Filter functionality
+    const courseStatusFilter = document.getElementById('courseStatusFilter');
+    const categoryFilter = document.getElementById('categoryFilter');
+    const subcategoryFilter = document.getElementById('subcategoryFilter');
+
+    if (courseStatusFilter) {
+        courseStatusFilter.addEventListener('change', searchCourses);
+    }
+
+    if (categoryFilter) {
+        categoryFilter.addEventListener('change', searchCourses);
+    }
+
+    if (subcategoryFilter) {
+        subcategoryFilter.addEventListener('change', searchCourses);
+    }
+
+    // Clear filters functionality
+    const clearFiltersBtn = document.getElementById('clearFiltersBtn');
+    if (clearFiltersBtn) {
+        clearFiltersBtn.addEventListener('click', resetFilters);
+    }
+
+    // Pagination functionality
+    document.addEventListener('click', function(e) {
+        if (e.target.matches('.page-link[data-page]')) {
+            e.preventDefault();
+            const page = parseInt(e.target.getAttribute('data-page'));
+            loadCourses(page);
+        }
+    });
+}
+
+function clearAllFilters() {
+    // Clear search
+    const searchInput = document.getElementById('searchInput');
+    if (searchInput) {
+        searchInput.value = '';
+        currentSearch = '';
+    }
+
+    // Clear all filters
+    const courseStatusFilter = document.getElementById('courseStatusFilter');
+    const categoryFilter = document.getElementById('categoryFilter');
+    const subcategoryFilter = document.getElementById('subcategoryFilter');
+
+    if (courseStatusFilter) courseStatusFilter.value = '';
+    if (categoryFilter) categoryFilter.value = '';
+    if (subcategoryFilter) subcategoryFilter.value = '';
+
+    currentFilters = {
+        course_status: '',
+        category: '',
+        subcategory: ''
+    };
+
+    // Reload courses
+    loadCourses(1);
+}
+
+// Debounce function
+function debounce(func, wait) {
+    let timeout;
+    return function executedFunction(...args) {
+        const later = () => {
+            clearTimeout(timeout);
+            func(...args);
+        };
+        clearTimeout(timeout);
+        timeout = setTimeout(later, wait);
+    };
+}
+
+// Global variables for search and filters
+let currentSearch = '';
+let currentFilters = {
+    course_status: '',
+    category: '',
+    subcategory: ''
+};
+let currentPage = 1;
+
+function searchCourses() {
+    const searchInput = document.getElementById('searchInput');
+    currentSearch = searchInput ? searchInput.value.trim() : '';
+    
+    // Get filter values
+    const courseStatusFilter = document.getElementById('courseStatusFilter');
+    const categoryFilter = document.getElementById('categoryFilter');
+    const subcategoryFilter = document.getElementById('subcategoryFilter');
+
+    currentFilters = {
+        course_status: courseStatusFilter ? courseStatusFilter.value : '',
+        category: categoryFilter ? categoryFilter.value : '',
+        subcategory: subcategoryFilter ? subcategoryFilter.value : ''
+    };
+
+    // Reset to first page when searching
+    currentPage = 1;
+    loadCourses(currentPage);
+}
+
+function resetFilters() {
+    clearAllFilters();
+}
+
+function loadCourses(page = 1) {
+    currentPage = page;
+    
+    // Show loading indicator
+    const loadingIndicator = document.getElementById('loadingIndicator');
+    const coursesContainer = document.getElementById('coursesContainer');
+    
+    if (loadingIndicator) loadingIndicator.style.display = 'block';
+    if (coursesContainer) coursesContainer.style.display = 'none';
+
+    // Prepare search parameters
+    const params = new URLSearchParams({
+        page: page,
+        search: currentSearch,
+        ...currentFilters
+    });
+
+    // Add client_id if present
+    const urlParams = new URLSearchParams(window.location.search);
+    if (urlParams.has('client_id')) {
+        params.append('client_id', urlParams.get('client_id'));
+    }
+
+    // Make AJAX request
+    fetch(`index.php?controller=CourseCreationController&action=getCourses&${params.toString()}`, {
+        method: 'GET',
+        headers: {
+            'Content-Type': 'application/json',
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            displayCourses(data.courses);
+            displayPagination(data.pagination);
+            updateSearchResultsInfo(data.total, data.filtered);
+        } else {
+            console.error('Error loading courses:', data.message);
+            showToast('error', 'Failed to load courses');
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        showToast('error', 'Failed to load courses');
+    })
+    .finally(() => {
+        // Hide loading indicator
+        if (loadingIndicator) loadingIndicator.style.display = 'none';
+        if (coursesContainer) coursesContainer.style.display = 'block';
+    });
+}
+
+function displayCourses(courses) {
+    const tbody = document.getElementById('coursesTableBody');
+    if (!tbody) return;
+
+    tbody.innerHTML = '';
+
+    if (courses.length === 0) {
+        tbody.innerHTML = `
+            <tr>
+                <td colspan="8" class="text-center py-4">
+                    <i class="fas fa-graduation-cap fa-2x text-muted mb-2"></i>
+                    <p class="text-muted mb-0">No courses found</p>
+                </td>
+            </tr>
+        `;
+        return;
+    }
+
+    courses.forEach(course => {
+        const row = document.createElement('tr');
+        row.innerHTML = `
+            <td>${course.id}</td>
+            <td>
+                <div class="d-flex align-items-center">
+                    <div class="course-icon me-2">
+                        <i class="fas fa-graduation-cap text-primary"></i>
+                    </div>
+                    <div>
+                        <strong>${course.name}</strong>
+                        <br>
+                        <small class="text-muted">${course.description || 'No description'}</small>
+                    </div>
+                </div>
+            </td>
+            <td>${course.category_name || 'Uncategorized'}</td>
+            <td>${course.subcategory_name || 'None'}</td>
+            <td>
+                <span class="badge bg-${getStatusBadgeClass(course.status)}">
+                    ${course.status.charAt(0).toUpperCase() + course.status.slice(1)}
+                </span>
+            </td>
+            <td>${course.enrollment_count || 0}</td>
+            <td>${formatDate(course.created_at)}</td>
+            <td>
+                <div class="btn-group" role="group">
+                    <button type="button" class="btn btn-sm btn-outline-primary" onclick="editCourse(${course.id})" title="Edit Course">
+                        <i class="fas fa-edit"></i>
+                    </button>
+                    <button type="button" class="btn btn-sm btn-outline-info" onclick="previewCourse(${course.id})" title="Preview Course">
+                        <i class="fas fa-eye"></i>
+                    </button>
+                    <button type="button" class="btn btn-sm btn-outline-danger" onclick="deleteCourse(${course.id}, '${course.name}')" title="Delete Course">
+                        <i class="fas fa-trash"></i>
+                    </button>
+                </div>
+            </td>
+        `;
+        tbody.appendChild(row);
+    });
+}
+
+function getStatusBadgeClass(status) {
+    switch (status) {
+        case 'published': return 'success';
+        case 'draft': return 'warning';
+        case 'archived': return 'secondary';
+        default: return 'secondary';
+    }
+}
+
+function formatDate(dateString) {
+    if (!dateString) return 'N/A';
+    const date = new Date(dateString);
+    return date.toLocaleDateString();
+}
+
+function displayPagination(pagination) {
+    const container = document.getElementById('paginationContainer');
+    if (!container || !pagination) return;
+
+    const { current_page, total_pages, total_records } = pagination;
+    
+    if (total_pages <= 1) {
+        container.innerHTML = '';
+        return;
+    }
+
+    let paginationHTML = `
+        <nav aria-label="Course pagination">
+            <ul class="pagination justify-content-center">
+    `;
+
+    // Previous button
+    if (current_page > 1) {
+        paginationHTML += `
+            <li class="page-item">
+                <a class="page-link" href="#" data-page="${current_page - 1}">
+                    <i class="fas fa-chevron-left"></i>
+                </a>
+            </li>
+        `;
+    }
+
+    // Page numbers
+    const startPage = Math.max(1, current_page - 2);
+    const endPage = Math.min(total_pages, current_page + 2);
+
+    for (let i = startPage; i <= endPage; i++) {
+        paginationHTML += `
+            <li class="page-item ${i === current_page ? 'active' : ''}">
+                <a class="page-link" href="#" data-page="${i}">${i}</a>
+            </li>
+        `;
+    }
+
+    // Next button
+    if (current_page < total_pages) {
+        paginationHTML += `
+            <li class="page-item">
+                <a class="page-link" href="#" data-page="${current_page + 1}">
+                    <i class="fas fa-chevron-right"></i>
+                </a>
+            </li>
+        `;
+    }
+
+    paginationHTML += `
+            </ul>
+        </nav>
+        <div class="text-center text-muted mt-2">
+            Showing page ${current_page} of ${total_pages} (${total_records} total courses)
+        </div>
+    `;
+
+    container.innerHTML = paginationHTML;
+}
+
+function updateSearchResultsInfo(total, filtered) {
+    const searchResultsInfo = document.getElementById('searchResultsInfo');
+    const resultsText = document.getElementById('resultsText');
+    
+    if (!searchResultsInfo || !resultsText) return;
+
+    if (currentSearch || Object.values(currentFilters).some(filter => filter !== '')) {
+        searchResultsInfo.style.display = 'block';
+        resultsText.textContent = `Showing ${filtered} of ${total} courses`;
+    } else {
+        searchResultsInfo.style.display = 'none';
+    }
+}
+
+function editCourse(courseId) {
+    // Load edit course modal content
+    fetch(`index.php?controller=CourseController&action=editCourse&id=${courseId}`, {
+        method: 'GET',
+        headers: {
+            'Content-Type': 'application/json',
+        }
+    })
+    .then(response => response.text())
+    .then(html => {
+        document.getElementById('editCourseModalContent').innerHTML = html;
+        const modal = new bootstrap.Modal(document.getElementById('editCourseModal'));
+        modal.show();
+    })
+    .catch(error => {
+        console.error('Error loading edit form:', error);
+        showToast('error', 'Failed to load edit form');
+    });
+}
+
+function previewCourse(courseId) {
+    window.open(`index.php?controller=CourseController&action=previewCourse&id=${courseId}`, '_blank');
+}
+
+function deleteCourse(courseId, courseName) {
+    document.getElementById('deleteCourseName').textContent = courseName;
+    const modal = new bootstrap.Modal(document.getElementById('deleteCourseModal'));
+    modal.show();
+    
+    // Store course ID for deletion
+    document.getElementById('confirmDeleteCourse').onclick = function() {
+        performDeleteCourse(courseId);
+    };
+}
+
+function performDeleteCourse(courseId) {
+    fetch(`index.php?controller=CourseController&action=deleteCourse`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+            course_id: courseId
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            showToast('success', 'Course deleted successfully');
+            loadCourses(currentPage);
+            const modal = bootstrap.Modal.getInstance(document.getElementById('deleteCourseModal'));
+            modal.hide();
+        } else {
+            showToast('error', data.message || 'Failed to delete course');
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        showToast('error', 'Failed to delete course');
+    });
+}
+
+// Toast notification function
+function showToast(type, message) {
+    if (typeof showToastNotification === 'function') {
+        showToastNotification(type, message);
+    } else {
+        alert(message);
+    }
+}
+
+function attachAddCourseFormHandler() {
+    const form = document.getElementById('addCourseForm');
+    if (!form) return;
+    form.addEventListener('submit', function(e) {
+        e.preventDefault();
+        const formData = new FormData(form);
+        fetch('course-creation', {
+            method: 'POST',
+            body: formData
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                showToast('success', data.message || 'Course created successfully');
+                const modal = bootstrap.Modal.getInstance(document.getElementById('addCourseModal'));
+                modal.hide();
+                loadCourses(1);
+            } else {
+                showToast('error', data.message || 'Failed to create course');
+            }
+        })
+        .catch(() => {
+            showToast('error', 'Failed to create course');
+        });
+    });
+}
+</script>
+
+<?php include 'views/includes/footer.php'; ?>
+<script src="/Unlockyourskills/public/js/course_creation.js"></script>
 </body>
 </html> 

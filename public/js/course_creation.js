@@ -3,6 +3,7 @@
  * Enhanced with drag-and-drop, advanced validation, and custom modals
  */
 
+// Instantiate CourseCreationManager only after modal content is loaded.
 class CourseCreationManager {
     constructor() {
         this.currentTab = 0;
@@ -44,13 +45,25 @@ class CourseCreationManager {
         // Add module button
         const addModuleBtn = document.getElementById('addModuleBtn');
         if (addModuleBtn) {
-            addModuleBtn.addEventListener('click', () => this.addModule());
+            console.log('[DEBUG] Add Module button found, binding click event');
+            addModuleBtn.addEventListener('click', () => {
+                console.log('[DEBUG] Add Module button clicked');
+                this.addModule();
+            });
+        } else {
+            console.warn('[DEBUG] Add Module button NOT found');
         }
 
         // Add prerequisite button
-        const addPrerequisiteBtn = document.getElementById('addPrerequisiteBtn');
+        const addPrerequisiteBtn = document.getElementById('add_prerequisite');
         if (addPrerequisiteBtn) {
-            addPrerequisiteBtn.addEventListener('click', () => this.showPrerequisiteModal());
+            console.debug('[DEBUG] Add Prerequisite button found, binding click event');
+            addPrerequisiteBtn.addEventListener('click', () => {
+                console.debug('[DEBUG] Add Prerequisite button clicked');
+                this.showPrerequisiteModal();
+            });
+        } else {
+            console.warn('[DEBUG] Add Prerequisite button NOT found');
         }
 
         // Add assessment button
@@ -422,23 +435,10 @@ class CourseCreationManager {
     }
 
     async loadCategories() {
-        try {
-            const response = await fetch('/api/course-categories');
-            const data = await response.json();
-            
-            if (data.success) {
-                const select = document.getElementById('courseCategory');
-                if (select) {
-                    select.innerHTML = '<option value="">Select Category</option>';
-                    data.categories.forEach(category => {
-                        select.innerHTML += `<option value="${category.id}">${category.name}</option>`;
-                    });
-                }
-            }
-        } catch (error) {
-            console.error('Error loading categories:', error);
-            this.showToast('Error loading categories', 'error');
-        }
+        // Comment out or remove any global or immediate instantiation of CourseCreationManager
+        // ... existing code ...
+        // ... existing code ...
+        // ... existing code ...
     }
 
     async loadSubcategories() {
@@ -471,6 +471,7 @@ class CourseCreationManager {
     }
 
     addModule() {
+        console.log('[DEBUG] addModule() called');
         const moduleId = Date.now();
         const module = {
             id: moduleId,
@@ -478,10 +479,10 @@ class CourseCreationManager {
             description: '',
             content: []
         };
-
         this.modules.push(module);
+        console.log('[DEBUG] Module pushed. Modules array:', this.modules);
         this.renderModules();
-        this.showToast('Module added successfully', 'success');
+        this.showToast('New module created. Now add VLR content and fill in module details.', 'info');
     }
 
     removeModule(moduleId) {
@@ -497,66 +498,111 @@ class CourseCreationManager {
     }
 
     renderModules() {
+        console.log('[DEBUG] renderModules() called. Modules:', this.modules);
         const container = document.getElementById('modulesContainer');
-        if (!container) return;
+        if (!container) {
+            console.warn('[DEBUG] modulesContainer NOT found');
+            return;
+        }
 
-        container.innerHTML = this.modules.map((module, index) => `
-            <div class="module-item" draggable="true" data-module-id="${module.id}">
-                <div class="module-header">
-                    <h6 class="module-title">Module ${index + 1}</h6>
-                    <div class="module-actions">
-                        <i class="fas fa-grip-vertical module-drag-handle" title="Drag to reorder"></i>
-                        <button type="button" class="module-remove-btn" onclick="courseManager.removeModule(${module.id})">
+        // Add Module button at the top
+        let html = `
+            <div class="d-flex justify-content-end mb-3">
+                <button type="button" class="btn btn-outline-primary" id="addModuleBtnTop">
+                    <i class="fas fa-plus me-1"></i> Add Module
+                </button>
+            </div>
+        `;
+
+        html += this.modules.map((module, index) => `
+            <div class="module-card card mb-4 shadow-sm" draggable="true" data-module-id="${module.id}">
+                <div class="card-header d-flex justify-content-between align-items-center bg-light">
+                    <div class="d-flex align-items-center">
+                        <span class="badge bg-primary me-3">${index + 1}</span>
+                        <h6 class="mb-0 module-title">${module.title || `Module ${index + 1}`}</h6>
+                    </div>
+                    <div class="module-actions d-flex align-items-center gap-2">
+                        <button type="button" class="btn btn-sm btn-outline-secondary module-move-up" title="Move Up" ${index === 0 ? 'disabled' : ''} onclick="courseManager.moveModuleUp(${index})">
+                            <i class="fas fa-arrow-up"></i>
+                        </button>
+                        <button type="button" class="btn btn-sm btn-outline-secondary module-move-down" title="Move Down" ${index === this.modules.length - 1 ? 'disabled' : ''} onclick="courseManager.moveModuleDown(${index})">
+                            <i class="fas fa-arrow-down"></i>
+                        </button>
+                        <i class="fas fa-grip-vertical module-drag-handle ms-2" title="Drag to reorder"></i>
+                        <button type="button" class="btn btn-sm btn-outline-danger module-remove-btn ms-2" onclick="courseManager.removeModule(${module.id})">
                             <i class="fas fa-trash"></i>
                         </button>
                     </div>
                 </div>
-                <div class="row">
-                    <div class="col-md-6">
-                        <div class="form-group">
-                            <label for="moduleTitle_${module.id}">Module Title *</label>
-                            <input type="text" class="form-control" id="moduleTitle_${module.id}" 
-                                   value="${module.title}" onchange="courseManager.updateModule(${module.id}, 'title', this.value)">
+                <div class="card-body">
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label for="moduleTitle_${module.id}">Module Title *</label>
+                                <input type="text" class="form-control" id="moduleTitle_${module.id}" 
+                                       value="${module.title}" onchange="courseManager.updateModule(${module.id}, 'title', this.value)">
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label for="moduleDescription_${module.id}">Module Description</label>
+                                <textarea class="form-control" id="moduleDescription_${module.id}" rows="2"
+                                          onchange="courseManager.updateModule(${module.id}, 'description', this.value)">${module.description}</textarea>
+                            </div>
                         </div>
                     </div>
-                    <div class="col-md-6">
-                        <div class="form-group">
-                            <label for="moduleDescription_${module.id}">Module Description</label>
-                            <textarea class="form-control" id="moduleDescription_${module.id}" rows="3"
-                                      onchange="courseManager.updateModule(${module.id}, 'description', this.value)">${module.description}</textarea>
+                    <div class="module-content-section">
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <h6 class="mb-0">Module Content</h6>
+                            <span class="text-muted small">${module.content.length} VLR item${module.content.length !== 1 ? 's' : ''}</span>
                         </div>
+                        <div class="vlr-content-list d-flex flex-wrap gap-2" id="moduleContent_${module.id}">
+                            ${this.renderModuleContent(module.content, module.id)}
+                        </div>
+                        <button type="button" class="btn btn-outline-success btn-sm mt-2 px-2 py-1 add-item-btn" style="font-size:0.95em; min-width:unset;" title="Add VLR Content" onclick="courseManager.showVLRModal(${module.id})">
+                            <i class="fas fa-plus me-1"></i> Add VLR Content
+                        </button>
                     </div>
-                </div>
-                <div class="module-content-section">
-                    <h6>Module Content</h6>
-                    <div class="vlr-content-list" id="moduleContent_${module.id}">
-                        ${this.renderModuleContent(module.content)}
-                    </div>
-                    <button type="button" class="add-item-btn" onclick="courseManager.showVLRModal(${module.id})">
-                        <i class="fas fa-plus"></i>
-                        Add VLR Content
-                    </button>
                 </div>
             </div>
         `).join('');
+
+        // Add Module button at the bottom
+        html += `
+            <div class="d-flex justify-content-end mt-3">
+                <button type="button" class="btn btn-outline-primary" id="addModuleBtnBottom">
+                    <i class="fas fa-plus me-1"></i> Add Module
+                </button>
+            </div>
+        `;
+
+        container.innerHTML = html;
+
+        // Bind Add Module buttons
+        document.getElementById('addModuleBtnTop').onclick = () => this.addModule();
+        document.getElementById('addModuleBtnBottom').onclick = () => this.addModule();
 
         // Reinitialize drag and drop for new modules
         this.initializeModuleDragAndDrop();
     }
 
-    renderModuleContent(content) {
+    renderModuleContent(content, moduleId) {
         if (!content || content.length === 0) {
-            return '<p class="text-muted">No content added yet</p>';
+            return '<span class="text-muted">No content added yet</span>';
         }
 
-        return content.map(item => `
-            <div class="vlr-content-item">
-                <div class="vlr-content-info">
-                    <i class="vlr-content-icon fas ${this.getVLRIcon(item.type)}"></i>
-                    <span class="vlr-content-title">${item.title}</span>
-                    <span class="vlr-content-type">${item.type}</span>
-                </div>
-                <button type="button" class="vlr-content-remove" onclick="courseManager.removeVLRContent(${item.moduleId}, ${item.id})">
+        return content.map((item, idx) => `
+            <div class="vlr-chip card px-2 py-1 d-flex flex-row align-items-center overflow-hidden" draggable="false" data-content-id="${item.id}" data-module-id="${moduleId}">
+                <i class="vlr-content-icon fas ${this.getVLRIcon(item.type)} me-2"></i>
+                <span class="vlr-content-title flex-grow-1 text-truncate" title="${item.title}">${item.title.length > 20 ? item.title.substring(0, 18) + '…' : item.title}</span>
+                <span class="badge bg-light text-dark ms-2 text-truncate" style="max-width: 80px;" title="${item.type}">${item.type}</span>
+                <button type="button" class="btn btn-sm btn-outline-secondary ms-2 flex-shrink-0 move-up-btn" title="Move Up" ${idx === 0 ? 'disabled' : ''} onclick="courseManager.moveVLRUp(${moduleId}, ${idx})">
+                    <i class="fas fa-arrow-up"></i>
+                </button>
+                <button type="button" class="btn btn-sm btn-outline-secondary ms-1 flex-shrink-0 move-down-btn" title="Move Down" ${idx === content.length - 1 ? 'disabled' : ''} onclick="courseManager.moveVLRDown(${moduleId}, ${idx})">
+                    <i class="fas fa-arrow-down"></i>
+                </button>
+                <button type="button" class="btn btn-sm btn-outline-danger ms-2 flex-shrink-0" title="Remove" onclick="courseManager.removeVLRContent(${moduleId}, ${item.id})">
                     <i class="fas fa-times"></i>
                 </button>
             </div>
@@ -582,6 +628,7 @@ class CourseCreationManager {
         const module = this.modules.find(m => m.id === moduleId);
         if (module) {
             module[field] = value;
+            this.renderModules();
         }
     }
 
@@ -601,7 +648,9 @@ class CourseCreationManager {
     }
 
     showPrerequisiteModal() {
-        this.showVLRSelectionModal('prerequisites', 'Select Prerequisite Courses');
+        // Use the VLR content selection modal for prerequisites
+        const preselectedIds = this.prerequisites.map(item => ({ id: item.id, type: item.prereqType || item.type }));
+        this.showVLRSelectionModal('prerequisites', 'Select Prerequisite Content', null, preselectedIds);
     }
 
     showAssessmentModal() {
@@ -617,56 +666,138 @@ class CourseCreationManager {
     }
 
     showVLRModal(moduleId) {
-        this.showVLRSelectionModal('moduleContent', 'Select VLR Content', moduleId);
+        // Find the module and pass its current content IDs and types
+        const module = this.modules.find(m => m.id === moduleId);
+        const preselectedIds = module ? module.content.map(item => ({ id: item.id, type: item.type })) : [];
+        this.showVLRSelectionModal('moduleContent', 'Select VLR Content', moduleId, preselectedIds);
     }
 
-    async showVLRSelectionModal(type, title, moduleId = null) {
-        try {
-            const response = await fetch('/api/vlr-content');
-            const data = await response.json();
-            
-            if (data.success) {
-                this.showVLRContentModal(title, data.content, type, moduleId);
-            }
-        } catch (error) {
-            console.error('Error loading VLR content:', error);
-            this.showToast('Error loading VLR content', 'error');
+    showVLRSelectionModal(type, title, moduleId = null, preselectedIds = []) {
+        console.log('[DEBUG] showVLRSelectionModal called with type:', type, 'title:', title, 'moduleId:', moduleId);
+        console.log('[DEBUG] typeof window.vlrContent:', typeof window.vlrContent);
+        console.log('[DEBUG] window.vlrContent:', window.vlrContent);
+        if (window.vlrContent && Object.keys(window.vlrContent).length > 0) {
+            console.log('[DEBUG] VLR content found, opening modal.');
+            this.showVLRContentModal(title, window.vlrContent, type, moduleId, preselectedIds);
+        } else {
+            console.error('[DEBUG] VLR content not available or empty!');
+            this.showToast('VLR content not available', 'error');
         }
     }
 
-    showVLRContentModal(title, content, type, moduleId = null) {
+    showVLRContentModal(title, content, type, moduleId = null, preselectedIds = []) {
+        // Group content by type
+        const groupedContent = {};
+        content.forEach(item => {
+            if (!groupedContent[item.type]) {
+                groupedContent[item.type] = [];
+            }
+            groupedContent[item.type].push(item);
+        });
+
+        // Fix: Declare isGridView before using it in modal.innerHTML
+        let isGridView = localStorage.getItem('vlrViewMode') !== 'list';
+
         const modal = document.createElement('div');
         modal.className = 'modal fade';
         modal.id = 'vlrSelectionModal';
         modal.innerHTML = `
-            <div class="modal-dialog modal-lg">
+            <div class="modal-dialog modal-xl">
                 <div class="modal-content">
-                    <div class="modal-header">
-                        <h5 class="modal-title">${title}</h5>
-                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    <div class="modal-header align-items-center">
+                        <h5 class="modal-title flex-grow-1">${title}</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                     </div>
                     <div class="modal-body">
-                        <div class="row">
-                            ${content.map(item => `
-                                <div class="col-md-6 mb-3">
-                                    <div class="card vlr-selection-card" data-vlr-id="${item.id}" data-vlr-type="${item.type}">
-                                        <div class="card-body">
-                                            <div class="d-flex align-items-center">
-                                                <i class="fas ${this.getVLRIcon(item.type)} me-3" style="font-size: 1.5em; color: #4b0082;"></i>
-                                                <div>
-                                                    <h6 class="card-title mb-1">${item.title}</h6>
-                                                    <small class="text-muted">${item.type}</small>
+                        <!-- View Toggle and Search Bar -->
+                        <div class="d-flex justify-content-between align-items-center mb-3">
+                            <div>
+                                <button type="button" class="btn btn-outline-primary btn-sm me-2 rounded-pill px-3 fw-bold" id="toggleVLRViewBtn" aria-pressed="${isGridView}">
+                                    <i class="fas fa-th"></i> <span id="vlrViewLabel">Grid View</span>
+                                </button>
+                            </div>
+                            <div class="flex-grow-1">
+                                <div class="input-group">
+                                    <span class="input-group-text"><i class="fas fa-search"></i></span>
+                                    <input type="text" class="form-control" id="vlrSearchInput" placeholder="Search VLR content...">
+                                    <button class="btn btn-outline-secondary" type="button" id="clearSearchBtn">Clear</button>
+                                </div>
+                            </div>
+                        </div>
+                        <!-- Tabs for different VLR types -->
+                        <ul class="nav nav-tabs" id="vlrTypeTabs" role="tablist">
+                            ${Object.keys(groupedContent).map((contentType, index) => `
+                                <li class="nav-item" role="presentation">
+                                    <button class="nav-link ${index === 0 ? 'active' : ''}" 
+                                            id="tab-${contentType}" 
+                                            data-bs-toggle="tab" 
+                                            data-bs-target="#content-${contentType}" 
+                                            type="button" 
+                                            role="tab">
+                                        <i class="fas ${this.getVLRIcon(contentType)} me-2"></i>
+                                        ${this.getVLRTypeDisplayName(contentType)} 
+                                        <span class="badge bg-secondary ms-2">${groupedContent[contentType].length}</span>
+                                    </button>
+                                </li>
+                            `).join('')}
+                        </ul>
+                        <!-- Tab Content -->
+                        <div class="tab-content mt-3" id="vlrTypeTabContent">
+                            ${Object.keys(groupedContent).map((contentType, index) => `
+                                <div class="tab-pane fade ${index === 0 ? 'show active' : ''}" 
+                                     id="content-${contentType}" 
+                                     role="tabpanel">
+                                    <div class="d-flex align-items-center mb-2">
+                                        <input type="checkbox" class="form-check-input me-2" id="selectAllVLR-${contentType}" aria-label="Select all ${this.getVLRTypeDisplayName(contentType)}">
+                                        <label for="selectAllVLR-${contentType}" class="form-check-label small">Select All</label>
+                                    </div>
+                                    <div class="row g-3" id="content-grid-${contentType}">
+                                        ${groupedContent[contentType].map(item => `
+                                            <div class="col-md-6 col-lg-4 vlr-content-item d-flex align-items-center gap-3 p-3 border rounded bg-white position-relative" 
+                                                 tabindex="0" role="option" aria-label="${item.title}" 
+                                                 data-vlr-id="${item.id}" 
+                                                 data-vlr-type="${item.type}"
+                                                 data-title="${item.title.toLowerCase()}"
+                                                 data-description="${(item.description || '').toLowerCase()}">
+                                                <i class="fas ${this.getVLRIcon(item.type)} mt-1" style="font-size: 2em; color: var(--bs-primary, #4b0082); filter: drop-shadow(0 2px 4px #b197fc33);" title="${this.getVLRTypeDisplayName(item.type)}" data-bs-toggle="tooltip"></i>
+                                                <div class="flex-grow-1">
+                                                    <div class="fw-bold mb-1 text-truncate" title="${item.title}" data-bs-toggle="tooltip" style="font-size:1.1em;">${item.title.length > 30 ? item.title.substring(0, 27) + '...' : item.title}</div>
+                                                    <small class="text-muted d-block mb-2 text-truncate" title="${item.description}" data-bs-toggle="tooltip">${item.description && item.description.length > 60 ? item.description.substring(0, 57) + '...' : item.description || ''}</small>
+                                                    <div class="d-flex align-items-center gap-2 mt-1">
+                                                        <span class="badge bg-primary-subtle text-primary small">${this.getVLRTypeDisplayName(item.type)}</span>
+                                                        ${item.uploadDate ? `<span class="badge bg-secondary-subtle text-secondary small" title="Upload Date">${item.uploadDate}</span>` : ''}
+                                                        ${item.fileSize ? `<span class="badge bg-info-subtle text-info small" title="File Size">${item.fileSize}</span>` : ''}
+                                                    </div>
+                                                </div>
+                                                <div class="form-check ms-2 flex-shrink-0" style="min-width:2.5em;">
+                                                    <input class="form-check-input vlr-checkbox" type="checkbox" value="${item.id}" id="vlr-${item.id}" aria-label="Select ${item.title}" style="accent-color: var(--bs-primary, #4b0082); width:1.3em; height:1.3em;">
+                                                    <label class="form-check-label visually-hidden" for="vlr-${item.id}">Select</label>
                                                 </div>
                                             </div>
-                                        </div>
+                                        `).join('')}
                                     </div>
+                                    ${groupedContent[contentType].length === 0 ? `
+                                        <div class="text-center py-4">
+                                            <i class="fas fa-inbox fa-3x text-muted mb-3"></i>
+                                            <p class="text-muted">No ${this.getVLRTypeDisplayName(contentType)} content available</p>
+                                        </div>
+                                    ` : ''}
                                 </div>
                             `).join('')}
                         </div>
                     </div>
                     <div class="modal-footer">
-                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                        <button type="button" class="btn btn-primary" onclick="courseManager.addSelectedVLR('${type}', ${moduleId})">Add Selected</button>
+                        <div class="d-flex justify-content-between align-items-center w-100">
+                            <div>
+                                <span class="text-muted" id="selectedCount">0 items selected</span>
+                            </div>
+                            <div>
+                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                                <button type="button" class="btn btn-primary" id="addSelectedVLRBtn" disabled>
+                                    Add Selected (<span id="selectedCountBtn">0</span>)
+                                </button>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -677,39 +808,284 @@ class CourseCreationManager {
         const modalInstance = new bootstrap.Modal(modal);
         modalInstance.show();
 
-        // Handle card selection
-        modal.querySelectorAll('.vlr-selection-card').forEach(card => {
-            card.addEventListener('click', () => {
-                card.classList.toggle('selected');
-            });
-        });
+        // Initialize search functionality
+        this.initializeVLRSearch(modal);
+        
+        // Initialize checkbox functionality, pass preselectedIds
+        this.initializeVLRCheckboxes(modal, type, moduleId, preselectedIds);
 
         // Clean up modal after hiding
         modal.addEventListener('hidden.bs.modal', () => {
             document.body.removeChild(modal);
         });
+
+        // Add after modalInstance.show();
+        const toggleBtn = modal.querySelector('#toggleVLRViewBtn');
+        function updateVLRView() {
+            const tabPanes = modal.querySelectorAll('.tab-pane');
+            tabPanes.forEach(tabPane => {
+                const grid = tabPane.querySelector('.row, .g-3, #content-grid-' + tabPane.id.replace('content-', ''));
+                if (!grid) return;
+                const items = grid.querySelectorAll('.vlr-content-item');
+                // Reset all custom styles
+                items.forEach(item => {
+                    item.style.background = '';
+                    item.style.borderColor = '';
+                    item.style.borderRadius = '';
+                    item.style.boxShadow = '';
+                    item.style.transition = '';
+                    item.style.color = '';
+                    item.style.padding = '';
+                });
+                if (isGridView) {
+                    grid.classList.add('row', 'g-3');
+                    items.forEach(item => {
+                        item.classList.remove('col-12', 'h-100', 'flex-column');
+                        item.classList.add('col-md-6', 'col-lg-4', 'mb-3', 'p-2', 'd-flex');
+                        item.style.background = 'var(--bs-primary-bg-subtle, #f3f0ff)';
+                        item.style.borderColor = 'var(--bs-primary-border-subtle, #b197fc)';
+                        item.style.borderRadius = '1rem';
+                        item.style.boxShadow = '0 2px 8px 0 rgba(75,0,130,0.07)';
+                        item.style.transition = 'box-shadow 0.2s, border-color 0.2s';
+                        item.style.padding = '0.75rem';
+                        item.style.color = 'var(--bs-body-color, #212529)';
+                        item.style.height = '';
+                        item.style.display = '';
+                        item.style.flexDirection = '';
+                        item.style.justifyContent = '';
+                        // Icon style
+                        const icon = item.querySelector('i');
+                        if (icon) {
+                            icon.style.fontSize = '1.5em';
+                            icon.style.color = 'var(--bs-primary, #4b0082)';
+                        }
+                        // Title style
+                        const title = item.querySelector('.fw-bold');
+                        if (title) {
+                            title.style.fontSize = '1em';
+                            title.style.fontWeight = 'bold';
+                            title.style.whiteSpace = 'nowrap';
+                            title.style.overflow = 'hidden';
+                            title.style.textOverflow = 'ellipsis';
+                            title.setAttribute('title', title.textContent);
+                        }
+                        // Description style
+                        const desc = item.querySelector('.text-muted');
+                        if (desc) {
+                            desc.style.fontSize = '0.95em';
+                            desc.style.color = 'var(--bs-secondary-color, #6c757d)';
+                            desc.style.whiteSpace = 'nowrap';
+                            desc.style.overflow = 'hidden';
+                            desc.style.textOverflow = 'ellipsis';
+                            desc.setAttribute('title', desc.textContent);
+                        }
+                        // Hover effect
+                        item.onmouseover = () => { item.style.boxShadow = '0 0 0 0.2rem #b197fc33'; item.style.borderColor = '#4b0082'; };
+                        item.onmouseout = () => { item.style.boxShadow = '0 2px 8px 0 rgba(75,0,130,0.07)'; item.style.borderColor = 'var(--bs-primary-border-subtle, #b197fc)'; };
+                    });
+                    toggleBtn.innerHTML = '<i class="fas fa-th-list"></i> <span id="vlrViewLabel">List View</span>';
+                } else {
+                    grid.classList.remove('row', 'g-3');
+                    items.forEach(item => {
+                        item.classList.remove('col-md-6', 'col-lg-4');
+                        item.classList.add('col-12', 'd-flex');
+                        item.style.background = 'var(--bs-body-bg, #fff)';
+                        item.style.borderColor = 'var(--bs-primary-border-subtle, #b197fc)';
+                        item.style.borderRadius = '0.5rem';
+                        item.style.boxShadow = '0 1px 4px 0 rgba(75,0,130,0.04)';
+                        item.style.transition = 'box-shadow 0.2s, border-color 0.2s';
+                        item.style.padding = '1.25rem';
+                        item.style.color = 'var(--bs-body-color, #212529)';
+                        // Icon style
+                        const icon = item.querySelector('i');
+                        if (icon) {
+                            icon.style.fontSize = '2em';
+                            icon.style.color = 'var(--bs-primary, #4b0082)';
+                        }
+                        // Title style
+                        const title = item.querySelector('.fw-bold');
+                        if (title) {
+                            title.style.fontSize = '1.1em';
+                            title.style.fontWeight = 'bold';
+                        }
+                        // Description style
+                        const desc = item.querySelector('.text-muted');
+                        if (desc) {
+                            desc.style.fontSize = '0.95em';
+                            desc.style.color = 'var(--bs-secondary-color, #6c757d)';
+                        }
+                        // Hover effect
+                        item.onmouseover = () => { item.style.boxShadow = '0 0 0 0.2rem #b197fc33'; item.style.borderColor = '#4b0082'; };
+                        item.onmouseout = () => { item.style.boxShadow = '0 1px 4px 0 rgba(75,0,130,0.04)'; item.style.borderColor = 'var(--bs-primary-border-subtle, #b197fc)'; };
+                    });
+                    toggleBtn.innerHTML = '<i class="fas fa-th"></i> <span id="vlrViewLabel">Grid View</span>';
+                }
+            });
+            localStorage.setItem('vlrViewMode', isGridView ? 'grid' : 'list');
+        }
+        toggleBtn.addEventListener('click', () => {
+            isGridView = !isGridView;
+            updateVLRView();
+        });
+        updateVLRView();
     }
 
-    addSelectedVLR(type, moduleId = null) {
-        const selectedCards = document.querySelectorAll('#vlrSelectionModal .vlr-selection-card.selected');
-        const selectedItems = [];
+    getVLRTypeDisplayName(type) {
+        const typeNames = {
+            'scorm': 'SCORM Packages',
+            'non_scorm': 'Non-SCORM Packages',
+            'assessment': 'Assessments',
+            'audio': 'Audio Packages',
+            'video': 'Video Packages',
+            'image': 'Image Packages',
+            'document': 'Documents',
+            'external': 'External Content',
+            'interactive': 'Interactive Content',
+            'assignment': 'Assignments',
+            'survey': 'Surveys',
+            'feedback': 'Feedback Forms'
+        };
+        return typeNames[type] || type;
+    }
 
-        selectedCards.forEach(card => {
-            selectedItems.push({
-                id: parseInt(card.dataset.vlrId),
-                type: card.dataset.vlrType,
-                title: card.querySelector('.card-title').textContent
+    initializeVLRSearch(modal) {
+        const searchInput = modal.querySelector('#vlrSearchInput');
+        const clearSearchBtn = modal.querySelector('#clearSearchBtn');
+        const contentItems = modal.querySelectorAll('.vlr-content-item');
+
+        const performSearch = () => {
+            const searchTerm = searchInput.value.toLowerCase().trim();
+            
+            contentItems.forEach(item => {
+                const title = item.dataset.title;
+                const description = item.dataset.description;
+                const matches = title.includes(searchTerm) || description.includes(searchTerm);
+                
+                item.style.display = matches ? 'block' : 'none';
+            });
+
+            // Update tab badges with visible count
+            const tabs = modal.querySelectorAll('#vlrTypeTabs .nav-link');
+            tabs.forEach(tab => {
+                const targetId = tab.getAttribute('data-bs-target');
+                const targetPane = modal.querySelector(targetId);
+                // Only count .vlr-content-item that are visible (not display: none)
+                const visibleItems = Array.from(targetPane.querySelectorAll('.vlr-content-item')).filter(item => item.style.display !== 'none');
+                const badge = tab.querySelector('.badge');
+                if (badge) {
+                    badge.textContent = visibleItems.length;
+                }
+            });
+        };
+
+        searchInput.addEventListener('input', performSearch);
+        clearSearchBtn.addEventListener('click', () => {
+            searchInput.value = '';
+            performSearch();
+        });
+    }
+
+    initializeVLRCheckboxes(modal, type, moduleId, preselectedIds = []) {
+        const checkboxes = modal.querySelectorAll('.vlr-checkbox');
+        const selectedCountSpan = modal.querySelector('#selectedCount');
+        const selectedCountBtn = modal.querySelector('#selectedCountBtn');
+        const addSelectedBtn = modal.querySelector('#addSelectedVLRBtn');
+
+        // Pre-check checkboxes for already selected items
+        checkboxes.forEach(checkbox => {
+            checkbox.checked = false;
+            const checkboxId = parseInt(checkbox.value);
+            const checkboxType = checkbox.closest('.vlr-content-item').dataset.vlrType;
+            if (preselectedIds.some(sel => sel.id === checkboxId && sel.type === checkboxType)) {
+                checkbox.checked = true;
+            }
+        });
+
+        const updateSelectedCount = () => {
+            const selectedCheckboxes = modal.querySelectorAll('.vlr-checkbox:checked');
+            const count = selectedCheckboxes.length;
+            
+            selectedCountSpan.textContent = `${count} item${count !== 1 ? 's' : ''} selected`;
+            selectedCountBtn.textContent = count;
+            addSelectedBtn.disabled = count === 0;
+        };
+
+        // Initialize Select All functionality for each tab
+        const tabPanes = modal.querySelectorAll('.tab-pane');
+        tabPanes.forEach(tabPane => {
+            const selectAllCheckbox = tabPane.querySelector('input.form-check-input[id^="selectAllVLR-"]');
+            if (!selectAllCheckbox) return;
+            
+            // When Select All is clicked
+            selectAllCheckbox.addEventListener('change', function() {
+                // Find all visible VLR content items in this tab
+                const visibleItems = tabPane.querySelectorAll('.vlr-content-item:not([style*="display: none"])');
+                visibleItems.forEach(item => {
+                    const checkbox = item.querySelector('.vlr-checkbox');
+                    if (checkbox && !checkbox.disabled) {
+                        checkbox.checked = selectAllCheckbox.checked;
+                    }
+                });
+                updateSelectedCount();
             });
         });
 
-        if (selectedItems.length === 0) {
-            this.showToast('Please select at least one item', 'warning');
-            return;
-        }
+        checkboxes.forEach(checkbox => {
+            checkbox.addEventListener('change', () => {
+                updateSelectedCount();
+                
+                // Update Select All state for the current tab
+                const tabPane = checkbox.closest('.tab-pane');
+                if (tabPane) {
+                    const selectAllCheckbox = tabPane.querySelector('input.form-check-input[id^="selectAllVLR-"]');
+                    if (selectAllCheckbox) {
+                        const visibleItems = tabPane.querySelectorAll('.vlr-content-item:not([style*="display: none"])');
+                        const visibleCheckboxes = Array.from(visibleItems).map(item => item.querySelector('.vlr-checkbox')).filter(cb => cb && !cb.disabled);
+                        const checkedCount = visibleCheckboxes.filter(cb => cb.checked).length;
+                        
+                        selectAllCheckbox.checked = checkedCount === visibleCheckboxes.length && checkedCount > 0;
+                        selectAllCheckbox.indeterminate = checkedCount > 0 && checkedCount < visibleCheckboxes.length;
+                    }
+                }
+            });
+        });
 
+        addSelectedBtn.addEventListener('click', () => {
+            const selectedCheckboxes = modal.querySelectorAll('.vlr-checkbox:checked');
+            const selectedItems = [];
+
+            selectedCheckboxes.forEach(checkbox => {
+                const itemId = parseInt(checkbox.value);
+                const itemCard = checkbox.closest('.vlr-content-item');
+                const itemTitle = itemCard.querySelector('.fw-bold').textContent.trim();
+                const itemType = itemCard.dataset.vlrType;
+                
+                selectedItems.push({
+                    id: itemId,
+                    type: itemType,
+                    title: itemTitle
+                });
+            });
+
+            if (selectedItems.length > 0) {
+                this.addSelectedVLR(type, moduleId, selectedItems);
+                
+                // Close modal
+                const modalInstance = bootstrap.Modal.getInstance(modal);
+                if (modalInstance) {
+                    modalInstance.hide();
+                }
+            }
+        });
+
+        // Initialize count
+        updateSelectedCount();
+    }
+
+    addSelectedVLR(type, moduleId, selectedItems) {
         switch (type) {
             case 'prerequisites':
-                this.prerequisites.push(...selectedItems);
+                this.prerequisites = [...selectedItems];
                 this.renderPrerequisites();
                 break;
             case 'assessments':
@@ -728,33 +1104,29 @@ class CourseCreationManager {
                 if (moduleId) {
                     const module = this.modules.find(m => m.id === moduleId);
                     if (module) {
-                        module.content.push(...selectedItems);
+                        module.content = [...selectedItems];
                         this.renderModules();
                     }
                 }
                 break;
         }
 
-        // Close modal
-        const modal = bootstrap.Modal.getInstance(document.getElementById('vlrSelectionModal'));
-        if (modal) {
-            modal.hide();
-        }
-
         this.showToast(`${selectedItems.length} item(s) added successfully`, 'success');
     }
 
     renderPrerequisites() {
-        const container = document.getElementById('prerequisitesContainer');
+        const container = document.getElementById('prerequisites_container');
         if (!container) return;
-
+        if (!this.prerequisites.length) {
+            container.innerHTML = '<span class="text-muted">No prerequisites added yet</span>';
+            return;
+        }
         container.innerHTML = this.prerequisites.map(item => `
-            <div class="prerequisite-item">
-                <div class="prerequisite-info">
-                    <h6 class="prerequisite-title">${item.title}</h6>
-                    <p class="prerequisite-category">${item.type}</p>
-                </div>
-                <button type="button" class="prerequisite-remove" onclick="courseManager.removePrerequisite(${item.id})">
+            <div class="prerequisite-chip card px-2 py-1 d-flex flex-row align-items-center mb-2" style="border-radius:1.2em; background:#f8f9fa; border:1px solid #e0e0e0;">
+                <i class="fas fa-link me-2 text-secondary"></i>
+                <span class="prerequisite-title flex-grow-1 text-truncate" title="${item.title}">${item.title}</span>
+                <span class="badge bg-light text-dark ms-2 text-truncate" style="max-width: 80px;" title="${item.prereqType || item.type}">${item.prereqType || item.type}</span>
+                <button type="button" class="btn btn-sm btn-outline-danger ms-2 flex-shrink-0" title="Remove" onclick="courseManager.removePrerequisite(${item.id})">
                     <i class="fas fa-times"></i>
                 </button>
             </div>
@@ -1016,61 +1388,53 @@ class CourseCreationManager {
     }
 
     showToast(message, type = 'info', duration = 5000) {
-        // Use existing toast system if available
-        if (typeof showToast === 'function') {
-            showToast(message, type);
-        } else {
-            // Enhanced fallback toast implementation
-            const toast = document.createElement('div');
-            toast.className = `toast text-bg-${type === 'error' ? 'danger' : type} show`;
-            toast.style.position = 'fixed';
-            toast.style.top = '20px';
-            toast.style.right = '20px';
-            toast.style.zIndex = '9999';
-            toast.style.minWidth = '300px';
-            toast.style.maxWidth = '400px';
-            toast.style.boxShadow = '0 4px 12px rgba(0, 0, 0, 0.15)';
-            toast.style.borderRadius = '8px';
-            toast.style.border = 'none';
-            
-            const icon = this.getToastIcon(type);
-            const title = this.getToastTitle(type);
-            
-            toast.innerHTML = `
-                <div class="toast-body d-flex align-items-center">
-                    <i class="fas ${icon} me-2" style="font-size: 1.1em;"></i>
-                    <div class="flex-grow-1">
-                        <div class="fw-bold">${title}</div>
-                        <div class="small">${message}</div>
-                    </div>
-                    <button type="button" class="btn-close btn-close-white ms-2" 
-                            onclick="this.parentElement.parentElement.remove()"></button>
-                </div>
-            `;
-            
-            document.body.appendChild(toast);
-            
-            // Auto-remove after duration
-            setTimeout(() => {
-                if (toast.parentElement) {
-                    toast.style.opacity = '0';
-                    toast.style.transform = 'translateX(100%)';
-                    toast.style.transition = 'all 0.3s ease';
-                    setTimeout(() => {
-                        if (toast.parentElement) {
-                            toast.remove();
-                        }
-                    }, 300);
-                }
-            }, duration);
-
-            // Add click to dismiss
-            toast.addEventListener('click', (e) => {
-                if (!e.target.classList.contains('btn-close')) {
-                    toast.remove();
-                }
-            });
+        if (typeof window.showSimpleToast === 'function') {
+            window.showSimpleToast(message, type);
+            return;
         }
+        // Enhanced fallback toast implementation
+        const toast = document.createElement('div');
+        toast.className = `toast text-bg-${type === 'error' ? 'danger' : type} show`;
+        toast.style.position = 'fixed';
+        toast.style.top = '20px';
+        toast.style.right = '20px';
+        toast.style.zIndex = '9999';
+        toast.style.minWidth = '300px';
+        toast.style.maxWidth = '400px';
+        toast.style.boxShadow = '0 4px 12px rgba(0, 0, 0, 0.15)';
+        toast.style.borderRadius = '8px';
+        toast.style.border = 'none';
+        const icon = this.getToastIcon(type);
+        const title = this.getToastTitle(type);
+        toast.innerHTML = `
+            <div class="toast-body d-flex align-items-center">
+                <i class="fas ${icon} me-2" style="font-size: 1.1em;"></i>
+                <div class="flex-grow-1">
+                    <div class="fw-bold">${title}</div>
+                    <div class="small">${message}</div>
+                </div>
+                <button type="button" class="btn-close btn-close-white ms-2" 
+                        onclick="this.parentElement.parentElement.remove()"></button>
+            </div>
+        `;
+        document.body.appendChild(toast);
+        setTimeout(() => {
+            if (toast.parentElement) {
+                toast.style.opacity = '0';
+                toast.style.transform = 'translateX(100%)';
+                toast.style.transition = 'all 0.3s ease';
+                setTimeout(() => {
+                    if (toast.parentElement) {
+                        toast.remove();
+                    }
+                }, 300);
+            }
+        }, duration);
+        toast.addEventListener('click', (e) => {
+            if (!e.target.classList.contains('btn-close')) {
+                toast.remove();
+            }
+        });
     }
 
     getToastIcon(type) {
@@ -1164,12 +1528,37 @@ class CourseCreationManager {
         // Handle global drop events if needed
         e.preventDefault();
     }
-}
 
-// Initialize course creation manager when DOM is loaded
-document.addEventListener('DOMContentLoaded', () => {
-    window.courseManager = new CourseCreationManager();
-});
+    moveModuleUp(index) {
+        if (index > 0) {
+            [this.modules[index - 1], this.modules[index]] = [this.modules[index], this.modules[index - 1]];
+            this.renderModules();
+        }
+    }
+
+    moveModuleDown(index) {
+        if (index < this.modules.length - 1) {
+            [this.modules[index], this.modules[index + 1]] = [this.modules[index + 1], this.modules[index]];
+            this.renderModules();
+        }
+    }
+
+    // Move VLR content up in the module
+    moveVLRUp(moduleId, idx) {
+        const module = this.modules.find(m => m.id === moduleId);
+        if (!module || idx === 0) return;
+        [module.content[idx - 1], module.content[idx]] = [module.content[idx], module.content[idx - 1]];
+        this.renderModules();
+    }
+
+    // Move VLR content down in the module
+    moveVLRDown(moduleId, idx) {
+        const module = this.modules.find(m => m.id === moduleId);
+        if (!module || idx === module.content.length - 1) return;
+        [module.content[idx + 1], module.content[idx]] = [module.content[idx], module.content[idx + 1]];
+        this.renderModules();
+    }
+}
 
 // Export for global access
 window.CourseCreationManager = CourseCreationManager; 
