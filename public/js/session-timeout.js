@@ -146,23 +146,45 @@ class SessionTimeoutManager {
         const warningModal = document.createElement('div');
         warningModal.id = 'sessionTimeoutWarning';
         warningModal.innerHTML = `
-            <div class="modal-overlay" style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 9999; display: flex; align-items: center; justify-content: center;">
-                <div class="modal-content" style="background: white; padding: 30px; border-radius: 8px; max-width: 400px; text-align: center; box-shadow: 0 4px 20px rgba(0,0,0,0.3);">
-                    <div class="warning-icon" style="font-size: 48px; color: #ffc107; margin-bottom: 20px;">
-                        <i class="fas fa-exclamation-triangle"></i>
+            <div class="modal-overlay" style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); z-index: 9999; display: flex; align-items: center; justify-content: center; backdrop-filter: blur(3px);">
+                <div class="modal-content" style="background: linear-gradient(135deg, #fff 0%, #f8f9fa 100%); padding: 40px; border-radius: 16px; max-width: 450px; text-align: center; box-shadow: 0 10px 40px rgba(0,0,0,0.3); border: 1px solid rgba(255,193,7,0.2); animation: modalSlideIn 0.4s ease-out;">
+                    <div class="warning-icon" style="width: 80px; height: 80px; background: linear-gradient(135deg, #ffc107, #ff8f00); border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 25px; box-shadow: 0 4px 15px rgba(255,193,7,0.4);">
+                        <i class="fas fa-clock" style="font-size: 32px; color: white;"></i>
                     </div>
-                    <h3 style="color: #333; margin-bottom: 15px;">Session Timeout Warning</h3>
-                    <p style="color: #666; margin-bottom: 20px; line-height: 1.5;">
-                        Your session will expire in <strong>${Math.ceil(remainingMinutes)} minutes</strong> due to inactivity.
+                    <h3 style="color: #333; margin-bottom: 15px; font-size: 24px; font-weight: 600;">Session Timeout Warning</h3>
+                    <p style="color: #666; margin-bottom: 30px; line-height: 1.6; font-size: 16px;">
+                        Your session will expire in <strong style="color: #ff8f00;">${Math.ceil(remainingMinutes)} minutes</strong> due to inactivity.
                     </p>
-                    <div class="modal-buttons" style="display: flex; gap: 10px; justify-content: center;">
-                        <button id="extendSession" class="btn btn-primary" style="padding: 10px 20px; background: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer;">
+                    <div class="modal-buttons" style="display: flex; gap: 15px; justify-content: center;">
+                        <button id="extendSession" class="btn btn-primary" style="padding: 12px 24px; background: linear-gradient(135deg, #007bff, #0056b3); color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: 500; transition: all 0.3s ease; box-shadow: 0 2px 8px rgba(0,123,255,0.3);">
+                            <i class="fas fa-clock" style="margin-right: 8px;"></i>
                             Extend Session
                         </button>
-                        <button id="logoutNow" class="btn btn-secondary" style="padding: 10px 20px; background: #6c757d; color: white; border: none; border-radius: 4px; cursor: pointer;">
+                        <button id="logoutNow" class="btn btn-secondary" style="padding: 12px 24px; background: linear-gradient(135deg, #6c757d, #545b62); color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: 500; transition: all 0.3s ease; box-shadow: 0 2px 8px rgba(108,117,125,0.3);">
+                            <i class="fas fa-sign-out-alt" style="margin-right: 8px;"></i>
                             Logout Now
                         </button>
                     </div>
+                    <style>
+                        @keyframes modalSlideIn {
+                            from {
+                                opacity: 0;
+                                transform: translateY(-30px) scale(0.9);
+                            }
+                            to {
+                                opacity: 1;
+                                transform: translateY(0) scale(1);
+                            }
+                        }
+                        #extendSession:hover {
+                            transform: translateY(-2px);
+                            box-shadow: 0 4px 12px rgba(0,123,255,0.4);
+                        }
+                        #logoutNow:hover {
+                            transform: translateY(-2px);
+                            box-shadow: 0 4px 12px rgba(108,117,125,0.4);
+                        }
+                    </style>
                 </div>
             </div>
         `;

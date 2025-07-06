@@ -141,9 +141,8 @@ if (isset($_GET['client_id'])) {
                             <div class="col-md-2">
                                 <select class="form-select" id="courseStatusFilter">
                                     <option value="">Course Status</option>
-                                    <option value="draft">Draft</option>
-                                    <option value="published">Published</option>
-                                    <option value="archived">Archived</option>
+                                    <option value="active">Active</option>
+                                    <option value="inactive">Inactive</option>
                                 </select>
                             </div>
 
@@ -306,6 +305,34 @@ if (isset($_GET['client_id'])) {
                         <p class="mt-2">Loading form...</p>
                     </div>
                 </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ✅ Preview Course Modal -->
+<div class="modal fade" id="previewCourseModal" tabindex="-1" aria-labelledby="previewCourseModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-xl">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="previewCourseModalLabel">
+                    <i class="fas fa-eye me-2"></i>Course Preview
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div id="previewCourseModalContent">
+                    <!-- Content will be loaded dynamically -->
+                    <div class="text-center py-4">
+                        <div class="spinner-border text-primary" role="status">
+                            <span class="visually-hidden">Loading...</span>
+                        </div>
+                        <p class="mt-2">Loading course preview...</p>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
             </div>
         </div>
     </div>
@@ -596,8 +623,8 @@ function displayCourses(courses) {
             <td>${course.category_name || 'Uncategorized'}</td>
             <td>${course.subcategory_name || 'None'}</td>
             <td>
-                <span class="badge bg-${getStatusBadgeClass(course.status)}">
-                    ${course.status.charAt(0).toUpperCase() + course.status.slice(1)}
+                <span class="badge bg-${getStatusBadgeClass(course.course_status || 'active')}">
+                    ${(course.course_status || 'active').charAt(0).toUpperCase() + (course.course_status || 'active').slice(1)}
                 </span>
             </td>
             <td>${course.enrollment_count || 0}</td>
@@ -622,6 +649,8 @@ function displayCourses(courses) {
 
 function getStatusBadgeClass(status) {
     switch (status) {
+        case 'active': return 'success';
+        case 'inactive': return 'warning';
         case 'published': return 'success';
         case 'draft': return 'warning';
         case 'archived': return 'secondary';
@@ -731,7 +760,48 @@ function editCourse(courseId) {
 }
 
 function previewCourse(courseId) {
-    window.open(`index.php?controller=CourseController&action=previewCourse&id=${courseId}`, '_blank');
+    // Show loading in modal
+    const modal = new bootstrap.Modal(document.getElementById('previewCourseModal'));
+    document.getElementById('previewCourseModalContent').innerHTML = `
+        <div class="text-center py-4">
+            <div class="spinner-border text-primary" role="status">
+                <span class="visually-hidden">Loading...</span>
+            </div>
+            <p class="mt-2">Loading course preview...</p>
+        </div>
+    `;
+    modal.show();
+    
+    // Load course preview content
+    fetch(`/Unlockyourskills/course-preview/${courseId}`, {
+        method: 'GET',
+        headers: {
+            'X-Requested-With': 'XMLHttpRequest',
+            'Content-Type': 'application/json'
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            document.getElementById('previewCourseModalContent').innerHTML = data.html;
+        } else {
+            document.getElementById('previewCourseModalContent').innerHTML = `
+                <div class="alert alert-danger">
+                    <i class="fas fa-exclamation-triangle me-2"></i>
+                    ${data.message || 'Failed to load course preview'}
+                </div>
+            `;
+        }
+    })
+    .catch(error => {
+        console.error('Error loading course preview:', error);
+        document.getElementById('previewCourseModalContent').innerHTML = `
+            <div class="alert alert-danger">
+                <i class="fas fa-exclamation-triangle me-2"></i>
+                Failed to load course preview. Please try again.
+            </div>
+        `;
+    });
 }
 
 function deleteCourse(courseId, courseName) {

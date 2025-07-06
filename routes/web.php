@@ -27,6 +27,11 @@ Router::post('/api/locations/timezones', 'LocationController@getTimezonesByCount
 // Session Activity API (for timeout management)
 Router::post('/api/session/activity', 'SessionController@activity');
 
+// Debug logging endpoint
+Router::post('/debug-log', function() {
+    require_once 'debug-log.php';
+});
+
 // ===================================
 // AUTHENTICATED ROUTES
 // ===================================
@@ -139,7 +144,7 @@ Router::middleware(['Auth'])->group(function() {
     
     // Course Creation
     Router::get('/course-creation', 'CourseCreationController@index');
-    Router::post('/course-creation', 'CourseCreationController@create');
+    Router::post('/course-creation', 'CourseCreationController@createCourse');
     // Modal route for Add Course
     Router::get('/course-creation/modal/add', 'CourseCreationController@loadAddCourseModal');
     

@@ -9,6 +9,8 @@ class ConfirmationModal {
         this.modalId = 'confirmationModal';
         this.onConfirm = null;
         this.onCancel = null;
+        this.directConfirmHandler = null;
+        this.isConfirming = false;
         console.log('📝 Creating modal...');
         this.createModal();
         console.log('🔗 Binding events...');
@@ -88,6 +90,9 @@ class ConfirmationModal {
                 console.log('🔍 this context:', this);
                 // Use arrow function to preserve 'this' context
                 this.handleConfirm();
+            } else if (e.target.closest('#confirmButton')) {
+                console.log('🎯 Confirm button area clicked! Calling handleConfirm...');
+                this.handleConfirm();
             } else {
                 console.log('❌ Not the confirm button');
             }
@@ -99,7 +104,7 @@ class ConfirmationModal {
                 // Delay cleanup to allow callback execution
                 setTimeout(() => {
                     this.cleanup();
-                }, 200);
+                }, 500);
             }
         });
 
@@ -158,6 +163,11 @@ class ConfirmationModal {
         console.log('📦 Stored callbacks in show():');
         console.log('  - onConfirm:', this.onConfirm);
         console.log('  - onCancel:', this.onCancel);
+        console.log('  - onConfirm type:', typeof this.onConfirm);
+        console.log('  - onCancel type:', typeof this.onCancel);
+
+        // Clean up any existing backdrops before showing (but don't clear callbacks)
+        this.cleanupBackdrops();
 
         // Show modal with proper backdrop handling
         const modalElement = document.getElementById(this.modalId);
@@ -166,9 +176,6 @@ class ConfirmationModal {
             keyboard: true,
             focus: true
         });
-
-        // Clean up any existing backdrops before showing
-        this.cleanup();
 
         // Add direct event listener to the confirm button as backup
         const confirmButton = document.getElementById('confirmButton');
@@ -192,6 +199,13 @@ class ConfirmationModal {
         console.log('🔍 Current onConfirm callback:', this.onConfirm);
         console.log('🔍 Callback type:', typeof this.onConfirm);
 
+        // Prevent double execution
+        if (this.isConfirming) {
+            console.log('🔄 Already confirming, skipping...');
+            return;
+        }
+        this.isConfirming = true;
+
         // Store callback before hiding modal (to prevent cleanup from clearing it)
         const callback = this.onConfirm;
         console.log('📦 Stored callback:', callback);
@@ -214,12 +228,15 @@ class ConfirmationModal {
                     console.log('✅ Callback executed successfully');
                 } catch (error) {
                     console.error('❌ Error executing callback:', error);
+                } finally {
+                    this.isConfirming = false;
                 }
             }, 100);
         } else {
             console.error('❌ NO VALID CALLBACK FOUND!');
             console.log('Callback value:', callback);
             console.log('Callback type:', typeof callback);
+            this.isConfirming = false;
         }
     }
 
@@ -237,11 +254,7 @@ class ConfirmationModal {
         }
     }
 
-    cleanup() {
-        // Clear callbacks
-        this.onConfirm = null;
-        this.onCancel = null;
-
+    cleanupBackdrops() {
         // Force remove any remaining backdrops
         const backdrops = document.querySelectorAll('.modal-backdrop');
         backdrops.forEach(backdrop => {
@@ -252,6 +265,15 @@ class ConfirmationModal {
         document.body.classList.remove('modal-open');
         document.body.style.overflow = '';
         document.body.style.paddingRight = '';
+    }
+
+    cleanup() {
+        // Clear callbacks
+        this.onConfirm = null;
+        this.onCancel = null;
+
+        // Clean up backdrops
+        this.cleanupBackdrops();
     }
 
     // Static method for easy usage

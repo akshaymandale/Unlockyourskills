@@ -14,19 +14,191 @@ class CourseModel
     // Create a new course
     public function createCourse($data, $files, $userId, $clientId)
     {
-        // Validate $data, handle file uploads, use transactions, save course, modules, etc.
-        // Return ['success' => true] or ['success' => false, 'message' => '...']
+        error_log("=== COURSE CREATION STARTED ===");
+        error_log("User ID: $userId, Client ID: $clientId");
+        error_log("Data keys received: " . json_encode(array_keys($data)));
+        error_log("Full data received: " . json_encode($data));
+        
+        try {
+            $this->conn->beginTransaction();
+
+            // Server-side validation for required fields
+            if (empty($data['title'])) {
+                return ['success' => false, 'message' => 'Course title is required.'];
+            }
+            if (empty($data['category_id'])) {
+                return ['success' => false, 'message' => 'Course category is required.'];
+            }
+            if (empty($data['subcategory_id'])) {
+                return ['success' => false, 'message' => 'Course subcategory is required.'];
+            }
+            if (empty($data['course_type'])) {
+                return ['success' => false, 'message' => 'Course type is required.'];
+            }
+            if (empty($data['difficulty_level'])) {
+                return ['success' => false, 'message' => 'Difficulty level is required.'];
+            }
+
+            // Handle file uploads
+            $thumbnailPath = null;
+            $bannerPath = null;
+
+            if (!empty($files['thumbnail']['name'])) {
+                $thumbnailPath = $this->uploadFile($files['thumbnail'], 'uploads/logos/');
+            }
+            if (!empty($files['banner']['name'])) {
+                $bannerPath = $this->uploadFile($files['banner'], 'uploads/logos/');
+            }
+
+            // Map course_type to database enum values
+            $courseTypeMap = [
+                'e-learning' => 'self_paced',
+                'blended' => 'hybrid',
+                'classroom' => 'instructor_led',
+                'assessment' => 'self_paced'
+            ];
+            $mappedCourseType = $courseTypeMap[$data['course_type']] ?? 'self_paced';
+
+            // Prepare course data - using all available fields from the database
+            $courseData = [
+                'client_id' => $clientId,
+                'name' => trim($data['title']), // Database column is 'name', not 'title'
+                'description' => trim($data['description'] ?? ''),
+                'short_description' => trim($data['short_description'] ?? ''),
+                'category_id' => $data['category_id'],
+                'subcategory_id' => $data['subcategory_id'],
+                'course_type' => $mappedCourseType,
+                'difficulty_level' => $data['difficulty_level'],
+                'course_status' => $data['course_status'] ?? 'active',
+                'module_structure' => $data['module_structure'] ?? 'sequential',
+                'course_points' => intval($data['course_points'] ?? 0),
+                'course_cost' => floatval($data['course_cost'] ?? 0.00),
+                'currency' => $data['currency'] ?? null,
+                'reassign_course' => $data['reassign_course'] ?? 'no',
+                'reassign_days' => ($data['reassign_course'] === 'yes') ? intval($data['reassign_days'] ?? 0) : null,
+                'show_in_search' => $data['show_in_search'] ?? 'no',
+                'certificate_option' => !empty($data['certificate_option']) ? $data['certificate_option'] : null,
+                'duration_hours' => intval($data['duration_hours'] ?? 0),
+                'duration_minutes' => intval($data['duration_minutes'] ?? 0),
+                'is_self_paced' => isset($data['is_self_paced']) ? 1 : 0,
+                'is_featured' => isset($data['is_featured']) ? 1 : 0,
+                'is_published' => isset($data['is_published']) ? 1 : 0,
+                'thumbnail_image' => $thumbnailPath,
+                'banner_image' => $bannerPath,
+                'target_audience' => trim($data['target_audience'] ?? ''),
+                'learning_objectives' => !empty($data['learning_objectives']) ? json_encode($data['learning_objectives']) : null,
+                'tags' => !empty($data['tags']) ? json_encode($data['tags']) : null,
+                'created_by' => $userId
+            ];
+
+            // Insert course
+            $sql = "INSERT INTO courses (
+                client_id, name, description, short_description, category_id, subcategory_id,
+                course_type, difficulty_level, course_status, module_structure, course_points,
+                course_cost, currency, reassign_course, reassign_days, show_in_search,
+                certificate_option, duration_hours, duration_minutes,
+                is_self_paced, is_featured, is_published, thumbnail_image, banner_image,
+                target_audience, learning_objectives, tags, created_by
+            ) VALUES (
+                :client_id, :name, :description, :short_description, :category_id, :subcategory_id,
+                :course_type, :difficulty_level, :course_status, :module_structure, :course_points,
+                :course_cost, :currency, :reassign_course, :reassign_days, :show_in_search,
+                :certificate_option, :duration_hours, :duration_minutes,
+                :is_self_paced, :is_featured, :is_published, :thumbnail_image, :banner_image,
+                :target_audience, :learning_objectives, :tags, :created_by
+            )";
+
+            $stmt = $this->conn->prepare($sql);
+            $stmt->execute($courseData);
+            $courseId = $this->conn->lastInsertId();
+
+            // Create modules if provided
+            if (!empty($data['modules']) && is_array($data['modules'])) {
+                error_log("Processing " . count($data['modules']) . " modules");
+                foreach ($data['modules'] as $moduleData) {
+                    $moduleData['created_by'] = $userId;
+                    $this->createModule($courseId, $moduleData);
+                }
+            } else {
+                error_log("No modules provided or modules is not an array");
+            }
+
+            // Create prerequisites if provided
+            if (!empty($data['prerequisites']) && is_array($data['prerequisites'])) {
+                foreach ($data['prerequisites'] as $prerequisiteData) {
+                    $prerequisiteData['created_by'] = $userId;
+                    $this->addPrerequisite($courseId, $prerequisiteData);
+                }
+            }
+
+            // Create post-requisite content if provided
+            error_log("=== CHECKING POST-REQUISITES ===");
+            error_log("post_requisites key exists: " . (isset($data['post_requisites']) ? 'YES' : 'NO'));
+            if (isset($data['post_requisites'])) {
+                error_log("post_requisites value: " . json_encode($data['post_requisites']));
+                error_log("post_requisites type: " . gettype($data['post_requisites']));
+                error_log("post_requisites is array: " . (is_array($data['post_requisites']) ? 'YES' : 'NO'));
+                error_log("post_requisites empty: " . (empty($data['post_requisites']) ? 'YES' : 'NO'));
+            }
+            
+            if (!empty($data['post_requisites']) && is_array($data['post_requisites'])) {
+                error_log("Processing post-requisites: " . json_encode($data['post_requisites']));
+                foreach ($data['post_requisites'] as $index => $requisiteData) {
+                    error_log("Processing requisite $index: " . json_encode($requisiteData));
+                    $requisiteData['created_by'] = $userId;
+                    $result = $this->addPostRequisite($courseId, $requisiteData);
+                    error_log("addPostRequisite result for index $index: " . ($result ? 'SUCCESS' : 'FAILED'));
+                }
+            } else {
+                error_log("No post-requisites found in data or not an array");
+                error_log("Data keys: " . json_encode(array_keys($data)));
+            }
+
+            $this->conn->commit();
+            return ['success' => true, 'course_id' => $courseId];
+
+        } catch (Exception $e) {
+            $this->conn->rollBack();
+            error_log("Course creation error: " . $e->getMessage());
+            error_log("Course creation error trace: " . $e->getTraceAsString());
+            return ['success' => false, 'message' => 'Failed to create course: ' . $e->getMessage()];
+        } catch (Error $e) {
+            $this->conn->rollBack();
+            error_log("Course creation fatal error: " . $e->getMessage());
+            error_log("Course creation fatal error trace: " . $e->getTraceAsString());
+            return ['success' => false, 'message' => 'Fatal error creating course: ' . $e->getMessage()];
+        }
+    }
+
+    // Helper method to upload files
+    private function uploadFile($file, $uploadDir)
+    {
+        if (!is_dir($uploadDir)) {
+            mkdir($uploadDir, 0755, true);
+        }
+
+        $fileName = time() . '_' . basename($file['name']);
+        $targetPath = $uploadDir . $fileName;
+
+        if (move_uploaded_file($file['tmp_name'], $targetPath)) {
+            return $targetPath;
+        }
+
+        return null;
     }
 
     // Create a module
     private function createModule($courseId, $moduleData)
     {
+        error_log("Creating module for courseId: $courseId");
+        error_log("Module data: " . json_encode($moduleData));
+        
         $sql = "INSERT INTO course_modules (
-            course_id, title, description, sort_order, is_required, 
-            estimated_duration, learning_objectives, created_by
+            course_id, title, description, module_order, is_required, 
+            estimated_duration, created_by
         ) VALUES (
-            :course_id, :title, :description, :sort_order, :is_required,
-            :estimated_duration, :learning_objectives, :created_by
+            :course_id, :title, :description, :module_order, :is_required,
+            :estimated_duration, :created_by
         )";
 
         $stmt = $this->conn->prepare($sql);
@@ -34,18 +206,20 @@ class CourseModel
             ':course_id' => $courseId,
             ':title' => $moduleData['title'],
             ':description' => $moduleData['description'],
-            ':sort_order' => $moduleData['sort_order'],
-            ':is_required' => $moduleData['is_required'],
-            ':estimated_duration' => $moduleData['estimated_duration'],
-            ':learning_objectives' => $moduleData['learning_objectives'],
+            ':module_order' => $moduleData['sort_order'] ?? 0, // Map sort_order to module_order
+            ':is_required' => isset($moduleData['is_required']) ? 1 : 0,
+            ':estimated_duration' => intval($moduleData['estimated_duration'] ?? 0),
             ':created_by' => $moduleData['created_by']
         ]);
 
         $moduleId = $this->conn->lastInsertId();
+        error_log("Created module with ID: $moduleId");
 
         // Add module content if provided
         if (!empty($moduleData['content'])) {
             foreach ($moduleData['content'] as $content) {
+                // Ensure created_by is set for each content item
+                $content['created_by'] = $content['created_by'] ?? $moduleData['created_by'];
                 $this->addModuleContent($moduleId, $content);
             }
         }
@@ -56,124 +230,193 @@ class CourseModel
     // Add module content
     private function addModuleContent($moduleId, $contentData)
     {
+        // Map frontend fields to database fields
+        $contentType = $contentData['type'] ?? $contentData['content_type'] ?? '';
+        $contentId = $contentData['id'] ?? $contentData['content_id'] ?? 0;
+        $createdBy = $contentData['created_by'] ?? null;
+        
+        // Skip if required fields are missing
+        if (empty($contentType) || empty($contentId) || empty($createdBy)) {
+            error_log("Skipping module content - missing required fields. contentType: '$contentType', contentId: '$contentId', createdBy: '$createdBy'");
+            error_log("Content data received: " . json_encode($contentData));
+            return false;
+        }
+
         $sql = "INSERT INTO course_module_content (
             module_id, content_type, content_id, title, description,
-            sort_order, is_required, estimated_duration, completion_criteria, created_by
+            content_order, is_required, estimated_duration, created_by
         ) VALUES (
             :module_id, :content_type, :content_id, :title, :description,
-            :sort_order, :is_required, :estimated_duration, :completion_criteria, :created_by
+            :content_order, :is_required, :estimated_duration, :created_by
         )";
 
         $stmt = $this->conn->prepare($sql);
-        return $stmt->execute([
+        $result = $stmt->execute([
             ':module_id' => $moduleId,
-            ':content_type' => $contentData['content_type'],
-            ':content_id' => $contentData['content_id'],
-            ':title' => $contentData['title'],
-            ':description' => $contentData['description'],
-            ':sort_order' => $contentData['sort_order'],
-            ':is_required' => $contentData['is_required'],
-            ':estimated_duration' => $contentData['estimated_duration'],
-            ':completion_criteria' => $contentData['completion_criteria'],
-            ':created_by' => $contentData['created_by']
+            ':content_type' => $contentType,
+            ':content_id' => $contentId,
+            ':title' => $contentData['title'] ?? '',
+            ':description' => $contentData['description'] ?? '',
+            ':content_order' => $contentData['sort_order'] ?? 0, // Map sort_order to content_order
+            ':is_required' => isset($contentData['is_required']) ? 1 : 0,
+            ':estimated_duration' => intval($contentData['estimated_duration'] ?? 0),
+            ':created_by' => $createdBy
         ]);
+        
+        if ($result) {
+            error_log("Successfully inserted module content: moduleId=$moduleId, contentType=$contentType, contentId=$contentId");
+        } else {
+            error_log("Failed to insert module content: moduleId=$moduleId, contentType=$contentType, contentId=$contentId");
+        }
+        
+        return $result;
     }
 
     // Add prerequisite
     private function addPrerequisite($courseId, $prerequisiteData)
     {
+        // Skip if required fields are missing
+        if (empty($prerequisiteData['created_by'])) {
+            error_log("Skipping prerequisite - missing required field: created_by");
+            return false;
+        }
+
+        // Map frontend type to database prerequisite_type
+        $frontendType = $prerequisiteData['type'] ?? $prerequisiteData['prerequisite_type'] ?? '';
+        $prerequisiteType = $this->mapPrerequisiteType($frontendType);
+        $prerequisiteId = $prerequisiteData['id'] ?? $prerequisiteData['prerequisite_id'] ?? $prerequisiteData['content_id'] ?? 0;
+        
+        error_log("Processing prerequisite - frontendType: '$frontendType', mappedType: '$prerequisiteType', id: '$prerequisiteId'");
+        error_log("Full prerequisite data: " . json_encode($prerequisiteData));
+
         $sql = "INSERT INTO course_prerequisites (
-            course_id, prerequisite_course_id, prerequisite_type, minimum_score, created_by
+            course_id, prerequisite_type, prerequisite_id, prerequisite_name, 
+            prerequisite_description, sort_order, created_by
         ) VALUES (
-            :course_id, :prerequisite_course_id, :prerequisite_type, :minimum_score, :created_by
+            :course_id, :prerequisite_type, :prerequisite_id, :prerequisite_name,
+            :prerequisite_description, :sort_order, :created_by
         )";
 
         $stmt = $this->conn->prepare($sql);
-        return $stmt->execute([
+        $result = $stmt->execute([
             ':course_id' => $courseId,
-            ':prerequisite_course_id' => $prerequisiteData['prerequisite_course_id'],
-            ':prerequisite_type' => $prerequisiteData['prerequisite_type'],
-            ':minimum_score' => $prerequisiteData['minimum_score'],
+            ':prerequisite_type' => $prerequisiteType,
+            ':prerequisite_id' => $prerequisiteId,
+            ':prerequisite_name' => $prerequisiteData['title'] ?? '',
+            ':prerequisite_description' => $prerequisiteData['description'] ?? '',
+            ':sort_order' => intval($prerequisiteData['sort_order'] ?? 0),
             ':created_by' => $prerequisiteData['created_by']
         ]);
+        
+        if ($result) {
+            error_log("Successfully inserted prerequisite: courseId=$courseId, type=$prerequisiteType, id=$prerequisiteId");
+        } else {
+            error_log("Failed to insert prerequisite: courseId=$courseId, type=$prerequisiteType, id=$prerequisiteId");
+        }
+        
+        return $result;
     }
 
-    // Add assessment (references existing VLR assessment package)
-    private function addAssessment($courseId, $assessmentData)
+    // Map frontend content types to database prerequisite types
+    private function mapPrerequisiteType($frontendType)
     {
-        $sql = "INSERT INTO course_assessments (
-            course_id, assessment_id, assessment_type, module_id, title, description,
-            is_required, passing_score, max_attempts, time_limit, sort_order, created_by
-        ) VALUES (
-            :course_id, :assessment_id, :assessment_type, :module_id, :title, :description,
-            :is_required, :passing_score, :max_attempts, :time_limit, :sort_order, :created_by
-        )";
-
-        $stmt = $this->conn->prepare($sql);
-        return $stmt->execute([
-            ':course_id' => $courseId,
-            ':assessment_id' => $assessmentData['assessment_id'],
-            ':assessment_type' => $assessmentData['assessment_type'],
-            ':module_id' => $assessmentData['module_id'],
-            ':title' => $assessmentData['title'],
-            ':description' => $assessmentData['description'],
-            ':is_required' => $assessmentData['is_required'],
-            ':passing_score' => $assessmentData['passing_score'],
-            ':max_attempts' => $assessmentData['max_attempts'],
-            ':time_limit' => $assessmentData['time_limit'],
-            ':sort_order' => $assessmentData['sort_order'],
-            ':created_by' => $assessmentData['created_by']
-        ]);
+        // Map VLR content types to their corresponding package table types
+        $typeMapping = [
+            'assessment' => 'assessment', // References assessment_package.id
+            'survey' => 'survey', // References survey_package.id
+            'feedback' => 'feedback', // References feedback_package.id
+            'course' => 'course', // References courses.id
+            'skill' => 'skill',
+            'certification' => 'certification',
+            'scorm' => 'scorm', // References scorm_packages.id
+            'video' => 'video', // References video_package.id
+            'audio' => 'audio', // References audio_package.id
+            'document' => 'document', // References document_package.id (if exists)
+            'interactive' => 'interactive', // References interactive_ai_content_package.id
+            'assignment' => 'assignment', // References assignment_package.id
+            'external' => 'external', // References external_package.id (if exists)
+            'image' => 'image' // References image_package.id
+        ];
+        
+        return $typeMapping[$frontendType] ?? 'assessment'; // Default to assessment if type not found
     }
 
-    // Add feedback (references existing VLR feedback package)
-    private function addFeedback($courseId, $feedbackData)
+    // Add post-requisite content (unified method for all types)
+    private function addPostRequisite($courseId, $requisiteData)
     {
-        $sql = "INSERT INTO course_feedback (
-            course_id, feedback_id, feedback_type, module_id, title, description,
-            is_required, sort_order, created_by
+        error_log("=== ADDING POST-REQUISITE ===");
+        error_log("Course ID: $courseId");
+        error_log("Requisite data: " . json_encode($requisiteData));
+        error_log("Requisite data keys: " . json_encode(array_keys($requisiteData)));
+        
+        // Skip if required fields are missing
+        if (empty($requisiteData['created_by'])) {
+            error_log("Skipping post-requisite - missing required field: created_by");
+            return false;
+        }
+
+        $contentType = $requisiteData['content_type'] ?? $requisiteData['type'] ?? '';
+        $contentId = $requisiteData['content_id'] ?? $requisiteData['id'] ?? 0;
+        
+        error_log("Extracted content_type: '$contentType'");
+        error_log("Extracted content_id: '$contentId'");
+        
+        // Skip if content type or ID is missing
+        if (empty($contentType) || empty($contentId)) {
+            error_log("Skipping post-requisite - missing content_type or content_id");
+            error_log("Post-requisite data: " . json_encode($requisiteData));
+            return false;
+        }
+
+        // Prepare settings JSON for content-specific data
+        $settings = null;
+        if ($contentType === 'assessment') {
+            $settings = json_encode([
+                'time_limit' => intval($requisiteData['time_limit'] ?? 0)
+            ]);
+        }
+
+        $sql = "INSERT INTO course_post_requisites (
+            course_id, content_type, content_id, requisite_type, module_id,
+            title, description, is_required, sort_order, settings, created_by
         ) VALUES (
-            :course_id, :feedback_id, :feedback_type, :module_id, :title, :description,
-            :is_required, :sort_order, :created_by
+            :course_id, :content_type, :content_id, :requisite_type, :module_id,
+            :title, :description, :is_required, :sort_order, :settings, :created_by
         )";
 
-        $stmt = $this->conn->prepare($sql);
-        return $stmt->execute([
+        error_log("SQL Query: $sql");
+        
+        $params = [
             ':course_id' => $courseId,
-            ':feedback_id' => $feedbackData['feedback_id'],
-            ':feedback_type' => $feedbackData['feedback_type'],
-            ':module_id' => $feedbackData['module_id'],
-            ':title' => $feedbackData['title'],
-            ':description' => $feedbackData['description'],
-            ':is_required' => $feedbackData['is_required'],
-            ':sort_order' => $feedbackData['sort_order'],
-            ':created_by' => $feedbackData['created_by']
-        ]);
-    }
-
-    // Add survey (references existing VLR survey package)
-    private function addSurvey($courseId, $surveyData)
-    {
-        $sql = "INSERT INTO course_surveys (
-            course_id, survey_id, survey_type, module_id, title, description,
-            is_required, sort_order, created_by
-        ) VALUES (
-            :course_id, :survey_id, :survey_type, :module_id, :title, :description,
-            :is_required, :sort_order, :created_by
-        )";
+            ':content_type' => $contentType,
+            ':content_id' => $contentId,
+            ':requisite_type' => $requisiteData['requisite_type'] ?? 'post_course',
+            ':module_id' => $requisiteData['module_id'] ?? null,
+            ':title' => $requisiteData['title'] ?? '',
+            ':description' => $requisiteData['description'] ?? '',
+            ':is_required' => isset($requisiteData['is_required']) ? 1 : 0,
+            ':sort_order' => intval($requisiteData['sort_order'] ?? 0),
+            ':settings' => $settings,
+            ':created_by' => $requisiteData['created_by']
+        ];
+        
+        error_log("Parameters to execute: " . json_encode($params));
 
         $stmt = $this->conn->prepare($sql);
-        return $stmt->execute([
-            ':course_id' => $courseId,
-            ':survey_id' => $surveyData['survey_id'],
-            ':survey_type' => $surveyData['survey_type'],
-            ':module_id' => $surveyData['module_id'],
-            ':title' => $surveyData['title'],
-            ':description' => $surveyData['description'],
-            ':is_required' => $surveyData['is_required'],
-            ':sort_order' => $surveyData['sort_order'],
-            ':created_by' => $surveyData['created_by']
-        ]);
+        if (!$stmt) {
+            error_log("Prepare failed: " . json_encode($this->conn->errorInfo()));
+            return false;
+        }
+        
+        $result = $stmt->execute($params);
+        
+        if ($result) {
+            error_log("Successfully inserted post-requisite: courseId=$courseId, type=$contentType, id=$contentId");
+        } else {
+            error_log("Failed to insert post-requisite: courseId=$courseId, type=$contentType, id=$contentId");
+        }
+        
+        return $result;
     }
 
     // Get all courses for a client
@@ -187,7 +430,7 @@ class CourseModel
                 LEFT JOIN course_categories cc ON c.category_id = cc.id
                 LEFT JOIN course_subcategories csc ON c.subcategory_id = csc.id
                 LEFT JOIN user_profiles up ON c.created_by = up.id
-                WHERE c.is_deleted = 0";
+                WHERE c.deleted_at IS NULL";
         
         $params = [];
 
@@ -224,7 +467,7 @@ class CourseModel
             } elseif ($filters['course_status'] === 'draft') {
                 $sql .= " AND c.is_published = 0";
             } elseif ($filters['course_status'] === 'archived') {
-                $sql .= " AND c.is_deleted = 1";
+                $sql .= " AND c.deleted_at IS NOT NULL";
             }
         }
 
@@ -239,7 +482,7 @@ class CourseModel
         }
 
         if (!empty($filters['search'])) {
-            $sql .= " AND (c.title LIKE ? OR c.description LIKE ? OR c.short_description LIKE ?)";
+            $sql .= " AND (c.name LIKE ? OR c.description LIKE ? OR c.short_description LIKE ?)";
             $searchTerm = '%' . $filters['search'] . '%';
             $params[] = $searchTerm;
             $params[] = $searchTerm;
@@ -345,7 +588,7 @@ class CourseModel
                 LEFT JOIN course_categories cc ON c.category_id = cc.id
                 LEFT JOIN course_subcategories csc ON c.subcategory_id = csc.id
                 LEFT JOIN user_profiles up ON c.created_by = up.id
-                WHERE c.id = ? AND c.is_deleted = 0";
+                WHERE c.id = ? AND (c.deleted_at IS NULL OR c.deleted_at = '0000-00-00 00:00:00')";
         
         $params = [$courseId];
 
@@ -365,25 +608,19 @@ class CourseModel
             // Get prerequisites
             $course['prerequisites'] = $this->getCoursePrerequisites($courseId);
             
-            // Get assessments
-            $course['assessments'] = $this->getCourseAssessments($courseId);
-            
-            // Get feedback
-            $course['feedback'] = $this->getCourseFeedback($courseId);
-            
-            // Get surveys
-            $course['surveys'] = $this->getCourseSurveys($courseId);
+            // Get post-requisites (unified)
+            $course['post_requisites'] = $this->getCoursePostRequisites($courseId);
         }
 
         return $course;
     }
 
     // Get course modules
-    private function getCourseModules($courseId)
+    public function getCourseModules($courseId)
     {
         $sql = "SELECT * FROM course_modules 
-                WHERE course_id = ? AND is_deleted = 0 
-                ORDER BY sort_order ASC";
+                WHERE course_id = ? AND (deleted_at IS NULL OR deleted_at = '0000-00-00 00:00:00') 
+                ORDER BY module_order ASC";
         
         $stmt = $this->conn->prepare($sql);
         $stmt->execute([$courseId]);
@@ -401,8 +638,8 @@ class CourseModel
     private function getModuleContent($moduleId)
     {
         $sql = "SELECT * FROM course_module_content 
-                WHERE module_id = ? AND is_deleted = 0 
-                ORDER BY sort_order ASC";
+                WHERE module_id = ? AND (deleted_at IS NULL OR deleted_at = '0000-00-00 00:00:00') 
+                ORDER BY content_order ASC";
         
         $stmt = $this->conn->prepare($sql);
         $stmt->execute([$moduleId]);
@@ -410,58 +647,96 @@ class CourseModel
     }
 
     // Get course prerequisites
-    private function getCoursePrerequisites($courseId)
+    public function getCoursePrerequisites($courseId)
     {
-        $sql = "SELECT cp.*, c.title as prerequisite_course_title
+        $sql = "SELECT cp.*, c.name as prerequisite_course_title
                 FROM course_prerequisites cp
-                LEFT JOIN courses c ON cp.prerequisite_course_id = c.id
-                WHERE cp.course_id = ?";
+                LEFT JOIN courses c ON cp.prerequisite_id = c.id AND cp.prerequisite_type = 'course'
+                WHERE cp.course_id = ? AND (cp.deleted_at IS NULL OR cp.deleted_at = '0000-00-00 00:00:00')
+                ORDER BY cp.sort_order ASC";
         
         $stmt = $this->conn->prepare($sql);
         $stmt->execute([$courseId]);
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
 
-    // Get course assessments
-    private function getCourseAssessments($courseId)
+    // Get course post-requisites
+    public function getCoursePostRequisites($courseId)
     {
-        $sql = "SELECT ca.*, ap.title as assessment_title
-                FROM course_assessments ca
-                LEFT JOIN assessment_package ap ON ca.assessment_id = ap.id
-                WHERE ca.course_id = ? AND ca.is_deleted = 0
-                ORDER BY ca.sort_order ASC";
-        
-        $stmt = $this->conn->prepare($sql);
-        $stmt->execute([$courseId]);
-        return $stmt->fetchAll(PDO::FETCH_ASSOC);
-    }
-
-    // Get course feedback
-    private function getCourseFeedback($courseId)
-    {
-        $sql = "SELECT cf.*, fp.title as feedback_title
-                FROM course_feedback cf
-                LEFT JOIN feedback_package fp ON cf.feedback_id = fp.id
-                WHERE cf.course_id = ? AND cf.is_deleted = 0
-                ORDER BY cf.sort_order ASC";
-        
-        $stmt = $this->conn->prepare($sql);
-        $stmt->execute([$courseId]);
-        return $stmt->fetchAll(PDO::FETCH_ASSOC);
-    }
-
-    // Get course surveys
-    private function getCourseSurveys($courseId)
-    {
-        $sql = "SELECT cs.*, sp.title as survey_title
-                FROM course_surveys cs
-                LEFT JOIN survey_package sp ON cs.survey_id = sp.id
-                WHERE cs.course_id = ? AND cs.is_deleted = 0
-                ORDER BY cs.sort_order ASC";
-        
-        $stmt = $this->conn->prepare($sql);
-        $stmt->execute([$courseId]);
-        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+        try {
+            // First try the unified table
+            $sql = "SELECT cpr.*, 
+                           CASE 
+                               WHEN cpr.content_type = 'assessment' THEN ap.title
+                               WHEN cpr.content_type = 'feedback' THEN fp.title
+                               WHEN cpr.content_type = 'survey' THEN sp.title
+                               WHEN cpr.content_type = 'assignment' THEN ap2.title
+                           END as content_title
+                    FROM course_post_requisites cpr
+                    LEFT JOIN assessment_package ap ON cpr.content_type = 'assessment' AND cpr.content_id = ap.id
+                    LEFT JOIN feedback_package fp ON cpr.content_type = 'feedback' AND cpr.content_id = fp.id
+                    LEFT JOIN survey_package sp ON cpr.content_type = 'survey' AND cpr.content_id = sp.id
+                    LEFT JOIN assignment_package ap2 ON cpr.content_type = 'assignment' AND cpr.content_id = ap2.id
+                    WHERE cpr.course_id = ? AND cpr.is_deleted = 0
+                    ORDER BY cpr.sort_order ASC";
+            
+            $stmt = $this->conn->prepare($sql);
+            $stmt->execute([$courseId]);
+            return $stmt->fetchAll(PDO::FETCH_ASSOC);
+            
+        } catch (PDOException $e) {
+            // If unified table doesn't exist, fall back to old tables
+            error_log("Unified post-requisites table not found, falling back to old tables: " . $e->getMessage());
+            
+            $postRequisites = [];
+            
+            // Get assessments
+            try {
+                $sql = "SELECT ca.*, ap.title as content_title, 'assessment' as content_type
+                        FROM course_assessments ca
+                        LEFT JOIN assessment_package ap ON ca.assessment_id = ap.id
+                        WHERE ca.course_id = ? AND (ca.deleted_at IS NULL OR ca.deleted_at = '0000-00-00 00:00:00')
+                        ORDER BY ca.assessment_order ASC";
+                $stmt = $this->conn->prepare($sql);
+                $stmt->execute([$courseId]);
+                $assessments = $stmt->fetchAll(PDO::FETCH_ASSOC);
+                $postRequisites = array_merge($postRequisites, $assessments);
+            } catch (PDOException $e) {
+                error_log("Error fetching assessments: " . $e->getMessage());
+            }
+            
+            // Get feedback
+            try {
+                $sql = "SELECT cf.*, fp.title as content_title, 'feedback' as content_type
+                        FROM course_feedback cf
+                        LEFT JOIN feedback_package fp ON cf.feedback_id = fp.id
+                        WHERE cf.course_id = ? AND (cf.deleted_at IS NULL OR cf.deleted_at = '0000-00-00 00:00:00')
+                        ORDER BY cf.feedback_order ASC";
+                $stmt = $this->conn->prepare($sql);
+                $stmt->execute([$courseId]);
+                $feedback = $stmt->fetchAll(PDO::FETCH_ASSOC);
+                $postRequisites = array_merge($postRequisites, $feedback);
+            } catch (PDOException $e) {
+                error_log("Error fetching feedback: " . $e->getMessage());
+            }
+            
+            // Get surveys
+            try {
+                $sql = "SELECT cs.*, sp.title as content_title, 'survey' as content_type
+                        FROM course_surveys cs
+                        LEFT JOIN survey_package sp ON cs.survey_id = sp.id
+                        WHERE cs.course_id = ? AND (cs.deleted_at IS NULL OR cs.deleted_at = '0000-00-00 00:00:00')
+                        ORDER BY cs.survey_order ASC";
+                $stmt = $this->conn->prepare($sql);
+                $stmt->execute([$courseId]);
+                $surveys = $stmt->fetchAll(PDO::FETCH_ASSOC);
+                $postRequisites = array_merge($postRequisites, $surveys);
+            } catch (PDOException $e) {
+                error_log("Error fetching surveys: " . $e->getMessage());
+            }
+            
+            return $postRequisites;
+        }
     }
 
     // Update course
@@ -473,14 +748,14 @@ class CourseModel
             $sql = "UPDATE courses SET
                 title = :title, description = :description, short_description = :short_description,
                 category_id = :category_id, subcategory_id = :subcategory_id, course_type = :course_type,
-                difficulty_level = :difficulty_level, duration_hours = :duration_hours, duration_minutes = :duration_minutes,
-                max_attempts = :max_attempts, passing_score = :passing_score, is_self_paced = :is_self_paced,
-                is_featured = :is_featured, is_published = :is_published, thumbnail_image = :thumbnail_image,
-                banner_image = :banner_image, tags = :tags, learning_objectives = :learning_objectives,
-                prerequisites = :prerequisites, target_audience = :target_audience,
-                certificate_template = :certificate_template, completion_criteria = :completion_criteria,
-                updated_by = :updated_by, updated_at = NOW()
-                WHERE id = :course_id";
+                difficulty_level = :difficulty_level, course_status = :course_status, module_structure = :module_structure,
+                course_points = :course_points, course_cost = :course_cost, currency = :currency,
+                reassign_course = :reassign_course, reassign_days = :reassign_days, show_in_search = :show_in_search,
+                certificate_option = :certificate_option, duration_hours = :duration_hours, duration_minutes = :duration_minutes,
+                is_self_paced = :is_self_paced, is_featured = :is_featured, is_published = :is_published,
+                target_audience = :target_audience, learning_objectives = :learning_objectives, tags = :tags,
+                updated_by = :updated_by, updated_at = CURRENT_TIMESTAMP
+                WHERE id = :id AND (client_id = :client_id OR :client_id IS NULL)";
 
             $params = [
                 ':title' => $data['title'],
@@ -490,29 +765,27 @@ class CourseModel
                 ':subcategory_id' => $data['subcategory_id'],
                 ':course_type' => $data['course_type'],
                 ':difficulty_level' => $data['difficulty_level'],
-                ':duration_hours' => $data['duration_hours'],
-                ':duration_minutes' => $data['duration_minutes'],
-                ':max_attempts' => $data['max_attempts'],
-                ':passing_score' => $data['passing_score'],
-                ':is_self_paced' => $data['is_self_paced'],
-                ':is_featured' => $data['is_featured'],
-                ':is_published' => $data['is_published'],
-                ':thumbnail_image' => $data['thumbnail_image'],
-                ':banner_image' => $data['banner_image'],
-                ':tags' => $data['tags'],
-                ':learning_objectives' => $data['learning_objectives'],
-                ':prerequisites' => $data['prerequisites'],
-                ':target_audience' => $data['target_audience'],
-                ':certificate_template' => $data['certificate_template'],
-                ':completion_criteria' => $data['completion_criteria'],
+                ':course_status' => $data['course_status'] ?? 'active',
+                ':module_structure' => $data['module_structure'] ?? 'sequential',
+                ':course_points' => intval($data['course_points'] ?? 0),
+                ':course_cost' => floatval($data['course_cost'] ?? 0.00),
+                ':currency' => $data['currency'] ?? null,
+                ':reassign_course' => $data['reassign_course'] ?? 'no',
+                ':reassign_days' => ($data['reassign_course'] === 'yes') ? intval($data['reassign_days'] ?? 0) : null,
+                ':show_in_search' => $data['show_in_search'] ?? 'no',
+                ':certificate_option' => !empty($data['certificate_option']) ? $data['certificate_option'] : null,
+                ':duration_hours' => floatval($data['duration_hours'] ?? 0),
+                ':duration_minutes' => intval($data['duration_minutes'] ?? 0),
+                ':is_self_paced' => isset($data['is_self_paced']) ? 1 : 0,
+                ':is_featured' => isset($data['is_featured']) ? 1 : 0,
+                ':is_published' => isset($data['is_published']) ? 1 : 0,
+                ':target_audience' => trim($data['target_audience'] ?? ''),
+                ':learning_objectives' => !empty($data['learning_objectives']) ? json_encode($data['learning_objectives']) : null,
+                ':tags' => !empty($data['tags']) ? json_encode($data['tags']) : null,
                 ':updated_by' => $data['updated_by'],
-                ':course_id' => $courseId
+                ':id' => $courseId,
+                ':client_id' => $clientId
             ];
-
-            if ($clientId !== null) {
-                $sql .= " AND client_id = :client_id";
-                $params[':client_id'] = $clientId;
-            }
 
             $stmt = $this->conn->prepare($sql);
             $stmt->execute($params);
@@ -760,7 +1033,7 @@ class CourseModel
      */
     public function updateCourseStatus($courseId, $status, $clientId) {
         try {
-            $sql = "UPDATE courses SET status = ?, updated_at = NOW() WHERE id = ? AND client_id = ? AND is_deleted = 0";
+            $sql = "UPDATE courses SET course_status = ?, updated_at = NOW() WHERE id = ? AND client_id = ? AND is_deleted = 0";
             $stmt = $this->conn->prepare($sql);
             return $stmt->execute([$status, $courseId, $clientId]);
         } catch (PDOException $e) {
@@ -820,5 +1093,19 @@ class CourseModel
             error_log("Error getting course analytics: " . $e->getMessage());
             return [];
         }
+    }
+
+    // Get currencies from countries table
+    public function getCurrencies()
+    {
+        $sql = "SELECT DISTINCT currency, currency_symbol 
+                FROM countries 
+                WHERE currency IS NOT NULL AND currency != '' 
+                ORDER BY currency";
+        
+        $stmt = $this->conn->prepare($sql);
+        $stmt->execute();
+        
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
 } 

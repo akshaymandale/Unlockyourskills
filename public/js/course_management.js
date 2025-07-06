@@ -10,7 +10,7 @@ class CourseManagementManager {
         this.currentFilters = {
             search: '',
             category: '',
-            status: ''
+            course_status: ''
         };
         
         this.init();
@@ -34,8 +34,8 @@ class CourseManagementManager {
             this.applyFilters();
         });
 
-        document.getElementById('statusFilter')?.addEventListener('change', (e) => {
-            this.currentFilters.status = e.target.value.toLowerCase();
+        document.getElementById('courseStatusFilter')?.addEventListener('change', (e) => {
+            this.currentFilters.course_status = e.target.value.toLowerCase();
             this.applyFilters();
         });
 
@@ -99,8 +99,8 @@ class CourseManagementManager {
             const matchesCategory = !this.currentFilters.category || 
                 course.category_name.toLowerCase() === this.currentFilters.category;
 
-            const matchesStatus = !this.currentFilters.status || 
-                course.status.toLowerCase() === this.currentFilters.status;
+            const matchesStatus = !this.currentFilters.course_status || 
+                (course.course_status || 'active').toLowerCase() === this.currentFilters.course_status;
 
             return matchesSearch && matchesCategory && matchesStatus;
         });
@@ -113,13 +113,13 @@ class CourseManagementManager {
         this.currentFilters = {
             search: '',
             category: '',
-            status: ''
+            course_status: ''
         };
 
         // Reset form elements
         document.getElementById('searchInput').value = '';
         document.getElementById('categoryFilter').value = '';
-        document.getElementById('statusFilter').value = '';
+        document.getElementById('courseStatusFilter').value = '';
 
         this.applyFilters();
         this.showToast('Filters cleared', 'info');
@@ -146,11 +146,11 @@ class CourseManagementManager {
             <div class="col-lg-4 col-md-6 mb-4 course-card" 
                  data-name="${course.name.toLowerCase()}"
                  data-category="${course.category_name.toLowerCase()}"
-                 data-status="${course.status}">
+                 data-status="${course.course_status || 'active'}">
                 <div class="card h-100 course-card-inner">
                     <div class="card-header d-flex justify-content-between align-items-center">
-                        <span class="badge bg-${this.getStatusBadgeColor(course.status)}">
-                            ${this.capitalizeFirst(course.status)}
+                        <span class="badge bg-${this.getStatusBadgeColor(course.course_status || 'active')}">
+                            ${this.capitalizeFirst(course.course_status || 'active')}
                         </span>
                         <div class="dropdown">
                             <button class="btn btn-sm btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown">
@@ -176,18 +176,18 @@ class CourseManagementManager {
                                     </a>
                                 </li>
                                 <li><hr class="dropdown-divider"></li>
-                                ${course.status === 'draft' ? `
+                                ${course.course_status === 'inactive' ? `
                                     <li>
                                         <a class="dropdown-item text-success" href="#" onclick="courseManager.publishCourse(${course.id})">
                                             <i class="fas fa-check me-2"></i>
-                                            Publish
+                                            Activate
                                         </a>
                                     </li>
-                                ` : course.status === 'published' ? `
+                                ` : course.course_status === 'active' ? `
                                     <li>
                                         <a class="dropdown-item text-warning" href="#" onclick="courseManager.unpublishCourse(${course.id})">
                                             <i class="fas fa-pause me-2"></i>
-                                            Unpublish
+                                            Deactivate
                                         </a>
                                     </li>
                                 ` : ''}
@@ -264,8 +264,8 @@ class CourseManagementManager {
 
     updateStatistics() {
         const totalCourses = this.courses.length;
-        const publishedCourses = this.courses.filter(c => c.status === 'published').length;
-        const draftCourses = this.courses.filter(c => c.status === 'draft').length;
+        const publishedCourses = this.courses.filter(c => c.course_status === 'active').length;
+        const draftCourses = this.courses.filter(c => c.course_status === 'inactive').length;
         const totalEnrollments = this.courses.reduce((sum, c) => sum + (c.enrollment_count || 0), 0);
 
         // Update statistics cards
@@ -464,8 +464,8 @@ class CourseManagementManager {
 
     getStatusBadgeColor(status) {
         const colors = {
-            'published': 'success',
-            'draft': 'warning',
+            'active': 'success',
+            'inactive': 'warning',
             'archived': 'secondary'
         };
         return colors[status] || 'secondary';

@@ -5427,3 +5427,97 @@ body select:focus,
 .add-item-btn {
   margin-top: 1.1em;
 }
+
+/* Form Validation Styles */
+.form-control:invalid {
+    border-color: #dc3545;
+    box-shadow: 0 0 0 0.2rem rgba(220, 53, 69, 0.25);
+}
+
+.form-control:invalid:focus {
+    border-color: #dc3545;
+    box-shadow: 0 0 0 0.2rem rgba(220, 53, 69, 0.25);
+}
+
+/* Session Timeout Message Styles */
+.timeout-message {
+    display: flex;
+    align-items: center;
+    background: linear-gradient(135deg, #fff3cd 0%, #ffeaa7 100%);
+    border: 2px solid #ffc107;
+    border-radius: 12px;
+    padding: 20px;
+    margin-bottom: 25px;
+    box-shadow: 0 4px 15px rgba(255, 193, 7, 0.2);
+    position: relative;
+    animation: slideInDown 0.5s ease-out;
+}
+
+.timeout-icon {
+    flex-shrink: 0;
+    width: 50px;
+    height: 50px;
+    background: linear-gradient(135deg, #ffc107, #ff8f00);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-right: 15px;
+    box-shadow: 0 2px 8px rgba(255, 193, 7, 0.3);
+}
+
+.timeout-icon i {
+    font-size: 20px;
+    color: white;
+}
+
+.timeout-content {
+    flex: 1;
+}
+
+.timeout-content h4 {
+    margin: 0 0 5px 0;
+    color: #856404;
+    font-size: 18px;
+    font-weight: 600;
+}
+
+.timeout-content p {
+    margin: 0;
+    color: #856404;
+    font-size: 14px;
+    line-height: 1.4;
+}
+
+.timeout-close {
+    background: none;
+    border: none;
+    color: #856404;
+    font-size: 16px;
+    cursor: pointer;
+    padding: 5px;
+    border-radius: 50%;
+    width: 30px;
+    height: 30px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s ease;
+    flex-shrink: 0;
+}
+
+.timeout-close:hover {
+    background: rgba(133, 100, 4, 0.1);
+    color: #5a4a00;
+}
+
+@keyframes slideInDown {
+    from {
+        opacity: 0;
+        transform: translateY(-20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
