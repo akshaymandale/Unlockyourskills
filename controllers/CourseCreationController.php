@@ -19,152 +19,22 @@ class CourseCreationController extends BaseController
     }
 
     /**
-     * Display course creation page
+     * Course Creation Page
      */
-    public function index()
-    {
-        // Check if user is authenticated
-        if (!isset($_SESSION['id'])) {
+    public function index() {
+        $userId = $_SESSION['id'] ?? $_SESSION['user_id'] ?? null;
+        if (!$userId) {
             $this->redirectWithToast('Please login to access course creation.', 'error', '/login');
             return;
         }
-
+        
         $clientId = $_SESSION['user']['client_id'] ?? null;
-        $currentUser = $_SESSION['id'];
-
-        // Get categories and subcategories
         $categories = $this->courseCategoryModel->getAllCategories($clientId);
-        $subcategories = $this->courseSubcategoryModel->getAllSubcategories($clientId);
-
-        // Get available VLR content
         $vlrContent = $this->courseModel->getAvailableVLRContent($clientId);
-
-        // Get existing courses for prerequisites
-        $existingCourses = $this->courseModel->getCourses($clientId);
-
+        $existingCourses = $this->courseModel->getAllCourses($clientId);
+        $currencies = $this->courseModel->getCurrencies();
+        
         require 'views/course_creation.php';
-    }
-
-    /**
-     * Create a new course
-     */
-    public function create()
-    {
-        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
-            $this->redirectWithToast('Invalid request method.', 'error', '/course-creation');
-            return;
-        }
-
-        // Check if user is authenticated
-        if (!isset($_SESSION['id'])) {
-            $this->redirectWithToast('Please login to create courses.', 'error', '/login');
-            return;
-        }
-
-        $clientId = $_SESSION['user']['client_id'] ?? null;
-        $currentUser = $_SESSION['id'];
-
-        // Validate input
-        $errors = $this->validateCourseData($_POST);
-
-        if (!empty($errors)) {
-            if ($this->isAjaxRequest()) {
-                $this->jsonResponse([
-                    'success' => false,
-                    'message' => implode(', ', $errors),
-                    'errors' => $errors
-                ]);
-                return;
-            }
-            $this->redirectWithToast(implode(', ', $errors), 'error', '/course-creation');
-            return;
-        }
-
-        // Prepare course data
-        $courseData = [
-            'client_id' => $clientId,
-            'title' => trim($_POST['title']),
-            'description' => trim($_POST['description'] ?? ''),
-            'short_description' => trim($_POST['short_description'] ?? ''),
-            'category_id' => intval($_POST['category_id']),
-            'subcategory_id' => intval($_POST['subcategory_id']),
-            'course_type' => $_POST['course_type'],
-            'difficulty_level' => $_POST['difficulty_level'],
-            'duration_hours' => floatval($_POST['duration_hours'] ?? 0),
-            'duration_minutes' => intval($_POST['duration_minutes'] ?? 0),
-            'max_attempts' => intval($_POST['max_attempts'] ?? 1),
-            'passing_score' => floatval($_POST['passing_score'] ?? 70.0),
-            'is_self_paced' => isset($_POST['is_self_paced']) ? 1 : 0,
-            'is_featured' => isset($_POST['is_featured']) ? 1 : 0,
-            'is_published' => isset($_POST['is_published']) ? 1 : 0,
-            'thumbnail_image' => $_POST['thumbnail_image'] ?? null,
-            'banner_image' => $_POST['banner_image'] ?? null,
-            'tags' => json_encode($_POST['tags'] ?? []),
-            'learning_objectives' => json_encode($_POST['learning_objectives'] ?? []),
-            'prerequisites' => json_encode($_POST['prerequisites'] ?? []),
-            'target_audience' => trim($_POST['target_audience'] ?? ''),
-            'certificate_template' => $_POST['certificate_template'] ?? null,
-            'completion_criteria' => json_encode($_POST['completion_criteria'] ?? []),
-            'created_by' => $currentUser
-        ];
-
-        // Handle file uploads
-        if (isset($_FILES['thumbnail']) && $_FILES['thumbnail']['error'] === UPLOAD_ERR_OK) {
-            $courseData['thumbnail_image'] = $this->uploadFile($_FILES['thumbnail'], 'uploads/courses/thumbnails/');
-        }
-
-        if (isset($_FILES['banner']) && $_FILES['banner']['error'] === UPLOAD_ERR_OK) {
-            $courseData['banner_image'] = $this->uploadFile($_FILES['banner'], 'uploads/courses/banners/');
-        }
-
-        // Process modules
-        if (!empty($_POST['modules'])) {
-            $courseData['modules'] = $this->processModules($_POST['modules'], $currentUser);
-        }
-
-        // Process prerequisites
-        if (!empty($_POST['prerequisite_courses'])) {
-            $courseData['prerequisite_courses'] = $this->processPrerequisites($_POST['prerequisite_courses'], $currentUser);
-        }
-
-        // Process assessments
-        if (!empty($_POST['assessments'])) {
-            $courseData['assessments'] = $this->processAssessments($_POST['assessments'], $currentUser);
-        }
-
-        // Process feedback
-        if (!empty($_POST['feedback'])) {
-            $courseData['feedback'] = $this->processFeedback($_POST['feedback'], $currentUser);
-        }
-
-        // Process surveys
-        if (!empty($_POST['surveys'])) {
-            $courseData['surveys'] = $this->processSurveys($_POST['surveys'], $currentUser);
-        }
-
-        // Create course
-        $courseId = $this->courseModel->createCourse($courseData);
-
-        if ($courseId) {
-            if ($this->isAjaxRequest()) {
-                $this->jsonResponse([
-                    'success' => true,
-                    'message' => 'Course created successfully!',
-                    'course_id' => $courseId
-                ]);
-                return;
-            }
-            $this->redirectWithToast('Course created successfully!', 'success', '/course-creation');
-        } else {
-            if ($this->isAjaxRequest()) {
-                $this->jsonResponse([
-                    'success' => false,
-                    'message' => 'Failed to create course. Please try again.'
-                ]);
-                return;
-            }
-            $this->redirectWithToast('Failed to create course. Please try again.', 'error', '/course-creation');
-        }
     }
 
     /**
@@ -219,229 +89,6 @@ class CourseCreationController extends BaseController
                 'message' => 'Invalid content type'
             ]);
         }
-    }
-
-    /**
-     * Validate course data
-     */
-    private function validateCourseData($data)
-    {
-        $errors = [];
-
-        // Required fields
-        if (empty($data['title'])) {
-            $errors[] = 'Course title is required';
-        }
-
-        if (empty($data['category_id'])) {
-            $errors[] = 'Category is required';
-        }
-
-        if (empty($data['subcategory_id'])) {
-            $errors[] = 'Subcategory is required';
-        }
-
-        if (empty($data['course_type'])) {
-            $errors[] = 'Course type is required';
-        }
-
-        if (empty($data['difficulty_level'])) {
-            $errors[] = 'Difficulty level is required';
-        }
-
-        // Validate title length
-        if (strlen($data['title']) > 255) {
-            $errors[] = 'Course title cannot exceed 255 characters';
-        }
-
-        // Validate description length
-        if (!empty($data['description']) && strlen($data['description']) > 65535) {
-            $errors[] = 'Course description is too long';
-        }
-
-        // Validate short description length
-        if (!empty($data['short_description']) && strlen($data['short_description']) > 500) {
-            $errors[] = 'Short description cannot exceed 500 characters';
-        }
-
-        // Validate duration
-        if (isset($data['duration_hours']) && ($data['duration_hours'] < 0 || $data['duration_hours'] > 999.99)) {
-            $errors[] = 'Duration hours must be between 0 and 999.99';
-        }
-
-        if (isset($data['duration_minutes']) && ($data['duration_minutes'] < 0 || $data['duration_minutes'] > 59)) {
-            $errors[] = 'Duration minutes must be between 0 and 59';
-        }
-
-        // Validate passing score
-        if (isset($data['passing_score']) && ($data['passing_score'] < 0 || $data['passing_score'] > 100)) {
-            $errors[] = 'Passing score must be between 0 and 100';
-        }
-
-        // Validate max attempts
-        if (isset($data['max_attempts']) && ($data['max_attempts'] < 1 || $data['max_attempts'] > 999)) {
-            $errors[] = 'Maximum attempts must be between 1 and 999';
-        }
-
-        return $errors;
-    }
-
-    /**
-     * Process modules data
-     */
-    private function processModules($modulesData, $createdBy)
-    {
-        $modules = [];
-        foreach ($modulesData as $index => $module) {
-            if (!empty($module['title'])) {
-                $modules[] = [
-                    'title' => trim($module['title']),
-                    'description' => trim($module['description'] ?? ''),
-                    'sort_order' => intval($module['sort_order'] ?? $index + 1),
-                    'is_required' => isset($module['is_required']) ? 1 : 0,
-                    'estimated_duration' => intval($module['estimated_duration'] ?? 0),
-                    'learning_objectives' => json_encode($module['learning_objectives'] ?? []),
-                    'created_by' => $createdBy,
-                    'content' => isset($module['content']) ? $this->processModuleContent($module['content'], $createdBy) : []
-                ];
-            }
-        }
-        return $modules;
-    }
-
-    /**
-     * Process module content data
-     */
-    private function processModuleContent($contentData, $createdBy)
-    {
-        $content = [];
-        foreach ($contentData as $index => $item) {
-            if (!empty($item['content_type']) && !empty($item['content_id'])) {
-                $content[] = [
-                    'content_type' => $item['content_type'],
-                    'content_id' => intval($item['content_id']),
-                    'title' => trim($item['title'] ?? ''),
-                    'description' => trim($item['description'] ?? ''),
-                    'sort_order' => intval($item['sort_order'] ?? $index + 1),
-                    'is_required' => isset($item['is_required']) ? 1 : 0,
-                    'estimated_duration' => intval($item['estimated_duration'] ?? 0),
-                    'completion_criteria' => json_encode($item['completion_criteria'] ?? []),
-                    'created_by' => $createdBy
-                ];
-            }
-        }
-        return $content;
-    }
-
-    /**
-     * Process prerequisites data
-     */
-    private function processPrerequisites($prerequisitesData, $createdBy)
-    {
-        $prerequisites = [];
-        foreach ($prerequisitesData as $prerequisite) {
-            if (!empty($prerequisite['prerequisite_course_id'])) {
-                $prerequisites[] = [
-                    'prerequisite_course_id' => intval($prerequisite['prerequisite_course_id']),
-                    'prerequisite_type' => $prerequisite['prerequisite_type'] ?? 'required',
-                    'minimum_score' => floatval($prerequisite['minimum_score'] ?? 0),
-                    'created_by' => $createdBy
-                ];
-            }
-        }
-        return $prerequisites;
-    }
-
-    /**
-     * Process assessments data
-     */
-    private function processAssessments($assessmentsData, $createdBy)
-    {
-        $assessments = [];
-        foreach ($assessmentsData as $index => $assessment) {
-            if (!empty($assessment['assessment_id'])) {
-                $assessments[] = [
-                    'assessment_id' => intval($assessment['assessment_id']),
-                    'assessment_type' => $assessment['assessment_type'] ?? 'post_course',
-                    'module_id' => !empty($assessment['module_id']) ? intval($assessment['module_id']) : null,
-                    'title' => trim($assessment['title'] ?? ''),
-                    'description' => trim($assessment['description'] ?? ''),
-                    'is_required' => isset($assessment['is_required']) ? 1 : 0,
-                    'passing_score' => floatval($assessment['passing_score'] ?? 70.0),
-                    'max_attempts' => intval($assessment['max_attempts'] ?? 1),
-                    'time_limit' => !empty($assessment['time_limit']) ? intval($assessment['time_limit']) : null,
-                    'sort_order' => intval($assessment['sort_order'] ?? $index + 1),
-                    'created_by' => $createdBy
-                ];
-            }
-        }
-        return $assessments;
-    }
-
-    /**
-     * Process feedback data
-     */
-    private function processFeedback($feedbackData, $createdBy)
-    {
-        $feedback = [];
-        foreach ($feedbackData as $index => $item) {
-            if (!empty($item['feedback_id'])) {
-                $feedback[] = [
-                    'feedback_id' => intval($item['feedback_id']),
-                    'feedback_type' => $item['feedback_type'] ?? 'post_course',
-                    'module_id' => !empty($item['module_id']) ? intval($item['module_id']) : null,
-                    'title' => trim($item['title'] ?? ''),
-                    'description' => trim($item['description'] ?? ''),
-                    'is_required' => isset($item['is_required']) ? 1 : 0,
-                    'sort_order' => intval($item['sort_order'] ?? $index + 1),
-                    'created_by' => $createdBy
-                ];
-            }
-        }
-        return $feedback;
-    }
-
-    /**
-     * Process surveys data
-     */
-    private function processSurveys($surveysData, $createdBy)
-    {
-        $surveys = [];
-        foreach ($surveysData as $index => $survey) {
-            if (!empty($survey['survey_id'])) {
-                $surveys[] = [
-                    'survey_id' => intval($survey['survey_id']),
-                    'survey_type' => $survey['survey_type'] ?? 'post_course',
-                    'module_id' => !empty($survey['module_id']) ? intval($survey['module_id']) : null,
-                    'title' => trim($survey['title'] ?? ''),
-                    'description' => trim($survey['description'] ?? ''),
-                    'is_required' => isset($survey['is_required']) ? 1 : 0,
-                    'sort_order' => intval($survey['sort_order'] ?? $index + 1),
-                    'created_by' => $createdBy
-                ];
-            }
-        }
-        return $surveys;
-    }
-
-    /**
-     * Upload file
-     */
-    private function uploadFile($file, $uploadDir)
-    {
-        // Create upload directory if it doesn't exist
-        if (!is_dir($uploadDir)) {
-            mkdir($uploadDir, 0755, true);
-        }
-
-        $fileName = time() . '_' . basename($file['name']);
-        $targetPath = $uploadDir . $fileName;
-
-        if (move_uploaded_file($file['tmp_name'], $targetPath)) {
-            return $targetPath;
-        }
-
-        return null;
     }
 
     /**
@@ -539,7 +186,7 @@ class CourseCreationController extends BaseController
         
         try {
             $clientId = $_SESSION['user']['client_id'] ?? null;
-            $result = $this->courseModel->updateCourseStatus($courseId, 'published', $clientId);
+            $result = $this->courseModel->updateCourseStatus($courseId, 'active', $clientId);
             
             if ($result) {
                 $this->jsonResponse([
@@ -571,7 +218,7 @@ class CourseCreationController extends BaseController
         
         try {
             $clientId = $_SESSION['user']['client_id'] ?? null;
-            $result = $this->courseModel->updateCourseStatus($courseId, 'draft', $clientId);
+            $result = $this->courseModel->updateCourseStatus($courseId, 'inactive', $clientId);
             
             if ($result) {
                 $this->jsonResponse([
@@ -625,38 +272,19 @@ class CourseCreationController extends BaseController
     }
 
     /**
-     * Edit Course Page
-     */
-    public function editCourse($courseId) {
-        if (!isset($_SESSION['id'])) {
-            $this->redirectWithToast('Please login to edit courses.', 'error', '/login');
-            return;
-        }
-        
-        try {
-            $clientId = $_SESSION['user']['client_id'] ?? null;
-            $course = $this->courseModel->getCourseById($courseId, $clientId);
-            
-            if (!$course) {
-                $this->redirectWithToast('Course not found.', 'error', '/course-management');
-                return;
-            }
-            
-            $categories = $this->courseCategoryModel->getAllCategories($clientId);
-            $subcategories = $this->courseSubcategoryModel->getSubcategoriesByCategoryId($course['category_id'], $clientId);
-            
-            require 'views/course_creation.php';
-        } catch (Exception $e) {
-            $this->redirectWithToast('Error loading course.', 'error', '/course-management');
-        }
-    }
-
-    /**
      * Preview Course Page
      */
     public function previewCourse($courseId) {
         if (!isset($_SESSION['id'])) {
-            $this->redirectWithToast('Please login to preview courses.', 'error', '/login');
+            if ($this->isAjaxRequest()) {
+                $this->jsonResponse([
+                    'success' => false,
+                    'message' => 'Please login to preview courses.',
+                    'redirect' => '/Unlockyourskills/login'
+                ]);
+            } else {
+                $this->redirectWithToast('Please login to preview courses.', 'error', '/login');
+            }
             return;
         }
         
@@ -665,20 +293,68 @@ class CourseCreationController extends BaseController
             $course = $this->courseModel->getCourseById($courseId, $clientId);
             
             if (!$course) {
-                $this->redirectWithToast('Course not found.', 'error', '/course-management');
+                if ($this->isAjaxRequest()) {
+                    $this->jsonResponse([
+                        'success' => false,
+                        'message' => 'Course not found.'
+                    ]);
+                } else {
+                    $this->redirectWithToast('Course not found.', 'error', '/Unlockyourskills/course-management');
+                }
                 return;
             }
             
             // Get course modules and content
             $modules = $this->courseModel->getCourseModules($courseId);
             $prerequisites = $this->courseModel->getCoursePrerequisites($courseId);
-            $assessments = $this->courseModel->getCourseAssessments($courseId);
-            $feedback = $this->courseModel->getCourseFeedback($courseId);
-            $surveys = $this->courseModel->getCourseSurveys($courseId);
+            $postRequisites = $this->courseModel->getCoursePostRequisites($courseId);
             
-            require 'views/course_preview.php';
+            // Separate post-requisites by type for the view
+            $assessments = [];
+            $feedback = [];
+            $surveys = [];
+            $assignments = [];
+            
+            foreach ($postRequisites as $requisite) {
+                switch ($requisite['content_type']) {
+                    case 'assessment':
+                        $assessments[] = $requisite;
+                        break;
+                    case 'feedback':
+                        $feedback[] = $requisite;
+                        break;
+                    case 'survey':
+                        $surveys[] = $requisite;
+                        break;
+                    case 'assignment':
+                        $assignments[] = $requisite;
+                        break;
+                }
+            }
+            
+            if ($this->isAjaxRequest()) {
+                // For AJAX requests, capture the output and return as JSON
+                ob_start();
+                require 'views/course_preview.php';
+                $html = ob_get_clean();
+                
+                $this->jsonResponse([
+                    'success' => true,
+                    'html' => $html
+                ]);
+            } else {
+                // For direct requests, include the view normally
+                require 'views/course_preview.php';
+            }
         } catch (Exception $e) {
-            $this->redirectWithToast('Error loading course.', 'error', '/course-management');
+            if ($this->isAjaxRequest()) {
+                $this->jsonResponse([
+                    'success' => false,
+                    'message' => 'Error loading course: ' . $e->getMessage()
+                ]);
+            } else {
+                $this->redirectWithToast('Error loading course.', 'error', '/Unlockyourskills/course-management');
+            }
         }
     }
 
@@ -696,7 +372,7 @@ class CourseCreationController extends BaseController
             $course = $this->courseModel->getCourseById($courseId, $clientId);
             
             if (!$course) {
-                $this->redirectWithToast('Course not found.', 'error', '/course-management');
+                $this->redirectWithToast('Course not found.', 'error', '/Unlockyourskills/course-management');
                 return;
             }
             
@@ -705,7 +381,7 @@ class CourseCreationController extends BaseController
             
             require 'views/course_analytics.php';
         } catch (Exception $e) {
-            $this->redirectWithToast('Error loading analytics.', 'error', '/course-management');
+            $this->redirectWithToast('Error loading analytics.', 'error', '/Unlockyourskills/course-management');
         }
     }
 
@@ -744,26 +420,92 @@ class CourseCreationController extends BaseController
         $vlrContent = $flatVlrContent;
         // Get existing courses for prerequisites
         $existingCourses = $this->courseModel->getAllCourses($clientId);
+        // Get currencies from countries table
+        $currencies = $this->courseModel->getCurrencies();
         error_log('[DEBUG] $vlrContent (flattened) in controller: ' . print_r($vlrContent, true));
         require 'views/modals/add_course_modal_content.php';
     }
 
     // Handle form POST (standard submit)
     public function createCourse() {
-        if ($_SERVER['REQUEST_METHOD'] !== 'POST' || !isset($_SESSION['id'])) {
-            header('Location: /course-management');
-            exit;
+        error_log('[DEBUG] createCourse method called');
+        error_log('[DEBUG] REQUEST_METHOD: ' . $_SERVER['REQUEST_METHOD']);
+        error_log('[DEBUG] SESSION data: ' . print_r($_SESSION, true));
+        
+        try {
+            // Check for different possible session user ID keys
+            $userId = $_SESSION['id'] ?? $_SESSION['user_id'] ?? null;
+            error_log('[DEBUG] User ID found: ' . $userId);
+            
+            if ($_SERVER['REQUEST_METHOD'] !== 'POST' || !$userId) {
+                error_log('[DEBUG] Authentication failed - Method: ' . $_SERVER['REQUEST_METHOD'] . ', User ID: ' . $userId);
+                $this->jsonResponse(['success' => false, 'message' => 'Authentication required', 'redirect' => '/Unlockyourskills/login']);
+                return;
+            }
+            
+            $clientId = $_SESSION['user']['client_id'] ?? $_SESSION['client_id'] ?? null;
+            error_log('[DEBUG] Client ID: ' . $clientId);
+            
+            // Check if this is a JSON request
+            $contentType = $_SERVER['CONTENT_TYPE'] ?? '';
+            error_log('[DEBUG] Content-Type: ' . $contentType);
+            
+            if (strpos($contentType, 'application/json') !== false) {
+                error_log('[DEBUG] Processing JSON request');
+                // Handle JSON request
+                $input = file_get_contents('php://input');
+                error_log('[DEBUG] Raw input: ' . substr($input, 0, 1000)); // Log first 1000 chars
+                
+                $jsonData = json_decode($input, true);
+                if ($jsonData === null) {
+                    error_log('[DEBUG] JSON decode failed: ' . json_last_error_msg());
+                    $this->jsonResponse(['success' => false, 'message' => 'Invalid JSON data']);
+                    return;
+                }
+                
+                error_log('[DEBUG] JSON data received: ' . print_r($jsonData, true));
+                error_log('[DEBUG] JSON data keys: ' . json_encode(array_keys($jsonData)));
+                
+                // Check for post-requisites specifically
+                if (isset($jsonData['post_requisites'])) {
+                    error_log('[DEBUG] Post-requisites found in JSON: ' . json_encode($jsonData['post_requisites']));
+                    error_log('[DEBUG] Post-requisites count: ' . count($jsonData['post_requisites']));
+                    error_log('[DEBUG] Post-requisites type: ' . gettype($jsonData['post_requisites']));
+                } else {
+                    error_log('[DEBUG] No post_requisites key found in JSON data');
+                }
+                
+                // Process JSON data
+                error_log('[DEBUG] Calling courseModel->createCourse');
+                $result = $this->courseModel->createCourse($jsonData, [], $userId, $clientId);
+                error_log('[DEBUG] Course creation result: ' . print_r($result, true));
+                $this->jsonResponse($result);
+            } else {
+                error_log('[DEBUG] Processing form data request');
+                error_log('[DEBUG] POST data: ' . print_r($_POST, true));
+                error_log('[DEBUG] FILES data: ' . print_r($_FILES, true));
+                
+                // Handle form data request
+                $result = $this->courseModel->createCourse($_POST, $_FILES, $userId, $clientId);
+                error_log('[DEBUG] Form course creation result: ' . print_r($result, true));
+                
+                if ($result['success']) {
+                    $_SESSION['toast'] = ['type' => 'success', 'message' => 'Course created successfully!'];
+                    header('Location: /Unlockyourskills/course-management');
+                } else {
+                    $_SESSION['toast'] = ['type' => 'error', 'message' => $result['message'] ?? 'Failed to create course.'];
+                    header('Location: /Unlockyourskills/course-management');
+                }
+                exit;
+            }
+        } catch (Exception $e) {
+            error_log('[ERROR] Exception in createCourse: ' . $e->getMessage());
+            error_log('[ERROR] Exception trace: ' . $e->getTraceAsString());
+            $this->jsonResponse(['success' => false, 'message' => 'Server error: ' . $e->getMessage()]);
+        } catch (Error $e) {
+            error_log('[FATAL ERROR] Error in createCourse: ' . $e->getMessage());
+            error_log('[FATAL ERROR] Error trace: ' . $e->getTraceAsString());
+            $this->jsonResponse(['success' => false, 'message' => 'Fatal server error: ' . $e->getMessage()]);
         }
-        $clientId = $_SESSION['user']['client_id'] ?? null;
-        $userId = $_SESSION['id'];
-        $result = $this->courseModel->createCourse($_POST, $_FILES, $userId, $clientId);
-        if ($result['success']) {
-            $_SESSION['toast'] = ['type' => 'success', 'message' => 'Course created successfully!'];
-            header('Location: /course-management');
-        } else {
-            $_SESSION['toast'] = ['type' => 'error', 'message' => $result['message'] ?? 'Failed to create course.'];
-            header('Location: /course-management');
-        }
-        exit;
     }
 } 

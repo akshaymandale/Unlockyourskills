@@ -107,3 +107,9 @@ SELECT
 [2025-06-29 19:08:14] Failed statements: 3
 [2025-06-29 19:08:14] Total statements: 23
 [2025-06-29 19:08:14] WARNING: Some statements failed. Check the log for details.
+
+[2025-06-29 20:00:00] Course-level assessment fields removed
+[2025-06-29 20:00:00] - Removed max_attempts, passing_score, status from courses table
+[2025-06-29 20:00:00] - Removed max_attempts, passing_score from course_assessments table
+[2025-06-29 20:00:00] - Updated CourseModel to remove references to these fields
+[2025-06-29 20:00:00] - Assessment-level settings now handled at VLR level

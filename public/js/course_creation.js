@@ -6,15 +6,18 @@
 // Instantiate CourseCreationManager only after modal content is loaded.
 class CourseCreationManager {
     constructor() {
+        console.log('[DEBUG] CourseCreationManager instantiated');
         this.currentTab = 0;
         this.modules = [];
         this.prerequisites = [];
-        this.assessments = [];
-        this.feedback = [];
-        this.surveys = [];
+        this.post_requisites = [];
+        this.learningObjectives = [];
+        this.tags = [];
         this.draggedElement = null;
         this.dragOverElement = null;
         this.isSubmitting = false;
+        
+        this.logToFile('post_requisites initialized as:', this.post_requisites);
         
         this.init();
     }
@@ -25,21 +28,56 @@ class CourseCreationManager {
         this.setupValidation();
         this.initializeTabs();
         this.loadInitialData();
+        this.initializeTagSystems();
+        this.setupImagePreviewHandlers();
     }
 
     bindEvents() {
         // Tab navigation
-        document.querySelectorAll('.course-creation-tabs .nav-link').forEach((tab, index) => {
-            tab.addEventListener('click', (e) => {
-                e.preventDefault();
-                this.switchTab(index);
+        const tabButtons = document.querySelectorAll('[data-bs-toggle="tab"]');
+        tabButtons.forEach(button => {
+            button.addEventListener('click', (e) => {
+                const target = e.target.getAttribute('data-bs-target');
+                if (target) {
+                    this.switchTab(target.replace('#', ''));
+                }
             });
         });
 
         // Form submission
         const form = document.getElementById('courseCreationForm');
+        console.log('[DEBUG] bindEvents: courseCreationForm:', form);
         if (form) {
-            form.addEventListener('submit', (e) => this.handleFormSubmit(e));
+            form.addEventListener('submit', (e) => {
+                e.preventDefault();
+                this.handleFormSubmit(e);
+            });
+            console.log('[DEBUG] bindEvents: submit event bound to courseCreationForm');
+        } else {
+            console.warn('[DEBUG] bindEvents: courseCreationForm not found');
+        }
+
+        // Create course button (for confirmation modal)
+        const createCourseBtn = document.getElementById('create_course');
+        if (createCourseBtn) {
+            console.log('[DEBUG] Create course button found, binding click event');
+            createCourseBtn.addEventListener('click', (e) => {
+                console.log('[DEBUG] Create course button clicked');
+                e.preventDefault();
+                this.showConfirmationModal(
+                    'Create Course',
+                    'Are you sure you want to create this course?',
+                    () => {
+                        console.log('[DEBUG] Confirmation callback executed');
+                        this.handleFormSubmit(e);
+                    },
+                    () => {
+                        console.log('[DEBUG] Confirmation cancelled');
+                    }
+                );
+            });
+        } else {
+            console.warn('[DEBUG] Create course button NOT found');
         }
 
         // Add module button
@@ -66,28 +104,64 @@ class CourseCreationManager {
             console.warn('[DEBUG] Add Prerequisite button NOT found');
         }
 
-        // Add assessment button
-        const addAssessmentBtn = document.getElementById('addAssessmentBtn');
+        // Add post-requisite buttons (unified)
+        const addAssessmentBtn = document.getElementById('selectPostAssessmentBtn');
         if (addAssessmentBtn) {
-            addAssessmentBtn.addEventListener('click', () => this.showAssessmentModal());
+            this.logToFile('Found selectPostAssessmentBtn, binding click event');
+            addAssessmentBtn.addEventListener('click', () => this.showPostRequisiteVLRModal('assessment'));
+        } else {
+            this.logToFile('ERROR: selectPostAssessmentBtn not found');
         }
 
-        // Add feedback button
-        const addFeedbackBtn = document.getElementById('addFeedbackBtn');
+        const addFeedbackBtn = document.getElementById('selectPostFeedbackBtn');
         if (addFeedbackBtn) {
-            addFeedbackBtn.addEventListener('click', () => this.showFeedbackModal());
+            this.logToFile('Found selectPostFeedbackBtn, binding click event');
+            addFeedbackBtn.addEventListener('click', () => this.showPostRequisiteVLRModal('feedback'));
+        } else {
+            this.logToFile('ERROR: selectPostFeedbackBtn not found');
         }
 
-        // Add survey button
-        const addSurveyBtn = document.getElementById('addSurveyBtn');
+        const addSurveyBtn = document.getElementById('selectPostSurveyBtn');
         if (addSurveyBtn) {
-            addSurveyBtn.addEventListener('click', () => this.showSurveyModal());
+            this.logToFile('Found selectPostSurveyBtn, binding click event');
+            addSurveyBtn.addEventListener('click', () => this.showPostRequisiteVLRModal('survey'));
+        } else {
+            this.logToFile('ERROR: selectPostSurveyBtn not found');
+        }
+
+        const addAssignmentBtn = document.getElementById('selectPostAssignmentBtn');
+        if (addAssignmentBtn) {
+            this.logToFile('Found selectPostAssignmentBtn, binding click event');
+            addAssignmentBtn.addEventListener('click', () => this.showPostRequisiteVLRModal('assignment'));
+        } else {
+            this.logToFile('ERROR: selectPostAssignmentBtn not found');
         }
 
         // Category change handlers
-        const categorySelect = document.getElementById('courseCategory');
+        const categorySelect = document.getElementById('category_id');
+        console.log('[DEBUG] categorySelect element:', categorySelect);
         if (categorySelect) {
-            categorySelect.addEventListener('change', () => this.loadSubcategories());
+            console.log('[DEBUG] Adding change event listener to category select');
+            categorySelect.addEventListener('change', () => {
+                console.log('[DEBUG] Category changed, calling loadSubcategories');
+                this.loadSubcategories();
+            });
+        } else {
+            console.error('[DEBUG] category_id select element not found');
+        }
+
+        // Reassign course radio button handlers
+        const reassignNo = document.getElementById('reassign_no');
+        const reassignYes = document.getElementById('reassign_yes');
+        const reassignDaysContainer = document.getElementById('reassign_days_container');
+        
+        if (reassignNo && reassignYes && reassignDaysContainer) {
+            reassignNo.addEventListener('change', () => {
+                reassignDaysContainer.style.display = 'none';
+            });
+            reassignYes.addEventListener('change', () => {
+                reassignDaysContainer.style.display = 'block';
+            });
         }
 
         // Real-time validation
@@ -95,6 +169,160 @@ class CourseCreationManager {
 
         // Keyboard shortcuts
         this.setupKeyboardShortcuts();
+
+        // Post Requisite VLR selection buttons (these are already correctly bound above)
+        // The buttons are now handled by the unified post-requisite system above
+
+        // Initialize tag systems
+        this.initializeTagSystems();
+
+        // Remove tab error highlight on focus out if tab is valid
+        if (form) {
+            form.addEventListener('blur', (e) => {
+                setTimeout(() => { // Wait for value to update
+                    this.checkAndClearTabErrorForField(e.target);
+                }, 0);
+            }, true);
+        }
+    }
+
+    initializeTagSystems() {
+        console.log('[DEBUG] initializeTagSystems called');
+        console.log('[DEBUG] this.learningObjectives before init:', this.learningObjectives);
+        console.log('[DEBUG] this.tags before init:', this.tags);
+        
+        // Learning Objectives Tag System
+        this.initializeLearningObjectivesTags();
+        
+        // Tags Tag System
+        this.initializeTagsSystem();
+        
+        console.log('[DEBUG] this.learningObjectives after init:', this.learningObjectives);
+        console.log('[DEBUG] this.tags after init:', this.tags);
+    }
+
+    initializeLearningObjectivesTags() {
+        console.log('[DEBUG] initializeLearningObjectivesTags called');
+        const container = document.getElementById('learning_objectives_container');
+        if (!container) {
+            console.log('[DEBUG] learning_objectives_container not found');
+            return;
+        }
+        console.log('[DEBUG] learning_objectives_container found');
+
+        // Clear existing content and create proper structure (no plus button)
+        container.innerHTML = `
+            <div class="input-group mb-2">
+                <input type="text" class="form-control" id="learning_objective_input" 
+                       placeholder="Enter learning objective">
+            </div>
+            <div id="learning_objectives_display" class="mb-2"></div>
+            <input type="hidden" id="learning_objectives_list" name="learning_objectives_list" value="">
+        `;
+
+        const input = document.getElementById('learning_objective_input');
+        const display = document.getElementById('learning_objectives_display');
+        const hiddenInput = document.getElementById('learning_objectives_list');
+
+        const addLearningObjective = (text) => {
+            console.log('[DEBUG] addLearningObjective called with:', text);
+            if (text.trim() === "" || this.learningObjectives.includes(text.trim())) {
+                console.log('[DEBUG] addLearningObjective: skipping empty or duplicate');
+                return;
+            }
+            
+            this.learningObjectives.push(text.trim());
+            console.log('[DEBUG] addLearningObjective: added, current array:', this.learningObjectives);
+            updateDisplay();
+            input.value = '';
+        };
+
+        const removeLearningObjective = (text) => {
+            this.learningObjectives = this.learningObjectives.filter(obj => obj !== text);
+            updateDisplay();
+        };
+
+        const updateDisplay = () => {
+            display.innerHTML = this.learningObjectives.map(obj => 
+                `<span class="tag">${obj} <button type="button" class="remove-tag" onclick="courseManager.removeLearningObjective('${obj}')">&times;</button></span>`
+            ).join('');
+            hiddenInput.value = this.learningObjectives.join(',');
+        };
+
+        // Event listeners
+        if (input) {
+            input.addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    addLearningObjective(input.value);
+                }
+            });
+        }
+
+        // Make remove function globally accessible
+        this.removeLearningObjective = removeLearningObjective;
+    }
+
+    initializeTagsSystem() {
+        console.log('[DEBUG] initializeTagsSystem called');
+        const container = document.getElementById('tags_container');
+        if (!container) {
+            console.log('[DEBUG] tags_container not found');
+            return;
+        }
+        console.log('[DEBUG] tags_container found');
+
+        // Clear existing content and create proper structure (no plus button)
+        container.innerHTML = `
+            <div class="input-group mb-2">
+                <input type="text" class="form-control" id="tag_input" 
+                       placeholder="Enter tag">
+            </div>
+            <div id="tags_display" class="mb-2"></div>
+            <input type="hidden" id="tags_list" name="tags_list" value="">
+        `;
+
+        const input = document.getElementById('tag_input');
+        const display = document.getElementById('tags_display');
+        const hiddenInput = document.getElementById('tags_list');
+
+        const addTag = (text) => {
+            console.log('[DEBUG] addTag called with:', text);
+            if (text.trim() === "" || this.tags.includes(text.trim())) {
+                console.log('[DEBUG] addTag: skipping empty or duplicate');
+                return;
+            }
+            
+            this.tags.push(text.trim());
+            console.log('[DEBUG] addTag: added, current array:', this.tags);
+            updateDisplay();
+            input.value = '';
+        };
+
+        const removeTag = (text) => {
+            this.tags = this.tags.filter(tag => tag !== text);
+            updateDisplay();
+        };
+
+        const updateDisplay = () => {
+            display.innerHTML = this.tags.map(tag => 
+                `<span class="tag">${tag} <button type="button" class="remove-tag" onclick="courseManager.removeTag('${tag}')">&times;</button></span>`
+            ).join('');
+            hiddenInput.value = this.tags.join(',');
+        };
+
+        // Event listeners
+        if (input) {
+            input.addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    addTag(input.value);
+                }
+            });
+        }
+
+        // Make remove function globally accessible
+        this.removeTag = removeTag;
     }
 
     initializeDragAndDrop() {
@@ -171,21 +399,22 @@ class CourseCreationManager {
 
     setupValidation() {
         this.validationRules = {
-            courseName: {
+            title: {
                 required: true,
                 minLength: 3,
                 maxLength: 100,
                 pattern: /^[a-zA-Z0-9\s\-_()]+$/
             },
-            courseDescription: {
-                required: true,
-                minLength: 10,
-                maxLength: 500
-            },
-            courseCategory: {
+            category_id: {
                 required: true
             },
-            courseSubcategory: {
+            subcategory_id: {
+                required: true
+            },
+            course_type: {
+                required: true
+            },
+            difficulty_level: {
                 required: true
             },
             modules: {
@@ -195,22 +424,23 @@ class CourseCreationManager {
         };
 
         this.errorMessages = {
-            courseName: {
-                required: 'Course name is required',
-                minLength: 'Course name must be at least 3 characters',
-                maxLength: 'Course name cannot exceed 100 characters',
-                pattern: 'Course name contains invalid characters'
+            title: {
+                required: 'Course title is required',
+                minLength: 'Course title must be at least 3 characters',
+                maxLength: 'Course title cannot exceed 100 characters',
+                pattern: 'Course title contains invalid characters'
             },
-            courseDescription: {
-                required: 'Course description is required',
-                minLength: 'Course description must be at least 10 characters',
-                maxLength: 'Course description cannot exceed 500 characters'
-            },
-            courseCategory: {
+            category_id: {
                 required: 'Please select a course category'
             },
-            courseSubcategory: {
+            subcategory_id: {
                 required: 'Please select a course subcategory'
+            },
+            course_type: {
+                required: 'Please select a course type'
+            },
+            difficulty_level: {
+                required: 'Please select a difficulty level'
             },
             modules: {
                 required: 'At least one module is required',
@@ -292,44 +522,90 @@ class CourseCreationManager {
     validateForm() {
         let isValid = true;
         const errors = [];
+        // Track which tabs have errors
+        const tabErrors = new Set();
 
-        // Validate basic fields
-        const fields = ['courseName', 'courseDescription', 'courseCategory', 'courseSubcategory'];
+        // Validate basic fields (tab 0)
+        const fields = ['title', 'category_id', 'subcategory_id', 'course_type', 'difficulty_level'];
         fields.forEach(fieldName => {
             const field = document.querySelector(`[name="${fieldName}"]`);
             if (field && !this.validateField(field)) {
                 isValid = false;
                 errors.push(this.errorMessages[fieldName].required || 'Invalid field');
+                tabErrors.add(0); // Basic Info tab
             }
         });
 
-        // Validate modules
+        // Validate duration fields
+        const durationHours = document.querySelector('[name="duration_hours"]');
+        const durationMinutes = document.querySelector('[name="duration_minutes"]');
+        
+        if (durationHours && durationMinutes) {
+            const hours = parseInt(durationHours.value) || 0;
+            const minutes = parseInt(durationMinutes.value) || 0;
+            
+            if (hours < 0) {
+                isValid = false;
+                errors.push('Duration hours cannot be negative');
+                tabErrors.add(0);
+            }
+            
+            if (minutes < 0 || minutes > 59) {
+                isValid = false;
+                errors.push('Duration minutes must be between 0 and 59');
+                tabErrors.add(0);
+            }
+        }
+
+        // Validate modules (tab 1)
         if (this.modules.length === 0) {
             isValid = false;
             errors.push('At least one module is required');
-            this.markTabAsError(1); // Modules tab
-        } else {
-            this.clearTabError(1);
+            tabErrors.add(1); // Modules tab
         }
 
-        // Validate prerequisites (if any)
+        // Validate prerequisites (tab 2)
         if (this.prerequisites.length > 0) {
             const hasValidPrerequisites = this.prerequisites.every(pre => pre.id && pre.title);
             if (!hasValidPrerequisites) {
                 isValid = false;
                 errors.push('Some prerequisites are invalid');
-                this.markTabAsError(2); // Prerequisites tab
-            } else {
-                this.clearTabError(2);
+                tabErrors.add(2); // Prerequisites tab
             }
         }
+
+        // Highlight tabs with errors
+        this.clearAllTabErrors();
+        tabErrors.forEach(idx => this.markTabAsError(idx));
 
         // Show validation errors
         if (!isValid) {
             this.showValidationErrors(errors);
+        } else {
+            // If valid, ensure all tab highlights are cleared
+            this.clearAllTabErrors();
         }
 
         return isValid;
+    }
+
+    clearAllTabErrors() {
+        const tabs = document.querySelectorAll('#courseCreationTabs .nav-link');
+        tabs.forEach(tab => tab.classList.remove('tab-error'));
+    }
+
+    markTabAsError(tabIndex) {
+        const tabs = document.querySelectorAll('#courseCreationTabs .nav-link');
+        if (tabs[tabIndex]) {
+            tabs[tabIndex].classList.add('tab-error');
+        }
+    }
+
+    clearTabError(tabIndex) {
+        const tabs = document.querySelectorAll('#courseCreationTabs .nav-link');
+        if (tabs[tabIndex]) {
+            tabs[tabIndex].classList.remove('tab-error');
+        }
     }
 
     showValidationErrors(errors) {
@@ -350,28 +626,17 @@ class CourseCreationManager {
         errorContainer.style.display = 'block';
     }
 
-    markTabAsError(tabIndex) {
-        const tabs = document.querySelectorAll('.course-creation-tabs .nav-link');
-        if (tabs[tabIndex]) {
-            tabs[tabIndex].classList.add('tab-error');
-        }
-    }
-
-    clearTabError(tabIndex) {
-        const tabs = document.querySelectorAll('.course-creation-tabs .nav-link');
-        if (tabs[tabIndex]) {
-            tabs[tabIndex].classList.remove('tab-error');
-        }
-    }
-
     initializeTabs() {
         this.showTab(0);
     }
 
     switchTab(tabIndex) {
+        // On tab change, re-validate the previous tab and clear highlight if valid
         if (this.validateCurrentTab()) {
+            this.clearTabError(this.currentTab);
             this.showTab(tabIndex);
         } else {
+            this.markTabAsError(this.currentTab);
             this.showToast('Please fix errors in the current tab before proceeding', 'warning');
         }
     }
@@ -396,7 +661,7 @@ class CourseCreationManager {
     }
 
     validateBasicInfo() {
-        const requiredFields = ['courseName', 'courseDescription', 'courseCategory', 'courseSubcategory'];
+        const requiredFields = ['title', 'category_id', 'subcategory_id', 'course_type', 'difficulty_level'];
         return requiredFields.every(fieldName => {
             const field = document.querySelector(`[name="${fieldName}"]`);
             return field && field.value.trim() !== '';
@@ -442,9 +707,13 @@ class CourseCreationManager {
     }
 
     async loadSubcategories() {
-        const categoryId = document.getElementById('courseCategory')?.value;
+        console.log('[DEBUG] loadSubcategories() called');
+        const categoryId = document.getElementById('category_id')?.value;
+        console.log('[DEBUG] categoryId:', categoryId);
+        
         if (!categoryId) {
-            const select = document.getElementById('courseSubcategory');
+            console.log('[DEBUG] No category selected, clearing subcategory dropdown');
+            const select = document.getElementById('subcategory_id');
             if (select) {
                 select.innerHTML = '<option value="">Select Subcategory</option>';
             }
@@ -452,20 +721,32 @@ class CourseCreationManager {
         }
 
         try {
-            const response = await fetch(`/api/course-subcategories/${categoryId}`);
+            console.log('[DEBUG] Fetching subcategories for category_id:', categoryId);
+            // Use the correct endpoint for subcategory dropdown
+            const response = await fetch(`/Unlockyourskills/api/course-subcategories/dropdown?category_id=${categoryId}`, {
+                credentials: 'include'
+            });
+            console.log('[DEBUG] Response status:', response.status);
             const data = await response.json();
+            console.log('[DEBUG] Response data:', data);
             
             if (data.success) {
-                const select = document.getElementById('courseSubcategory');
+                const select = document.getElementById('subcategory_id');
                 if (select) {
                     select.innerHTML = '<option value="">Select Subcategory</option>';
                     data.subcategories.forEach(subcategory => {
                         select.innerHTML += `<option value="${subcategory.id}">${subcategory.name}</option>`;
                     });
+                    console.log('[DEBUG] Loaded', data.subcategories.length, 'subcategories');
+                } else {
+                    console.error('[DEBUG] subcategory_id select element not found');
                 }
+            } else {
+                console.error('[DEBUG] API returned error:', data.message);
+                this.showToast('Error loading subcategories: ' + data.message, 'error');
             }
         } catch (error) {
-            console.error('Error loading subcategories:', error);
+            console.error('[DEBUG] Error loading subcategories:', error);
             this.showToast('Error loading subcategories', 'error');
         }
     }
@@ -477,7 +758,8 @@ class CourseCreationManager {
             id: moduleId,
             title: '',
             description: '',
-            content: []
+            content: [],
+            sort_order: this.modules.length // Set proper order
         };
         this.modules.push(module);
         console.log('[DEBUG] Module pushed. Modules array:', this.modules);
@@ -539,8 +821,9 @@ class CourseCreationManager {
                         <div class="col-md-6">
                             <div class="form-group">
                                 <label for="moduleTitle_${module.id}">Module Title *</label>
-                                <input type="text" class="form-control" id="moduleTitle_${module.id}" 
-                                       value="${module.title}" onchange="courseManager.updateModule(${module.id}, 'title', this.value)">
+                                <input type="text" class="form-control module-title-input" id="moduleTitle_${module.id}" 
+                                       value="${module.title}" data-module-id="${module.id}" autocomplete="off">
+                                <div class="invalid-feedback d-block module-title-error" style="display:none;"></div>
                             </div>
                         </div>
                         <div class="col-md-6">
@@ -582,8 +865,149 @@ class CourseCreationManager {
         document.getElementById('addModuleBtnTop').onclick = () => this.addModule();
         document.getElementById('addModuleBtnBottom').onclick = () => this.addModule();
 
+        // Bind validation for module title fields
+        this.bindModuleTitleValidation();
+
         // Reinitialize drag and drop for new modules
         this.initializeModuleDragAndDrop();
+    }
+
+    bindModuleTitleValidation() {
+        // Add blur and input event listeners to all module title fields
+        const inputs = document.querySelectorAll('.module-title-input');
+        inputs.forEach(input => {
+            input.addEventListener('blur', (e) => {
+                this.validateModuleTitleField(e.target);
+                this.updateModulesTabErrorHighlight();
+            });
+            input.addEventListener('input', (e) => {
+                this.clearModuleTitleError(e.target);
+                this.updateModulesTabErrorHighlight();
+            });
+            // Also update module title in data on change
+            input.addEventListener('change', (e) => {
+                const moduleId = parseInt(e.target.getAttribute('data-module-id'));
+                this.updateModule(moduleId, 'title', e.target.value);
+            });
+        });
+    }
+
+    validateModuleTitleField(input) {
+        const value = input.value.trim();
+        const errorDiv = input.parentElement.querySelector('.module-title-error');
+        if (!value) {
+            errorDiv.textContent = 'Module title is required';
+            errorDiv.style.display = 'block';
+            input.classList.add('is-invalid');
+            return false;
+        } else {
+            errorDiv.textContent = '';
+            errorDiv.style.display = 'none';
+            input.classList.remove('is-invalid');
+            return true;
+        }
+    }
+
+    clearModuleTitleError(input) {
+        const errorDiv = input.parentElement.querySelector('.module-title-error');
+        errorDiv.textContent = '';
+        errorDiv.style.display = 'none';
+        input.classList.remove('is-invalid');
+    }
+
+    updateModulesTabErrorHighlight() {
+        // Highlight the Modules tab if any module title is invalid
+        const inputs = document.querySelectorAll('.module-title-input');
+        let hasError = false;
+        inputs.forEach(input => {
+            if (!input.value.trim()) {
+                hasError = true;
+            }
+        });
+        if (hasError) {
+            this.markTabAsError(1);
+        } else {
+            this.clearTabError(1);
+        }
+    }
+
+    // On form submit, validate all module titles
+    validateAllModuleTitles() {
+        const inputs = document.querySelectorAll('.module-title-input');
+        let allValid = true;
+        inputs.forEach(input => {
+            if (!this.validateModuleTitleField(input)) {
+                allValid = false;
+            }
+        });
+        this.updateModulesTabErrorHighlight();
+        return allValid;
+    }
+
+    // In handleFormSubmit, call validateAllModuleTitles and prevent submit if invalid
+    async handleFormSubmit(e) {
+        console.log('[DEBUG] handleFormSubmit called');
+        // No need to prevent default here since we're handling it in the click event
+
+        if (this.isSubmitting) {
+            console.log('[DEBUG] Form is already being submitted');
+            this.showToast('Form is already being submitted', 'warning');
+            return;
+        }
+
+        // Validate all module titles
+        console.log('[DEBUG] Validating module titles');
+        const modulesValid = this.validateAllModuleTitles();
+        if (!modulesValid) {
+            console.log('[DEBUG] Module titles validation failed');
+            this.showToast('Please fix module title errors before submitting.', 'error');
+            return;
+        }
+
+        // Validate the rest of the form
+        console.log('[DEBUG] Validating form');
+        if (!this.validateForm()) {
+            console.log('[DEBUG] Form validation failed');
+            this.showToast('Please fix the validation errors', 'error');
+            return;
+        }
+        
+        console.log('[DEBUG] All validations passed, proceeding with submission');
+
+        this.isSubmitting = true;
+        this.showLoadingOverlay('Creating course...');
+
+        try {
+            const formData = this.collectFormData();
+            console.log('[DEBUG] Form data being sent:', formData);
+            console.log('[DEBUG] Modules data:', formData.modules);
+            const response = await fetch('/Unlockyourskills/course-creation', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-Requested-With': 'XMLHttpRequest'
+                },
+                credentials: 'include',
+                body: JSON.stringify(formData)
+            });
+
+            const result = await response.json();
+
+            if (result.success) {
+                this.showToast('Course created successfully!', 'success');
+                setTimeout(() => {
+                    window.location.href = '/Unlockyourskills/course-management';
+                }, 2000);
+            } else {
+                this.showToast(result.message || 'Error creating course', 'error');
+            }
+        } catch (error) {
+            console.error('Error submitting form:', error);
+            this.showToast('An error occurred while creating the course', 'error');
+        } finally {
+            this.isSubmitting = false;
+            this.hideLoadingOverlay();
+        }
     }
 
     renderModuleContent(content, moduleId) {
@@ -653,16 +1077,18 @@ class CourseCreationManager {
         this.showVLRSelectionModal('prerequisites', 'Select Prerequisite Content', null, preselectedIds);
     }
 
-    showAssessmentModal() {
-        this.showVLRSelectionModal('assessments', 'Select Assessments');
-    }
-
-    showFeedbackModal() {
-        this.showVLRSelectionModal('feedback', 'Select Feedback Forms');
-    }
-
-    showSurveyModal() {
-        this.showVLRSelectionModal('surveys', 'Select Surveys');
+    showPostRequisiteModal(contentType) {
+        const typeMap = {
+            'assessment': 'Assessment',
+            'feedback': 'Feedback',
+            'survey': 'Survey',
+            'assignment': 'Assignment'
+        };
+        const title = `Select ${typeMap[contentType]}`;
+        const preselectedIds = this.post_requisites
+            .filter(item => item.content_type === contentType)
+            .map(item => item.content_id);
+        this.showVLRSelectionModal(contentType, title, null, preselectedIds);
     }
 
     showVLRModal(moduleId) {
@@ -673,27 +1099,55 @@ class CourseCreationManager {
     }
 
     showVLRSelectionModal(type, title, moduleId = null, preselectedIds = []) {
-        console.log('[DEBUG] showVLRSelectionModal called with type:', type, 'title:', title, 'moduleId:', moduleId);
-        console.log('[DEBUG] typeof window.vlrContent:', typeof window.vlrContent);
-        console.log('[DEBUG] window.vlrContent:', window.vlrContent);
         if (window.vlrContent && Object.keys(window.vlrContent).length > 0) {
-            console.log('[DEBUG] VLR content found, opening modal.');
             this.showVLRContentModal(title, window.vlrContent, type, moduleId, preselectedIds);
         } else {
-            console.error('[DEBUG] VLR content not available or empty!');
             this.showToast('VLR content not available', 'error');
         }
     }
 
     showVLRContentModal(title, content, type, moduleId = null, preselectedIds = []) {
-        // Group content by type
-        const groupedContent = {};
-        content.forEach(item => {
-            if (!groupedContent[item.type]) {
-                groupedContent[item.type] = [];
+        // Filter VLR types based on course type if adding to module
+        let allowedTypes = null;
+        if (type === 'moduleContent') {
+            const courseTypeSelect = document.getElementById('course_type');
+            const courseType = courseTypeSelect ? courseTypeSelect.value : '';
+            if (courseType === 'e-learning') {
+                allowedTypes = [
+                    'scorm', 'nonscorm', 'external', 'interactive', 'audio', 'video', 'image'
+                ];
+            } else if (courseType === 'blended') {
+                allowedTypes = [
+                    'assignment', 'document', 'video', 'audio', 'interactive'
+                ];
+            } else if (courseType === 'classroom') {
+                allowedTypes = [
+                    'document', 'assignment', 'image', 'external'
+                ];
+            } else if (courseType === 'assessment') {
+                allowedTypes = ['assessment'];
             }
-            groupedContent[item.type].push(item);
-        });
+        }
+
+        // Group content by type if it's an array (for legacy support)
+        let groupedContent = {};
+        if (Array.isArray(content)) {
+            content.forEach(item => {
+                if (!groupedContent[item.type]) groupedContent[item.type] = [];
+                groupedContent[item.type].push(item);
+            });
+        } else if (typeof content === 'object' && content !== null) {
+            groupedContent = content;
+        }
+
+        // If filtering, remove disallowed types
+        if (allowedTypes) {
+            Object.keys(groupedContent).forEach(typeKey => {
+                if (!allowedTypes.includes(typeKey)) {
+                    delete groupedContent[typeKey];
+                }
+            });
+        }
 
         // Fix: Declare isGridView before using it in modal.innerHTML
         let isGridView = localStorage.getItem('vlrViewMode') !== 'list';
@@ -1001,54 +1455,40 @@ class CourseCreationManager {
             }
         });
 
+        const isPostRequisite = type.startsWith('postRequisite_');
+
         const updateSelectedCount = () => {
-            const selectedCheckboxes = modal.querySelectorAll('.vlr-checkbox:checked');
-            const count = selectedCheckboxes.length;
-            
-            selectedCountSpan.textContent = `${count} item${count !== 1 ? 's' : ''} selected`;
-            selectedCountBtn.textContent = count;
-            addSelectedBtn.disabled = count === 0;
+            let count = 0;
+            if (isPostRequisite) {
+                count = modal.querySelectorAll('.vlr-checkbox:checked').length;
+                // Only enable Add button if exactly one is checked
+                addSelectedBtn.disabled = count !== 1;
+                selectedCountSpan.textContent = `${count} item${count !== 1 ? 's' : ''} selected`;
+                selectedCountBtn.textContent = count;
+            } else {
+                const selectedCheckboxes = modal.querySelectorAll('.vlr-checkbox:checked');
+                count = selectedCheckboxes.length;
+                selectedCountSpan.textContent = `${count} item${count !== 1 ? 's' : ''} selected`;
+                selectedCountBtn.textContent = count;
+                addSelectedBtn.disabled = count === 0;
+            }
         };
 
-        // Initialize Select All functionality for each tab
-        const tabPanes = modal.querySelectorAll('.tab-pane');
-        tabPanes.forEach(tabPane => {
-            const selectAllCheckbox = tabPane.querySelector('input.form-check-input[id^="selectAllVLR-"]');
-            if (!selectAllCheckbox) return;
-            
-            // When Select All is clicked
-            selectAllCheckbox.addEventListener('change', function() {
-                // Find all visible VLR content items in this tab
-                const visibleItems = tabPane.querySelectorAll('.vlr-content-item:not([style*="display: none"])');
-                visibleItems.forEach(item => {
-                    const checkbox = item.querySelector('.vlr-checkbox');
-                    if (checkbox && !checkbox.disabled) {
-                        checkbox.checked = selectAllCheckbox.checked;
+        if (isPostRequisite) {
+            // Only allow one selection at a time (radio button behavior)
+            checkboxes.forEach(checkbox => {
+                checkbox.addEventListener('change', () => {
+                    if (checkbox.checked) {
+                        checkboxes.forEach(cb => { if (cb !== checkbox) cb.checked = false; });
                     }
+                    updateSelectedCount();
                 });
-                updateSelectedCount();
             });
-        });
-
-        checkboxes.forEach(checkbox => {
-            checkbox.addEventListener('change', () => {
-                updateSelectedCount();
-                
-                // Update Select All state for the current tab
-                const tabPane = checkbox.closest('.tab-pane');
-                if (tabPane) {
-                    const selectAllCheckbox = tabPane.querySelector('input.form-check-input[id^="selectAllVLR-"]');
-                    if (selectAllCheckbox) {
-                        const visibleItems = tabPane.querySelectorAll('.vlr-content-item:not([style*="display: none"])');
-                        const visibleCheckboxes = Array.from(visibleItems).map(item => item.querySelector('.vlr-checkbox')).filter(cb => cb && !cb.disabled);
-                        const checkedCount = visibleCheckboxes.filter(cb => cb.checked).length;
-                        
-                        selectAllCheckbox.checked = checkedCount === visibleCheckboxes.length && checkedCount > 0;
-                        selectAllCheckbox.indeterminate = checkedCount > 0 && checkedCount < visibleCheckboxes.length;
-                    }
-                }
+        } else {
+            checkboxes.forEach(checkbox => {
+                checkbox.addEventListener('change', updateSelectedCount);
             });
-        });
+        }
 
         addSelectedBtn.addEventListener('click', () => {
             const selectedCheckboxes = modal.querySelectorAll('.vlr-checkbox:checked');
@@ -1083,28 +1523,94 @@ class CourseCreationManager {
     }
 
     addSelectedVLR(type, moduleId, selectedItems) {
+        console.log('[DEBUG] addSelectedVLR', type, selectedItems);
+        if (type.startsWith('postRequisite_')) {
+            // Only one item allowed
+            const realType = type.replace('postRequisite_', '');
+            this.logToFile('Processing postRequisite type:', realType);
+            this.logToFile('Selected items:', selectedItems);
+            
+            // Add to unified post-requisites array instead of separate object
+            if (selectedItems[0]) {
+                const requisite = {
+                    id: selectedItems[0].id,
+                    title: selectedItems[0].title,
+                    description: selectedItems[0].description || '',
+                    content_type: realType,
+                    content_id: selectedItems[0].id,
+                    sort_order: this.post_requisites.length,
+                    is_required: true
+                };
+                
+                this.logToFile('Adding requisite to post_requisites array:', requisite);
+                this.post_requisites.push(requisite);
+                this.logToFile('post_requisites after adding:', this.post_requisites);
+                
+                // Update UI
+                this.renderPostRequisites();
+            }
+            
+            // Update display div
+            const displayDiv = document.getElementById('selectedPost' + this.capitalizeFirstLetter(realType));
+            if (displayDiv) {
+                if (selectedItems[0]) {
+                    displayDiv.innerHTML = `<div class='alert alert-success py-1 px-2 mb-0 d-flex align-items-center justify-content-between'><span><i class='mdi mdi-check-circle me-1'></i> ${selectedItems[0].title}</span> <button type='button' class='btn btn-sm btn-link text-danger p-0 ms-2' onclick='courseManager.clearPostRequisiteSelection("${realType}")'><i class='mdi mdi-close'></i></button></div>`;
+                } else {
+                    displayDiv.innerHTML = '';
+                }
+            }
+            
+            this.renderPostRequisitesSummary();
+            return;
+        }
         switch (type) {
             case 'prerequisites':
-                this.prerequisites = [...selectedItems];
+                // Add sort_order to each prerequisite item
+                const prerequisitesWithOrder = selectedItems.map((item, index) => ({
+                    ...item,
+                    sort_order: index
+                }));
+                this.prerequisites = prerequisitesWithOrder;
+                console.log('[DEBUG] Prerequisites added:', prerequisitesWithOrder);
                 this.renderPrerequisites();
                 break;
-            case 'assessments':
-                this.assessments.push(...selectedItems);
-                this.renderAssessments();
-                break;
+            case 'assessment':
             case 'feedback':
-                this.feedback.push(...selectedItems);
-                this.renderFeedback();
-                break;
-            case 'surveys':
-                this.surveys.push(...selectedItems);
-                this.renderSurveys();
+            case 'survey':
+            case 'assignment':
+                this.logToFile('Adding post-requisites for type: ' + type);
+                this.logToFile('Selected items:', selectedItems);
+                this.logToFile('Current post_requisites before:', this.post_requisites);
+                
+                // Add to unified post-requisites array
+                const postRequisitesWithOrder = selectedItems.map((item, index) => {
+                    const requisite = {
+                        id: item.id, // Keep original id for reference
+                        title: item.title,
+                        description: item.description || '',
+                        content_type: type,
+                        content_id: item.id, // This is what the backend expects
+                        sort_order: this.post_requisites.length + index,
+                        is_required: true
+                    };
+                    this.logToFile('Created requisite object:', requisite);
+                    return requisite;
+                });
+                
+                this.post_requisites.push(...postRequisitesWithOrder);
+                this.logToFile('Post-requisites after adding:', this.post_requisites);
+                this.renderPostRequisites();
                 break;
             case 'moduleContent':
                 if (moduleId) {
                     const module = this.modules.find(m => m.id === moduleId);
                     if (module) {
-                        module.content = [...selectedItems];
+                        // Add sort_order to each content item
+                        const contentWithOrder = selectedItems.map((item, index) => ({
+                            ...item,
+                            sort_order: index
+                        }));
+                        module.content = contentWithOrder;
                         this.renderModules();
                     }
                 }
@@ -1133,54 +1639,33 @@ class CourseCreationManager {
         `).join('');
     }
 
-    renderAssessments() {
-        const container = document.getElementById('assessmentsContainer');
-        if (!container) return;
+    renderPostRequisites() {
+        this.logToFile('renderPostRequisites called');
+        this.logToFile('Current post_requisites:', this.post_requisites);
+        this.logToFile('post_requisites length:', this.post_requisites.length);
+        
+        const container = document.getElementById('postRequisitesContainer');
+        if (!container) {
+            this.logToFile('ERROR: Post-requisites container not found');
+            return;
+        }
 
-        container.innerHTML = this.assessments.map(item => `
-            <div class="vlr-content-item">
-                <div class="vlr-content-info">
-                    <i class="vlr-content-icon fas ${this.getVLRIcon(item.type)}"></i>
-                    <span class="vlr-content-title">${item.title}</span>
-                    <span class="vlr-content-type">${item.type}</span>
+        if (!this.post_requisites.length) {
+            this.logToFile('No post-requisites to render');
+            container.innerHTML = '<span class="text-muted">No post-requisites added yet</span>';
+            return;
+        }
+
+        container.innerHTML = this.post_requisites.map(requisite => `
+            <div class="vlr-content-item d-flex align-items-center justify-content-between p-2 mb-2 border rounded bg-white">
+                <div class="vlr-content-info d-flex align-items-center">
+                    <i class="vlr-content-icon fas ${this.getVLRIcon(requisite.content_type)} me-2 text-primary"></i>
+                    <div>
+                        <div class="vlr-content-title fw-bold">${requisite.title}</div>
+                        <small class="text-muted">${this.capitalizeFirstLetter(requisite.content_type)}</small>
+                    </div>
                 </div>
-                <button type="button" class="vlr-content-remove" onclick="courseManager.removeAssessment(${item.id})">
-                    <i class="fas fa-times"></i>
-                </button>
-            </div>
-        `).join('');
-    }
-
-    renderFeedback() {
-        const container = document.getElementById('feedbackContainer');
-        if (!container) return;
-
-        container.innerHTML = this.feedback.map(item => `
-            <div class="vlr-content-item">
-                <div class="vlr-content-info">
-                    <i class="vlr-content-icon fas ${this.getVLRIcon(item.type)}"></i>
-                    <span class="vlr-content-title">${item.title}</span>
-                    <span class="vlr-content-type">${item.type}</span>
-                </div>
-                <button type="button" class="vlr-content-remove" onclick="courseManager.removeFeedback(${item.id})">
-                    <i class="fas fa-times"></i>
-                </button>
-            </div>
-        `).join('');
-    }
-
-    renderSurveys() {
-        const container = document.getElementById('surveysContainer');
-        if (!container) return;
-
-        container.innerHTML = this.surveys.map(item => `
-            <div class="vlr-content-item">
-                <div class="vlr-content-info">
-                    <i class="vlr-content-icon fas ${this.getVLRIcon(item.type)}"></i>
-                    <span class="vlr-content-title">${item.title}</span>
-                    <span class="vlr-content-type">${item.type}</span>
-                </div>
-                <button type="button" class="vlr-content-remove" onclick="courseManager.removeSurvey(${item.id})">
+                <button type="button" class="btn btn-sm btn-outline-danger" onclick="courseManager.removePostRequisite(${requisite.id})">
                     <i class="fas fa-times"></i>
                 </button>
             </div>
@@ -1193,22 +1678,19 @@ class CourseCreationManager {
         this.showToast('Prerequisite removed', 'success');
     }
 
-    removeAssessment(id) {
-        this.assessments = this.assessments.filter(item => item.id !== id);
-        this.renderAssessments();
-        this.showToast('Assessment removed', 'success');
-    }
-
-    removeFeedback(id) {
-        this.feedback = this.feedback.filter(item => item.id !== id);
-        this.renderFeedback();
-        this.showToast('Feedback form removed', 'success');
-    }
-
-    removeSurvey(id) {
-        this.surveys = this.surveys.filter(item => item.id !== id);
-        this.renderSurveys();
-        this.showToast('Survey removed', 'success');
+    removePostRequisite(id) {
+        this.logToFile('removePostRequisite called with id:', id);
+        this.logToFile('post_requisites before removal:', this.post_requisites);
+        
+        // Convert id to number for comparison since it might be passed as string
+        const numericId = parseInt(id);
+        this.logToFile('numericId:', numericId);
+        
+        this.post_requisites = this.post_requisites.filter(item => item.id !== numericId);
+        this.logToFile('post_requisites after removal:', this.post_requisites);
+        
+        this.renderPostRequisites();
+        this.showToast('Post-requisite removed', 'success');
     }
 
     removeVLRContent(moduleId, contentId) {
@@ -1241,66 +1723,55 @@ class CourseCreationManager {
         });
     }
 
-    async handleFormSubmit(e) {
-        if (e) e.preventDefault();
-
-        if (this.isSubmitting) {
-            this.showToast('Form is already being submitted', 'warning');
-            return;
-        }
-
-        if (!this.validateForm()) {
-            this.showToast('Please fix the validation errors', 'error');
-            return;
-        }
-
-        this.isSubmitting = true;
-        this.showLoadingOverlay('Creating course...');
-
-        try {
-            const formData = this.collectFormData();
-            const response = await fetch('/course-creation', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify(formData)
-            });
-
-            const result = await response.json();
-
-            if (result.success) {
-                this.showToast('Course created successfully!', 'success');
-                setTimeout(() => {
-                    window.location.href = '/course-management';
-                }, 2000);
-            } else {
-                this.showToast(result.message || 'Error creating course', 'error');
-            }
-        } catch (error) {
-            console.error('Error submitting form:', error);
-            this.showToast('An error occurred while creating the course', 'error');
-        } finally {
-            this.isSubmitting = false;
-            this.hideLoadingOverlay();
-        }
-    }
-
     collectFormData() {
         const form = document.getElementById('courseCreationForm');
         const formData = new FormData(form);
         
-        return {
-            courseName: formData.get('courseName'),
-            courseDescription: formData.get('courseDescription'),
-            courseCategory: formData.get('courseCategory'),
-            courseSubcategory: formData.get('courseSubcategory'),
+        const data = {
+            title: formData.get('title'),
+            short_description: formData.get('short_description'),
+            description: formData.get('description'),
+            category_id: formData.get('category_id'),
+            subcategory_id: formData.get('subcategory_id'),
+            course_type: formData.get('course_type'),
+            difficulty_level: formData.get('difficulty_level'),
+            course_status: formData.get('course_status'),
+            module_structure: formData.get('module_structure'),
+            course_points: formData.get('course_points'),
+            course_cost: formData.get('course_cost'),
+            currency: formData.get('currency'),
+            reassign_course: formData.get('reassign_course'),
+            reassign_days: formData.get('reassign_days'),
+            show_in_search: formData.get('show_in_search'),
+            certificate_option: formData.get('certificate_option'),
+            duration_hours: formData.get('duration_hours'),
+            duration_minutes: formData.get('duration_minutes'),
+            is_self_paced: formData.get('is_self_paced'),
+            is_featured: formData.get('is_featured'),
+            is_published: formData.get('is_published'),
+            target_audience: formData.get('target_audience'),
+            learning_objectives: this.learningObjectives,
+            tags: this.tags,
             modules: this.modules,
             prerequisites: this.prerequisites,
-            assessments: this.assessments,
-            feedback: this.feedback,
-            surveys: this.surveys
+            post_requisites: this.post_requisites
         };
+        
+        this.logToFile('Form data collected:', data);
+        console.log('[DEBUG] collectFormData - Learning Objectives:', this.learningObjectives);
+        console.log('[DEBUG] collectFormData - Learning Objectives length:', this.learningObjectives.length);
+        console.log('[DEBUG] collectFormData - Tags:', this.tags);
+        console.log('[DEBUG] collectFormData - Tags length:', this.tags.length);
+        this.logToFile('Learning Objectives:', this.learningObjectives);
+        this.logToFile('Learning Objectives length:', this.learningObjectives.length);
+        this.logToFile('Tags:', this.tags);
+        this.logToFile('Tags length:', this.tags.length);
+        this.logToFile('Post-requisites:', this.post_requisites);
+        this.logToFile('Post-requisites length:', this.post_requisites.length);
+        this.logToFile('Post-requisites type:', typeof this.post_requisites);
+        this.logToFile('Post-requisites in data:', data.post_requisites);
+        
+        return data;
     }
 
     showLoadingOverlay(message = 'Loading...') {
@@ -1323,67 +1794,26 @@ class CourseCreationManager {
     }
 
     showConfirmationModal(title, message, onConfirm, onCancel = null) {
-        const modal = document.createElement('div');
-        modal.className = 'modal fade';
-        modal.innerHTML = `
-            <div class="modal-dialog modal-dialog-centered">
-                <div class="modal-content">
-                    <div class="modal-header bg-warning text-dark">
-                        <h5 class="modal-title">
-                            <i class="fas fa-exclamation-triangle me-2"></i>
-                            ${title}
-                        </h5>
-                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                    </div>
-                    <div class="modal-body">
-                        <p class="mb-0">${message}</p>
-                    </div>
-                    <div class="modal-footer">
-                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
-                            <i class="fas fa-times me-1"></i>
-                            Cancel
-                        </button>
-                        <button type="button" class="btn btn-danger" onclick="courseManager.confirmAction()">
-                            <i class="fas fa-check me-1"></i>
-                            Confirm
-                        </button>
-                    </div>
-                </div>
-            </div>
-        `;
-
-        document.body.appendChild(modal);
+        console.log('[DEBUG] showConfirmationModal called');
+        console.log('[DEBUG] window.confirmationModalInstance:', window.confirmationModalInstance);
         
-        const modalInstance = new bootstrap.Modal(modal);
-        modalInstance.show();
-
-        // Store the confirmation callback
-        this.pendingConfirmation = onConfirm;
-        this.pendingCancel = onCancel;
-
-        // Clean up modal after hiding
-        modal.addEventListener('hidden.bs.modal', () => {
-            document.body.removeChild(modal);
-            this.pendingConfirmation = null;
-            this.pendingCancel = null;
-        });
-
-        // Handle cancel button
-        modal.querySelector('.btn-secondary').addEventListener('click', () => {
-            if (this.pendingCancel) {
-                this.pendingCancel();
+        // Use the global confirmation modal if available
+        if (window.confirmationModalInstance && typeof window.confirmationModalInstance.show === 'function') {
+            console.log('[DEBUG] Using global confirmation modal');
+            window.confirmationModalInstance.show({
+                title: title,
+                message: message,
+                onConfirm: onConfirm,
+                onCancel: onCancel
+            });
+        } else {
+            console.log('[DEBUG] Using fallback confirmation');
+            // Fallback to simple confirmation
+            if (confirm(message)) {
+                if (onConfirm) onConfirm();
+            } else {
+                if (onCancel) onCancel();
             }
-        });
-    }
-
-    confirmAction() {
-        if (this.pendingConfirmation) {
-            this.pendingConfirmation();
-        }
-        
-        const modal = bootstrap.Modal.getInstance(document.querySelector('.modal'));
-        if (modal) {
-            modal.hide();
         }
     }
 
@@ -1532,6 +1962,10 @@ class CourseCreationManager {
     moveModuleUp(index) {
         if (index > 0) {
             [this.modules[index - 1], this.modules[index]] = [this.modules[index], this.modules[index - 1]];
+            // Update sort_order for all modules
+            this.modules.forEach((module, idx) => {
+                module.sort_order = idx;
+            });
             this.renderModules();
         }
     }
@@ -1539,6 +1973,10 @@ class CourseCreationManager {
     moveModuleDown(index) {
         if (index < this.modules.length - 1) {
             [this.modules[index], this.modules[index + 1]] = [this.modules[index + 1], this.modules[index]];
+            // Update sort_order for all modules
+            this.modules.forEach((module, idx) => {
+                module.sort_order = idx;
+            });
             this.renderModules();
         }
     }
@@ -1548,6 +1986,10 @@ class CourseCreationManager {
         const module = this.modules.find(m => m.id === moduleId);
         if (!module || idx === 0) return;
         [module.content[idx - 1], module.content[idx]] = [module.content[idx], module.content[idx - 1]];
+        // Update sort_order for all content items
+        module.content.forEach((content, contentIdx) => {
+            content.sort_order = contentIdx;
+        });
         this.renderModules();
     }
 
@@ -1556,9 +1998,250 @@ class CourseCreationManager {
         const module = this.modules.find(m => m.id === moduleId);
         if (!module || idx === module.content.length - 1) return;
         [module.content[idx + 1], module.content[idx]] = [module.content[idx], module.content[idx + 1]];
+        // Update sort_order for all content items
+        module.content.forEach((content, contentIdx) => {
+            content.sort_order = contentIdx;
+        });
         this.renderModules();
+    }
+
+    showPostRequisiteVLRModal(type) {
+        let preselectedId = null;
+        if (this.postRequisites && this.postRequisites[type]) {
+            preselectedId = this.postRequisites[type].id;
+        }
+        let vlrContentForType = [];
+        if (Array.isArray(window.vlrContent)) {
+            // Flat array: filter by type
+            let filterType = type;
+            if (type === 'assignment') filterType = 'assignment';
+            if (type === 'survey') filterType = 'survey';
+            vlrContentForType = window.vlrContent.filter(item => item.type === filterType);
+        } else {
+            // Object: use correct key
+            let vlrKey = type;
+            if (type === 'assignment') vlrKey = 'assignments';
+            if (type === 'survey') vlrKey = 'surveys';
+            vlrContentForType = (window.vlrContent && window.vlrContent[vlrKey]) ? window.vlrContent[vlrKey] : [];
+        }
+        console.log('Post requisite VLR content for', type, vlrContentForType);
+        this.showSingleTypeVLRModal('postRequisite_' + type, 'Select ' + this.getVLRTypeDisplayName(type), vlrContentForType, preselectedId ? [{id: preselectedId, type}] : [], type);
+    }
+
+    // Dedicated modal for single-type VLR content (post requisite)
+    showSingleTypeVLRModal(type, title, contentArray, preselectedIds = [], filterType = null) {
+        // Group as an object for modal rendering
+        const groupedContent = {};
+        groupedContent[filterType] = Array.isArray(contentArray) ? contentArray : [];
+        // Pass 'postRequisite_' + filterType as the type to ensure correct handling in addSelectedVLR
+        this.showVLRContentModal(title, groupedContent, 'postRequisite_' + filterType, null, preselectedIds);
+    }
+
+    clearPostRequisiteSelection(type) {
+        this.logToFile('clearPostRequisiteSelection called for type:', type);
+        this.logToFile('post_requisites before removal:', this.post_requisites);
+        
+        // Remove items with this content_type from the array
+        this.post_requisites = this.post_requisites.filter(item => item.content_type !== type);
+        
+        this.logToFile('post_requisites after removal:', this.post_requisites);
+        
+        // Update display div
+        const displayDiv = document.getElementById('selectedPost' + this.capitalizeFirstLetter(type));
+        if (displayDiv) displayDiv.innerHTML = '';
+        
+        // Update UI
+        this.renderPostRequisites();
+        this.renderPostRequisitesSummary();
+    }
+
+    capitalizeFirstLetter(str) {
+        return str.charAt(0).toUpperCase() + str.slice(1);
+    }
+
+    renderPostRequisitesSummary() {
+        const container = document.getElementById('postRequisitesSummary');
+        if (!container) return;
+        
+        this.logToFile('renderPostRequisitesSummary called');
+        this.logToFile('post_requisites array:', this.post_requisites);
+        
+        if (!this.post_requisites || this.post_requisites.length === 0) {
+            container.innerHTML = '<span class="text-muted">No post requisites added yet</span>';
+            return;
+        }
+        
+        const types = [
+            { key: 'assessment', label: 'Assessment', icon: 'mdi mdi-clipboard-check' },
+            { key: 'feedback', label: 'Feedback', icon: 'mdi mdi-comment-multiple' },
+            { key: 'survey', label: 'Survey', icon: 'mdi mdi-clipboard-text-multiple' },
+            { key: 'assignment', label: 'Assignment', icon: 'mdi mdi-file-document-edit' }
+        ];
+        
+        let cards = types.map(t => {
+            const items = this.post_requisites.filter(item => item.content_type === t.key);
+            if (items.length === 0) return '';
+            
+            return items.map(item => `
+                <div class="prerequisite-chip card px-2 py-1 d-flex flex-row align-items-center mb-2" style="border-radius:1.2em; background:#f8f9fa; border:1px solid #e0e0e0;">
+                    <i class="${t.icon} me-2 text-secondary"></i>
+                    <span class="prerequisite-title flex-grow-1" title="${item.title}">${item.title}</span>
+                    <span class="badge bg-light text-dark ms-2" title="${t.label}">${t.label}</span>
+                    <button type="button" class="btn btn-sm btn-outline-danger ms-2 flex-shrink-0" title="Remove" onclick="courseManager.removePostRequisite(${item.id})">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+            `).join('');
+        }).join('');
+        
+        container.innerHTML = cards || '<span class="text-muted">No post requisites added yet</span>';
+        this.logToFile('renderPostRequisitesSummary completed');
+    }
+
+    setupImagePreviewHandlers() {
+        // This will work for both main and modal forms since IDs are reused
+        const thumbnailInputs = document.querySelectorAll('#thumbnail');
+        const thumbnailPreviews = document.querySelectorAll('#thumbnailPreviewContainer');
+        thumbnailInputs.forEach((thumbnailInput, idx) => {
+            const thumbnailPreview = thumbnailPreviews[idx];
+            if (thumbnailInput && thumbnailPreview) {
+                thumbnailInput.addEventListener('change', function() {
+                    if (this.files && this.files[0]) {
+                        showImagePreview(this.files[0], thumbnailPreview, () => {
+                            thumbnailInput.value = '';
+                            thumbnailPreview.innerHTML = '';
+                        });
+                    } else {
+                        thumbnailPreview.innerHTML = '';
+                    }
+                });
+            }
+        });
+        const bannerInputs = document.querySelectorAll('#banner');
+        const bannerPreviews = document.querySelectorAll('#bannerPreviewContainer');
+        bannerInputs.forEach((bannerInput, idx) => {
+            const bannerPreview = bannerPreviews[idx];
+            if (bannerInput && bannerPreview) {
+                bannerInput.addEventListener('change', function() {
+                    if (this.files && this.files[0]) {
+                        showImagePreview(this.files[0], bannerPreview, () => {
+                            bannerInput.value = '';
+                            bannerPreview.innerHTML = '';
+                        });
+                    } else {
+                        bannerPreview.innerHTML = '';
+                    }
+                });
+            }
+        });
+        // Helper function for preview
+        function showImagePreview(file, container, removeCallback) {
+            const fileName = file.name;
+            const fileExtension = fileName.split('.').pop().toLowerCase();
+            let previewHTML = '';
+            if (["jpg","jpeg","png","gif","webp","bmp","svg"].includes(fileExtension)) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    previewHTML = `
+                        <div class="preview-wrapper" style="position: relative; display: inline-block; margin-top: 10px;">
+                            <img src="${e.target.result}" alt="Preview" style="max-width: 150px; max-height: 100px; object-fit: cover; border: 1px solid #ddd; border-radius: 5px;">
+                            <button type="button" class="remove-preview" style="position: absolute; top: -5px; right: -5px; background: #dc3545; color: white; border: none; border-radius: 50%; width: 20px; height: 20px; font-size: 12px; cursor: pointer;" tabindex="0">×</button>
+                        </div>
+                        <p style="margin-top: 5px; font-size: 12px; color: #6c757d;">New file: ${fileName} (${(file.size / 1024 / 1024).toFixed(2)} MB)</p>
+                    `;
+                    container.innerHTML = previewHTML;
+                    const removeBtn = container.querySelector('.remove-preview');
+                    if (removeBtn) {
+                        removeBtn.addEventListener('click', removeCallback);
+                    }
+                };
+                reader.readAsDataURL(file);
+            } else {
+                previewHTML = `
+                    <div class="preview-wrapper" style="position: relative; display: inline-block; margin-top: 10px;">
+                        <div style="padding: 10px; border: 1px solid #ddd; border-radius: 5px; background: #e8f5e8;">
+                            <i class="fas fa-file-image" style="font-size: 24px; color: #6a0dad;"></i>
+                            <button type="button" class="remove-preview" style="position: absolute; top: -5px; right: -5px; background: #dc3545; color: white; border: none; border-radius: 50%; width: 20px; height: 20px; font-size: 12px; cursor: pointer;" tabindex="0">×</button>
+                        </div>
+                        <p style="margin-top: 5px; font-size: 12px; color: #6c757d;">New file: ${fileName} (${(file.size / 1024 / 1024).toFixed(2)} MB)</p>
+                    </div>
+                `;
+                container.innerHTML = previewHTML;
+                const removeBtn = container.querySelector('.remove-preview');
+                if (removeBtn) {
+                    removeBtn.addEventListener('click', removeCallback);
+                }
+            }
+        }
+    }
+
+    checkAndClearTabErrorForField(field) {
+        if (!field || !field.form || field.form.id !== 'courseCreationForm') return;
+        // Determine which tab this field belongs to
+        const tabMap = {
+            0: ['title', 'category_id', 'subcategory_id', 'course_type', 'difficulty_level'],
+            1: [], // Modules handled by module logic
+            2: [], // Prerequisites handled by prerequisite logic
+        };
+        // Check basic info tab
+        if (tabMap[0].includes(field.name)) {
+            const allValid = tabMap[0].every(name => {
+                const f = document.querySelector(`[name="${name}"]`);
+                return f && this.validateField(f);
+            });
+            if (allValid) this.clearTabError(0);
+        }
+        // You can add similar logic for modules/prerequisites if needed
+    }
+
+    // Add debugging function to log to file
+    logToFile(message, data = null) {
+        const logData = {
+            timestamp: new Date().toISOString(),
+            message: message,
+            data: data
+        };
+        
+        // Send to a simple logging endpoint
+        fetch('/Unlockyourskills/debug-log', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(logData)
+        }).catch(err => console.error('Logging failed:', err));
+        
+        // Also log to console
+        console.log('[DEBUG]', message, data);
     }
 }
 
 // Export for global access
-window.CourseCreationManager = CourseCreationManager; 
+window.CourseCreationManager = CourseCreationManager;
+
+document.addEventListener('DOMContentLoaded', function() {
+    // Wait for courseManager to be available
+    setTimeout(function() {
+        if (window.courseManager && typeof window.courseManager.renderPostRequisitesSummary === 'function') {
+            window.courseManager.renderPostRequisitesSummary();
+        }
+    }, 200);
+
+    // Listen for all tab switches
+    const tabList = document.querySelectorAll('#courseCreationTabs .nav-link');
+    tabList.forEach(tab => {
+        tab.addEventListener('shown.bs.tab', function (e) {
+            if (window.courseManager && typeof window.courseManager.renderPostRequisitesSummary === 'function') {
+                window.courseManager.renderPostRequisitesSummary();
+            }
+        });
+    });
+
+    document.addEventListener('hidden.bs.modal', function (e) {
+        if (e.target && e.target.id === 'vlrSelectionModal') {
+            if (window.courseManager && typeof window.courseManager.renderPostRequisitesSummary === 'function') {
+                window.courseManager.renderPostRequisitesSummary();
+            }
+        }
+    });
+}); 

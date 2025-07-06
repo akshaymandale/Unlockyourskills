@@ -25,6 +25,22 @@
         <div class="login-right">
             <h2 class="login-title">Unlock Your Skills</h2>
 
+            <!-- Session Timeout Message -->
+            <?php if (isset($timeoutMessage) && !empty($timeoutMessage)): ?>
+            <div class="timeout-message" role="alert">
+                <div class="timeout-icon">
+                    <i class="fas fa-clock"></i>
+                </div>
+                <div class="timeout-content">
+                    <h4>Session Expired</h4>
+                    <p><?= htmlspecialchars($timeoutMessage) ?></p>
+                </div>
+                <button type="button" class="timeout-close" onclick="this.parentElement.style.display='none'">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <?php endif; ?>
+
             <!-- Login Form -->
             <form id="loginForm" method="POST" action="/Unlockyourskills/login">
             <script>

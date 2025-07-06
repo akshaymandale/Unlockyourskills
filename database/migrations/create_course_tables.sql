@@ -152,10 +152,8 @@ CREATE TABLE IF NOT EXISTS course_module_content (
 CREATE TABLE IF NOT EXISTS course_prerequisites (
     id INT PRIMARY KEY AUTO_INCREMENT,
     course_id INT NOT NULL,
-    prerequisite_type ENUM('course', 'assessment', 'skill', 'certification') NOT NULL,
-    prerequisite_id INT NOT NULL, -- ID of prerequisite course, assessment, etc.
-    prerequisite_course_id INT NULL, -- For course prerequisites
-    minimum_score INT DEFAULT 70, -- For assessment prerequisites
+    prerequisite_type ENUM('course', 'assessment', 'survey', 'feedback', 'scorm', 'video', 'audio', 'document', 'interactive', 'assignment', 'external', 'image', 'skill', 'certification') NOT NULL,
+    prerequisite_id INT NOT NULL, -- ID of prerequisite (references different tables based on prerequisite_type)
     prerequisite_name VARCHAR(255), -- Display name
     prerequisite_description TEXT,
     sort_order INT DEFAULT 0,
@@ -165,7 +163,6 @@ CREATE TABLE IF NOT EXISTS course_prerequisites (
     created_by INT,
     updated_by INT,
     FOREIGN KEY (course_id) REFERENCES courses(id) ON DELETE CASCADE,
-    FOREIGN KEY (prerequisite_course_id) REFERENCES courses(id) ON DELETE CASCADE,
     INDEX idx_course_order (course_id, sort_order),
     INDEX idx_prerequisite_type (prerequisite_type),
     INDEX idx_prerequisite_id (prerequisite_id),

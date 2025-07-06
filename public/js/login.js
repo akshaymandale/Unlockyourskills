@@ -86,9 +86,7 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // Form submission
     loginForm.addEventListener('submit', function(e) {
-        alert('Login form submitted!');
         e.preventDefault();
-        console.log('About to send fetch request');
         
         if (!validateForm()) {
             return;
@@ -106,12 +104,8 @@ document.addEventListener('DOMContentLoaded', function() {
                 'X-Requested-With': 'XMLHttpRequest'
             }
         })
-        .then(response => {
-            console.log('Fetch response received');
-            return response.json();
-        })
+        .then(response => response.json())
         .then(data => {
-            console.log('Fetch response data:', data);
             setLoading(false);
             
             if (data.success) {
@@ -126,7 +120,6 @@ document.addEventListener('DOMContentLoaded', function() {
         })
         .catch(error => {
             setLoading(false);
-            console.error('Login error:', error);
             showGeneralError('An error occurred during login. Please try again.');
         });
     });
@@ -170,3 +163,4 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
 });
+
