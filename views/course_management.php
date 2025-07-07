@@ -404,11 +404,19 @@ document.addEventListener('DOMContentLoaded', function() {
                 } else {
                     console.error('[DEBUG] vlrContentData div not found in modal!');
                 }
+                
+                        // Initialize course creation functionality after modal content is loaded
+        console.log('[DEBUG] About to initialize course creation functionality');
+        if (typeof initializeCourseCreation === 'function') {
+            console.log('[DEBUG] initializeCourseCreation function found, calling it');
+            initializeCourseCreation();
+            console.log('[DEBUG] initializeCourseCreation completed');
+        } else {
+            console.error('[DEBUG] initializeCourseCreation function not found!');
+        }
+                
                 const modal = new bootstrap.Modal(document.getElementById('addCourseModal'));
                 modal.show();
-                if (window.CourseCreationManager) {
-                    window.courseManager = new window.CourseCreationManager();
-                }
             })
             .catch(error => {
                 console.error('[DEBUG] Fetch error:', error);
@@ -740,8 +748,9 @@ function updateSearchResultsInfo(total, filtered) {
 }
 
 function editCourse(courseId) {
+    console.log('[DEBUG] editCourse() called with courseId:', courseId);
     // Load edit course modal content
-    fetch(`index.php?controller=CourseController&action=editCourse&id=${courseId}`, {
+    fetch(`index.php?controller=CourseCreationController&action=editCourse&id=${courseId}`, {
         method: 'GET',
         headers: {
             'Content-Type': 'application/json',
@@ -749,9 +758,43 @@ function editCourse(courseId) {
     })
     .then(response => response.text())
     .then(html => {
+        console.log('[DEBUG] Modal content loaded, setting innerHTML');
         document.getElementById('editCourseModalContent').innerHTML = html;
+        
+        // Extract and set VLR content from the loaded modal content
+        console.log('[DEBUG] Extracting VLR content from modal');
+        const vlrContentElement = document.getElementById('vlrContentData');
+        if (vlrContentElement) {
+            try {
+                const vlrContentData = vlrContentElement.getAttribute('data-vlr-content');
+                console.log('[DEBUG] VLR content data attribute found:', vlrContentData);
+                window.vlrContent = JSON.parse(vlrContentData);
+                console.log('[DEBUG] window.vlrContent set from edit modal:', window.vlrContent);
+            } catch (e) {
+                console.error('[DEBUG] Error parsing VLR content from edit modal:', e);
+                window.vlrContent = [];
+            }
+        } else {
+            console.error('[DEBUG] VLR content element not found in edit modal');
+            window.vlrContent = [];
+        }
+        
+        console.log('[DEBUG] About to show modal');
         const modal = new bootstrap.Modal(document.getElementById('editCourseModal'));
         modal.show();
+        
+        // Initialize course creation functionality AFTER modal content is loaded
+        console.log('[DEBUG] About to initialize course creation functionality');
+        if (typeof initializeCourseCreation === 'function') {
+            console.log('[DEBUG] initializeCourseCreation function found, calling it');
+            // Add a small delay to ensure form fields are populated
+            setTimeout(() => {
+                initializeCourseCreation();
+                console.log('[DEBUG] initializeCourseCreation completed');
+            }, 100);
+        } else {
+            console.error('[ERROR] initializeCourseCreation function not found!');
+        }
     })
     .catch(error => {
         console.error('Error loading edit form:', error);
@@ -816,7 +859,7 @@ function deleteCourse(courseId, courseName) {
 }
 
 function performDeleteCourse(courseId) {
-    fetch(`index.php?controller=CourseController&action=deleteCourse`, {
+    fetch(`index.php?controller=CourseCreationController&action=deleteCourse`, {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
@@ -880,6 +923,7 @@ function attachAddCourseFormHandler() {
 </script>
 
 <?php include 'views/includes/footer.php'; ?>
+<script src="/Unlockyourskills/public/js/course_creation_validation.js"></script>
 <script src="/Unlockyourskills/public/js/course_creation.js"></script>
 </body>
 </html> 

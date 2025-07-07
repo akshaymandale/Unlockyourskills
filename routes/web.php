@@ -425,6 +425,8 @@ Router::middleware(['Auth'])->group(function() {
     Router::post('/api/courses/{id}/unpublish', 'CourseCreationController@unpublishCourse');
     Router::delete('/api/courses/{id}', 'CourseCreationController@deleteCourse');
     Router::get('/course-edit/{id}', 'CourseCreationController@editCourse');
+    Router::post('/course-edit/{id}', 'CourseCreationController@updateCourse');
+    Router::put('/course-edit/{id}', 'CourseCreationController@updateCourse');
     Router::get('/course-preview/{id}', 'CourseCreationController@previewCourse');
     Router::get('/course-analytics/{id}', 'CourseCreationController@courseAnalytics');
 

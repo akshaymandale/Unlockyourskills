@@ -23,7 +23,7 @@ class CourseModel
             $this->conn->beginTransaction();
 
             // Server-side validation for required fields
-            if (empty($data['title'])) {
+            if (empty($data['name'])) {
                 return ['success' => false, 'message' => 'Course title is required.'];
             }
             if (empty($data['category_id'])) {
@@ -62,7 +62,7 @@ class CourseModel
             // Prepare course data - using all available fields from the database
             $courseData = [
                 'client_id' => $clientId,
-                'name' => trim($data['title']), // Database column is 'name', not 'title'
+                'name' => trim($data['name']), // Database column is 'name'
                 'description' => trim($data['description'] ?? ''),
                 'short_description' => trim($data['short_description'] ?? ''),
                 'category_id' => $data['category_id'],
@@ -745,8 +745,17 @@ class CourseModel
         try {
             $this->conn->beginTransaction();
 
+            // Map course_type to database enum values (same as createCourse)
+            $courseTypeMap = [
+                'e-learning' => 'self_paced',
+                'blended' => 'hybrid',
+                'classroom' => 'instructor_led',
+                'assessment' => 'self_paced'
+            ];
+            $mappedCourseType = $courseTypeMap[$data['course_type']] ?? 'self_paced';
+
             $sql = "UPDATE courses SET
-                title = :title, description = :description, short_description = :short_description,
+                name = :name, description = :description, short_description = :short_description,
                 category_id = :category_id, subcategory_id = :subcategory_id, course_type = :course_type,
                 difficulty_level = :difficulty_level, course_status = :course_status, module_structure = :module_structure,
                 course_points = :course_points, course_cost = :course_cost, currency = :currency,
@@ -758,12 +767,12 @@ class CourseModel
                 WHERE id = :id AND (client_id = :client_id OR :client_id IS NULL)";
 
             $params = [
-                ':title' => $data['title'],
+                ':name' => $data['name'],
                 ':description' => $data['description'],
                 ':short_description' => $data['short_description'],
                 ':category_id' => $data['category_id'],
                 ':subcategory_id' => $data['subcategory_id'],
-                ':course_type' => $data['course_type'],
+                ':course_type' => $mappedCourseType,
                 ':difficulty_level' => $data['difficulty_level'],
                 ':course_status' => $data['course_status'] ?? 'active',
                 ':module_structure' => $data['module_structure'] ?? 'sequential',
@@ -774,7 +783,7 @@ class CourseModel
                 ':reassign_days' => ($data['reassign_course'] === 'yes') ? intval($data['reassign_days'] ?? 0) : null,
                 ':show_in_search' => $data['show_in_search'] ?? 'no',
                 ':certificate_option' => !empty($data['certificate_option']) ? $data['certificate_option'] : null,
-                ':duration_hours' => floatval($data['duration_hours'] ?? 0),
+                ':duration_hours' => intval($data['duration_hours'] ?? 0),
                 ':duration_minutes' => intval($data['duration_minutes'] ?? 0),
                 ':is_self_paced' => isset($data['is_self_paced']) ? 1 : 0,
                 ':is_featured' => isset($data['is_featured']) ? 1 : 0,
