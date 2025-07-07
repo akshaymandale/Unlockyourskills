@@ -782,6 +782,23 @@ function renderModules() {
         return;
     }
     
+    // Remove error highlight if modules exist
+    const modulesTabButton = document.querySelector('#courseCreationTabs button[data-bs-target="#modules"]');
+    if (courseManagerState.modules.length > 0) {
+        if (container) {
+            container.style.border = '';
+            container.style.borderRadius = '';
+            container.style.boxShadow = '';
+        }
+        if (modulesTabButton) {
+            modulesTabButton.classList.remove('tab-error');
+            modulesTabButton.style.borderColor = '';
+            modulesTabButton.style.borderWidth = '';
+            modulesTabButton.style.borderStyle = '';
+            modulesTabButton.style.color = '';
+        }
+    }
+    
     if (courseManagerState.modules.length === 0) {
         container.innerHTML = `
             <div class="text-center py-4">
