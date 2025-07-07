@@ -149,6 +149,46 @@
                 isFormValid = false;
             }
         });
+
+        // Require at least one module
+        const modulesContainer = document.getElementById('modulesContainer');
+        const modulesTabButton = document.querySelector('#courseCreationTabs button[data-bs-target="#modules"]');
+        if (!window.courseManagerState || !Array.isArray(window.courseManagerState.modules) || window.courseManagerState.modules.length === 0) {
+            isFormValid = false;
+            if (typeof showToast === 'function') {
+                showToast('error', 'At least one module is required.');
+            } else {
+                alert('At least one module is required.');
+            }
+            // Highlight modules tab
+            if (modulesTabButton) {
+                modulesTabButton.classList.add('tab-error');
+                modulesTabButton.style.borderColor = '#dc3545';
+                modulesTabButton.style.borderWidth = '2px';
+                modulesTabButton.style.borderStyle = 'solid';
+                modulesTabButton.style.color = '#dc3545';
+            }
+            // Highlight modules container
+            if (modulesContainer) {
+                modulesContainer.style.border = '2px solid #dc3545';
+                modulesContainer.style.borderRadius = '8px';
+                modulesContainer.style.boxShadow = '0 0 0 2px #dc354533';
+            }
+        } else {
+            // Remove highlight if valid
+            if (modulesTabButton) {
+                modulesTabButton.classList.remove('tab-error');
+                modulesTabButton.style.borderColor = '';
+                modulesTabButton.style.borderWidth = '';
+                modulesTabButton.style.borderStyle = '';
+                modulesTabButton.style.color = '';
+            }
+            if (modulesContainer) {
+                modulesContainer.style.border = '';
+                modulesContainer.style.borderRadius = '';
+                modulesContainer.style.boxShadow = '';
+            }
+        }
         
         // Highlight tabs with errors
         updateCourseCreationTabHighlighting();
@@ -176,15 +216,20 @@
         Object.keys(tabMappings).forEach(tabId => {
             const tabButton = document.querySelector(`#courseCreationTabs button[data-bs-target="#${tabId}"]`);
             if (!tabButton) return;
-            
             let hasErrors = false;
-            tabMappings[tabId].forEach(selector => {
-                const field = document.querySelector(selector);
-                if (field && field.classList.contains('is-invalid')) {
+            if (tabId === 'modules') {
+                // Special: highlight if no modules
+                if (!window.courseManagerState || !Array.isArray(window.courseManagerState.modules) || window.courseManagerState.modules.length === 0) {
                     hasErrors = true;
                 }
-            });
-            
+            } else {
+                tabMappings[tabId].forEach(selector => {
+                    const field = document.querySelector(selector);
+                    if (field && field.classList.contains('is-invalid')) {
+                        hasErrors = true;
+                    }
+                });
+            }
             if (hasErrors) {
                 tabButton.classList.add('tab-error');
                 tabButton.style.borderColor = '#dc3545';
