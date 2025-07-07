@@ -1,7 +1,13 @@
 <?php
 // Full-featured course creation form for modal (no header/footer)
 ?>
-<form id="courseCreationForm" method="POST" action="/Unlockyourskills/course-creation" enctype="multipart/form-data">
+<form id="courseCreationForm" method="POST" enctype="multipart/form-data" <?= isset($isEditMode) && $isEditMode ? 'data-edit-mode="true"' : '' ?>>
+    <!-- Hidden fields for existing data in edit mode -->
+    <?php if (isset($isEditMode) && $isEditMode): ?>
+        <input type="hidden" id="existing_modules" value="<?= htmlspecialchars(json_encode($modules ?? [])) ?>">
+        <input type="hidden" id="existing_prerequisites" value="<?= htmlspecialchars(json_encode($prerequisites ?? [])) ?>">
+        <input type="hidden" id="existing_post_requisites" value="<?= htmlspecialchars(json_encode($postRequisites ?? [])) ?>">
+    <?php endif; ?>
     <!-- Navigation Tabs -->
     <ul class="nav nav-tabs nav-bordered" id="courseCreationTabs" role="tablist">
         <li class="nav-item" role="presentation">
@@ -49,17 +55,17 @@
                         <div class="row">
                             <div class="col-md-8">
                                 <div class="mb-3">
-                                    <label for="course_title" class="form-label"><?= Localization::translate('course_creation.course_title') ?> <span class="text-danger">*</span></label>
-                                    <input type="text" class="form-control" id="course_title" name="title" placeholder="<?= Localization::translate('course_creation.course_title_placeholder') ?>">
+                                    <label for="course_name" class="form-label"><?= Localization::translate('course_creation.course_title') ?> <span class="text-danger">*</span></label>
+                                    <input type="text" class="form-control" id="course_name" name="name" placeholder="<?= Localization::translate('course_creation.course_title_placeholder') ?>" value="<?= isset($isEditMode) && $isEditMode && isset($editCourseData['name']) ? htmlspecialchars($editCourseData['name']) : '' ?>">
                                 </div>
                                 <div class="mb-3">
                                     <label for="short_description" class="form-label"><?= Localization::translate('course_creation.short_description') ?></label>
-                                    <textarea class="form-control" id="short_description" name="short_description" rows="2" placeholder="<?= Localization::translate('course_creation.short_description_placeholder') ?>"></textarea>
+                                    <textarea class="form-control" id="short_description" name="short_description" rows="2" placeholder="<?= Localization::translate('course_creation.short_description_placeholder') ?>"><?php if(isset($isEditMode) && $isEditMode && isset($editCourseData['short_description'])) echo htmlspecialchars($editCourseData['short_description']); ?></textarea>
                                     <div class="form-text"><?= Localization::translate('course_creation.short_description_placeholder') ?></div>
                                 </div>
                                 <div class="mb-3">
                                     <label for="description" class="form-label"><?= Localization::translate('course_creation.description') ?></label>
-                                    <textarea class="form-control" id="description" name="description" rows="4" placeholder="<?= Localization::translate('course_creation.description_placeholder') ?>"></textarea>
+                                    <textarea class="form-control" id="description" name="description" rows="4" placeholder="<?= Localization::translate('course_creation.description_placeholder') ?>"><?php if(isset($isEditMode) && $isEditMode && isset($editCourseData['description'])) echo htmlspecialchars($editCourseData['description']); ?></textarea>
                                 </div>
                             </div>
                             <div class="col-md-4">
@@ -68,7 +74,7 @@
                                     <select class="form-select" id="category_id" name="category_id">
                                         <option value=""><?= Localization::translate('course_creation.select_category') ?></option>
                                         <?php foreach ($categories as $category): ?>
-                                            <option value="<?= $category['id'] ?>"><?= htmlspecialchars($category['name']) ?></option>
+                                            <option value="<?= $category['id'] ?>" <?= (isset($isEditMode) && $isEditMode && isset($editCourseData['category_id']) && $editCourseData['category_id'] == $category['id']) ? 'selected' : '' ?>><?= htmlspecialchars($category['name']) ?></option>
                                         <?php endforeach; ?>
                                     </select>
                                 </div>
@@ -76,33 +82,48 @@
                                     <label for="subcategory_id" class="form-label"><?= Localization::translate('course_creation.subcategory') ?> <span class="text-danger">*</span></label>
                                     <select class="form-select" id="subcategory_id" name="subcategory_id">
                                         <option value=""><?= Localization::translate('course_creation.select_subcategory') ?></option>
+                                        <?php if(isset($isEditMode) && $isEditMode && isset($subcategories) && is_array($subcategories)): ?>
+                                            <?php foreach ($subcategories as $subcategory): ?>
+                                                <option value="<?= $subcategory['id'] ?>" <?= (isset($editCourseData['subcategory_id']) && $editCourseData['subcategory_id'] == $subcategory['id']) ? 'selected' : '' ?>><?= htmlspecialchars($subcategory['name']) ?></option>
+                                            <?php endforeach; ?>
+                                        <?php endif; ?>
                                     </select>
                                 </div>
                                 <div class="mb-3">
                                     <label for="course_type" class="form-label"><?= Localization::translate('course_creation.course_type') ?> <span class="text-danger">*</span></label>
                                     <select class="form-select" id="course_type" name="course_type">
                                         <option value=""><?= Localization::translate('course_creation.select_category') ?></option>
-                                        <option value="e-learning"><?= Localization::translate('course_creation.e_learning') ?></option>
-                                        <option value="classroom"><?= Localization::translate('course_creation.classroom') ?></option>
-                                        <option value="blended"><?= Localization::translate('course_creation.blended') ?></option>
-                                        <option value="assessment"><?= Localization::translate('course_creation.assessment') ?></option>
+                                        <?php 
+                                        // Map database values back to frontend values for display
+                                        $courseTypeDisplayMap = [
+                                            'self_paced' => 'e-learning',
+                                            'instructor_led' => 'classroom', 
+                                            'hybrid' => 'blended'
+                                        ];
+                                        $displayCourseType = isset($isEditMode) && $isEditMode && isset($editCourseData['course_type']) ? 
+                                            ($courseTypeDisplayMap[$editCourseData['course_type']] ?? 'e-learning') : '';
+                                        ?>
+                                        <option value="e-learning" <?= ($displayCourseType == 'e-learning') ? 'selected' : '' ?>><?= Localization::translate('course_creation.e_learning') ?></option>
+                                        <option value="classroom" <?= ($displayCourseType == 'classroom') ? 'selected' : '' ?>><?= Localization::translate('course_creation.classroom') ?></option>
+                                        <option value="blended" <?= ($displayCourseType == 'blended') ? 'selected' : '' ?>><?= Localization::translate('course_creation.blended') ?></option>
+                                        <option value="assessment" <?= ($displayCourseType == 'assessment') ? 'selected' : '' ?>><?= Localization::translate('course_creation.assessment') ?></option>
                                     </select>
                                 </div>
                                 <div class="mb-3">
                                     <label for="difficulty_level" class="form-label"><?= Localization::translate('course_creation.difficulty_level') ?> <span class="text-danger">*</span></label>
                                     <select class="form-select" id="difficulty_level" name="difficulty_level">
                                         <option value=""><?= Localization::translate('course_creation.select_category') ?></option>
-                                        <option value="beginner"><?= Localization::translate('course_creation.beginner') ?></option>
-                                        <option value="intermediate"><?= Localization::translate('course_creation.intermediate') ?></option>
-                                        <option value="advanced"><?= Localization::translate('course_creation.advanced') ?></option>
-                                        <option value="expert"><?= Localization::translate('course_creation.expert') ?></option>
+                                        <option value="beginner" <?= (isset($isEditMode) && $isEditMode && isset($editCourseData['difficulty_level']) && $editCourseData['difficulty_level'] == 'beginner') ? 'selected' : '' ?>><?= Localization::translate('course_creation.beginner') ?></option>
+                                        <option value="intermediate" <?= (isset($isEditMode) && $isEditMode && isset($editCourseData['difficulty_level']) && $editCourseData['difficulty_level'] == 'intermediate') ? 'selected' : '' ?>><?= Localization::translate('course_creation.intermediate') ?></option>
+                                        <option value="advanced" <?= (isset($isEditMode) && $isEditMode && isset($editCourseData['difficulty_level']) && $editCourseData['difficulty_level'] == 'advanced') ? 'selected' : '' ?>><?= Localization::translate('course_creation.advanced') ?></option>
+                                        <option value="expert" <?= (isset($isEditMode) && $isEditMode && isset($editCourseData['difficulty_level']) && $editCourseData['difficulty_level'] == 'expert') ? 'selected' : '' ?>><?= Localization::translate('course_creation.expert') ?></option>
                                     </select>
                                 </div>
                                 <div class="mb-3">
                                     <label for="course_status" class="form-label">Course Status</label>
                                     <select class="form-select" id="course_status" name="course_status">
-                                        <option value="active" selected>Active</option>
-                                        <option value="inactive">Inactive</option>
+                                        <option value="active" <?= (isset($isEditMode) && $isEditMode && isset($editCourseData['course_status']) && $editCourseData['course_status'] == 'active') ? 'selected' : '' ?>>Active</option>
+                                        <option value="inactive" <?= (isset($isEditMode) && $isEditMode && isset($editCourseData['course_status']) && $editCourseData['course_status'] == 'inactive') ? 'selected' : '' ?>>Inactive</option>
                                     </select>
                                 </div>
                             </div>
@@ -120,19 +141,29 @@
                             <div class="col-md-6">
                                 <div class="mb-3">
                                     <label for="target_audience" class="form-label"><?= Localization::translate('course_creation.target_audience') ?></label>
-                                    <textarea class="form-control" id="target_audience" name="target_audience" rows="3" placeholder="<?= Localization::translate('course_creation.target_audience_placeholder') ?>"></textarea>
+                                    <textarea class="form-control" id="target_audience" name="target_audience" rows="3" placeholder="<?= Localization::translate('course_creation.target_audience_placeholder') ?>"><?php if(isset($isEditMode) && $isEditMode && isset($editCourseData['target_audience'])) echo htmlspecialchars($editCourseData['target_audience']); ?></textarea>
                                 </div>
                                 <div class="mb-3">
                                     <label class="form-label"><?= Localization::translate('course_creation.learning_objectives') ?></label>
-                                    <div id="learning_objectives_container">
-                                        <!-- Learning objectives will be added here dynamically by JavaScript -->
+                                    <div class="tag-input-container form-control">
+                                        <span id="learningObjectivesDisplay"></span>
+                                        <input type="text" id="learningObjectivesInput" 
+                                            placeholder="Type and press Enter to add learning objective..." 
+                                            class="form-control border-0">
                                     </div>
+                                    <input type="hidden" name="learning_objectives" id="learningObjectivesList" 
+                                        value="<?= isset($isEditMode) && $isEditMode && isset($editCourseData['learning_objectives']) ? htmlspecialchars($editCourseData['learning_objectives']) : '' ?>">
                                 </div>
                                 <div class="mb-3">
                                     <label class="form-label"><?= Localization::translate('course_creation.tags') ?></label>
-                                    <div id="tags_container">
-                                        <!-- Tags will be added here dynamically by JavaScript -->
+                                    <div class="tag-input-container form-control">
+                                        <span id="tagsDisplay"></span>
+                                        <input type="text" id="tagsInput" 
+                                            placeholder="Type and press Enter to add tags..." 
+                                            class="form-control border-0">
                                     </div>
+                                    <input type="hidden" name="tags" id="tagsList" 
+                                        value="<?= isset($isEditMode) && $isEditMode && isset($editCourseData['tags']) ? htmlspecialchars($editCourseData['tags']) : '' ?>">
                                 </div>
                             </div>
                             <div class="col-md-6">
@@ -140,32 +171,32 @@
                                     <div class="col-md-6">
                                         <div class="mb-3">
                                             <label for="duration_hours" class="form-label"><?= Localization::translate('course_creation.duration') ?> (<?= Localization::translate('course_creation.hours') ?>)</label>
-                                            <input type="number" class="form-control" id="duration_hours" name="duration_hours" min="0" max="999.99" step="0.01" value="0">
+                                            <input type="number" class="form-control" id="duration_hours" name="duration_hours" min="0" max="999.99" step="0.01" value="<?= isset($isEditMode) && $isEditMode && isset($editCourseData['duration_hours']) ? htmlspecialchars($editCourseData['duration_hours']) : '0' ?>">
                                         </div>
                                     </div>
                                     <div class="col-md-6">
                                         <div class="mb-3">
                                             <label for="duration_minutes" class="form-label"><?= Localization::translate('course_creation.duration') ?> (<?= Localization::translate('course_creation.minutes') ?>)</label>
-                                            <input type="number" class="form-control" id="duration_minutes" name="duration_minutes" min="0" max="59" value="0">
+                                            <input type="number" class="form-control" id="duration_minutes" name="duration_minutes" min="0" max="59" value="<?= isset($isEditMode) && $isEditMode && isset($editCourseData['duration_minutes']) ? htmlspecialchars($editCourseData['duration_minutes']) : '0' ?>">
                                         </div>
                                     </div>
                                 </div>
                                 <div class="mb-3">
                                     <label class="form-label"><?= Localization::translate('course_creation.course_settings') ?></label>
                                     <div class="form-check">
-                                        <input class="form-check-input" type="checkbox" id="is_self_paced" name="is_self_paced" value="1">
+                                        <input class="form-check-input" type="checkbox" id="is_self_paced" name="is_self_paced" value="1" <?= (isset($isEditMode) && $isEditMode && !empty($editCourseData['is_self_paced'])) ? 'checked' : '' ?>>
                                         <label class="form-check-label" for="is_self_paced">
                                             <?= Localization::translate('course_creation.self_paced') ?>
                                         </label>
                                     </div>
                                     <div class="form-check">
-                                        <input class="form-check-input" type="checkbox" id="is_featured" name="is_featured" value="1">
+                                        <input class="form-check-input" type="checkbox" id="is_featured" name="is_featured" value="1" <?= (isset($isEditMode) && $isEditMode && !empty($editCourseData['is_featured'])) ? 'checked' : '' ?>>
                                         <label class="form-check-label" for="is_featured">
                                             <?= Localization::translate('course_creation.featured_course') ?>
                                         </label>
                                     </div>
                                     <div class="form-check">
-                                        <input class="form-check-input" type="checkbox" id="is_published" name="is_published" value="1">
+                                        <input class="form-check-input" type="checkbox" id="is_published" name="is_published" value="1" <?= (isset($isEditMode) && $isEditMode && !empty($editCourseData['is_published'])) ? 'checked' : '' ?>>
                                         <label class="form-check-label" for="is_published">
                                             <?= Localization::translate('course_creation.published') ?>
                                         </label>
@@ -267,9 +298,6 @@
         <!-- Post Requisite Tab -->
         <div class="tab-pane fade" id="post-requisite" role="tabpanel">
             <div class="mt-3">
-                <h5>Select Post Requisite Content</h5>
-                <div id="postRequisitesSummary" class="mb-3"></div>
-                
                 <!-- Container for displaying selected post-requisites -->
                 <div class="mb-3">
                     <label class="form-label">Selected Post Requisites</label>
@@ -334,10 +362,10 @@
                                         <select class="form-select" id="currency" name="currency" style="max-width: 120px;">
                                             <option value="">Select Currency</option>
                                             <?php foreach ($currencies as $currency): ?>
-                                                <option value="<?= $currency['currency'] ?>"><?= $currency['currency'] ?> (<?= $currency['currency_symbol'] ?>)</option>
+                                                <option value="<?= $currency['currency'] ?>" <?= (isset($isEditMode) && $isEditMode && isset($editCourseData['currency']) && $editCourseData['currency'] == $currency['currency']) ? 'selected' : '' ?>><?= $currency['currency'] ?> (<?= $currency['currency_symbol'] ?>)</option>
                                             <?php endforeach; ?>
                                         </select>
-                                        <input type="number" class="form-control" id="course_cost" name="course_cost" min="0" step="0.01" value="0" placeholder="0.00">
+                                        <input type="number" class="form-control" id="course_cost" name="course_cost" min="0" step="0.01" value="<?= isset($isEditMode) && $isEditMode && isset($editCourseData['course_cost']) ? htmlspecialchars($editCourseData['course_cost']) : '0' ?>" placeholder="0.00">
                                     </div>
                                     <div class="form-text">Set to 0 for free courses</div>
                                 </div>
@@ -425,7 +453,11 @@
             <i class="mdi mdi-close me-1"></i>Cancel
         </button>
         <button type="submit" class="btn btn-primary" id="create_course">
-            <i class="mdi mdi-plus-circle me-1"></i>Create Course
+            <?php if (isset($isEditMode) && $isEditMode): ?>
+                <i class="mdi mdi-content-save me-1"></i>Update Course
+            <?php else: ?>
+                <i class="mdi mdi-plus-circle me-1"></i>Create Course
+            <?php endif; ?>
         </button>
     </div>
 </form>
@@ -585,7 +617,7 @@
                     <select class="form-select" name="prerequisite_courses[][prerequisite_course_id]">
                         <option value=""><?= Localization::translate('course_creation.select_prerequisite') ?></option>
                         <?php foreach ($existingCourses as $course): ?>
-                            <option value="<?= $course['id'] ?>"><?= htmlspecialchars($course['title']) ?></option>
+                            <option value="<?= $course['id'] ?>" <?= (isset($isEditMode) && $isEditMode && isset($editCourseData['prerequisite_courses']) && in_array($course['id'], $editCourseData['prerequisite_courses'])) ? 'selected' : '' ?>><?= htmlspecialchars($course['title']) ?></option>
                         <?php endforeach; ?>
                     </select>
                 </div>

@@ -1,2247 +1,1617 @@
 /**
- * Course Creation JavaScript
+ * Course Creation JavaScript - Function-based approach (like user management)
  * Enhanced with drag-and-drop, advanced validation, and custom modals
  */
 
-// Instantiate CourseCreationManager only after modal content is loaded.
-class CourseCreationManager {
-    constructor() {
-        console.log('[DEBUG] CourseCreationManager instantiated');
-        this.currentTab = 0;
-        this.modules = [];
-        this.prerequisites = [];
-        this.post_requisites = [];
-        this.learningObjectives = [];
-        this.tags = [];
-        this.draggedElement = null;
-        this.dragOverElement = null;
-        this.isSubmitting = false;
+console.log('[DEBUG] course_creation.js file loaded successfully');
+
+// Global variables to track current state
+let courseManagerState = {
+    modules: [],
+    prerequisites: [],
+    post_requisites: [],
+    learningObjectives: [],
+    tags: [],
+    currentTab: 0,
+    isEditMode: false,
+    courseId: null,
+    searchTimeout: null,
+    validationInterval: null
+};
+
+// Initialize course creation functionality
+function initializeCourseCreation() {
+    console.log('[DEBUG] initializeCourseCreation() called');
+    
+    try {
+        // Add custom styles for validation and tab highlighting
+        addCustomStyles();
+        console.log('[DEBUG] addCustomStyles() completed');
         
-        this.logToFile('post_requisites initialized as:', this.post_requisites);
-        
-        this.init();
-    }
-
-    init() {
-        this.bindEvents();
-        this.initializeDragAndDrop();
-        this.setupValidation();
-        this.initializeTabs();
-        this.loadInitialData();
-        this.initializeTagSystems();
-        this.setupImagePreviewHandlers();
-    }
-
-    bindEvents() {
-        // Tab navigation
-        const tabButtons = document.querySelectorAll('[data-bs-toggle="tab"]');
-        tabButtons.forEach(button => {
-            button.addEventListener('click', (e) => {
-                const target = e.target.getAttribute('data-bs-target');
-                if (target) {
-                    this.switchTab(target.replace('#', ''));
-                }
-            });
-        });
-
-        // Form submission
-        const form = document.getElementById('courseCreationForm');
-        console.log('[DEBUG] bindEvents: courseCreationForm:', form);
-        if (form) {
-            form.addEventListener('submit', (e) => {
-                e.preventDefault();
-                this.handleFormSubmit(e);
-            });
-            console.log('[DEBUG] bindEvents: submit event bound to courseCreationForm');
-        } else {
-            console.warn('[DEBUG] bindEvents: courseCreationForm not found');
-        }
-
-        // Create course button (for confirmation modal)
-        const createCourseBtn = document.getElementById('create_course');
-        if (createCourseBtn) {
-            console.log('[DEBUG] Create course button found, binding click event');
-            createCourseBtn.addEventListener('click', (e) => {
-                console.log('[DEBUG] Create course button clicked');
-                e.preventDefault();
-                this.showConfirmationModal(
-                    'Create Course',
-                    'Are you sure you want to create this course?',
-                    () => {
-                        console.log('[DEBUG] Confirmation callback executed');
-                        this.handleFormSubmit(e);
-                    },
-                    () => {
-                        console.log('[DEBUG] Confirmation cancelled');
-                    }
-                );
-            });
-        } else {
-            console.warn('[DEBUG] Create course button NOT found');
-        }
-
-        // Add module button
-        const addModuleBtn = document.getElementById('addModuleBtn');
-        if (addModuleBtn) {
-            console.log('[DEBUG] Add Module button found, binding click event');
-            addModuleBtn.addEventListener('click', () => {
-                console.log('[DEBUG] Add Module button clicked');
-                this.addModule();
-            });
-        } else {
-            console.warn('[DEBUG] Add Module button NOT found');
-        }
-
-        // Add prerequisite button
-        const addPrerequisiteBtn = document.getElementById('add_prerequisite');
-        if (addPrerequisiteBtn) {
-            console.debug('[DEBUG] Add Prerequisite button found, binding click event');
-            addPrerequisiteBtn.addEventListener('click', () => {
-                console.debug('[DEBUG] Add Prerequisite button clicked');
-                this.showPrerequisiteModal();
-            });
-        } else {
-            console.warn('[DEBUG] Add Prerequisite button NOT found');
-        }
-
-        // Add post-requisite buttons (unified)
-        const addAssessmentBtn = document.getElementById('selectPostAssessmentBtn');
-        if (addAssessmentBtn) {
-            this.logToFile('Found selectPostAssessmentBtn, binding click event');
-            addAssessmentBtn.addEventListener('click', () => this.showPostRequisiteVLRModal('assessment'));
-        } else {
-            this.logToFile('ERROR: selectPostAssessmentBtn not found');
-        }
-
-        const addFeedbackBtn = document.getElementById('selectPostFeedbackBtn');
-        if (addFeedbackBtn) {
-            this.logToFile('Found selectPostFeedbackBtn, binding click event');
-            addFeedbackBtn.addEventListener('click', () => this.showPostRequisiteVLRModal('feedback'));
-        } else {
-            this.logToFile('ERROR: selectPostFeedbackBtn not found');
-        }
-
-        const addSurveyBtn = document.getElementById('selectPostSurveyBtn');
-        if (addSurveyBtn) {
-            this.logToFile('Found selectPostSurveyBtn, binding click event');
-            addSurveyBtn.addEventListener('click', () => this.showPostRequisiteVLRModal('survey'));
-        } else {
-            this.logToFile('ERROR: selectPostSurveyBtn not found');
-        }
-
-        const addAssignmentBtn = document.getElementById('selectPostAssignmentBtn');
-        if (addAssignmentBtn) {
-            this.logToFile('Found selectPostAssignmentBtn, binding click event');
-            addAssignmentBtn.addEventListener('click', () => this.showPostRequisiteVLRModal('assignment'));
-        } else {
-            this.logToFile('ERROR: selectPostAssignmentBtn not found');
-        }
-
-        // Category change handlers
-        const categorySelect = document.getElementById('category_id');
-        console.log('[DEBUG] categorySelect element:', categorySelect);
-        if (categorySelect) {
-            console.log('[DEBUG] Adding change event listener to category select');
-            categorySelect.addEventListener('change', () => {
-                console.log('[DEBUG] Category changed, calling loadSubcategories');
-                this.loadSubcategories();
-            });
-        } else {
-            console.error('[DEBUG] category_id select element not found');
-        }
-
-        // Reassign course radio button handlers
-        const reassignNo = document.getElementById('reassign_no');
-        const reassignYes = document.getElementById('reassign_yes');
-        const reassignDaysContainer = document.getElementById('reassign_days_container');
-        
-        if (reassignNo && reassignYes && reassignDaysContainer) {
-            reassignNo.addEventListener('change', () => {
-                reassignDaysContainer.style.display = 'none';
-            });
-            reassignYes.addEventListener('change', () => {
-                reassignDaysContainer.style.display = 'block';
-            });
-        }
-
-        // Real-time validation
-        this.setupRealTimeValidation();
-
-        // Keyboard shortcuts
-        this.setupKeyboardShortcuts();
-
-        // Post Requisite VLR selection buttons (these are already correctly bound above)
-        // The buttons are now handled by the unified post-requisite system above
-
-        // Initialize tag systems
-        this.initializeTagSystems();
-
-        // Remove tab error highlight on focus out if tab is valid
-        if (form) {
-            form.addEventListener('blur', (e) => {
-                setTimeout(() => { // Wait for value to update
-                    this.checkAndClearTabErrorForField(e.target);
-                }, 0);
-            }, true);
-        }
-    }
-
-    initializeTagSystems() {
-        console.log('[DEBUG] initializeTagSystems called');
-        console.log('[DEBUG] this.learningObjectives before init:', this.learningObjectives);
-        console.log('[DEBUG] this.tags before init:', this.tags);
-        
-        // Learning Objectives Tag System
-        this.initializeLearningObjectivesTags();
-        
-        // Tags Tag System
-        this.initializeTagsSystem();
-        
-        console.log('[DEBUG] this.learningObjectives after init:', this.learningObjectives);
-        console.log('[DEBUG] this.tags after init:', this.tags);
-    }
-
-    initializeLearningObjectivesTags() {
-        console.log('[DEBUG] initializeLearningObjectivesTags called');
-        const container = document.getElementById('learning_objectives_container');
-        if (!container) {
-            console.log('[DEBUG] learning_objectives_container not found');
-            return;
-        }
-        console.log('[DEBUG] learning_objectives_container found');
-
-        // Clear existing content and create proper structure (no plus button)
-        container.innerHTML = `
-            <div class="input-group mb-2">
-                <input type="text" class="form-control" id="learning_objective_input" 
-                       placeholder="Enter learning objective">
-            </div>
-            <div id="learning_objectives_display" class="mb-2"></div>
-            <input type="hidden" id="learning_objectives_list" name="learning_objectives_list" value="">
-        `;
-
-        const input = document.getElementById('learning_objective_input');
-        const display = document.getElementById('learning_objectives_display');
-        const hiddenInput = document.getElementById('learning_objectives_list');
-
-        const addLearningObjective = (text) => {
-            console.log('[DEBUG] addLearningObjective called with:', text);
-            if (text.trim() === "" || this.learningObjectives.includes(text.trim())) {
-                console.log('[DEBUG] addLearningObjective: skipping empty or duplicate');
-                return;
-            }
-            
-            this.learningObjectives.push(text.trim());
-            console.log('[DEBUG] addLearningObjective: added, current array:', this.learningObjectives);
-            updateDisplay();
-            input.value = '';
-        };
-
-        const removeLearningObjective = (text) => {
-            this.learningObjectives = this.learningObjectives.filter(obj => obj !== text);
-            updateDisplay();
-        };
-
-        const updateDisplay = () => {
-            display.innerHTML = this.learningObjectives.map(obj => 
-                `<span class="tag">${obj} <button type="button" class="remove-tag" onclick="courseManager.removeLearningObjective('${obj}')">&times;</button></span>`
-            ).join('');
-            hiddenInput.value = this.learningObjectives.join(',');
-        };
-
-        // Event listeners
-        if (input) {
-            input.addEventListener('keypress', (e) => {
-                if (e.key === 'Enter') {
-                    e.preventDefault();
-                    addLearningObjective(input.value);
-                }
-            });
-        }
-
-        // Make remove function globally accessible
-        this.removeLearningObjective = removeLearningObjective;
-    }
-
-    initializeTagsSystem() {
-        console.log('[DEBUG] initializeTagsSystem called');
-        const container = document.getElementById('tags_container');
-        if (!container) {
-            console.log('[DEBUG] tags_container not found');
-            return;
-        }
-        console.log('[DEBUG] tags_container found');
-
-        // Clear existing content and create proper structure (no plus button)
-        container.innerHTML = `
-            <div class="input-group mb-2">
-                <input type="text" class="form-control" id="tag_input" 
-                       placeholder="Enter tag">
-            </div>
-            <div id="tags_display" class="mb-2"></div>
-            <input type="hidden" id="tags_list" name="tags_list" value="">
-        `;
-
-        const input = document.getElementById('tag_input');
-        const display = document.getElementById('tags_display');
-        const hiddenInput = document.getElementById('tags_list');
-
-        const addTag = (text) => {
-            console.log('[DEBUG] addTag called with:', text);
-            if (text.trim() === "" || this.tags.includes(text.trim())) {
-                console.log('[DEBUG] addTag: skipping empty or duplicate');
-                return;
-            }
-            
-            this.tags.push(text.trim());
-            console.log('[DEBUG] addTag: added, current array:', this.tags);
-            updateDisplay();
-            input.value = '';
-        };
-
-        const removeTag = (text) => {
-            this.tags = this.tags.filter(tag => tag !== text);
-            updateDisplay();
-        };
-
-        const updateDisplay = () => {
-            display.innerHTML = this.tags.map(tag => 
-                `<span class="tag">${tag} <button type="button" class="remove-tag" onclick="courseManager.removeTag('${tag}')">&times;</button></span>`
-            ).join('');
-            hiddenInput.value = this.tags.join(',');
-        };
-
-        // Event listeners
-        if (input) {
-            input.addEventListener('keypress', (e) => {
-                if (e.key === 'Enter') {
-                    e.preventDefault();
-                    addTag(input.value);
-                }
-            });
-        }
-
-        // Make remove function globally accessible
-        this.removeTag = removeTag;
-    }
-
-    initializeDragAndDrop() {
-        // Module drag and drop
-        this.setupModuleDragAndDrop();
-        
-        // Global drag and drop handlers
-        document.addEventListener('dragover', (e) => {
-            e.preventDefault();
-            this.handleGlobalDragOver(e);
-        });
-
-        document.addEventListener('drop', (e) => {
-            e.preventDefault();
-            this.handleGlobalDrop(e);
-        });
-    }
-
-    setupModuleDragAndDrop() {
-        const modulesContainer = document.getElementById('modulesContainer');
-        if (!modulesContainer) return;
-
-        modulesContainer.addEventListener('dragover', (e) => {
-            e.preventDefault();
-            this.handleModuleDragOver(e);
-        });
-
-        modulesContainer.addEventListener('drop', (e) => {
-            e.preventDefault();
-            this.handleModuleDrop(e);
-        });
-
-        // Add drag event listeners to module items
-        this.addModuleDragListeners();
-    }
-
-    handleModuleDragOver(e) {
-        const afterElement = this.getDragAfterElement(e.currentTarget, e.clientY);
-        const draggable = document.querySelector('.dragging');
-        
-        if (draggable) {
-            if (afterElement == null) {
-                e.currentTarget.appendChild(draggable);
-            } else {
-                e.currentTarget.insertBefore(draggable, afterElement);
-            }
-        }
-    }
-
-    handleModuleDrop(e) {
-        const draggedModule = this.draggedElement;
-        if (draggedModule) {
-            draggedModule.classList.remove('dragging');
-            this.updateModuleOrder();
-            this.showToast('Module order updated successfully', 'success');
-        }
-        this.draggedElement = null;
-    }
-
-    getDragAfterElement(container, y) {
-        const draggableElements = [...container.querySelectorAll('.module-item:not(.dragging)')];
-        
-        return draggableElements.reduce((closest, child) => {
-            const box = child.getBoundingClientRect();
-            const offset = y - box.top - box.height / 2;
-            
-            if (offset < 0 && offset > closest.offset) {
-                return { offset: offset, element: child };
-            } else {
-                return closest;
-            }
-        }, { offset: Number.NEGATIVE_INFINITY }).element;
-    }
-
-    setupValidation() {
-        this.validationRules = {
-            title: {
-                required: true,
-                minLength: 3,
-                maxLength: 100,
-                pattern: /^[a-zA-Z0-9\s\-_()]+$/
-            },
-            category_id: {
-                required: true
-            },
-            subcategory_id: {
-                required: true
-            },
-            course_type: {
-                required: true
-            },
-            difficulty_level: {
-                required: true
-            },
-            modules: {
-                required: true,
-                minCount: 1
-            }
-        };
-
-        this.errorMessages = {
-            title: {
-                required: 'Course title is required',
-                minLength: 'Course title must be at least 3 characters',
-                maxLength: 'Course title cannot exceed 100 characters',
-                pattern: 'Course title contains invalid characters'
-            },
-            category_id: {
-                required: 'Please select a course category'
-            },
-            subcategory_id: {
-                required: 'Please select a course subcategory'
-            },
-            course_type: {
-                required: 'Please select a course type'
-            },
-            difficulty_level: {
-                required: 'Please select a difficulty level'
-            },
-            modules: {
-                required: 'At least one module is required',
-                minCount: 'At least one module is required'
-            }
-        };
-    }
-
-    setupRealTimeValidation() {
-        const inputs = document.querySelectorAll('#courseCreationForm input, #courseCreationForm textarea, #courseCreationForm select');
-        
-        inputs.forEach(input => {
-            input.addEventListener('blur', () => this.validateField(input));
-            input.addEventListener('input', () => this.clearFieldError(input));
-        });
-    }
-
-    validateField(field) {
-        const fieldName = field.name;
-        const value = field.value.trim();
-        const rules = this.validationRules[fieldName];
-        
-        if (!rules) return true;
-
-        // Clear previous errors
-        this.clearFieldError(field);
-
-        // Check required
-        if (rules.required && !value) {
-            this.showFieldError(field, this.errorMessages[fieldName].required);
-            return false;
-        }
-
-        if (value) {
-            // Check min length
-            if (rules.minLength && value.length < rules.minLength) {
-                this.showFieldError(field, this.errorMessages[fieldName].minLength);
-                return false;
-            }
-
-            // Check max length
-            if (rules.maxLength && value.length > rules.maxLength) {
-                this.showFieldError(field, this.errorMessages[fieldName].maxLength);
-                return false;
-            }
-
-            // Check pattern
-            if (rules.pattern && !rules.pattern.test(value)) {
-                this.showFieldError(field, this.errorMessages[fieldName].pattern);
-                return false;
-            }
-        }
-
-        return true;
-    }
-
-    showFieldError(field, message) {
-        field.classList.add('is-invalid');
-        
-        let errorDiv = field.parentNode.querySelector('.invalid-feedback');
-        if (!errorDiv) {
-            errorDiv = document.createElement('div');
-            errorDiv.className = 'invalid-feedback';
-            field.parentNode.appendChild(errorDiv);
-        }
-        
-        errorDiv.textContent = message;
-        errorDiv.style.display = 'block';
-    }
-
-    clearFieldError(field) {
-        field.classList.remove('is-invalid');
-        const errorDiv = field.parentNode.querySelector('.invalid-feedback');
-        if (errorDiv) {
-            errorDiv.style.display = 'none';
-        }
-    }
-
-    validateForm() {
-        let isValid = true;
-        const errors = [];
-        // Track which tabs have errors
-        const tabErrors = new Set();
-
-        // Validate basic fields (tab 0)
-        const fields = ['title', 'category_id', 'subcategory_id', 'course_type', 'difficulty_level'];
-        fields.forEach(fieldName => {
-            const field = document.querySelector(`[name="${fieldName}"]`);
-            if (field && !this.validateField(field)) {
-                isValid = false;
-                errors.push(this.errorMessages[fieldName].required || 'Invalid field');
-                tabErrors.add(0); // Basic Info tab
-            }
-        });
-
-        // Validate duration fields
-        const durationHours = document.querySelector('[name="duration_hours"]');
-        const durationMinutes = document.querySelector('[name="duration_minutes"]');
-        
-        if (durationHours && durationMinutes) {
-            const hours = parseInt(durationHours.value) || 0;
-            const minutes = parseInt(durationMinutes.value) || 0;
-            
-            if (hours < 0) {
-                isValid = false;
-                errors.push('Duration hours cannot be negative');
-                tabErrors.add(0);
-            }
-            
-            if (minutes < 0 || minutes > 59) {
-                isValid = false;
-                errors.push('Duration minutes must be between 0 and 59');
-                tabErrors.add(0);
-            }
-        }
-
-        // Validate modules (tab 1)
-        if (this.modules.length === 0) {
-            isValid = false;
-            errors.push('At least one module is required');
-            tabErrors.add(1); // Modules tab
-        }
-
-        // Validate prerequisites (tab 2)
-        if (this.prerequisites.length > 0) {
-            const hasValidPrerequisites = this.prerequisites.every(pre => pre.id && pre.title);
-            if (!hasValidPrerequisites) {
-                isValid = false;
-                errors.push('Some prerequisites are invalid');
-                tabErrors.add(2); // Prerequisites tab
-            }
-        }
-
-        // Highlight tabs with errors
-        this.clearAllTabErrors();
-        tabErrors.forEach(idx => this.markTabAsError(idx));
-
-        // Show validation errors
-        if (!isValid) {
-            this.showValidationErrors(errors);
-        } else {
-            // If valid, ensure all tab highlights are cleared
-            this.clearAllTabErrors();
-        }
-
-        return isValid;
-    }
-
-    clearAllTabErrors() {
-        const tabs = document.querySelectorAll('#courseCreationTabs .nav-link');
-        tabs.forEach(tab => tab.classList.remove('tab-error'));
-    }
-
-    markTabAsError(tabIndex) {
-        const tabs = document.querySelectorAll('#courseCreationTabs .nav-link');
-        if (tabs[tabIndex]) {
-            tabs[tabIndex].classList.add('tab-error');
-        }
-    }
-
-    clearTabError(tabIndex) {
-        const tabs = document.querySelectorAll('#courseCreationTabs .nav-link');
-        if (tabs[tabIndex]) {
-            tabs[tabIndex].classList.remove('tab-error');
-        }
-    }
-
-    showValidationErrors(errors) {
-        const errorContainer = document.getElementById('validationErrors');
-        if (!errorContainer) return;
-
-        errorContainer.innerHTML = `
-            <div class="course-validation-error">
-                <i class="fas fa-exclamation-triangle"></i>
-                <div>
-                    <strong>Please fix the following errors:</strong>
-                    <ul>
-                        ${errors.map(error => `<li>${error}</li>`).join('')}
-                    </ul>
-                </div>
-            </div>
-        `;
-        errorContainer.style.display = 'block';
-    }
-
-    initializeTabs() {
-        this.showTab(0);
-    }
-
-    switchTab(tabIndex) {
-        // On tab change, re-validate the previous tab and clear highlight if valid
-        if (this.validateCurrentTab()) {
-            this.clearTabError(this.currentTab);
-            this.showTab(tabIndex);
-        } else {
-            this.markTabAsError(this.currentTab);
-            this.showToast('Please fix errors in the current tab before proceeding', 'warning');
-        }
-    }
-
-    validateCurrentTab() {
-        switch (this.currentTab) {
-            case 0: // Basic Info
-                return this.validateBasicInfo();
-            case 1: // Modules
-                return this.modules.length > 0;
-            case 2: // Prerequisites
-                return true; // Optional
-            case 3: // Assessments
-                return true; // Optional
-            case 4: // Feedback
-                return true; // Optional
-            case 5: // Surveys
-                return true; // Optional
-            default:
-                return true;
-        }
-    }
-
-    validateBasicInfo() {
-        const requiredFields = ['title', 'category_id', 'subcategory_id', 'course_type', 'difficulty_level'];
-        return requiredFields.every(fieldName => {
-            const field = document.querySelector(`[name="${fieldName}"]`);
-            return field && field.value.trim() !== '';
-        });
-    }
-
-    showTab(tabIndex) {
-        // Hide all tab contents
-        document.querySelectorAll('.course-tab-content').forEach(content => {
-            content.style.display = 'none';
-        });
-
-        // Remove active class from all tabs
-        document.querySelectorAll('.course-creation-tabs .nav-link').forEach(tab => {
-            tab.classList.remove('active');
-        });
-
-        // Show selected tab content
-        const tabContent = document.querySelectorAll('.course-tab-content')[tabIndex];
-        if (tabContent) {
-            tabContent.style.display = 'block';
-        }
-
-        // Add active class to selected tab
-        const selectedTab = document.querySelectorAll('.course-creation-tabs .nav-link')[tabIndex];
-        if (selectedTab) {
-            selectedTab.classList.add('active');
-        }
-
-        this.currentTab = tabIndex;
-    }
-
-    loadInitialData() {
-        this.loadCategories();
-        this.loadSubcategories();
-    }
-
-    async loadCategories() {
-        // Comment out or remove any global or immediate instantiation of CourseCreationManager
-        // ... existing code ...
-        // ... existing code ...
-        // ... existing code ...
-    }
-
-    async loadSubcategories() {
-        console.log('[DEBUG] loadSubcategories() called');
-        const categoryId = document.getElementById('category_id')?.value;
-        console.log('[DEBUG] categoryId:', categoryId);
-        
-        if (!categoryId) {
-            console.log('[DEBUG] No category selected, clearing subcategory dropdown');
-            const select = document.getElementById('subcategory_id');
-            if (select) {
-                select.innerHTML = '<option value="">Select Subcategory</option>';
-            }
-            return;
-        }
-
-        try {
-            console.log('[DEBUG] Fetching subcategories for category_id:', categoryId);
-            // Use the correct endpoint for subcategory dropdown
-            const response = await fetch(`/Unlockyourskills/api/course-subcategories/dropdown?category_id=${categoryId}`, {
-                credentials: 'include'
-            });
-            console.log('[DEBUG] Response status:', response.status);
-            const data = await response.json();
-            console.log('[DEBUG] Response data:', data);
-            
-            if (data.success) {
-                const select = document.getElementById('subcategory_id');
-                if (select) {
-                    select.innerHTML = '<option value="">Select Subcategory</option>';
-                    data.subcategories.forEach(subcategory => {
-                        select.innerHTML += `<option value="${subcategory.id}">${subcategory.name}</option>`;
-                    });
-                    console.log('[DEBUG] Loaded', data.subcategories.length, 'subcategories');
-                } else {
-                    console.error('[DEBUG] subcategory_id select element not found');
-                }
-            } else {
-                console.error('[DEBUG] API returned error:', data.message);
-                this.showToast('Error loading subcategories: ' + data.message, 'error');
-            }
-        } catch (error) {
-            console.error('[DEBUG] Error loading subcategories:', error);
-            this.showToast('Error loading subcategories', 'error');
-        }
-    }
-
-    addModule() {
-        console.log('[DEBUG] addModule() called');
-        const moduleId = Date.now();
-        const module = {
-            id: moduleId,
-            title: '',
-            description: '',
-            content: [],
-            sort_order: this.modules.length // Set proper order
-        };
-        this.modules.push(module);
-        console.log('[DEBUG] Module pushed. Modules array:', this.modules);
-        this.renderModules();
-        this.showToast('New module created. Now add VLR content and fill in module details.', 'info');
-    }
-
-    removeModule(moduleId) {
-        this.showConfirmationModal(
-            'Remove Module',
-            'Are you sure you want to remove this module? This action cannot be undone.',
-            () => {
-                this.modules = this.modules.filter(module => module.id !== moduleId);
-                this.renderModules();
-                this.showToast('Module removed successfully', 'success');
-            }
-        );
-    }
-
-    renderModules() {
-        console.log('[DEBUG] renderModules() called. Modules:', this.modules);
-        const container = document.getElementById('modulesContainer');
-        if (!container) {
-            console.warn('[DEBUG] modulesContainer NOT found');
-            return;
-        }
-
-        // Add Module button at the top
-        let html = `
-            <div class="d-flex justify-content-end mb-3">
-                <button type="button" class="btn btn-outline-primary" id="addModuleBtnTop">
-                    <i class="fas fa-plus me-1"></i> Add Module
-                </button>
-            </div>
-        `;
-
-        html += this.modules.map((module, index) => `
-            <div class="module-card card mb-4 shadow-sm" draggable="true" data-module-id="${module.id}">
-                <div class="card-header d-flex justify-content-between align-items-center bg-light">
-                    <div class="d-flex align-items-center">
-                        <span class="badge bg-primary me-3">${index + 1}</span>
-                        <h6 class="mb-0 module-title">${module.title || `Module ${index + 1}`}</h6>
-                    </div>
-                    <div class="module-actions d-flex align-items-center gap-2">
-                        <button type="button" class="btn btn-sm btn-outline-secondary module-move-up" title="Move Up" ${index === 0 ? 'disabled' : ''} onclick="courseManager.moveModuleUp(${index})">
-                            <i class="fas fa-arrow-up"></i>
-                        </button>
-                        <button type="button" class="btn btn-sm btn-outline-secondary module-move-down" title="Move Down" ${index === this.modules.length - 1 ? 'disabled' : ''} onclick="courseManager.moveModuleDown(${index})">
-                            <i class="fas fa-arrow-down"></i>
-                        </button>
-                        <i class="fas fa-grip-vertical module-drag-handle ms-2" title="Drag to reorder"></i>
-                        <button type="button" class="btn btn-sm btn-outline-danger module-remove-btn ms-2" onclick="courseManager.removeModule(${module.id})">
-                            <i class="fas fa-trash"></i>
-                        </button>
-                    </div>
-                </div>
-                <div class="card-body">
-                    <div class="row mb-3">
-                        <div class="col-md-6">
-                            <div class="form-group">
-                                <label for="moduleTitle_${module.id}">Module Title *</label>
-                                <input type="text" class="form-control module-title-input" id="moduleTitle_${module.id}" 
-                                       value="${module.title}" data-module-id="${module.id}" autocomplete="off">
-                                <div class="invalid-feedback d-block module-title-error" style="display:none;"></div>
-                            </div>
-                        </div>
-                        <div class="col-md-6">
-                            <div class="form-group">
-                                <label for="moduleDescription_${module.id}">Module Description</label>
-                                <textarea class="form-control" id="moduleDescription_${module.id}" rows="2"
-                                          onchange="courseManager.updateModule(${module.id}, 'description', this.value)">${module.description}</textarea>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="module-content-section">
-                        <div class="d-flex justify-content-between align-items-center mb-2">
-                            <h6 class="mb-0">Module Content</h6>
-                            <span class="text-muted small">${module.content.length} VLR item${module.content.length !== 1 ? 's' : ''}</span>
-                        </div>
-                        <div class="vlr-content-list d-flex flex-wrap gap-2" id="moduleContent_${module.id}">
-                            ${this.renderModuleContent(module.content, module.id)}
-                        </div>
-                        <button type="button" class="btn btn-outline-success btn-sm mt-2 px-2 py-1 add-item-btn" style="font-size:0.95em; min-width:unset;" title="Add VLR Content" onclick="courseManager.showVLRModal(${module.id})">
-                            <i class="fas fa-plus me-1"></i> Add VLR Content
-                        </button>
-                    </div>
-                </div>
-            </div>
-        `).join('');
-
-        // Add Module button at the bottom
-        html += `
-            <div class="d-flex justify-content-end mt-3">
-                <button type="button" class="btn btn-outline-primary" id="addModuleBtnBottom">
-                    <i class="fas fa-plus me-1"></i> Add Module
-                </button>
-            </div>
-        `;
-
-        container.innerHTML = html;
-
-        // Bind Add Module buttons
-        document.getElementById('addModuleBtnTop').onclick = () => this.addModule();
-        document.getElementById('addModuleBtnBottom').onclick = () => this.addModule();
-
-        // Bind validation for module title fields
-        this.bindModuleTitleValidation();
-
-        // Reinitialize drag and drop for new modules
-        this.initializeModuleDragAndDrop();
-    }
-
-    bindModuleTitleValidation() {
-        // Add blur and input event listeners to all module title fields
-        const inputs = document.querySelectorAll('.module-title-input');
-        inputs.forEach(input => {
-            input.addEventListener('blur', (e) => {
-                this.validateModuleTitleField(e.target);
-                this.updateModulesTabErrorHighlight();
-            });
-            input.addEventListener('input', (e) => {
-                this.clearModuleTitleError(e.target);
-                this.updateModulesTabErrorHighlight();
-            });
-            // Also update module title in data on change
-            input.addEventListener('change', (e) => {
-                const moduleId = parseInt(e.target.getAttribute('data-module-id'));
-                this.updateModule(moduleId, 'title', e.target.value);
-            });
-        });
-    }
-
-    validateModuleTitleField(input) {
-        const value = input.value.trim();
-        const errorDiv = input.parentElement.querySelector('.module-title-error');
-        if (!value) {
-            errorDiv.textContent = 'Module title is required';
-            errorDiv.style.display = 'block';
-            input.classList.add('is-invalid');
-            return false;
-        } else {
-            errorDiv.textContent = '';
-            errorDiv.style.display = 'none';
-            input.classList.remove('is-invalid');
-            return true;
-        }
-    }
-
-    clearModuleTitleError(input) {
-        const errorDiv = input.parentElement.querySelector('.module-title-error');
-        errorDiv.textContent = '';
-        errorDiv.style.display = 'none';
-        input.classList.remove('is-invalid');
-    }
-
-    updateModulesTabErrorHighlight() {
-        // Highlight the Modules tab if any module title is invalid
-        const inputs = document.querySelectorAll('.module-title-input');
-        let hasError = false;
-        inputs.forEach(input => {
-            if (!input.value.trim()) {
-                hasError = true;
-            }
-        });
-        if (hasError) {
-            this.markTabAsError(1);
-        } else {
-            this.clearTabError(1);
-        }
-    }
-
-    // On form submit, validate all module titles
-    validateAllModuleTitles() {
-        const inputs = document.querySelectorAll('.module-title-input');
-        let allValid = true;
-        inputs.forEach(input => {
-            if (!this.validateModuleTitleField(input)) {
-                allValid = false;
-            }
-        });
-        this.updateModulesTabErrorHighlight();
-        return allValid;
-    }
-
-    // In handleFormSubmit, call validateAllModuleTitles and prevent submit if invalid
-    async handleFormSubmit(e) {
-        console.log('[DEBUG] handleFormSubmit called');
-        // No need to prevent default here since we're handling it in the click event
-
-        if (this.isSubmitting) {
-            console.log('[DEBUG] Form is already being submitted');
-            this.showToast('Form is already being submitted', 'warning');
-            return;
-        }
-
-        // Validate all module titles
-        console.log('[DEBUG] Validating module titles');
-        const modulesValid = this.validateAllModuleTitles();
-        if (!modulesValid) {
-            console.log('[DEBUG] Module titles validation failed');
-            this.showToast('Please fix module title errors before submitting.', 'error');
-            return;
-        }
-
-        // Validate the rest of the form
-        console.log('[DEBUG] Validating form');
-        if (!this.validateForm()) {
-            console.log('[DEBUG] Form validation failed');
-            this.showToast('Please fix the validation errors', 'error');
-            return;
-        }
-        
-        console.log('[DEBUG] All validations passed, proceeding with submission');
-
-        this.isSubmitting = true;
-        this.showLoadingOverlay('Creating course...');
-
-        try {
-            const formData = this.collectFormData();
-            console.log('[DEBUG] Form data being sent:', formData);
-            console.log('[DEBUG] Modules data:', formData.modules);
-            const response = await fetch('/Unlockyourskills/course-creation', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-Requested-With': 'XMLHttpRequest'
-                },
-                credentials: 'include',
-                body: JSON.stringify(formData)
-            });
-
-            const result = await response.json();
-
-            if (result.success) {
-                this.showToast('Course created successfully!', 'success');
-                setTimeout(() => {
-                    window.location.href = '/Unlockyourskills/course-management';
-                }, 2000);
-            } else {
-                this.showToast(result.message || 'Error creating course', 'error');
-            }
-        } catch (error) {
-            console.error('Error submitting form:', error);
-            this.showToast('An error occurred while creating the course', 'error');
-        } finally {
-            this.isSubmitting = false;
-            this.hideLoadingOverlay();
-        }
-    }
-
-    renderModuleContent(content, moduleId) {
-        if (!content || content.length === 0) {
-            return '<span class="text-muted">No content added yet</span>';
-        }
-
-        return content.map((item, idx) => `
-            <div class="vlr-chip card px-2 py-1 d-flex flex-row align-items-center overflow-hidden" draggable="false" data-content-id="${item.id}" data-module-id="${moduleId}">
-                <i class="vlr-content-icon fas ${this.getVLRIcon(item.type)} me-2"></i>
-                <span class="vlr-content-title flex-grow-1 text-truncate" title="${item.title}">${item.title.length > 20 ? item.title.substring(0, 18) + '…' : item.title}</span>
-                <span class="badge bg-light text-dark ms-2 text-truncate" style="max-width: 80px;" title="${item.type}">${item.type}</span>
-                <button type="button" class="btn btn-sm btn-outline-secondary ms-2 flex-shrink-0 move-up-btn" title="Move Up" ${idx === 0 ? 'disabled' : ''} onclick="courseManager.moveVLRUp(${moduleId}, ${idx})">
-                    <i class="fas fa-arrow-up"></i>
-                </button>
-                <button type="button" class="btn btn-sm btn-outline-secondary ms-1 flex-shrink-0 move-down-btn" title="Move Down" ${idx === content.length - 1 ? 'disabled' : ''} onclick="courseManager.moveVLRDown(${moduleId}, ${idx})">
-                    <i class="fas fa-arrow-down"></i>
-                </button>
-                <button type="button" class="btn btn-sm btn-outline-danger ms-2 flex-shrink-0" title="Remove" onclick="courseManager.removeVLRContent(${moduleId}, ${item.id})">
-                    <i class="fas fa-times"></i>
-                </button>
-            </div>
-        `).join('');
-    }
-
-    getVLRIcon(type) {
-        const icons = {
-            'scorm': 'fa-cube',
-            'video': 'fa-video',
-            'audio': 'fa-volume-up',
-            'document': 'fa-file-alt',
-            'assessment': 'fa-question-circle',
-            'survey': 'fa-clipboard-list',
-            'feedback': 'fa-comments',
-            'interactive': 'fa-mouse-pointer',
-            'assignment': 'fa-tasks'
-        };
-        return icons[type] || 'fa-file';
-    }
-
-    updateModule(moduleId, field, value) {
-        const module = this.modules.find(m => m.id === moduleId);
-        if (module) {
-            module[field] = value;
-            this.renderModules();
-        }
-    }
-
-    updateModuleOrder() {
-        const moduleElements = document.querySelectorAll('.module-item');
-        const newOrder = [];
-        
-        moduleElements.forEach((element, index) => {
-            const moduleId = parseInt(element.dataset.moduleId);
-            const module = this.modules.find(m => m.id === moduleId);
-            if (module) {
-                newOrder.push(module);
-            }
-        });
-
-        this.modules = newOrder;
-    }
-
-    showPrerequisiteModal() {
-        // Use the VLR content selection modal for prerequisites
-        const preselectedIds = this.prerequisites.map(item => ({ id: item.id, type: item.prereqType || item.type }));
-        this.showVLRSelectionModal('prerequisites', 'Select Prerequisite Content', null, preselectedIds);
-    }
-
-    showPostRequisiteModal(contentType) {
-        const typeMap = {
-            'assessment': 'Assessment',
-            'feedback': 'Feedback',
-            'survey': 'Survey',
-            'assignment': 'Assignment'
-        };
-        const title = `Select ${typeMap[contentType]}`;
-        const preselectedIds = this.post_requisites
-            .filter(item => item.content_type === contentType)
-            .map(item => item.content_id);
-        this.showVLRSelectionModal(contentType, title, null, preselectedIds);
-    }
-
-    showVLRModal(moduleId) {
-        // Find the module and pass its current content IDs and types
-        const module = this.modules.find(m => m.id === moduleId);
-        const preselectedIds = module ? module.content.map(item => ({ id: item.id, type: item.type })) : [];
-        this.showVLRSelectionModal('moduleContent', 'Select VLR Content', moduleId, preselectedIds);
-    }
-
-    showVLRSelectionModal(type, title, moduleId = null, preselectedIds = []) {
-        if (window.vlrContent && Object.keys(window.vlrContent).length > 0) {
-            this.showVLRContentModal(title, window.vlrContent, type, moduleId, preselectedIds);
-        } else {
-            this.showToast('VLR content not available', 'error');
-        }
-    }
-
-    showVLRContentModal(title, content, type, moduleId = null, preselectedIds = []) {
-        // Filter VLR types based on course type if adding to module
-        let allowedTypes = null;
-        if (type === 'moduleContent') {
-            const courseTypeSelect = document.getElementById('course_type');
-            const courseType = courseTypeSelect ? courseTypeSelect.value : '';
-            if (courseType === 'e-learning') {
-                allowedTypes = [
-                    'scorm', 'nonscorm', 'external', 'interactive', 'audio', 'video', 'image'
-                ];
-            } else if (courseType === 'blended') {
-                allowedTypes = [
-                    'assignment', 'document', 'video', 'audio', 'interactive'
-                ];
-            } else if (courseType === 'classroom') {
-                allowedTypes = [
-                    'document', 'assignment', 'image', 'external'
-                ];
-            } else if (courseType === 'assessment') {
-                allowedTypes = ['assessment'];
-            }
-        }
-
-        // Group content by type if it's an array (for legacy support)
-        let groupedContent = {};
-        if (Array.isArray(content)) {
-            content.forEach(item => {
-                if (!groupedContent[item.type]) groupedContent[item.type] = [];
-                groupedContent[item.type].push(item);
-            });
-        } else if (typeof content === 'object' && content !== null) {
-            groupedContent = content;
-        }
-
-        // If filtering, remove disallowed types
-        if (allowedTypes) {
-            Object.keys(groupedContent).forEach(typeKey => {
-                if (!allowedTypes.includes(typeKey)) {
-                    delete groupedContent[typeKey];
-                }
-            });
-        }
-
-        // Fix: Declare isGridView before using it in modal.innerHTML
-        let isGridView = localStorage.getItem('vlrViewMode') !== 'list';
-
-        const modal = document.createElement('div');
-        modal.className = 'modal fade';
-        modal.id = 'vlrSelectionModal';
-        modal.innerHTML = `
-            <div class="modal-dialog modal-xl">
-                <div class="modal-content">
-                    <div class="modal-header align-items-center">
-                        <h5 class="modal-title flex-grow-1">${title}</h5>
-                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                    </div>
-                    <div class="modal-body">
-                        <!-- View Toggle and Search Bar -->
-                        <div class="d-flex justify-content-between align-items-center mb-3">
-                            <div>
-                                <button type="button" class="btn btn-outline-primary btn-sm me-2 rounded-pill px-3 fw-bold" id="toggleVLRViewBtn" aria-pressed="${isGridView}">
-                                    <i class="fas fa-th"></i> <span id="vlrViewLabel">Grid View</span>
-                                </button>
-                            </div>
-                            <div class="flex-grow-1">
-                                <div class="input-group">
-                                    <span class="input-group-text"><i class="fas fa-search"></i></span>
-                                    <input type="text" class="form-control" id="vlrSearchInput" placeholder="Search VLR content...">
-                                    <button class="btn btn-outline-secondary" type="button" id="clearSearchBtn">Clear</button>
-                                </div>
-                            </div>
-                        </div>
-                        <!-- Tabs for different VLR types -->
-                        <ul class="nav nav-tabs" id="vlrTypeTabs" role="tablist">
-                            ${Object.keys(groupedContent).map((contentType, index) => `
-                                <li class="nav-item" role="presentation">
-                                    <button class="nav-link ${index === 0 ? 'active' : ''}" 
-                                            id="tab-${contentType}" 
-                                            data-bs-toggle="tab" 
-                                            data-bs-target="#content-${contentType}" 
-                                            type="button" 
-                                            role="tab">
-                                        <i class="fas ${this.getVLRIcon(contentType)} me-2"></i>
-                                        ${this.getVLRTypeDisplayName(contentType)} 
-                                        <span class="badge bg-secondary ms-2">${groupedContent[contentType].length}</span>
-                                    </button>
-                                </li>
-                            `).join('')}
-                        </ul>
-                        <!-- Tab Content -->
-                        <div class="tab-content mt-3" id="vlrTypeTabContent">
-                            ${Object.keys(groupedContent).map((contentType, index) => `
-                                <div class="tab-pane fade ${index === 0 ? 'show active' : ''}" 
-                                     id="content-${contentType}" 
-                                     role="tabpanel">
-                                    <div class="d-flex align-items-center mb-2">
-                                        <input type="checkbox" class="form-check-input me-2" id="selectAllVLR-${contentType}" aria-label="Select all ${this.getVLRTypeDisplayName(contentType)}">
-                                        <label for="selectAllVLR-${contentType}" class="form-check-label small">Select All</label>
-                                    </div>
-                                    <div class="row g-3" id="content-grid-${contentType}">
-                                        ${groupedContent[contentType].map(item => `
-                                            <div class="col-md-6 col-lg-4 vlr-content-item d-flex align-items-center gap-3 p-3 border rounded bg-white position-relative" 
-                                                 tabindex="0" role="option" aria-label="${item.title}" 
-                                                 data-vlr-id="${item.id}" 
-                                                 data-vlr-type="${item.type}"
-                                                 data-title="${item.title.toLowerCase()}"
-                                                 data-description="${(item.description || '').toLowerCase()}">
-                                                <i class="fas ${this.getVLRIcon(item.type)} mt-1" style="font-size: 2em; color: var(--bs-primary, #4b0082); filter: drop-shadow(0 2px 4px #b197fc33);" title="${this.getVLRTypeDisplayName(item.type)}" data-bs-toggle="tooltip"></i>
-                                                <div class="flex-grow-1">
-                                                    <div class="fw-bold mb-1 text-truncate" title="${item.title}" data-bs-toggle="tooltip" style="font-size:1.1em;">${item.title.length > 30 ? item.title.substring(0, 27) + '...' : item.title}</div>
-                                                    <small class="text-muted d-block mb-2 text-truncate" title="${item.description}" data-bs-toggle="tooltip">${item.description && item.description.length > 60 ? item.description.substring(0, 57) + '...' : item.description || ''}</small>
-                                                    <div class="d-flex align-items-center gap-2 mt-1">
-                                                        <span class="badge bg-primary-subtle text-primary small">${this.getVLRTypeDisplayName(item.type)}</span>
-                                                        ${item.uploadDate ? `<span class="badge bg-secondary-subtle text-secondary small" title="Upload Date">${item.uploadDate}</span>` : ''}
-                                                        ${item.fileSize ? `<span class="badge bg-info-subtle text-info small" title="File Size">${item.fileSize}</span>` : ''}
-                                                    </div>
-                                                </div>
-                                                <div class="form-check ms-2 flex-shrink-0" style="min-width:2.5em;">
-                                                    <input class="form-check-input vlr-checkbox" type="checkbox" value="${item.id}" id="vlr-${item.id}" aria-label="Select ${item.title}" style="accent-color: var(--bs-primary, #4b0082); width:1.3em; height:1.3em;">
-                                                    <label class="form-check-label visually-hidden" for="vlr-${item.id}">Select</label>
-                                                </div>
-                                            </div>
-                                        `).join('')}
-                                    </div>
-                                    ${groupedContent[contentType].length === 0 ? `
-                                        <div class="text-center py-4">
-                                            <i class="fas fa-inbox fa-3x text-muted mb-3"></i>
-                                            <p class="text-muted">No ${this.getVLRTypeDisplayName(contentType)} content available</p>
-                                        </div>
-                                    ` : ''}
-                                </div>
-                            `).join('')}
-                        </div>
-                    </div>
-                    <div class="modal-footer">
-                        <div class="d-flex justify-content-between align-items-center w-100">
-                            <div>
-                                <span class="text-muted" id="selectedCount">0 items selected</span>
-                            </div>
-                            <div>
-                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                                <button type="button" class="btn btn-primary" id="addSelectedVLRBtn" disabled>
-                                    Add Selected (<span id="selectedCountBtn">0</span>)
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        `;
-
-        document.body.appendChild(modal);
-        
-        const modalInstance = new bootstrap.Modal(modal);
-        modalInstance.show();
-
-        // Initialize search functionality
-        this.initializeVLRSearch(modal);
-        
-        // Initialize checkbox functionality, pass preselectedIds
-        this.initializeVLRCheckboxes(modal, type, moduleId, preselectedIds);
-
-        // Clean up modal after hiding
-        modal.addEventListener('hidden.bs.modal', () => {
-            document.body.removeChild(modal);
-        });
-
-        // Add after modalInstance.show();
-        const toggleBtn = modal.querySelector('#toggleVLRViewBtn');
-        function updateVLRView() {
-            const tabPanes = modal.querySelectorAll('.tab-pane');
-            tabPanes.forEach(tabPane => {
-                const grid = tabPane.querySelector('.row, .g-3, #content-grid-' + tabPane.id.replace('content-', ''));
-                if (!grid) return;
-                const items = grid.querySelectorAll('.vlr-content-item');
-                // Reset all custom styles
-                items.forEach(item => {
-                    item.style.background = '';
-                    item.style.borderColor = '';
-                    item.style.borderRadius = '';
-                    item.style.boxShadow = '';
-                    item.style.transition = '';
-                    item.style.color = '';
-                    item.style.padding = '';
-                });
-                if (isGridView) {
-                    grid.classList.add('row', 'g-3');
-                    items.forEach(item => {
-                        item.classList.remove('col-12', 'h-100', 'flex-column');
-                        item.classList.add('col-md-6', 'col-lg-4', 'mb-3', 'p-2', 'd-flex');
-                        item.style.background = 'var(--bs-primary-bg-subtle, #f3f0ff)';
-                        item.style.borderColor = 'var(--bs-primary-border-subtle, #b197fc)';
-                        item.style.borderRadius = '1rem';
-                        item.style.boxShadow = '0 2px 8px 0 rgba(75,0,130,0.07)';
-                        item.style.transition = 'box-shadow 0.2s, border-color 0.2s';
-                        item.style.padding = '0.75rem';
-                        item.style.color = 'var(--bs-body-color, #212529)';
-                        item.style.height = '';
-                        item.style.display = '';
-                        item.style.flexDirection = '';
-                        item.style.justifyContent = '';
-                        // Icon style
-                        const icon = item.querySelector('i');
-                        if (icon) {
-                            icon.style.fontSize = '1.5em';
-                            icon.style.color = 'var(--bs-primary, #4b0082)';
-                        }
-                        // Title style
-                        const title = item.querySelector('.fw-bold');
-                        if (title) {
-                            title.style.fontSize = '1em';
-                            title.style.fontWeight = 'bold';
-                            title.style.whiteSpace = 'nowrap';
-                            title.style.overflow = 'hidden';
-                            title.style.textOverflow = 'ellipsis';
-                            title.setAttribute('title', title.textContent);
-                        }
-                        // Description style
-                        const desc = item.querySelector('.text-muted');
-                        if (desc) {
-                            desc.style.fontSize = '0.95em';
-                            desc.style.color = 'var(--bs-secondary-color, #6c757d)';
-                            desc.style.whiteSpace = 'nowrap';
-                            desc.style.overflow = 'hidden';
-                            desc.style.textOverflow = 'ellipsis';
-                            desc.setAttribute('title', desc.textContent);
-                        }
-                        // Hover effect
-                        item.onmouseover = () => { item.style.boxShadow = '0 0 0 0.2rem #b197fc33'; item.style.borderColor = '#4b0082'; };
-                        item.onmouseout = () => { item.style.boxShadow = '0 2px 8px 0 rgba(75,0,130,0.07)'; item.style.borderColor = 'var(--bs-primary-border-subtle, #b197fc)'; };
-                    });
-                    toggleBtn.innerHTML = '<i class="fas fa-th-list"></i> <span id="vlrViewLabel">List View</span>';
-                } else {
-                    grid.classList.remove('row', 'g-3');
-                    items.forEach(item => {
-                        item.classList.remove('col-md-6', 'col-lg-4');
-                        item.classList.add('col-12', 'd-flex');
-                        item.style.background = 'var(--bs-body-bg, #fff)';
-                        item.style.borderColor = 'var(--bs-primary-border-subtle, #b197fc)';
-                        item.style.borderRadius = '0.5rem';
-                        item.style.boxShadow = '0 1px 4px 0 rgba(75,0,130,0.04)';
-                        item.style.transition = 'box-shadow 0.2s, border-color 0.2s';
-                        item.style.padding = '1.25rem';
-                        item.style.color = 'var(--bs-body-color, #212529)';
-                        // Icon style
-                        const icon = item.querySelector('i');
-                        if (icon) {
-                            icon.style.fontSize = '2em';
-                            icon.style.color = 'var(--bs-primary, #4b0082)';
-                        }
-                        // Title style
-                        const title = item.querySelector('.fw-bold');
-                        if (title) {
-                            title.style.fontSize = '1.1em';
-                            title.style.fontWeight = 'bold';
-                        }
-                        // Description style
-                        const desc = item.querySelector('.text-muted');
-                        if (desc) {
-                            desc.style.fontSize = '0.95em';
-                            desc.style.color = 'var(--bs-secondary-color, #6c757d)';
-                        }
-                        // Hover effect
-                        item.onmouseover = () => { item.style.boxShadow = '0 0 0 0.2rem #b197fc33'; item.style.borderColor = '#4b0082'; };
-                        item.onmouseout = () => { item.style.boxShadow = '0 1px 4px 0 rgba(75,0,130,0.04)'; item.style.borderColor = 'var(--bs-primary-border-subtle, #b197fc)'; };
-                    });
-                    toggleBtn.innerHTML = '<i class="fas fa-th"></i> <span id="vlrViewLabel">Grid View</span>';
-                }
-            });
-            localStorage.setItem('vlrViewMode', isGridView ? 'grid' : 'list');
-        }
-        toggleBtn.addEventListener('click', () => {
-            isGridView = !isGridView;
-            updateVLRView();
-        });
-        updateVLRView();
-    }
-
-    getVLRTypeDisplayName(type) {
-        const typeNames = {
-            'scorm': 'SCORM Packages',
-            'non_scorm': 'Non-SCORM Packages',
-            'assessment': 'Assessments',
-            'audio': 'Audio Packages',
-            'video': 'Video Packages',
-            'image': 'Image Packages',
-            'document': 'Documents',
-            'external': 'External Content',
-            'interactive': 'Interactive Content',
-            'assignment': 'Assignments',
-            'survey': 'Surveys',
-            'feedback': 'Feedback Forms'
-        };
-        return typeNames[type] || type;
-    }
-
-    initializeVLRSearch(modal) {
-        const searchInput = modal.querySelector('#vlrSearchInput');
-        const clearSearchBtn = modal.querySelector('#clearSearchBtn');
-        const contentItems = modal.querySelectorAll('.vlr-content-item');
-
-        const performSearch = () => {
-            const searchTerm = searchInput.value.toLowerCase().trim();
-            
-            contentItems.forEach(item => {
-                const title = item.dataset.title;
-                const description = item.dataset.description;
-                const matches = title.includes(searchTerm) || description.includes(searchTerm);
-                
-                item.style.display = matches ? 'block' : 'none';
-            });
-
-            // Update tab badges with visible count
-            const tabs = modal.querySelectorAll('#vlrTypeTabs .nav-link');
-            tabs.forEach(tab => {
-                const targetId = tab.getAttribute('data-bs-target');
-                const targetPane = modal.querySelector(targetId);
-                // Only count .vlr-content-item that are visible (not display: none)
-                const visibleItems = Array.from(targetPane.querySelectorAll('.vlr-content-item')).filter(item => item.style.display !== 'none');
-                const badge = tab.querySelector('.badge');
-                if (badge) {
-                    badge.textContent = visibleItems.length;
-                }
-            });
-        };
-
-        searchInput.addEventListener('input', performSearch);
-        clearSearchBtn.addEventListener('click', () => {
-            searchInput.value = '';
-            performSearch();
-        });
-    }
-
-    initializeVLRCheckboxes(modal, type, moduleId, preselectedIds = []) {
-        const checkboxes = modal.querySelectorAll('.vlr-checkbox');
-        const selectedCountSpan = modal.querySelector('#selectedCount');
-        const selectedCountBtn = modal.querySelector('#selectedCountBtn');
-        const addSelectedBtn = modal.querySelector('#addSelectedVLRBtn');
-
-        // Pre-check checkboxes for already selected items
-        checkboxes.forEach(checkbox => {
-            checkbox.checked = false;
-            const checkboxId = parseInt(checkbox.value);
-            const checkboxType = checkbox.closest('.vlr-content-item').dataset.vlrType;
-            if (preselectedIds.some(sel => sel.id === checkboxId && sel.type === checkboxType)) {
-                checkbox.checked = true;
-            }
-        });
-
-        const isPostRequisite = type.startsWith('postRequisite_');
-
-        const updateSelectedCount = () => {
-            let count = 0;
-            if (isPostRequisite) {
-                count = modal.querySelectorAll('.vlr-checkbox:checked').length;
-                // Only enable Add button if exactly one is checked
-                addSelectedBtn.disabled = count !== 1;
-                selectedCountSpan.textContent = `${count} item${count !== 1 ? 's' : ''} selected`;
-                selectedCountBtn.textContent = count;
-            } else {
-                const selectedCheckboxes = modal.querySelectorAll('.vlr-checkbox:checked');
-                count = selectedCheckboxes.length;
-                selectedCountSpan.textContent = `${count} item${count !== 1 ? 's' : ''} selected`;
-                selectedCountBtn.textContent = count;
-                addSelectedBtn.disabled = count === 0;
-            }
-        };
-
-        if (isPostRequisite) {
-            // Only allow one selection at a time (radio button behavior)
-            checkboxes.forEach(checkbox => {
-                checkbox.addEventListener('change', () => {
-                    if (checkbox.checked) {
-                        checkboxes.forEach(cb => { if (cb !== checkbox) cb.checked = false; });
-                    }
-                    updateSelectedCount();
-                });
-            });
-        } else {
-            checkboxes.forEach(checkbox => {
-                checkbox.addEventListener('change', updateSelectedCount);
-            });
-        }
-
-        addSelectedBtn.addEventListener('click', () => {
-            const selectedCheckboxes = modal.querySelectorAll('.vlr-checkbox:checked');
-            const selectedItems = [];
-
-            selectedCheckboxes.forEach(checkbox => {
-                const itemId = parseInt(checkbox.value);
-                const itemCard = checkbox.closest('.vlr-content-item');
-                const itemTitle = itemCard.querySelector('.fw-bold').textContent.trim();
-                const itemType = itemCard.dataset.vlrType;
-                
-                selectedItems.push({
-                    id: itemId,
-                    type: itemType,
-                    title: itemTitle
-                });
-            });
-
-            if (selectedItems.length > 0) {
-                this.addSelectedVLR(type, moduleId, selectedItems);
-                
-                // Close modal
-                const modalInstance = bootstrap.Modal.getInstance(modal);
-                if (modalInstance) {
-                    modalInstance.hide();
-                }
-            }
-        });
-
-        // Initialize count
-        updateSelectedCount();
-    }
-
-    addSelectedVLR(type, moduleId, selectedItems) {
-        console.log('[DEBUG] addSelectedVLR', type, selectedItems);
-        if (type.startsWith('postRequisite_')) {
-            // Only one item allowed
-            const realType = type.replace('postRequisite_', '');
-            this.logToFile('Processing postRequisite type:', realType);
-            this.logToFile('Selected items:', selectedItems);
-            
-            // Add to unified post-requisites array instead of separate object
-            if (selectedItems[0]) {
-                const requisite = {
-                    id: selectedItems[0].id,
-                    title: selectedItems[0].title,
-                    description: selectedItems[0].description || '',
-                    content_type: realType,
-                    content_id: selectedItems[0].id,
-                    sort_order: this.post_requisites.length,
-                    is_required: true
-                };
-                
-                this.logToFile('Adding requisite to post_requisites array:', requisite);
-                this.post_requisites.push(requisite);
-                this.logToFile('post_requisites after adding:', this.post_requisites);
-                
-                // Update UI
-                this.renderPostRequisites();
-            }
-            
-            // Update display div
-            const displayDiv = document.getElementById('selectedPost' + this.capitalizeFirstLetter(realType));
-            if (displayDiv) {
-                if (selectedItems[0]) {
-                    displayDiv.innerHTML = `<div class='alert alert-success py-1 px-2 mb-0 d-flex align-items-center justify-content-between'><span><i class='mdi mdi-check-circle me-1'></i> ${selectedItems[0].title}</span> <button type='button' class='btn btn-sm btn-link text-danger p-0 ms-2' onclick='courseManager.clearPostRequisiteSelection("${realType}")'><i class='mdi mdi-close'></i></button></div>`;
-                } else {
-                    displayDiv.innerHTML = '';
-                }
-            }
-            
-            this.renderPostRequisitesSummary();
-            return;
-        }
-        switch (type) {
-            case 'prerequisites':
-                // Add sort_order to each prerequisite item
-                const prerequisitesWithOrder = selectedItems.map((item, index) => ({
-                    ...item,
-                    sort_order: index
-                }));
-                this.prerequisites = prerequisitesWithOrder;
-                console.log('[DEBUG] Prerequisites added:', prerequisitesWithOrder);
-                this.renderPrerequisites();
-                break;
-            case 'assessment':
-            case 'feedback':
-            case 'survey':
-            case 'assignment':
-                this.logToFile('Adding post-requisites for type: ' + type);
-                this.logToFile('Selected items:', selectedItems);
-                this.logToFile('Current post_requisites before:', this.post_requisites);
-                
-                // Add to unified post-requisites array
-                const postRequisitesWithOrder = selectedItems.map((item, index) => {
-                    const requisite = {
-                        id: item.id, // Keep original id for reference
-                        title: item.title,
-                        description: item.description || '',
-                        content_type: type,
-                        content_id: item.id, // This is what the backend expects
-                        sort_order: this.post_requisites.length + index,
-                        is_required: true
-                    };
-                    this.logToFile('Created requisite object:', requisite);
-                    return requisite;
-                });
-                
-                this.post_requisites.push(...postRequisitesWithOrder);
-                this.logToFile('Post-requisites after adding:', this.post_requisites);
-                this.renderPostRequisites();
-                break;
-            case 'moduleContent':
-                if (moduleId) {
-                    const module = this.modules.find(m => m.id === moduleId);
-                    if (module) {
-                        // Add sort_order to each content item
-                        const contentWithOrder = selectedItems.map((item, index) => ({
-                            ...item,
-                            sort_order: index
-                        }));
-                        module.content = contentWithOrder;
-                        this.renderModules();
-                    }
-                }
-                break;
-        }
-
-        this.showToast(`${selectedItems.length} item(s) added successfully`, 'success');
-    }
-
-    renderPrerequisites() {
-        const container = document.getElementById('prerequisites_container');
-        if (!container) return;
-        if (!this.prerequisites.length) {
-            container.innerHTML = '<span class="text-muted">No prerequisites added yet</span>';
-            return;
-        }
-        container.innerHTML = this.prerequisites.map(item => `
-            <div class="prerequisite-chip card px-2 py-1 d-flex flex-row align-items-center mb-2" style="border-radius:1.2em; background:#f8f9fa; border:1px solid #e0e0e0;">
-                <i class="fas fa-link me-2 text-secondary"></i>
-                <span class="prerequisite-title flex-grow-1 text-truncate" title="${item.title}">${item.title}</span>
-                <span class="badge bg-light text-dark ms-2 text-truncate" style="max-width: 80px;" title="${item.prereqType || item.type}">${item.prereqType || item.type}</span>
-                <button type="button" class="btn btn-sm btn-outline-danger ms-2 flex-shrink-0" title="Remove" onclick="courseManager.removePrerequisite(${item.id})">
-                    <i class="fas fa-times"></i>
-                </button>
-            </div>
-        `).join('');
-    }
-
-    renderPostRequisites() {
-        this.logToFile('renderPostRequisites called');
-        this.logToFile('Current post_requisites:', this.post_requisites);
-        this.logToFile('post_requisites length:', this.post_requisites.length);
-        
-        const container = document.getElementById('postRequisitesContainer');
-        if (!container) {
-            this.logToFile('ERROR: Post-requisites container not found');
-            return;
-        }
-
-        if (!this.post_requisites.length) {
-            this.logToFile('No post-requisites to render');
-            container.innerHTML = '<span class="text-muted">No post-requisites added yet</span>';
-            return;
-        }
-
-        container.innerHTML = this.post_requisites.map(requisite => `
-            <div class="vlr-content-item d-flex align-items-center justify-content-between p-2 mb-2 border rounded bg-white">
-                <div class="vlr-content-info d-flex align-items-center">
-                    <i class="vlr-content-icon fas ${this.getVLRIcon(requisite.content_type)} me-2 text-primary"></i>
-                    <div>
-                        <div class="vlr-content-title fw-bold">${requisite.title}</div>
-                        <small class="text-muted">${this.capitalizeFirstLetter(requisite.content_type)}</small>
-                    </div>
-                </div>
-                <button type="button" class="btn btn-sm btn-outline-danger" onclick="courseManager.removePostRequisite(${requisite.id})">
-                    <i class="fas fa-times"></i>
-                </button>
-            </div>
-        `).join('');
-    }
-
-    removePrerequisite(id) {
-        this.prerequisites = this.prerequisites.filter(item => item.id !== id);
-        this.renderPrerequisites();
-        this.showToast('Prerequisite removed', 'success');
-    }
-
-    removePostRequisite(id) {
-        this.logToFile('removePostRequisite called with id:', id);
-        this.logToFile('post_requisites before removal:', this.post_requisites);
-        
-        // Convert id to number for comparison since it might be passed as string
-        const numericId = parseInt(id);
-        this.logToFile('numericId:', numericId);
-        
-        this.post_requisites = this.post_requisites.filter(item => item.id !== numericId);
-        this.logToFile('post_requisites after removal:', this.post_requisites);
-        
-        this.renderPostRequisites();
-        this.showToast('Post-requisite removed', 'success');
-    }
-
-    removeVLRContent(moduleId, contentId) {
-        const module = this.modules.find(m => m.id === moduleId);
-        if (module) {
-            module.content = module.content.filter(item => item.id !== contentId);
-            this.renderModules();
-            this.showToast('Content removed from module', 'success');
-        }
-    }
-
-    setupKeyboardShortcuts() {
-        document.addEventListener('keydown', (e) => {
-            // Ctrl/Cmd + S to save
-            if ((e.ctrlKey || e.metaKey) && e.key === 's') {
-                e.preventDefault();
-                this.handleFormSubmit();
-            }
-
-            // Tab navigation with arrow keys
-            if (e.key === 'ArrowRight' && e.ctrlKey) {
-                e.preventDefault();
-                this.switchTab(Math.min(this.currentTab + 1, 5));
-            }
-
-            if (e.key === 'ArrowLeft' && e.ctrlKey) {
-                e.preventDefault();
-                this.switchTab(Math.max(this.currentTab - 1, 0));
-            }
-        });
-    }
-
-    collectFormData() {
-        const form = document.getElementById('courseCreationForm');
-        const formData = new FormData(form);
-        
-        const data = {
-            title: formData.get('title'),
-            short_description: formData.get('short_description'),
-            description: formData.get('description'),
-            category_id: formData.get('category_id'),
-            subcategory_id: formData.get('subcategory_id'),
-            course_type: formData.get('course_type'),
-            difficulty_level: formData.get('difficulty_level'),
-            course_status: formData.get('course_status'),
-            module_structure: formData.get('module_structure'),
-            course_points: formData.get('course_points'),
-            course_cost: formData.get('course_cost'),
-            currency: formData.get('currency'),
-            reassign_course: formData.get('reassign_course'),
-            reassign_days: formData.get('reassign_days'),
-            show_in_search: formData.get('show_in_search'),
-            certificate_option: formData.get('certificate_option'),
-            duration_hours: formData.get('duration_hours'),
-            duration_minutes: formData.get('duration_minutes'),
-            is_self_paced: formData.get('is_self_paced'),
-            is_featured: formData.get('is_featured'),
-            is_published: formData.get('is_published'),
-            target_audience: formData.get('target_audience'),
-            learning_objectives: this.learningObjectives,
-            tags: this.tags,
-            modules: this.modules,
-            prerequisites: this.prerequisites,
-            post_requisites: this.post_requisites
-        };
-        
-        this.logToFile('Form data collected:', data);
-        console.log('[DEBUG] collectFormData - Learning Objectives:', this.learningObjectives);
-        console.log('[DEBUG] collectFormData - Learning Objectives length:', this.learningObjectives.length);
-        console.log('[DEBUG] collectFormData - Tags:', this.tags);
-        console.log('[DEBUG] collectFormData - Tags length:', this.tags.length);
-        this.logToFile('Learning Objectives:', this.learningObjectives);
-        this.logToFile('Learning Objectives length:', this.learningObjectives.length);
-        this.logToFile('Tags:', this.tags);
-        this.logToFile('Tags length:', this.tags.length);
-        this.logToFile('Post-requisites:', this.post_requisites);
-        this.logToFile('Post-requisites length:', this.post_requisites.length);
-        this.logToFile('Post-requisites type:', typeof this.post_requisites);
-        this.logToFile('Post-requisites in data:', data.post_requisites);
-        
-        return data;
-    }
-
-    showLoadingOverlay(message = 'Loading...') {
-        const overlay = document.createElement('div');
-        overlay.className = 'course-loading-overlay';
-        overlay.innerHTML = `
-            <div class="course-loading-spinner">
-                <div class="spinner-border" role="status"></div>
-                <p class="course-loading-text">${message}</p>
-            </div>
-        `;
-        document.body.appendChild(overlay);
-    }
-
-    hideLoadingOverlay() {
-        const overlay = document.querySelector('.course-loading-overlay');
-        if (overlay) {
-            overlay.remove();
-        }
-    }
-
-    showConfirmationModal(title, message, onConfirm, onCancel = null) {
-        console.log('[DEBUG] showConfirmationModal called');
-        console.log('[DEBUG] window.confirmationModalInstance:', window.confirmationModalInstance);
-        
-        // Use the global confirmation modal if available
-        if (window.confirmationModalInstance && typeof window.confirmationModalInstance.show === 'function') {
-            console.log('[DEBUG] Using global confirmation modal');
-            window.confirmationModalInstance.show({
-                title: title,
-                message: message,
-                onConfirm: onConfirm,
-                onCancel: onCancel
-            });
-        } else {
-            console.log('[DEBUG] Using fallback confirmation');
-            // Fallback to simple confirmation
-            if (confirm(message)) {
-                if (onConfirm) onConfirm();
-            } else {
-                if (onCancel) onCancel();
-            }
-        }
-    }
-
-    showToast(message, type = 'info', duration = 5000) {
-        if (typeof window.showSimpleToast === 'function') {
-            window.showSimpleToast(message, type);
-            return;
-        }
-        // Enhanced fallback toast implementation
-        const toast = document.createElement('div');
-        toast.className = `toast text-bg-${type === 'error' ? 'danger' : type} show`;
-        toast.style.position = 'fixed';
-        toast.style.top = '20px';
-        toast.style.right = '20px';
-        toast.style.zIndex = '9999';
-        toast.style.minWidth = '300px';
-        toast.style.maxWidth = '400px';
-        toast.style.boxShadow = '0 4px 12px rgba(0, 0, 0, 0.15)';
-        toast.style.borderRadius = '8px';
-        toast.style.border = 'none';
-        const icon = this.getToastIcon(type);
-        const title = this.getToastTitle(type);
-        toast.innerHTML = `
-            <div class="toast-body d-flex align-items-center">
-                <i class="fas ${icon} me-2" style="font-size: 1.1em;"></i>
-                <div class="flex-grow-1">
-                    <div class="fw-bold">${title}</div>
-                    <div class="small">${message}</div>
-                </div>
-                <button type="button" class="btn-close btn-close-white ms-2" 
-                        onclick="this.parentElement.parentElement.remove()"></button>
-            </div>
-        `;
-        document.body.appendChild(toast);
-        setTimeout(() => {
-            if (toast.parentElement) {
-                toast.style.opacity = '0';
-                toast.style.transform = 'translateX(100%)';
-                toast.style.transition = 'all 0.3s ease';
-                setTimeout(() => {
-                    if (toast.parentElement) {
-                        toast.remove();
-                    }
-                }, 300);
-            }
-        }, duration);
-        toast.addEventListener('click', (e) => {
-            if (!e.target.classList.contains('btn-close')) {
-                toast.remove();
-            }
-        });
-    }
-
-    getToastIcon(type) {
-        const icons = {
-            success: 'check-circle',
-            error: 'exclamation-triangle',
-            warning: 'exclamation-triangle',
-            info: 'info-circle'
-        };
-        return icons[type] || 'info-circle';
-    }
-
-    getToastTitle(type) {
-        const titles = {
-            success: 'Success',
-            error: 'Error',
-            warning: 'Warning',
-            info: 'Information'
-        };
-        return titles[type] || 'Information';
-    }
-
-    showSuccessToast(message) {
-        this.showToast(message, 'success', 4000);
-    }
-
-    showErrorToast(message) {
-        this.showToast(message, 'error', 6000);
-    }
-
-    showWarningToast(message) {
-        this.showToast(message, 'warning', 5000);
-    }
-
-    showInfoToast(message) {
-        this.showToast(message, 'info', 4000);
-    }
-
-    initializeModuleDragAndDrop() {
-        const modulesContainer = document.getElementById('modulesContainer');
-        if (!modulesContainer) return;
-
-        modulesContainer.addEventListener('dragover', (e) => {
-            e.preventDefault();
-            this.handleModuleDragOver(e);
-        });
-
-        modulesContainer.addEventListener('drop', (e) => {
-            e.preventDefault();
-            this.handleModuleDrop(e);
-        });
-
-        // Add drag event listeners to module items
-        this.addModuleDragListeners();
-    }
-
-    addModuleDragListeners() {
-        document.querySelectorAll('.module-item').forEach(item => {
-            item.addEventListener('dragstart', (e) => {
-                this.draggedElement = item;
-                item.classList.add('dragging');
-                e.dataTransfer.effectAllowed = 'move';
-            });
-
-            item.addEventListener('dragend', () => {
-                item.classList.remove('dragging');
-                this.draggedElement = null;
-            });
-
-            // Drag handle functionality
-            const dragHandle = item.querySelector('.module-drag-handle');
-            if (dragHandle) {
-                dragHandle.addEventListener('mousedown', (e) => {
-                    e.preventDefault();
-                    item.draggable = true;
-                });
-
-                dragHandle.addEventListener('mouseup', () => {
-                    item.draggable = false;
-                });
-            }
-        });
-    }
-
-    handleGlobalDragOver(e) {
-        // Handle global drag over events if needed
-        e.preventDefault();
-    }
-
-    handleGlobalDrop(e) {
-        // Handle global drop events if needed
-        e.preventDefault();
-    }
-
-    moveModuleUp(index) {
-        if (index > 0) {
-            [this.modules[index - 1], this.modules[index]] = [this.modules[index], this.modules[index - 1]];
-            // Update sort_order for all modules
-            this.modules.forEach((module, idx) => {
-                module.sort_order = idx;
-            });
-            this.renderModules();
-        }
-    }
-
-    moveModuleDown(index) {
-        if (index < this.modules.length - 1) {
-            [this.modules[index], this.modules[index + 1]] = [this.modules[index + 1], this.modules[index]];
-            // Update sort_order for all modules
-            this.modules.forEach((module, idx) => {
-                module.sort_order = idx;
-            });
-            this.renderModules();
-        }
-    }
-
-    // Move VLR content up in the module
-    moveVLRUp(moduleId, idx) {
-        const module = this.modules.find(m => m.id === moduleId);
-        if (!module || idx === 0) return;
-        [module.content[idx - 1], module.content[idx]] = [module.content[idx], module.content[idx - 1]];
-        // Update sort_order for all content items
-        module.content.forEach((content, contentIdx) => {
-            content.sort_order = contentIdx;
-        });
-        this.renderModules();
-    }
-
-    // Move VLR content down in the module
-    moveVLRDown(moduleId, idx) {
-        const module = this.modules.find(m => m.id === moduleId);
-        if (!module || idx === module.content.length - 1) return;
-        [module.content[idx + 1], module.content[idx]] = [module.content[idx], module.content[idx + 1]];
-        // Update sort_order for all content items
-        module.content.forEach((content, contentIdx) => {
-            content.sort_order = contentIdx;
-        });
-        this.renderModules();
-    }
-
-    showPostRequisiteVLRModal(type) {
-        let preselectedId = null;
-        if (this.postRequisites && this.postRequisites[type]) {
-            preselectedId = this.postRequisites[type].id;
-        }
-        let vlrContentForType = [];
-        if (Array.isArray(window.vlrContent)) {
-            // Flat array: filter by type
-            let filterType = type;
-            if (type === 'assignment') filterType = 'assignment';
-            if (type === 'survey') filterType = 'survey';
-            vlrContentForType = window.vlrContent.filter(item => item.type === filterType);
-        } else {
-            // Object: use correct key
-            let vlrKey = type;
-            if (type === 'assignment') vlrKey = 'assignments';
-            if (type === 'survey') vlrKey = 'surveys';
-            vlrContentForType = (window.vlrContent && window.vlrContent[vlrKey]) ? window.vlrContent[vlrKey] : [];
-        }
-        console.log('Post requisite VLR content for', type, vlrContentForType);
-        this.showSingleTypeVLRModal('postRequisite_' + type, 'Select ' + this.getVLRTypeDisplayName(type), vlrContentForType, preselectedId ? [{id: preselectedId, type}] : [], type);
-    }
-
-    // Dedicated modal for single-type VLR content (post requisite)
-    showSingleTypeVLRModal(type, title, contentArray, preselectedIds = [], filterType = null) {
-        // Group as an object for modal rendering
-        const groupedContent = {};
-        groupedContent[filterType] = Array.isArray(contentArray) ? contentArray : [];
-        // Pass 'postRequisite_' + filterType as the type to ensure correct handling in addSelectedVLR
-        this.showVLRContentModal(title, groupedContent, 'postRequisite_' + filterType, null, preselectedIds);
-    }
-
-    clearPostRequisiteSelection(type) {
-        this.logToFile('clearPostRequisiteSelection called for type:', type);
-        this.logToFile('post_requisites before removal:', this.post_requisites);
-        
-        // Remove items with this content_type from the array
-        this.post_requisites = this.post_requisites.filter(item => item.content_type !== type);
-        
-        this.logToFile('post_requisites after removal:', this.post_requisites);
-        
-        // Update display div
-        const displayDiv = document.getElementById('selectedPost' + this.capitalizeFirstLetter(type));
-        if (displayDiv) displayDiv.innerHTML = '';
-        
-        // Update UI
-        this.renderPostRequisites();
-        this.renderPostRequisitesSummary();
-    }
-
-    capitalizeFirstLetter(str) {
-        return str.charAt(0).toUpperCase() + str.slice(1);
-    }
-
-    renderPostRequisitesSummary() {
-        const container = document.getElementById('postRequisitesSummary');
-        if (!container) return;
-        
-        this.logToFile('renderPostRequisitesSummary called');
-        this.logToFile('post_requisites array:', this.post_requisites);
-        
-        if (!this.post_requisites || this.post_requisites.length === 0) {
-            container.innerHTML = '<span class="text-muted">No post requisites added yet</span>';
-            return;
-        }
-        
-        const types = [
-            { key: 'assessment', label: 'Assessment', icon: 'mdi mdi-clipboard-check' },
-            { key: 'feedback', label: 'Feedback', icon: 'mdi mdi-comment-multiple' },
-            { key: 'survey', label: 'Survey', icon: 'mdi mdi-clipboard-text-multiple' },
-            { key: 'assignment', label: 'Assignment', icon: 'mdi mdi-file-document-edit' }
-        ];
-        
-        let cards = types.map(t => {
-            const items = this.post_requisites.filter(item => item.content_type === t.key);
-            if (items.length === 0) return '';
-            
-            return items.map(item => `
-                <div class="prerequisite-chip card px-2 py-1 d-flex flex-row align-items-center mb-2" style="border-radius:1.2em; background:#f8f9fa; border:1px solid #e0e0e0;">
-                    <i class="${t.icon} me-2 text-secondary"></i>
-                    <span class="prerequisite-title flex-grow-1" title="${item.title}">${item.title}</span>
-                    <span class="badge bg-light text-dark ms-2" title="${t.label}">${t.label}</span>
-                    <button type="button" class="btn btn-sm btn-outline-danger ms-2 flex-shrink-0" title="Remove" onclick="courseManager.removePostRequisite(${item.id})">
-                        <i class="fas fa-times"></i>
-                    </button>
-                </div>
-            `).join('');
-        }).join('');
-        
-        container.innerHTML = cards || '<span class="text-muted">No post requisites added yet</span>';
-        this.logToFile('renderPostRequisitesSummary completed');
-    }
-
-    setupImagePreviewHandlers() {
-        // This will work for both main and modal forms since IDs are reused
-        const thumbnailInputs = document.querySelectorAll('#thumbnail');
-        const thumbnailPreviews = document.querySelectorAll('#thumbnailPreviewContainer');
-        thumbnailInputs.forEach((thumbnailInput, idx) => {
-            const thumbnailPreview = thumbnailPreviews[idx];
-            if (thumbnailInput && thumbnailPreview) {
-                thumbnailInput.addEventListener('change', function() {
-                    if (this.files && this.files[0]) {
-                        showImagePreview(this.files[0], thumbnailPreview, () => {
-                            thumbnailInput.value = '';
-                            thumbnailPreview.innerHTML = '';
-                        });
-                    } else {
-                        thumbnailPreview.innerHTML = '';
-                    }
-                });
-            }
-        });
-        const bannerInputs = document.querySelectorAll('#banner');
-        const bannerPreviews = document.querySelectorAll('#bannerPreviewContainer');
-        bannerInputs.forEach((bannerInput, idx) => {
-            const bannerPreview = bannerPreviews[idx];
-            if (bannerInput && bannerPreview) {
-                bannerInput.addEventListener('change', function() {
-                    if (this.files && this.files[0]) {
-                        showImagePreview(this.files[0], bannerPreview, () => {
-                            bannerInput.value = '';
-                            bannerPreview.innerHTML = '';
-                        });
-                    } else {
-                        bannerPreview.innerHTML = '';
-                    }
-                });
-            }
-        });
-        // Helper function for preview
-        function showImagePreview(file, container, removeCallback) {
-            const fileName = file.name;
-            const fileExtension = fileName.split('.').pop().toLowerCase();
-            let previewHTML = '';
-            if (["jpg","jpeg","png","gif","webp","bmp","svg"].includes(fileExtension)) {
-                const reader = new FileReader();
-                reader.onload = function(e) {
-                    previewHTML = `
-                        <div class="preview-wrapper" style="position: relative; display: inline-block; margin-top: 10px;">
-                            <img src="${e.target.result}" alt="Preview" style="max-width: 150px; max-height: 100px; object-fit: cover; border: 1px solid #ddd; border-radius: 5px;">
-                            <button type="button" class="remove-preview" style="position: absolute; top: -5px; right: -5px; background: #dc3545; color: white; border: none; border-radius: 50%; width: 20px; height: 20px; font-size: 12px; cursor: pointer;" tabindex="0">×</button>
-                        </div>
-                        <p style="margin-top: 5px; font-size: 12px; color: #6c757d;">New file: ${fileName} (${(file.size / 1024 / 1024).toFixed(2)} MB)</p>
-                    `;
-                    container.innerHTML = previewHTML;
-                    const removeBtn = container.querySelector('.remove-preview');
-                    if (removeBtn) {
-                        removeBtn.addEventListener('click', removeCallback);
-                    }
-                };
-                reader.readAsDataURL(file);
-            } else {
-                previewHTML = `
-                    <div class="preview-wrapper" style="position: relative; display: inline-block; margin-top: 10px;">
-                        <div style="padding: 10px; border: 1px solid #ddd; border-radius: 5px; background: #e8f5e8;">
-                            <i class="fas fa-file-image" style="font-size: 24px; color: #6a0dad;"></i>
-                            <button type="button" class="remove-preview" style="position: absolute; top: -5px; right: -5px; background: #dc3545; color: white; border: none; border-radius: 50%; width: 20px; height: 20px; font-size: 12px; cursor: pointer;" tabindex="0">×</button>
-                        </div>
-                        <p style="margin-top: 5px; font-size: 12px; color: #6c757d;">New file: ${fileName} (${(file.size / 1024 / 1024).toFixed(2)} MB)</p>
-                    </div>
-                `;
-                container.innerHTML = previewHTML;
-                const removeBtn = container.querySelector('.remove-preview');
-                if (removeBtn) {
-                    removeBtn.addEventListener('click', removeCallback);
-                }
-            }
-        }
-    }
-
-    checkAndClearTabErrorForField(field) {
-        if (!field || !field.form || field.form.id !== 'courseCreationForm') return;
-        // Determine which tab this field belongs to
-        const tabMap = {
-            0: ['title', 'category_id', 'subcategory_id', 'course_type', 'difficulty_level'],
-            1: [], // Modules handled by module logic
-            2: [], // Prerequisites handled by prerequisite logic
-        };
-        // Check basic info tab
-        if (tabMap[0].includes(field.name)) {
-            const allValid = tabMap[0].every(name => {
-                const f = document.querySelector(`[name="${name}"]`);
-                return f && this.validateField(f);
-            });
-            if (allValid) this.clearTabError(0);
-        }
-        // You can add similar logic for modules/prerequisites if needed
-    }
-
-    // Add debugging function to log to file
-    logToFile(message, data = null) {
-        const logData = {
-            timestamp: new Date().toISOString(),
-            message: message,
-            data: data
-        };
-        
-        // Send to a simple logging endpoint
-        fetch('/Unlockyourskills/debug-log', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify(logData)
-        }).catch(err => console.error('Logging failed:', err));
-        
-        // Also log to console
-        console.log('[DEBUG]', message, data);
+        bindCourseEvents();
+        console.log('[DEBUG] bindCourseEvents() completed');
+        initializeDragAndDrop();
+        console.log('[DEBUG] initializeDragAndDrop() completed');
+        setupValidation();
+        console.log('[DEBUG] setupValidation() completed');
+        initializeTabs();
+        console.log('[DEBUG] initializeTabs() completed');
+        loadInitialData();
+        console.log('[DEBUG] loadInitialData() completed');
+        loadExistingCourseData(); // Load existing data for edit mode
+        console.log('[DEBUG] loadExistingCourseData() completed');
+        initializeTagSystems();
+        console.log('[DEBUG] initializeTagSystems() completed');
+        setupImagePreviewHandlers();
+        console.log('[DEBUG] setupImagePreviewHandlers() completed');
+        console.log('[DEBUG] initializeCourseCreation() completed');
+    } catch (error) {
+        console.error('[ERROR] initializeCourseCreation() failed:', error);
+        console.error('[ERROR] Error stack:', error.stack);
     }
 }
 
-// Export for global access
-window.CourseCreationManager = CourseCreationManager;
-
-document.addEventListener('DOMContentLoaded', function() {
-    // Wait for courseManager to be available
-    setTimeout(function() {
-        if (window.courseManager && typeof window.courseManager.renderPostRequisitesSummary === 'function') {
-            window.courseManager.renderPostRequisitesSummary();
+function addCustomStyles() {
+    console.log('[DEBUG] addCustomStyles() called');
+    
+    // Check if styles already exist
+    if (document.getElementById('course-creation-styles')) {
+        return;
+    }
+    
+    const style = document.createElement('style');
+    style.id = 'course-creation-styles';
+    style.textContent = `
+        /* Validation styles */
+        .form-control.is-invalid {
+            border-color: #dc3545;
+            box-shadow: 0 0 0 0.2rem rgba(220, 53, 69, 0.25);
         }
-    }, 200);
+        
+        .form-control.is-valid {
+            border-color: #198754;
+            box-shadow: 0 0 0 0.2rem rgba(25, 135, 84, 0.25);
+        }
+        
+        .invalid-feedback {
+            display: block;
+            color: #dc3545;
+            font-size: 0.875em;
+            margin-top: 0.25rem;
+        }
+        
+        /* Tab highlighting styles */
+        .nav-link.text-danger {
+            color: #dc3545 !important;
+            border-color: #dc3545 !important;
+        }
+        
+        .nav-link.border-danger {
+            border-color: #dc3545 !important;
+        }
+        
+        /* Tab active state */
+        .nav-link.active {
+            background-color: #007bff !important;
+            color: white !important;
+            border-color: #007bff !important;
+        }
+        
+        /* Tab hover effects */
+        .nav-link:hover:not(.active) {
+            background-color: #f8f9fa;
+            border-color: #dee2e6;
+        }
+    `;
+    
+    document.head.appendChild(style);
+    console.log('[DEBUG] Custom styles added');
+}
 
-    // Listen for all tab switches
-    const tabList = document.querySelectorAll('#courseCreationTabs .nav-link');
-    tabList.forEach(tab => {
-        tab.addEventListener('shown.bs.tab', function (e) {
-            if (window.courseManager && typeof window.courseManager.renderPostRequisitesSummary === 'function') {
-                window.courseManager.renderPostRequisitesSummary();
+function bindCourseEvents() {
+    console.log('[DEBUG] bindCourseEvents() started');
+    
+    // Check if buttons exist
+    const addPrerequisiteBtn = document.getElementById('add_prerequisite');
+    const addAssessmentBtn = document.getElementById('selectPostAssessmentBtn');
+    const addFeedbackBtn = document.getElementById('selectPostFeedbackBtn');
+    const addSurveyBtn = document.getElementById('selectPostSurveyBtn');
+    const addAssignmentBtn = document.getElementById('selectPostAssignmentBtn');
+    
+    console.log('[DEBUG] Button elements found:');
+    console.log('[DEBUG] - add_prerequisite:', addPrerequisiteBtn);
+    console.log('[DEBUG] - selectPostAssessmentBtn:', addAssessmentBtn);
+    console.log('[DEBUG] - selectPostFeedbackBtn:', addFeedbackBtn);
+    console.log('[DEBUG] - selectPostSurveyBtn:', addSurveyBtn);
+    console.log('[DEBUG] - selectPostAssignmentBtn:', addAssignmentBtn);
+    
+    try {
+        // Tab navigation
+        const tabButtons = document.querySelectorAll('[data-bs-toggle="tab"]');
+        console.log('[DEBUG] Found tab buttons:', tabButtons.length);
+        
+        tabButtons.forEach((button, index) => {
+            console.log('[DEBUG] Tab button', index, ':', button.id, 'target:', button.getAttribute('data-bs-target'));
+            button.addEventListener('click', handleTabClick);
+        });
+        console.log('[DEBUG] Tab event listeners bound successfully');
+    } catch (error) {
+        console.error('[ERROR] bindCourseEvents() failed:', error);
+        console.error('[ERROR] Error stack:', error.stack);
+    }
+
+    // Form submission
+    const form = document.getElementById('courseCreationForm');
+    console.log('[DEBUG] bindCourseEvents: courseCreationForm:', form);
+    if (form) {
+        form.addEventListener('submit', handleFormSubmit);
+        console.log('[DEBUG] bindCourseEvents: submit event bound to courseCreationForm');
+    } else {
+        console.warn('[DEBUG] bindCourseEvents: courseCreationForm not found');
+    }
+
+    // Create course button (direct submission)
+    const createCourseBtn = document.getElementById('create_course');
+    if (createCourseBtn) {
+        console.log('[DEBUG] Create course button found, binding click event');
+        createCourseBtn.addEventListener('click', handleFormSubmit);
+    } else {
+        console.warn('[DEBUG] Create course button NOT found');
+    }
+
+    // Add module button
+    const addModuleBtn = document.getElementById('addModuleBtn');
+    if (addModuleBtn) {
+        console.log('[DEBUG] Add Module button found, binding click event');
+        addModuleBtn.addEventListener('click', handleAddModule);
+    } else {
+        console.warn('[DEBUG] Add Module button NOT found');
+    }
+
+    // Add prerequisite button
+    if (addPrerequisiteBtn) {
+        console.log('[DEBUG] Add Prerequisite button found, binding click event');
+        addPrerequisiteBtn.addEventListener('click', handleAddPrerequisite);
+    } else {
+        console.warn('[DEBUG] Add Prerequisite button NOT found');
+    }
+
+    // Add post-requisite buttons
+    if (addAssessmentBtn) {
+        console.log('[DEBUG] Found selectPostAssessmentBtn, binding click event');
+        addAssessmentBtn.addEventListener('click', (e) => {
+            console.log('[DEBUG] selectPostAssessmentBtn clicked');
+            try {
+                showPostRequisiteVLRModal('assessment');
+            } catch (error) {
+                console.error('[ERROR] showPostRequisiteVLRModal failed:', error);
+            }
+        });
+    } else {
+        console.error('[DEBUG] ERROR: selectPostAssessmentBtn not found');
+    }
+
+    if (addFeedbackBtn) {
+        console.log('[DEBUG] Found selectPostFeedbackBtn, binding click event');
+        addFeedbackBtn.addEventListener('click', (e) => {
+            console.log('[DEBUG] selectPostFeedbackBtn clicked');
+            try {
+                showPostRequisiteVLRModal('feedback');
+            } catch (error) {
+                console.error('[ERROR] showPostRequisiteVLRModal failed:', error);
+            }
+        });
+    } else {
+        console.error('[DEBUG] ERROR: selectPostFeedbackBtn not found');
+    }
+
+    if (addSurveyBtn) {
+        console.log('[DEBUG] Found selectPostSurveyBtn, binding click event');
+        addSurveyBtn.addEventListener('click', (e) => {
+            console.log('[DEBUG] selectPostSurveyBtn clicked');
+            try {
+                showPostRequisiteVLRModal('survey');
+            } catch (error) {
+                console.error('[ERROR] showPostRequisiteVLRModal failed:', error);
+            }
+        });
+    } else {
+        console.error('[DEBUG] ERROR: selectPostSurveyBtn not found');
+    }
+
+    if (addAssignmentBtn) {
+        console.log('[DEBUG] Found selectPostAssignmentBtn, binding click event');
+        addAssignmentBtn.addEventListener('click', (e) => {
+            console.log('[DEBUG] selectPostAssignmentBtn clicked');
+            try {
+                showPostRequisiteVLRModal('assignment');
+            } catch (error) {
+                console.error('[ERROR] showPostRequisiteVLRModal failed:', error);
+            }
+        });
+    } else {
+        console.error('[DEBUG] ERROR: selectPostAssignmentBtn not found');
+    }
+
+    // Category change handlers
+    const categorySelect = document.getElementById('category_id');
+    console.log('[DEBUG] categorySelect element:', categorySelect);
+    if (categorySelect) {
+        console.log('[DEBUG] Adding change event listener to category select');
+        categorySelect.addEventListener('change', handleCategoryChange);
+    } else {
+        console.error('[DEBUG] category_id select element not found');
+    }
+
+    // Reassign course radio button handlers
+    const reassignNo = document.getElementById('reassign_no');
+    const reassignYes = document.getElementById('reassign_yes');
+    const reassignDaysContainer = document.getElementById('reassign_days_container');
+    
+    if (reassignNo && reassignYes && reassignDaysContainer) {
+        reassignNo.addEventListener('change', () => {
+            reassignDaysContainer.style.display = 'none';
+        });
+        reassignYes.addEventListener('change', () => {
+            reassignDaysContainer.style.display = 'block';
+        });
+    }
+}
+
+// Event handler functions
+function handleTabClick(e) {
+    console.log('[DEBUG] Tab click event triggered');
+    console.log('[DEBUG] Clicked element:', e.target);
+    console.log('[DEBUG] Clicked element ID:', e.target.id);
+    const target = e.target.getAttribute('data-bs-target');
+    console.log('[DEBUG] Tab clicked - target:', target);
+    if (target) {
+        const tabId = target.replace('#', '');
+        const tabIndex = getTabIndex(tabId);
+        console.log('[DEBUG] Tab ID:', tabId, 'Tab Index:', tabIndex);
+        switchTab(tabIndex);
+    }
+}
+
+function handleAddModule() {
+    console.log('[DEBUG] Add Module button clicked');
+    addModule();
+}
+
+function handleAddPrerequisite(e) {
+    console.log('[DEBUG] Add Prerequisite button clicked');
+    console.log('[DEBUG] Event target:', e.target);
+    console.log('[DEBUG] Event target ID:', e.target.id);
+    console.log('[DEBUG] showPrerequisiteModal exists:', typeof showPrerequisiteModal);
+    try {
+        showPrerequisiteModal();
+    } catch (error) {
+        console.error('[ERROR] showPrerequisiteModal failed:', error);
+        console.error('[ERROR] Error stack:', error.stack);
+    }
+}
+
+function handleCategoryChange() {
+    console.log('[DEBUG] Category changed, calling loadSubcategories');
+    loadSubcategories();
+}
+
+function handleFormSubmit(e) {
+    console.log('[DEBUG] Form submit event triggered');
+    // Let the validation system handle the submission
+    // The form submit event will be handled by the validation system
+}
+
+// Implementation functions
+function initializeDragAndDrop() {
+    console.log('[DEBUG] initializeDragAndDrop() called');
+    // Basic drag and drop implementation
+    const moduleContainers = document.querySelectorAll('.module-content-container');
+    moduleContainers.forEach(container => {
+        container.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            container.classList.add('drag-over');
+        });
+        container.addEventListener('dragleave', () => {
+            container.classList.remove('drag-over');
+        });
+        container.addEventListener('drop', (e) => {
+            e.preventDefault();
+            container.classList.remove('drag-over');
+            // Handle drop logic here
+        });
+    });
+}
+
+function setupValidation() {
+    console.log('[DEBUG] setupValidation() called');
+    
+    // Initialize course creation validation if the function exists
+    if (typeof initializeCourseCreationValidation === 'function') {
+        initializeCourseCreationValidation();
+    } else {
+        console.warn('[DEBUG] initializeCourseCreationValidation function not found');
+    }
+}
+
+function initializeTabs() {
+    console.log('[DEBUG] initializeTabs() called');
+    
+    // Get all tab buttons
+    const tabButtons = document.querySelectorAll('[data-bs-toggle="tab"]');
+    console.log('[DEBUG] Found tab buttons:', tabButtons.length);
+    
+    // Add event listeners for tab switching
+    tabButtons.forEach(button => {
+        button.addEventListener('shown.bs.tab', (e) => {
+            const target = e.target.getAttribute('data-bs-target');
+            const tabId = e.target.id;
+            console.log('[DEBUG] Tab shown:', target, 'Tab ID:', tabId);
+            
+            // Trigger rendering for specific tabs
+            if (target === '#modules') {
+                console.log('[DEBUG] Rendering modules tab');
+                renderModules();
+            } else if (target === '#prerequisites') {
+                console.log('[DEBUG] Rendering prerequisites tab');
+                renderPrerequisites();
+            } else if (target === '#post-requisite') {
+                console.log('[DEBUG] Rendering post-requisites tab');
+                renderPostRequisites();
+            }
+            
+            // Update tab highlighting
+            updateTabHighlighting(tabId);
+        });
+        
+        // Add click event for validation
+        button.addEventListener('click', (e) => {
+            const currentTab = document.querySelector('.tab-pane.active');
+            if (currentTab && currentTab.id === 'basic-info') {
+                // Validate basic info tab before allowing navigation
+                if (!validateBasicInfoTab()) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    return false;
+                }
             }
         });
     });
+    
+    // Initialize first tab
+    const firstTab = document.querySelector('[data-bs-toggle="tab"]');
+    if (firstTab) {
+        console.log('[DEBUG] Initializing first tab:', firstTab.id);
+        updateTabHighlighting(firstTab.id);
+    }
+}
 
-    document.addEventListener('hidden.bs.modal', function (e) {
-        if (e.target && e.target.id === 'vlrSelectionModal') {
-            if (window.courseManager && typeof window.courseManager.renderPostRequisitesSummary === 'function') {
-                window.courseManager.renderPostRequisitesSummary();
+function updateTabHighlighting(activeTabId) {
+    console.log('[DEBUG] updateTabHighlighting() called for tab:', activeTabId);
+    
+    // Remove active class from all tabs
+    document.querySelectorAll('.nav-link').forEach(tab => {
+        tab.classList.remove('active');
+    });
+    
+    // Add active class to the current tab
+    const activeTab = document.getElementById(activeTabId);
+    if (activeTab) {
+        activeTab.classList.add('active');
+        console.log('[DEBUG] Set active tab:', activeTabId);
+    }
+}
+
+function validateBasicInfoTab() {
+    console.log('[DEBUG] validateBasicInfoTab() called');
+    
+    const requiredFields = ['name', 'category_id', 'subcategory_id', 'course_type', 'difficulty_level'];
+    let isValid = true;
+    
+    requiredFields.forEach(fieldName => {
+        const field = document.querySelector(`[name="${fieldName}"]`);
+        if (field && !field.value.trim()) {
+            field.classList.add('is-invalid');
+            isValid = false;
+        } else if (field) {
+            field.classList.remove('is-invalid');
+        }
+    });
+    
+    if (!isValid) {
+        showToast('error', 'Please fill in all required fields in Basic Info tab');
+        highlightTabWithError('basic-info-tab');
+    }
+    
+    return isValid;
+}
+
+function loadInitialData() {
+    console.log('[DEBUG] loadInitialData() called');
+    // Load initial data like categories, VLR content, etc.
+    loadCategories();
+    loadVLRContent();
+}
+
+function loadCategories() {
+    console.log('[DEBUG] loadCategories() called');
+    // Load course categories using legacy routing
+    const url = 'index.php?controller=CourseCategoryController&action=getCategoriesForDropdown';
+    console.log('[DEBUG] Categories URL:', url);
+    
+    fetch(url)
+        .then(response => {
+            console.log('[DEBUG] Categories response status:', response.status);
+            console.log('[DEBUG] Categories response headers:', response.headers);
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            return response.text(); // Get response as text first to debug
+        })
+        .then(text => {
+            console.log('[DEBUG] Categories response text:', text.substring(0, 500));
+            try {
+                const data = JSON.parse(text);
+                console.log('[DEBUG] Categories data received:', data);
+                if (data.success) {
+                    populateCategorySelect(data.categories);
+                } else {
+                    console.error('[ERROR] Categories API returned success: false:', data.message);
+                }
+            } catch (parseError) {
+                console.error('[ERROR] Failed to parse JSON response:', parseError);
+                console.error('[ERROR] Response text:', text);
+            }
+        })
+        .catch(error => {
+            console.error('[ERROR] Failed to load categories:', error);
+            console.error('[ERROR] Error details:', error.message);
+        });
+}
+
+function loadVLRContent() {
+    console.log('[DEBUG] loadVLRContent() called');
+    // VLR content should already be loaded from the modal content
+    if (window.vlrContent) {
+        console.log('[DEBUG] VLR content already available:', window.vlrContent);
+    } else {
+        console.warn('[DEBUG] VLR content not available');
+    }
+}
+
+function loadExistingCourseData() {
+    console.log('[DEBUG] loadExistingCourseData() called');
+    // Check if we're in edit mode
+    const courseIdInput = document.getElementById('course_id');
+    if (courseIdInput && courseIdInput.value) {
+        courseManagerState.isEditMode = true;
+        courseManagerState.courseId = courseIdInput.value;
+        console.log('[DEBUG] Edit mode detected, course ID:', courseManagerState.courseId);
+        
+        // Load existing data from hidden inputs
+        loadExistingModules();
+        loadExistingPrerequisites();
+        loadExistingPostRequisites();
+        loadExistingTags();
+        loadExistingLearningObjectives();
+    } else {
+        console.log('[DEBUG] Add mode detected');
+    }
+}
+
+function loadExistingModules() {
+    console.log('[DEBUG] loadExistingModules() called');
+    const modulesInput = document.getElementById('existing_modules');
+    if (modulesInput && modulesInput.value) {
+        try {
+            const modules = JSON.parse(modulesInput.value);
+            courseManagerState.modules = modules;
+            console.log('[DEBUG] Loaded existing modules:', modules);
+            renderModules();
+        } catch (error) {
+            console.error('[ERROR] Failed to parse existing modules:', error);
+        }
+    }
+}
+
+function loadExistingPrerequisites() {
+    console.log('[DEBUG] loadExistingPrerequisites() called');
+    const prerequisitesInput = document.getElementById('existing_prerequisites');
+    if (prerequisitesInput && prerequisitesInput.value) {
+        try {
+            const prerequisites = JSON.parse(prerequisitesInput.value);
+            courseManagerState.prerequisites = prerequisites;
+            console.log('[DEBUG] Loaded existing prerequisites:', prerequisites);
+            renderPrerequisites();
+        } catch (error) {
+            console.error('[ERROR] Failed to parse existing prerequisites:', error);
+        }
+    }
+}
+
+function loadExistingPostRequisites() {
+    console.log('[DEBUG] loadExistingPostRequisites() called');
+    const postRequisitesInput = document.getElementById('existing_post_requisites');
+    if (postRequisitesInput && postRequisitesInput.value) {
+        try {
+            const postRequisites = JSON.parse(postRequisitesInput.value);
+            courseManagerState.post_requisites = postRequisites;
+            console.log('[DEBUG] Loaded existing post-requisites:', postRequisites);
+            renderPostRequisites();
+        } catch (error) {
+            console.error('[ERROR] Failed to parse existing post-requisites:', error);
+        }
+    }
+}
+
+function loadExistingTags() {
+    console.log('[DEBUG] loadExistingTags() called');
+    const hiddenInput = document.getElementById('tagsList');
+    if (hiddenInput && hiddenInput.value) {
+        try {
+            const tags = JSON.parse(hiddenInput.value);
+            courseManagerState.tags = tags;
+            console.log('[DEBUG] Loaded existing tags:', tags);
+            renderTags();
+        } catch (error) {
+            console.error('[ERROR] Failed to parse existing tags:', error);
+        }
+    }
+}
+
+function loadExistingLearningObjectives() {
+    console.log('[DEBUG] loadExistingLearningObjectives() called');
+    const hiddenInput = document.getElementById('learningObjectivesList');
+    if (hiddenInput && hiddenInput.value) {
+        try {
+            const objectives = JSON.parse(hiddenInput.value);
+            courseManagerState.learningObjectives = objectives;
+            console.log('[DEBUG] Loaded existing learning objectives:', objectives);
+            renderLearningObjectives();
+        } catch (error) {
+            console.error('[ERROR] Failed to parse existing learning objectives:', error);
+        }
+    }
+}
+
+function initializeTagSystems() {
+    console.log('[DEBUG] initializeTagSystems() called');
+    
+    // Bind events for tags input
+    const tagsInput = document.getElementById('tagsInput');
+    if (tagsInput) {
+        tagsInput.addEventListener('keydown', function(e) {
+            if (e.key === 'Enter' || e.key === ',') {
+                e.preventDefault();
+                const value = this.value.trim();
+                if (value) {
+                    addTag(value, 'tags');
+                    this.value = '';
+                }
+            }
+        });
+        console.log('[DEBUG] Tags input event bound');
+    } else {
+        console.error('[ERROR] Tags input not found');
+    }
+    
+    // Bind events for learning objectives input
+    const objectivesInput = document.getElementById('learningObjectivesInput');
+    if (objectivesInput) {
+        objectivesInput.addEventListener('keydown', function(e) {
+            if (e.key === 'Enter' || e.key === ',') {
+                e.preventDefault();
+                const value = this.value.trim();
+                if (value) {
+                    addTag(value, 'learning_objectives');
+                    this.value = '';
+                }
+            }
+        });
+        console.log('[DEBUG] Learning objectives input event bound');
+    } else {
+        console.error('[ERROR] Learning objectives input not found');
+    }
+}
+
+function addTag(value, type) {
+    console.log('[DEBUG] Adding tag:', value, 'type:', type);
+    if (type === 'tags') {
+        // Check for duplicates (case-insensitive)
+        const trimmedValue = value.trim();
+        if (trimmedValue && !courseManagerState.tags.some(tag => tag.toLowerCase() === trimmedValue.toLowerCase())) {
+            courseManagerState.tags.push(trimmedValue);
+            renderTags();
+        } else {
+            console.log('[DEBUG] Duplicate tag ignored:', trimmedValue);
+        }
+    } else if (type === 'learning_objectives') {
+        // Check for duplicates (case-insensitive)
+        const trimmedValue = value.trim();
+        if (trimmedValue && !courseManagerState.learningObjectives.some(objective => objective.toLowerCase() === trimmedValue.toLowerCase())) {
+            courseManagerState.learningObjectives.push(trimmedValue);
+            renderLearningObjectives();
+        } else {
+            console.log('[DEBUG] Duplicate learning objective ignored:', trimmedValue);
+        }
+    }
+}
+
+function setupImagePreviewHandlers() {
+    console.log('[DEBUG] setupImagePreviewHandlers() called');
+    // Setup image preview for course thumbnail
+    const imageInput = document.getElementById('course_image');
+    const previewContainer = document.getElementById('image_preview');
+    
+    if (imageInput && previewContainer) {
+        imageInput.addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    previewContainer.innerHTML = `<img src="${e.target.result}" class="img-thumbnail" style="max-width: 200px;">`;
+                };
+                reader.readAsDataURL(file);
+            }
+        });
+    }
+}
+
+function getTabIndex(tabId) {
+    console.log('[DEBUG] getTabIndex() called with:', tabId);
+    const tabMap = {
+        'basic-info-tab': 0,
+        'modules-tab': 1,
+        'prerequisites-tab': 2,
+        'post-requisites-tab': 3,
+        'settings-tab': 4
+    };
+    return tabMap[tabId] || 0;
+}
+
+function switchTab(tabIndex) {
+    console.log('[DEBUG] switchTab() called with:', tabIndex);
+    courseManagerState.currentTab = tabIndex;
+    
+    // Trigger rendering for the current tab
+    switch (tabIndex) {
+        case 1: // Modules tab
+            renderModules();
+            break;
+        case 2: // Prerequisites tab
+            renderPrerequisites();
+            break;
+        case 3: // Post-requisites tab
+            renderPostRequisites();
+            break;
+    }
+}
+
+function addModule() {
+    console.log('[DEBUG] addModule() called');
+    const module = {
+        id: Date.now(),
+        name: `Module ${courseManagerState.modules.length + 1}`,
+        description: '',
+        content: []
+    };
+    courseManagerState.modules.push(module);
+    renderModules();
+}
+
+function showPrerequisiteModal() {
+    console.log('[DEBUG] showPrerequisiteModal() called');
+    // Show VLR content selection modal for prerequisites
+    if (window.showVLRModal) {
+        window.showVLRModal('prerequisite');
+    } else {
+        console.error('[ERROR] showVLRModal function not available');
+    }
+}
+
+function loadSubcategories() {
+    console.log('[DEBUG] loadSubcategories() called');
+    const categoryId = document.getElementById('category_id').value;
+    const subcategorySelect = document.getElementById('subcategory_id');
+    
+    if (categoryId && subcategorySelect) {
+        const url = `index.php?controller=CourseSubcategoryController&action=getSubcategoriesForDropdown&category_id=${categoryId}`;
+        console.log('[DEBUG] Subcategories URL:', url);
+        
+        fetch(url)
+            .then(response => {
+                console.log('[DEBUG] Subcategories response status:', response.status);
+                console.log('[DEBUG] Subcategories response headers:', response.headers);
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                return response.text(); // Get response as text first to debug
+            })
+            .then(text => {
+                console.log('[DEBUG] Subcategories response text:', text.substring(0, 500));
+                try {
+                    const data = JSON.parse(text);
+                    console.log('[DEBUG] Subcategories data received:', data);
+                    if (data.success) {
+                        subcategorySelect.innerHTML = '<option value="">Select Subcategory</option>';
+                        data.subcategories.forEach(subcategory => {
+                            subcategorySelect.innerHTML += `<option value="${subcategory.id}">${subcategory.name}</option>`;
+                        });
+                        
+                        // Restore existing subcategory value if in edit mode
+                        if (courseManagerState.isEditMode) {
+                            const existingSubcategory = document.getElementById('existing_subcategory_id');
+                            if (existingSubcategory && existingSubcategory.value) {
+                                subcategorySelect.value = existingSubcategory.value;
+                            }
+                        }
+                    } else {
+                        console.error('[ERROR] Subcategories API returned success: false:', data.message);
+                    }
+                } catch (parseError) {
+                    console.error('[ERROR] Failed to parse JSON response:', parseError);
+                    console.error('[ERROR] Response text:', text);
+                }
+            })
+            .catch(error => {
+                console.error('[ERROR] Failed to load subcategories:', error);
+                console.error('[ERROR] Error details:', error.message);
+            });
+    }
+}
+
+// Form submission is now handled by the validation system
+// The submitCourseForm function has been moved to course_creation_validation.js
+
+function showPostRequisiteVLRModal(type) {
+    console.log('[DEBUG] showPostRequisiteVLRModal() called with:', type);
+    // Show VLR content selection modal for post-requisites
+    if (window.showVLRModal) {
+        window.showVLRModal('post_requisite', type);
+    } else {
+        console.error('[ERROR] showVLRModal function not available');
+    }
+}
+
+// Rendering functions
+function renderModules() {
+    console.log('[DEBUG] renderModules() called');
+    const container = document.getElementById('modulesContainer');
+    if (!container) {
+        console.error('[ERROR] modulesContainer not found');
+        return;
+    }
+    
+    if (courseManagerState.modules.length === 0) {
+        container.innerHTML = `
+            <div class="text-center py-4">
+                <i class="fas fa-folder-open text-muted fa-3x mb-3"></i>
+                <p class="text-muted">No modules added yet</p>
+            </div>
+        `;
+    } else {
+        let html = '';
+        courseManagerState.modules.forEach((module, index) => {
+            html += `
+                <div class="module-item border rounded p-3 mb-3" data-module-id="${module.id}">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <h6 class="mb-0">Module ${index + 1}</h6>
+                        <div class="btn-group btn-group-sm">
+                            <button type="button" class="btn btn-outline-secondary" onclick="moveModuleUp(${index})" ${index === 0 ? 'disabled' : ''} title="Move Up">
+                                <i class="fas fa-arrow-up"></i>
+                            </button>
+                            <button type="button" class="btn btn-outline-secondary" onclick="moveModuleDown(${index})" ${index === courseManagerState.modules.length - 1 ? 'disabled' : ''} title="Move Down">
+                                <i class="fas fa-arrow-down"></i>
+                            </button>
+                            <button type="button" class="btn btn-outline-danger" onclick="removeModule(${module.id})" title="Delete">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <!-- Module Title -->
+                    <div class="mb-3">
+                        <label class="form-label">Module Title</label>
+                        <input type="text" class="form-control module-title-input" 
+                               value="${module.name || `Module ${index + 1}`}" 
+                               placeholder="Enter module title"
+                               onchange="updateModuleTitle(${module.id}, this.value)">
+                    </div>
+                    
+                    <!-- Module Description -->
+                    <div class="mb-3">
+                        <label class="form-label">Module Description</label>
+                        <textarea class="form-control module-description-input" 
+                                  rows="3" 
+                                  placeholder="Enter module description"
+                                  onchange="updateModuleDescription(${module.id}, this.value)">${module.description || ''}</textarea>
+                    </div>
+                    
+                    <!-- Module Content Section -->
+                    <div class="mb-3">
+                        <label class="form-label">Module Content</label>
+                        <div class="module-content-container border rounded p-2 bg-light">
+                            ${renderModuleContent(module.content, module.id)}
+                        </div>
+                        <div class="mt-2">
+                            <button type="button" class="btn btn-primary btn-sm" onclick="addModuleContent(${module.id})">
+                                <i class="fas fa-plus me-1"></i>Add VLR Content
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            `;
+        });
+        // Add Module button inside the container, after the last module card
+        html += `
+            <div class="d-flex justify-content-end mt-2">
+                <button type="button" class="btn btn-primary add-module-btn">
+                    <i class="fas fa-plus me-2"></i>Add Module
+                </button>
+            </div>
+        `;
+        container.innerHTML = html;
+    }
+    
+    // Re-bind add module button(s) by class
+    document.querySelectorAll('.add-module-btn').forEach(btn => {
+        btn.removeEventListener('click', handleAddModule); // Remove previous to avoid double binding
+        btn.addEventListener('click', handleAddModule);
+    });
+}
+
+function renderModuleContent(content, moduleId) {
+    console.log('[DEBUG] renderModuleContent() called with:', content);
+    if (!content || content.length === 0) {
+        return '<p class="text-muted small">No content added</p>';
+    }
+    return content.map((item, idx) => {
+        const type = item.type || item.content_type || 'unknown';
+        const title = item.title || item.name || 'Untitled';
+        const icon = getContentIcon(type);
+        return `
+            <div class="content-item d-flex align-items-center p-2 border rounded mb-2">
+                <i class="${icon} me-2"></i>
+                <span class="flex-grow-1">${title}</span>
+                <div class="btn-group btn-group-sm ms-2">
+                    <button type="button" class="btn btn-outline-secondary btn-sm" onclick="moveModuleContentUp(${moduleId}, ${idx})" ${idx === 0 ? 'disabled' : ''} title="Move Up">
+                        <i class="fas fa-arrow-up"></i>
+                    </button>
+                    <button type="button" class="btn btn-outline-secondary btn-sm" onclick="moveModuleContentDown(${moduleId}, ${idx})" ${idx === content.length - 1 ? 'disabled' : ''} title="Move Down">
+                        <i class="fas fa-arrow-down"></i>
+                    </button>
+                    <button type="button" class="btn btn-outline-danger btn-sm" onclick="removeModuleContent(${item.id})" title="Delete">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+            </div>
+        `;
+    }).join('');
+}
+
+function renderPrerequisites() {
+    console.log('[DEBUG] renderPrerequisites() called');
+    const container = document.getElementById('prerequisites_container');
+    if (!container) {
+        console.error('[ERROR] prerequisites_container not found');
+        return;
+    }
+    
+    if (courseManagerState.prerequisites.length === 0) {
+        container.innerHTML = `
+            <div class="text-center py-4">
+                <i class="fas fa-list-check text-muted fa-3x mb-3"></i>
+                <p class="text-muted">No prerequisites added</p>
+            </div>
+        `;
+    } else {
+        let html = '<div class="d-flex flex-wrap gap-2 mb-3">';
+        courseManagerState.prerequisites.forEach((item, index) => {
+            const type = item.type || 'unknown';
+            const title = item.title || item.name || 'Untitled';
+            const icon = getContentIcon(type);
+            
+            html += `
+                <span class="badge bg-primary d-flex align-items-center">
+                    <i class="${icon} me-1"></i>
+                    ${title}
+                    <button type="button" class="btn btn-sm btn-link text-white p-0 ms-2" onclick="removePrerequisite(${index})">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </span>
+            `;
+        });
+        html += '</div>';
+        container.innerHTML = html;
+    }
+    
+    // Remove add prerequisite button binding (no button rendered)
+}
+
+function renderPostRequisites() {
+    console.log('[DEBUG] renderPostRequisites() called');
+    const container = document.getElementById('postRequisitesContainer');
+    if (!container) {
+        console.error('[ERROR] postRequisitesContainer not found');
+        return;
+    }
+    
+    let html = '';
+    if (courseManagerState.post_requisites.length === 0) {
+        html += `
+            <div class="text-center py-4">
+                <i class="fas fa-list-check text-muted fa-3x mb-3"></i>
+                <p class="text-muted">No post-requisites added</p>
+            </div>
+        `;
+    } else {
+        html += '<div class="post-requisites-list">';
+        courseManagerState.post_requisites.forEach((item, index) => {
+            const type = item.type || 'unknown';
+            const title = item.title || item.name || 'Untitled';
+            const icon = getContentIcon(type);
+            
+            html += `
+                <div class="post-requisite-item d-flex align-items-center p-2 border rounded mb-2">
+                    <i class="${icon} me-2"></i>
+                    <span class="flex-grow-1">${title}</span>
+                    <div class="btn-group btn-group-sm">
+                        <button type="button" class="btn btn-outline-secondary" onclick="movePostRequisiteUp(${index})" ${index === 0 ? 'disabled' : ''}>
+                            <i class="fas fa-arrow-up"></i>
+                        </button>
+                        <button type="button" class="btn btn-outline-secondary" onclick="movePostRequisiteDown(${index})" ${index === courseManagerState.post_requisites.length - 1 ? 'disabled' : ''}>
+                            <i class="fas fa-arrow-down"></i>
+                        </button>
+                        <button type="button" class="btn btn-outline-danger" onclick="removePostRequisite(${index})">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    </div>
+                </div>
+            `;
+        });
+        html += '</div>';
+    }
+    container.innerHTML = html;
+    // No add button group rendered
+    // Re-bind post-requisite buttons (move/remove)
+    bindPostRequisiteButtons();
+}
+
+function renderTags() {
+    console.log('[DEBUG] renderTags() called');
+    const display = document.getElementById('tagsDisplay');
+    const hiddenInput = document.getElementById('tagsList');
+    if (!display || !hiddenInput) {
+        console.error('[ERROR] Tags display or hidden input not found');
+        return;
+    }
+    
+    display.innerHTML = courseManagerState.tags.map(tag => 
+        `<span class="tag">${tag}<button type="button" class="remove-tag" data-tag="${tag}">×</button></span>`
+    ).join('');
+    
+    // Update hidden input
+    hiddenInput.value = JSON.stringify(courseManagerState.tags);
+    
+    // Bind remove tag events
+    display.addEventListener('click', function(event) {
+        if (event.target.classList.contains('remove-tag')) {
+            const tagText = event.target.getAttribute('data-tag');
+            removeTag(tagText);
+        }
+    });
+}
+
+function renderLearningObjectives() {
+    console.log('[DEBUG] renderLearningObjectives() called');
+    const display = document.getElementById('learningObjectivesDisplay');
+    const hiddenInput = document.getElementById('learningObjectivesList');
+    if (!display || !hiddenInput) {
+        console.error('[ERROR] Learning objectives display or hidden input not found');
+        return;
+    }
+    
+    display.innerHTML = courseManagerState.learningObjectives.map(objective => 
+        `<span class="tag">${objective}<button type="button" class="remove-tag" data-objective="${objective}">×</button></span>`
+    ).join('');
+    
+    // Update hidden input
+    hiddenInput.value = JSON.stringify(courseManagerState.learningObjectives);
+    
+    // Bind remove objective events
+    display.addEventListener('click', function(event) {
+        if (event.target.classList.contains('remove-tag')) {
+            const objectiveText = event.target.getAttribute('data-objective');
+            removeLearningObjective(objectiveText);
+        }
+    });
+}
+
+// Utility functions
+function getContentIcon(type) {
+    const iconMap = {
+        'scorm': 'fas fa-cube',
+        'video': 'fas fa-video',
+        'audio': 'fas fa-volume-up',
+        'document': 'fas fa-file-alt',
+        'image': 'fas fa-image',
+        'assessment': 'fas fa-question-circle',
+        'survey': 'fas fa-clipboard-list',
+        'feedback': 'fas fa-comments',
+        'assignment': 'fas fa-tasks',
+        'interactive': 'fas fa-mouse-pointer',
+        'external': 'fas fa-external-link-alt',
+        'non_scorm': 'fas fa-file-archive',
+        'unknown': 'fas fa-file'
+    };
+    return iconMap[type] || iconMap.unknown;
+}
+
+function populateCategorySelect(categories) {
+    const select = document.getElementById('category_id');
+    if (select) {
+        select.innerHTML = '<option value="">Select Category</option>';
+        categories.forEach(category => {
+            select.innerHTML += `<option value="${category.id}">${category.name}</option>`;
+        });
+    }
+}
+
+function bindPostRequisiteButtons() {
+    const btnIds = [
+        'selectPostAssessmentBtn',
+        'selectPostFeedbackBtn',
+        'selectPostSurveyBtn',
+        'selectPostAssignmentBtn'
+    ];
+    const types = ['assessment', 'feedback', 'survey', 'assignment'];
+    btnIds.forEach((id, idx) => {
+        const btn = document.getElementById(id);
+        if (btn) {
+            // Replace with clone to remove all previous listeners
+            const newBtn = btn.cloneNode(true);
+            btn.parentNode.replaceChild(newBtn, btn);
+            newBtn.addEventListener('click', () => showPostRequisiteVLRModal(types[idx]));
+        }
+    });
+}
+
+// Global functions for external access
+window.addModuleContent = function(moduleId) {
+    console.log('[DEBUG] addModuleContent() called for module:', moduleId);
+    if (window.showVLRModal) {
+        window.showVLRModal('module_content', moduleId);
+    }
+};
+
+window.removeModule = function(moduleId) {
+    console.log('[DEBUG] removeModule() called for module:', moduleId);
+    courseManagerState.modules = courseManagerState.modules.filter(m => m.id !== moduleId);
+    renderModules();
+};
+
+window.removeModuleContent = function(contentId) {
+    console.log('[DEBUG] removeModuleContent() called for content:', contentId);
+    courseManagerState.modules.forEach(module => {
+        module.content = module.content.filter(c => c.id !== contentId);
+    });
+    renderModules();
+};
+
+window.removePrerequisite = function(index) {
+    console.log('[DEBUG] removePrerequisite() called for index:', index);
+    courseManagerState.prerequisites.splice(index, 1);
+    renderPrerequisites();
+};
+
+window.removePostRequisite = function(index) {
+    console.log('[DEBUG] removePostRequisite() called for index:', index);
+    courseManagerState.post_requisites.splice(index, 1);
+    renderPostRequisites();
+};
+
+window.movePostRequisiteUp = function(index) {
+    if (index > 0) {
+        const temp = courseManagerState.post_requisites[index];
+        courseManagerState.post_requisites[index] = courseManagerState.post_requisites[index - 1];
+        courseManagerState.post_requisites[index - 1] = temp;
+        renderPostRequisites();
+    }
+};
+
+window.movePostRequisiteDown = function(index) {
+    if (index < courseManagerState.post_requisites.length - 1) {
+        const temp = courseManagerState.post_requisites[index];
+        courseManagerState.post_requisites[index] = courseManagerState.post_requisites[index + 1];
+        courseManagerState.post_requisites[index + 1] = temp;
+        renderPostRequisites();
+    }
+};
+
+window.removeTag = function(tag) {
+    courseManagerState.tags = courseManagerState.tags.filter(t => t !== tag);
+    renderTags();
+};
+
+window.removeLearningObjective = function(objective) {
+    courseManagerState.learningObjectives = courseManagerState.learningObjectives.filter(o => o !== objective);
+    renderLearningObjectives();
+};
+
+window.updateModuleTitle = function(moduleId, title) {
+    console.log('[DEBUG] updateModuleTitle() called for module:', moduleId, 'title:', title);
+    const module = courseManagerState.modules.find(m => m.id === moduleId);
+    if (module) {
+        module.name = title;
+        console.log('[DEBUG] Module title updated');
+    }
+};
+
+window.updateModuleDescription = function(moduleId, description) {
+    console.log('[DEBUG] updateModuleDescription() called for module:', moduleId, 'description:', description);
+    const module = courseManagerState.modules.find(m => m.id === moduleId);
+    if (module) {
+        module.description = description;
+        console.log('[DEBUG] Module description updated');
+    }
+};
+
+// ================= VLR Content Selection Modal Logic =================
+// This logic is adapted from the previous CourseCreationManager implementation
+// and made compatible with the current function-based approach and courseManagerState.
+
+/**
+ * Show the VLR content selection modal for modules, prerequisites, or post-requisites.
+ * @param {string} context - 'module_content', 'prerequisite', or 'post_requisite'
+ * @param {number|string} [moduleIdOrType] - moduleId for module content, or type for post_requisite
+ */
+window.showVLRModal = function(context, moduleIdOrType) {
+    // VLR content should be loaded globally as window.vlrContent
+    if (!window.vlrContent || Object.keys(window.vlrContent).length === 0) {
+        showToast('VLR content not available', 'error');
+        return;
+    }
+    let title = 'Select VLR Content';
+    let preselectedIds = [];
+    let allowedTypes = null;
+    let moduleId = null;
+    let type = null;
+    if (context === 'module_content') {
+        moduleId = moduleIdOrType;
+        title = 'Select VLR Content for Module';
+        // Preselect current module content
+        const module = courseManagerState.modules.find(m => m.id === moduleId);
+        preselectedIds = module ? module.content.map(item => ({ id: item.id, type: item.type })) : [];
+        // Filter allowed types by course type
+        const courseType = document.getElementById('course_type')?.value;
+        if (courseType === 'e-learning') {
+            allowedTypes = ['scorm', 'nonscorm', 'external', 'interactive', 'audio', 'video', 'image'];
+        } else if (courseType === 'blended') {
+            allowedTypes = ['assignment', 'document', 'video', 'audio', 'interactive'];
+        } else if (courseType === 'classroom') {
+            allowedTypes = ['document', 'assignment', 'image', 'external'];
+        } else if (courseType === 'assessment') {
+            allowedTypes = ['assessment'];
+        }
+        type = 'module_content';
+    } else if (context === 'prerequisite') {
+        title = 'Select Prerequisite Content';
+        preselectedIds = courseManagerState.prerequisites.map(item => ({ id: item.id, type: item.type }));
+        type = 'prerequisite';
+    } else if (context === 'post_requisite') {
+        type = moduleIdOrType; // e.g. 'assessment', 'feedback', etc.
+        title = 'Select ' + getVLRTypeDisplayName(type);
+        preselectedIds = courseManagerState.post_requisites.filter(item => item.content_type === type).map(item => ({ id: item.content_id, type: item.content_type }));
+        allowedTypes = [type];
+    }
+    showVLRContentModal(title, window.vlrContent, type, moduleId, preselectedIds, allowedTypes);
+};
+
+function showVLRContentModal(title, content, type, moduleId = null, preselectedIds = [], allowedTypes = null) {
+    // Group content by type
+    let groupedContent = {};
+    if (Array.isArray(content)) {
+        content.forEach(item => {
+            if (!groupedContent[item.type]) groupedContent[item.type] = [];
+            groupedContent[item.type].push(item);
+        });
+    } else if (typeof content === 'object' && content !== null) {
+        groupedContent = { ...content };
+    }
+    // Filter allowed types if specified
+    if (allowedTypes) {
+        Object.keys(groupedContent).forEach(typeKey => {
+            if (!allowedTypes.includes(typeKey)) {
+                delete groupedContent[typeKey];
+            }
+        });
+    }
+    // Modal HTML
+    let isGridView = localStorage.getItem('vlrViewMode') !== 'list';
+    const modal = document.createElement('div');
+    modal.className = 'modal fade';
+    modal.id = 'vlrSelectionModal';
+    modal.innerHTML = `
+        <div class="modal-dialog modal-xl">
+            <div class="modal-content">
+                <div class="modal-header align-items-center">
+                    <h5 class="modal-title flex-grow-1">${title}</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <div>
+                            <button type="button" class="btn btn-outline-primary btn-sm me-2 rounded-pill px-3 fw-bold" id="toggleVLRViewBtn" aria-pressed="${isGridView}">
+                                <i class="fas fa-th"></i> <span id="vlrViewLabel">Grid View</span>
+                            </button>
+                        </div>
+                        <div class="flex-grow-1">
+                            <div class="input-group">
+                                <span class="input-group-text"><i class="fas fa-search"></i></span>
+                                <input type="text" class="form-control" id="vlrSearchInput" placeholder="Search VLR content...">
+                                <button class="btn btn-outline-secondary" type="button" id="clearSearchBtn">Clear</button>
+                            </div>
+                        </div>
+                    </div>
+                    <ul class="nav nav-tabs" id="vlrTypeTabs" role="tablist">
+                        ${Object.keys(groupedContent).map((contentType, index) => `
+                            <li class="nav-item" role="presentation">
+                                <button class="nav-link ${index === 0 ? 'active' : ''}" 
+                                        id="tab-${contentType}" 
+                                        data-bs-toggle="tab" 
+                                        data-bs-target="#content-${contentType}" 
+                                        type="button" 
+                                        role="tab">
+                                    <i class="fas ${getContentIcon(contentType)} me-2"></i>
+                                    ${getVLRTypeDisplayName(contentType)} 
+                                    <span class="badge bg-secondary ms-2">${groupedContent[contentType].length}</span>
+                                </button>
+                            </li>
+                        `).join('')}
+                    </ul>
+                    <div class="tab-content mt-3" id="vlrTypeTabContent">
+                        ${Object.keys(groupedContent).map((contentType, index) => `
+                            <div class="tab-pane fade ${index === 0 ? 'show active' : ''}" 
+                                 id="content-${contentType}" 
+                                 role="tabpanel">
+                                <div class="d-flex align-items-center mb-2">
+                                    <input type="checkbox" class="form-check-input me-2" id="selectAllVLR-${contentType}" aria-label="Select all ${getVLRTypeDisplayName(contentType)}">
+                                    <label for="selectAllVLR-${contentType}" class="form-check-label small">Select All</label>
+                                </div>
+                                <div class="row g-3" id="content-grid-${contentType}">
+                                    ${groupedContent[contentType].map(item => `
+                                        <div class="col-md-6 col-lg-4 vlr-content-item d-flex align-items-center gap-3 p-3 border rounded bg-white position-relative" 
+                                             tabindex="0" role="option" aria-label="${item.title}" 
+                                             data-vlr-id="${item.id}" 
+                                             data-vlr-type="${item.type}"
+                                             data-title="${item.title.toLowerCase()}"
+                                             data-description="${(item.description || '').toLowerCase()}">
+                                            <i class="fas ${getContentIcon(item.type)} mt-1" style="font-size: 2em; color: var(--bs-primary, #4b0082); filter: drop-shadow(0 2px 4px #b197fc33);" title="${getVLRTypeDisplayName(item.type)}" data-bs-toggle="tooltip"></i>
+                                            <div class="flex-grow-1">
+                                                <div class="fw-bold mb-1 text-truncate" title="${item.title}" data-bs-toggle="tooltip" style="font-size:1.1em;">${item.title.length > 30 ? item.title.substring(0, 27) + '...' : item.title}</div>
+                                                <small class="text-muted d-block mb-2 text-truncate" title="${item.description}" data-bs-toggle="tooltip">${item.description && item.description.length > 60 ? item.description.substring(0, 57) + '...' : item.description || ''}</small>
+                                                <div class="d-flex align-items-center gap-2 mt-1">
+                                                    <span class="badge bg-primary-subtle text-primary small">${getVLRTypeDisplayName(item.type)}</span>
+                                                    ${item.uploadDate ? `<span class="badge bg-secondary-subtle text-secondary small" title="Upload Date">${item.uploadDate}</span>` : ''}
+                                                    ${item.fileSize ? `<span class="badge bg-info-subtle text-info small" title="File Size">${item.fileSize}</span>` : ''}
+                                                </div>
+                                            </div>
+                                            <div class="form-check ms-2 flex-shrink-0" style="min-width:2.5em;">
+                                                <input class="form-check-input vlr-checkbox" type="checkbox" value="${item.id}" id="vlr-${item.id}" aria-label="Select ${item.title}" style="accent-color: var(--bs-primary, #4b0082); width:1.3em; height:1.3em;">
+                                                <label class="form-check-label visually-hidden" for="vlr-${item.id}">Select</label>
+                                            </div>
+                                        </div>
+                                    `).join('')}
+                                </div>
+                                ${groupedContent[contentType].length === 0 ? `
+                                    <div class="text-center py-4">
+                                        <i class="fas fa-inbox fa-3x text-muted mb-3"></i>
+                                        <p class="text-muted">No ${getVLRTypeDisplayName(contentType)} content available</p>
+                                    </div>
+                                ` : ''}
+                            </div>
+                        `).join('')}
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <div class="d-flex justify-content-between align-items-center w-100">
+                        <div>
+                            <span class="text-muted" id="selectedCount">0 items selected</span>
+                        </div>
+                        <div>
+                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                            <button type="button" class="btn btn-primary" id="addSelectedVLRBtn" disabled>
+                                Add Selected (<span id="selectedCountBtn">0</span>)
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+    document.body.appendChild(modal);
+    const modalInstance = new bootstrap.Modal(modal);
+    modalInstance.show();
+    // Search functionality
+    initializeVLRSearch(modal);
+    // Checkbox functionality
+    initializeVLRCheckboxes(modal, type, moduleId, preselectedIds);
+    // Clean up modal after hiding
+    modal.addEventListener('hidden.bs.modal', () => {
+        document.body.removeChild(modal);
+    });
+    // View toggle
+    const toggleBtn = modal.querySelector('#toggleVLRViewBtn');
+    function updateVLRView() {
+        // For each tab-pane/content grid
+        const tabPanes = modal.querySelectorAll('.tab-pane');
+        tabPanes.forEach(tabPane => {
+            const grid = tabPane.querySelector('[id^="content-grid-"]');
+            if (!grid) return;
+            const items = grid.querySelectorAll('.vlr-content-item');
+            if (isGridView) {
+                // Grid view: add row/g-3/col classes
+                grid.classList.add('row', 'g-3');
+                items.forEach(item => {
+                    item.classList.add('col-md-6', 'col-lg-4');
+                    item.classList.remove('col-12');
+                });
+                toggleBtn.innerHTML = '<i class="fas fa-th-list"></i> <span id="vlrViewLabel">List View</span>';
+            } else {
+                // List view: remove grid classes, use col-12
+                grid.classList.remove('row', 'g-3');
+                items.forEach(item => {
+                    item.classList.remove('col-md-6', 'col-lg-4');
+                    item.classList.add('col-12');
+                });
+                toggleBtn.innerHTML = '<i class="fas fa-th"></i> <span id="vlrViewLabel">Grid View</span>';
+            }
+        });
+        // Save preference
+        localStorage.setItem('vlrViewMode', isGridView ? 'grid' : 'list');
+    }
+    toggleBtn.addEventListener('click', () => {
+        isGridView = !isGridView;
+        updateVLRView();
+    });
+    updateVLRView();
+}
+
+function getVLRTypeDisplayName(type) {
+    const typeNames = {
+        'scorm': 'SCORM Packages',
+        'nonscorm': 'Non-SCORM Packages',
+        'assessment': 'Assessments',
+        'audio': 'Audio Packages',
+        'video': 'Video Packages',
+        'image': 'Image Packages',
+        'document': 'Documents',
+        'external': 'External Content',
+        'interactive': 'Interactive Content',
+        'assignment': 'Assignments',
+        'survey': 'Surveys',
+        'feedback': 'Feedback Forms'
+    };
+    return typeNames[type] || type;
+}
+
+function initializeVLRSearch(modal) {
+    const searchInput = modal.querySelector('#vlrSearchInput');
+    const clearSearchBtn = modal.querySelector('#clearSearchBtn');
+    const contentItems = modal.querySelectorAll('.vlr-content-item');
+    const performSearch = () => {
+        const searchTerm = searchInput.value.toLowerCase().trim();
+        contentItems.forEach(item => {
+            const title = item.dataset.title;
+            const description = item.dataset.description;
+            const matches = title.includes(searchTerm) || description.includes(searchTerm);
+            item.style.display = matches ? 'block' : 'none';
+        });
+        // Update tab badges with visible count
+        const tabs = modal.querySelectorAll('#vlrTypeTabs .nav-link');
+        tabs.forEach(tab => {
+            const targetId = tab.getAttribute('data-bs-target');
+            const targetPane = modal.querySelector(targetId);
+            const visibleItems = Array.from(targetPane.querySelectorAll('.vlr-content-item')).filter(item => item.style.display !== 'none');
+            const badge = tab.querySelector('.badge');
+            if (badge) {
+                badge.textContent = visibleItems.length;
+            }
+        });
+    };
+    searchInput.addEventListener('input', performSearch);
+    clearSearchBtn.addEventListener('click', () => {
+        searchInput.value = '';
+        performSearch();
+    });
+}
+
+function initializeVLRCheckboxes(modal, type, moduleId, preselectedIds = []) {
+    const checkboxes = modal.querySelectorAll('.vlr-checkbox');
+    const selectedCountSpan = modal.querySelector('#selectedCount');
+    const selectedCountBtn = modal.querySelector('#selectedCountBtn');
+    const addSelectedBtn = modal.querySelector('#addSelectedVLRBtn');
+    // Pre-check checkboxes for already selected items
+    checkboxes.forEach(checkbox => {
+        checkbox.checked = false;
+        const checkboxId = parseInt(checkbox.value);
+        const checkboxType = checkbox.closest('.vlr-content-item').dataset.vlrType;
+        if (preselectedIds.some(sel => sel.id === checkboxId && sel.type === checkboxType)) {
+            checkbox.checked = true;
+        }
+    });
+    const updateSelectedCount = () => {
+        const selectedCheckboxes = modal.querySelectorAll('.vlr-checkbox:checked');
+        const count = selectedCheckboxes.length;
+        selectedCountSpan.textContent = `${count} item${count !== 1 ? 's' : ''} selected`;
+        selectedCountBtn.textContent = count;
+        addSelectedBtn.disabled = count === 0;
+        // Update Select All checkboxes for each tab
+        const tabPanes = modal.querySelectorAll('.tab-pane');
+        tabPanes.forEach(tabPane => {
+            const selectAll = tabPane.querySelector('[id^="selectAllVLR-"]');
+            const itemCheckboxes = tabPane.querySelectorAll('.vlr-checkbox');
+            const checkedCount = Array.from(itemCheckboxes).filter(cb => cb.checked).length;
+            if (selectAll) {
+                if (itemCheckboxes.length > 0 && checkedCount === itemCheckboxes.length) {
+                    selectAll.checked = true;
+                    selectAll.indeterminate = false;
+                } else if (checkedCount === 0) {
+                    selectAll.checked = false;
+                    selectAll.indeterminate = false;
+                } else {
+                    selectAll.checked = false;
+                    selectAll.indeterminate = true;
+                }
+            }
+        });
+    };
+    checkboxes.forEach(checkbox => {
+        checkbox.addEventListener('change', updateSelectedCount);
+    });
+    // Select All logic for each tab
+    const selectAllCheckboxes = modal.querySelectorAll('[id^="selectAllVLR-"]');
+    selectAllCheckboxes.forEach(selectAll => {
+        selectAll.addEventListener('change', function() {
+            const tabPane = selectAll.closest('.tab-pane');
+            if (!tabPane) return;
+            const itemCheckboxes = tabPane.querySelectorAll('.vlr-checkbox');
+            itemCheckboxes.forEach(cb => {
+                // Only check visible items
+                if (cb.closest('.vlr-content-item').style.display !== 'none') {
+                    cb.checked = selectAll.checked;
+                }
+            });
+            updateSelectedCount();
+        });
+    });
+    addSelectedBtn.addEventListener('click', () => {
+        const selectedCheckboxes = modal.querySelectorAll('.vlr-checkbox:checked');
+        const selectedItems = [];
+        selectedCheckboxes.forEach(checkbox => {
+            const itemId = parseInt(checkbox.value);
+            const itemCard = checkbox.closest('.vlr-content-item');
+            const itemTitle = itemCard.querySelector('.fw-bold').textContent.trim();
+            const itemType = itemCard.dataset.vlrType;
+            selectedItems.push({
+                id: itemId,
+                type: itemType,
+                title: itemTitle
+            });
+        });
+        if (selectedItems.length > 0) {
+            addSelectedVLR(type, moduleId, selectedItems);
+            // Close modal
+            const modalInstance = bootstrap.Modal.getInstance(modal);
+            if (modalInstance) {
+                modalInstance.hide();
             }
         }
     });
+    updateSelectedCount();
+}
+
+function addSelectedVLR(type, moduleId, selectedItems) {
+    if (type === 'module_content') {
+        // Assign to module content
+        const module = courseManagerState.modules.find(m => m.id === moduleId);
+        if (module) {
+            module.content = selectedItems.map((item, idx) => ({ ...item, sort_order: idx }));
+            renderModules();
+        }
+    } else if (type === 'prerequisite') {
+        // Assign to prerequisites
+        courseManagerState.prerequisites = selectedItems.map((item, idx) => ({ ...item, sort_order: idx }));
+        renderPrerequisites();
+    } else {
+        // Post-requisite (type is the content_type)
+        // Allow multiple per type, prevent duplicates
+        courseManagerState.post_requisites = courseManagerState.post_requisites.filter(item => item.content_type !== type);
+        selectedItems.forEach((item, idx) => {
+            // Prevent duplicate content_id for this type
+            if (!courseManagerState.post_requisites.some(pr => pr.content_id === item.id && pr.content_type === type)) {
+                courseManagerState.post_requisites.push({
+                    id: item.id,
+                    title: item.title,
+                    content_type: type,
+                    content_id: item.id,
+                    sort_order: courseManagerState.post_requisites.length,
+                    is_required: true
+                });
+            }
+        });
+        renderPostRequisites();
+    }
+    showToast(`${selectedItems.length} item(s) added successfully`, 'success');
+}
+
+// Module ordering functions
+window.moveModuleUp = function(index) {
+    if (index > 0) {
+        const temp = courseManagerState.modules[index];
+        courseManagerState.modules[index] = courseManagerState.modules[index - 1];
+        courseManagerState.modules[index - 1] = temp;
+        renderModules();
+    }
+};
+window.moveModuleDown = function(index) {
+    if (index < courseManagerState.modules.length - 1) {
+        const temp = courseManagerState.modules[index];
+        courseManagerState.modules[index] = courseManagerState.modules[index + 1];
+        courseManagerState.modules[index + 1] = temp;
+        renderModules();
+    }
+};
+// Module content ordering functions
+window.moveModuleContentUp = function(moduleId, idx) {
+    const module = courseManagerState.modules.find(m => m.id === moduleId);
+    if (module && idx > 0) {
+        const temp = module.content[idx];
+        module.content[idx] = module.content[idx - 1];
+        module.content[idx - 1] = temp;
+        renderModules();
+    }
+};
+window.moveModuleContentDown = function(moduleId, idx) {
+    const module = courseManagerState.modules.find(m => m.id === moduleId);
+    if (module && idx < module.content.length - 1) {
+        const temp = module.content[idx];
+        module.content[idx] = module.content[idx + 1];
+        module.content[idx + 1] = temp;
+        renderModules();
+    }
+};
+
+// Export for global access
+window.initializeCourseCreation = initializeCourseCreation;
+console.log('[DEBUG] initializeCourseCreation function exported to window:', typeof window.initializeCourseCreation);
+
+// Helper to reset courseManagerState
+function resetCourseManagerState() {
+    courseManagerState.modules = [];
+    courseManagerState.prerequisites = [];
+    courseManagerState.post_requisites = [];
+    courseManagerState.learningObjectives = [];
+    courseManagerState.tags = [];
+    courseManagerState.currentTab = 0;
+    courseManagerState.isEditMode = false;
+    courseManagerState.courseId = null;
+}
+
+// Attach modal close handler to reset state
+// Replace 'addCourseModal' with the actual modal ID if different
+
+document.addEventListener('DOMContentLoaded', function() {
+    var addCourseModal = document.getElementById('addCourseModal');
+    if (addCourseModal) {
+        addCourseModal.addEventListener('hidden.bs.modal', function() {
+            resetCourseManagerState();
+            // Optionally, re-render modules/prereqs/postreqs to clear UI
+            renderModules();
+            renderPrerequisites();
+            renderPostRequisites();
+            renderTags();
+            renderLearningObjectives();
+        });
+    }
 }); 

@@ -431,15 +431,41 @@ class CourseCreationController extends BaseController
         error_log('[DEBUG] createCourse method called');
         error_log('[DEBUG] REQUEST_METHOD: ' . $_SERVER['REQUEST_METHOD']);
         error_log('[DEBUG] SESSION data: ' . print_r($_SESSION, true));
+        error_log('[DEBUG] X-Requested-With header: ' . ($_SERVER['HTTP_X_REQUESTED_WITH'] ?? 'NOT SET'));
+        error_log('[DEBUG] isAjaxRequest result: ' . ($this->isAjaxRequest() ? 'TRUE' : 'FALSE'));
+        error_log('[DEBUG] Session ID: ' . (session_id() ?: 'NO SESSION ID'));
+        error_log('[DEBUG] Session status: ' . session_status());
         
         try {
             // Check for different possible session user ID keys
             $userId = $_SESSION['id'] ?? $_SESSION['user_id'] ?? null;
             error_log('[DEBUG] User ID found: ' . $userId);
             
+            // Check if session exists and user is logged in
+            if (!isset($_SESSION['id']) || !isset($_SESSION['user'])) {
+                error_log('[DEBUG] Session validation failed - missing id or user data');
+                error_log('[DEBUG] Session keys present: ' . implode(', ', array_keys($_SESSION)));
+                
+                if ($this->isAjaxRequest()) {
+                    $this->jsonResponse([
+                        'success' => false, 
+                        'message' => 'Session expired. Please log in again.', 
+                        'redirect' => '/Unlockyourskills/login',
+                        'timeout' => true
+                    ]);
+                } else {
+                    header('Location: /Unlockyourskills/login');
+                }
+                return;
+            }
+            
             if ($_SERVER['REQUEST_METHOD'] !== 'POST' || !$userId) {
                 error_log('[DEBUG] Authentication failed - Method: ' . $_SERVER['REQUEST_METHOD'] . ', User ID: ' . $userId);
-                $this->jsonResponse(['success' => false, 'message' => 'Authentication required', 'redirect' => '/Unlockyourskills/login']);
+                if ($this->isAjaxRequest()) {
+                    $this->jsonResponse(['success' => false, 'message' => 'Authentication required', 'redirect' => '/Unlockyourskills/login']);
+                } else {
+                    header('Location: /Unlockyourskills/login');
+                }
                 return;
             }
             
@@ -485,18 +511,28 @@ class CourseCreationController extends BaseController
                 error_log('[DEBUG] POST data: ' . print_r($_POST, true));
                 error_log('[DEBUG] FILES data: ' . print_r($_FILES, true));
                 
-                // Handle form data request
-                $result = $this->courseModel->createCourse($_POST, $_FILES, $userId, $clientId);
-                error_log('[DEBUG] Form course creation result: ' . print_r($result, true));
-                
-                if ($result['success']) {
-                    $_SESSION['toast'] = ['type' => 'success', 'message' => 'Course created successfully!'];
-                    header('Location: /Unlockyourskills/course-management');
+                // Check if this is an AJAX request
+                if ($this->isAjaxRequest()) {
+                    error_log('[DEBUG] AJAX request detected, returning JSON response');
+                    // Handle form data request for AJAX
+                    $result = $this->courseModel->createCourse($_POST, $_FILES, $userId, $clientId);
+                    error_log('[DEBUG] AJAX course creation result: ' . print_r($result, true));
+                    $this->jsonResponse($result);
                 } else {
-                    $_SESSION['toast'] = ['type' => 'error', 'message' => $result['message'] ?? 'Failed to create course.'];
-                    header('Location: /Unlockyourskills/course-management');
+                    error_log('[DEBUG] Non-AJAX request, redirecting');
+                    // Handle form data request for non-AJAX
+                    $result = $this->courseModel->createCourse($_POST, $_FILES, $userId, $clientId);
+                    error_log('[DEBUG] Form course creation result: ' . print_r($result, true));
+                    
+                    if ($result['success']) {
+                        $_SESSION['toast'] = ['type' => 'success', 'message' => 'Course created successfully!'];
+                        header('Location: /Unlockyourskills/course-management');
+                    } else {
+                        $_SESSION['toast'] = ['type' => 'error', 'message' => $result['message'] ?? 'Failed to create course.'];
+                        header('Location: /Unlockyourskills/course-management');
+                    }
+                    exit;
                 }
-                exit;
             }
         } catch (Exception $e) {
             error_log('[ERROR] Exception in createCourse: ' . $e->getMessage());
@@ -506,6 +542,135 @@ class CourseCreationController extends BaseController
             error_log('[FATAL ERROR] Error in createCourse: ' . $e->getMessage());
             error_log('[FATAL ERROR] Error trace: ' . $e->getTraceAsString());
             $this->jsonResponse(['success' => false, 'message' => 'Fatal server error: ' . $e->getMessage()]);
+        }
+    }
+
+    /**
+     * Edit Course Page
+     */
+    public function editCourse($id = null) {
+        if (!isset($_SESSION['id'])) {
+            $this->redirectWithToast('Please login to edit courses.', 'error', '/login');
+            return;
+        }
+        
+        // Handle legacy routing where id comes from GET parameter
+        if ($id === null) {
+            $id = $_GET['id'] ?? null;
+        }
+        
+        if (!$id) {
+            $this->redirectWithToast('Course ID is required.', 'error', '/Unlockyourskills/course-management');
+            return;
+        }
+        
+        try {
+            $clientId = $_SESSION['user']['client_id'] ?? null;
+            $course = $this->courseModel->getCourseById($id, $clientId);
+            
+            if (!$course) {
+                $this->redirectWithToast('Course not found.', 'error', '/Unlockyourskills/course-management');
+                return;
+            }
+            
+            // Get course data for editing
+            $categories = $this->courseCategoryModel->getAllCategories($clientId);
+            $subcategories = $this->courseSubcategoryModel->getSubcategoriesByCategoryId($course['category_id'], $clientId);
+            $vlrContent = $this->courseModel->getAvailableVLRContent($clientId);
+            $existingCourses = $this->courseModel->getAllCourses($clientId);
+            $currencies = $this->courseModel->getCurrencies();
+            
+            // Get course modules, prerequisites, and post-requisites
+            $modules = $this->courseModel->getCourseModules($id);
+            $prerequisites = $this->courseModel->getCoursePrerequisites($id);
+            $postRequisites = $this->courseModel->getCoursePostRequisites($id);
+            
+            // Set edit mode flag and course data for the modal
+            $isEditMode = true;
+            $editCourseData = $course;
+            
+            // Always use the modal content for editing
+            require 'views/modals/add_course_modal_content.php';
+        } catch (Exception $e) {
+            error_log('[ERROR] Exception in editCourse: ' . $e->getMessage());
+            if ($this->isAjaxRequest()) {
+                $this->jsonResponse([
+                    'success' => false,
+                    'message' => 'Error loading course: ' . $e->getMessage()
+                ]);
+            } else {
+                $this->redirectWithToast('Error loading course.', 'error', '/Unlockyourskills/course-management');
+            }
+        }
+    }
+
+    /**
+     * Update Course (POST/PUT)
+     */
+    public function updateCourse($id = null) {
+        if (!isset($_SESSION['id'])) {
+            $this->jsonResponse([
+                'success' => false,
+                'message' => 'Authentication required'
+            ]);
+            return;
+        }
+        
+        // Handle legacy routing where id comes from GET parameter
+        if ($id === null) {
+            $id = $_GET['id'] ?? $_POST['id'] ?? null;
+        }
+        
+        if (!$id) {
+            $this->jsonResponse(['success' => false, 'message' => 'Course ID is required']);
+            return;
+        }
+        
+        try {
+            $clientId = $_SESSION['user']['client_id'] ?? null;
+            $userId = $_SESSION['id'];
+            
+            // Check if this is a JSON request
+            $contentType = $_SERVER['CONTENT_TYPE'] ?? '';
+            
+            if (strpos($contentType, 'application/json') !== false) {
+                // Handle JSON request
+                $input = file_get_contents('php://input');
+                $jsonData = json_decode($input, true);
+                
+                if ($jsonData === null) {
+                    $this->jsonResponse(['success' => false, 'message' => 'Invalid JSON data']);
+                    return;
+                }
+                
+                // Add updated_by to the data
+                $jsonData['updated_by'] = $userId;
+                
+                // Process JSON data for update
+                $result = $this->courseModel->updateCourse($id, $jsonData, $clientId);
+                
+                if ($result) {
+                    $this->jsonResponse(['success' => true, 'message' => 'Course updated successfully']);
+                } else {
+                    $this->jsonResponse(['success' => false, 'message' => 'Failed to update course']);
+                }
+            } else {
+                // Handle form data request
+                $_POST['updated_by'] = $userId;
+                $result = $this->courseModel->updateCourse($id, $_POST, $clientId);
+                
+                if ($result) {
+                    $_SESSION['toast'] = ['type' => 'success', 'message' => 'Course updated successfully!'];
+                    header('Location: /Unlockyourskills/course-management');
+                } else {
+                    $_SESSION['toast'] = ['type' => 'error', 'message' => 'Failed to update course.'];
+                    header('Location: /Unlockyourskills/course-management');
+                }
+                exit;
+            }
+        } catch (Exception $e) {
+            error_log('[ERROR] Exception in updateCourse: ' . $e->getMessage());
+            $this->jsonResponse(['success' => false, 'message' => 'Server error: ' . $e->getMessage()]);
         }
     }
 } 
