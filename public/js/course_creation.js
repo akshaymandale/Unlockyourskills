@@ -18,6 +18,7 @@ let courseManagerState = {
     searchTimeout: null,
     validationInterval: null
 };
+window.courseManagerState = courseManagerState;
 
 // Initialize course creation functionality
 function initializeCourseCreation() {
