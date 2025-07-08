@@ -299,6 +299,21 @@ function handleCategoryChange() {
 
 function handleFormSubmit(e) {
     console.log('[DEBUG] Form submit event triggered');
+    // Before submitting, update hidden inputs for non-JS fallback
+    if (window.courseManagerState && Array.isArray(window.courseManagerState.modules)) {
+        window.courseManagerState.modules.forEach((module, idx) => {
+            module.sort_order = idx; // 0-based order for DB
+        });
+    }
+    if (document.getElementById('modulesInput')) {
+        document.getElementById('modulesInput').value = JSON.stringify(window.courseManagerState.modules || []);
+    }
+    if (document.getElementById('prerequisitesInput')) {
+        document.getElementById('prerequisitesInput').value = JSON.stringify(window.courseManagerState.prerequisites || []);
+    }
+    if (document.getElementById('postRequisitesInput')) {
+        document.getElementById('postRequisitesInput').value = JSON.stringify(window.courseManagerState.post_requisites || []);
+    }
     // Let the validation system handle the submission
     // The form submit event will be handled by the validation system
 }
@@ -755,9 +770,11 @@ function loadSubcategories() {
                             subcategorySelect.innerHTML += `<option value="${subcategory.id}">${subcategory.name}</option>`;
                         });
                         // Restore existing subcategory value if in edit mode
-                        const editSubcategoryIdInput = document.getElementById('edit_subcategory_id');
-                        if (editSubcategoryIdInput) {
-                            subcategorySelect.value = editSubcategoryIdInput.value;
+                        if (courseManagerState.isEditMode) {
+                            const existingSubcategory = document.getElementById('existing_subcategory_id');
+                            if (existingSubcategory && existingSubcategory.value) {
+                                subcategorySelect.value = existingSubcategory.value;
+                            }
                         }
                     } else {
                         console.error('[ERROR] Subcategories API returned success: false:', data.message);
@@ -936,27 +953,32 @@ function renderPrerequisites() {
             </div>
         `;
     } else {
-        let html = '<div class="d-flex flex-wrap gap-2 mb-3">';
+        let html = '<div class="module-content-container border rounded p-2 bg-light">';
         courseManagerState.prerequisites.forEach((item, index) => {
             const type = item.type || 'unknown';
             const title = item.title || item.name || 'Untitled';
             const icon = getContentIcon(type);
-            
             html += `
-                <span class="badge bg-primary d-flex align-items-center">
-                    <i class="${icon} me-1"></i>
-                    ${title}
-                    <button type="button" class="btn btn-sm btn-link text-white p-0 ms-2" onclick="removePrerequisite(${index})">
-                        <i class="fas fa-times"></i>
-                    </button>
-                </span>
+                <div class="content-item d-flex align-items-center p-2 border rounded mb-2">
+                    <i class="${icon} me-2"></i>
+                    <span class="flex-grow-1">${title}</span>
+                    <div class="btn-group btn-group-sm ms-2">
+                        <button type="button" class="btn btn-outline-secondary btn-sm" onclick="movePrerequisiteUp(${index})" ${index === 0 ? 'disabled' : ''} title="Move Up">
+                            <i class="fas fa-arrow-up"></i>
+                        </button>
+                        <button type="button" class="btn btn-outline-secondary btn-sm" onclick="movePrerequisiteDown(${index})" ${index === courseManagerState.prerequisites.length - 1 ? 'disabled' : ''} title="Move Down">
+                            <i class="fas fa-arrow-down"></i>
+                        </button>
+                        <button type="button" class="btn btn-outline-danger btn-sm" onclick="removePrerequisite(${index})" title="Delete">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    </div>
+                </div>
             `;
         });
         html += '</div>';
         container.innerHTML = html;
     }
-    
-    // Remove add prerequisite button binding (no button rendered)
 }
 
 function renderPostRequisites() {
@@ -1085,13 +1107,6 @@ function populateCategorySelect(categories) {
         categories.forEach(category => {
             select.innerHTML += `<option value="${category.id}">${category.name}</option>`;
         });
-        // Set the selected value if in edit mode
-        const editCategoryIdInput = document.getElementById('edit_category_id');
-        if (editCategoryIdInput) {
-            select.value = editCategoryIdInput.value;
-            // Optionally, trigger change event if subcategories depend on category
-            select.dispatchEvent(new Event('change'));
-        }
     }
 }
 
@@ -1163,6 +1178,21 @@ window.movePostRequisiteDown = function(index) {
         courseManagerState.post_requisites[index] = courseManagerState.post_requisites[index + 1];
         courseManagerState.post_requisites[index + 1] = temp;
         renderPostRequisites();
+    }
+};
+
+window.movePrerequisiteUp = function(index) {
+    if (index > 0) {
+        const arr = courseManagerState.prerequisites;
+        [arr[index - 1], arr[index]] = [arr[index], arr[index - 1]];
+        renderPrerequisites();
+    }
+};
+window.movePrerequisiteDown = function(index) {
+    if (index < courseManagerState.prerequisites.length - 1) {
+        const arr = courseManagerState.prerequisites;
+        [arr[index], arr[index + 1]] = [arr[index + 1], arr[index]];
+        renderPrerequisites();
     }
 };
 
