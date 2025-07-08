@@ -4649,7 +4649,10 @@ body select:focus,
     display: flex;
     align-items: center;
     justify-content: space-between;
-    margin-bottom: 15px;
+    margin-bottom: 16px;
+    background: #d9b3ff;
+    border-radius: 6px;
+    padding: 10px 16px;
 }
 
 .module-title {
