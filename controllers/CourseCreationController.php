@@ -549,6 +549,8 @@ class CourseCreationController extends BaseController
      * Edit Course Page
      */
     public function editCourse($id = null) {
+        error_log('[DEBUG] editCourse method called');
+        error_log('PHP error log path: ' . ini_get('error_log'));
         if (!isset($_SESSION['id'])) {
             $this->redirectWithToast('Please login to edit courses.', 'error', '/login');
             return;
@@ -588,8 +590,9 @@ class CourseCreationController extends BaseController
             // Set edit mode flag and course data for the modal
             $isEditMode = true;
             $editCourseData = $course;
-            
-            // Always use the modal content for editing
+            // Debugging logs for troubleshooting pre-fill issues
+            error_log('[DEBUG] $modules in editCourse: ' . print_r($modules, true));
+            error_log('[DEBUG] $editCourseData in editCourse: ' . print_r($editCourseData, true));
             require 'views/modals/add_course_modal_content.php';
         } catch (Exception $e) {
             error_log('[ERROR] Exception in editCourse: ' . $e->getMessage());

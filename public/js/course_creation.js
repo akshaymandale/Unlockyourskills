@@ -427,6 +427,22 @@ function validateBasicInfoTab() {
     return isValid;
 }
 
+// Add this function globally for tab error highlighting
+function highlightTabWithError(tabId) {
+    // Try by id first, then by data-bs-target
+    let tabButton = document.getElementById(tabId);
+    if (!tabButton) {
+        tabButton = document.querySelector(`#courseCreationTabs button[data-bs-target="#basic-info"]`);
+    }
+    if (tabButton) {
+        tabButton.classList.add('tab-error');
+        tabButton.style.borderColor = '#dc3545';
+        tabButton.style.borderWidth = '2px';
+        tabButton.style.borderStyle = 'solid';
+        tabButton.style.color = '#dc3545';
+    }
+}
+
 function loadInitialData() {
     console.log('[DEBUG] loadInitialData() called');
     // Load initial data like categories, VLR content, etc.
@@ -738,13 +754,10 @@ function loadSubcategories() {
                         data.subcategories.forEach(subcategory => {
                             subcategorySelect.innerHTML += `<option value="${subcategory.id}">${subcategory.name}</option>`;
                         });
-                        
                         // Restore existing subcategory value if in edit mode
-                        if (courseManagerState.isEditMode) {
-                            const existingSubcategory = document.getElementById('existing_subcategory_id');
-                            if (existingSubcategory && existingSubcategory.value) {
-                                subcategorySelect.value = existingSubcategory.value;
-                            }
+                        const editSubcategoryIdInput = document.getElementById('edit_subcategory_id');
+                        if (editSubcategoryIdInput) {
+                            subcategorySelect.value = editSubcategoryIdInput.value;
                         }
                     } else {
                         console.error('[ERROR] Subcategories API returned success: false:', data.message);
@@ -1072,6 +1085,13 @@ function populateCategorySelect(categories) {
         categories.forEach(category => {
             select.innerHTML += `<option value="${category.id}">${category.name}</option>`;
         });
+        // Set the selected value if in edit mode
+        const editCategoryIdInput = document.getElementById('edit_category_id');
+        if (editCategoryIdInput) {
+            select.value = editCategoryIdInput.value;
+            // Optionally, trigger change event if subcategories depend on category
+            select.dispatchEvent(new Event('change'));
+        }
     }
 }
 
