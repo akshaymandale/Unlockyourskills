@@ -842,9 +842,9 @@ function renderModules() {
         courseManagerState.modules.forEach((module, index) => {
             html += `
                 <div class="module-item border rounded p-3 mb-3" data-module-id="${module.id}">
-                    <div class="d-flex justify-content-between align-items-center mb-3">
-                        <h6 class="mb-0">Module ${index + 1}</h6>
-                        <div class="btn-group btn-group-sm">
+                    <div class="module-header">
+                        <h6 class="mb-0 module-title">Module ${index + 1}</h6>
+                        <div class="btn-group btn-group-sm module-actions">
                             <button type="button" class="btn btn-outline-secondary" onclick="moveModuleUp(${index})" ${index === 0 ? 'disabled' : ''} title="Move Up">
                                 <i class="fas fa-arrow-up"></i>
                             </button>
@@ -1017,6 +1017,12 @@ function renderPostRequisites() {
                     <span class="flex-grow-1">${title}</span>
                     <div class="badge bg-primary-subtle text-primary ms-2">${typeBadge}</div>
                     <div class="btn-group btn-group-sm ms-2">
+                        <button type="button" class="btn btn-outline-secondary btn-sm" onclick="movePostRequisiteUp(${index})" ${index === 0 ? 'disabled' : ''} title="Move Up">
+                            <i class="fas fa-arrow-up"></i>
+                        </button>
+                        <button type="button" class="btn btn-outline-secondary btn-sm" onclick="movePostRequisiteDown(${index})" ${index === courseManagerState.post_requisites.length - 1 ? 'disabled' : ''} title="Move Down">
+                            <i class="fas fa-arrow-down"></i>
+                        </button>
                         <button type="button" class="btn btn-outline-danger btn-sm" onclick="removePostRequisite(${index})" title="Delete">
                             <i class="fas fa-times"></i>
                         </button>

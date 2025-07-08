@@ -661,15 +661,60 @@ class CourseModel
     // Get course prerequisites
     public function getCoursePrerequisites($courseId)
     {
-        $sql = "SELECT cp.*, c.name as prerequisite_course_title
-                FROM course_prerequisites cp
-                LEFT JOIN courses c ON cp.prerequisite_id = c.id AND cp.prerequisite_type = 'course'
-                WHERE cp.course_id = ? AND (cp.deleted_at IS NULL OR cp.deleted_at = '0000-00-00 00:00:00')
-                ORDER BY cp.sort_order ASC";
+        $sql = "SELECT cp.*, 
+            c.name as course_title,
+            sp.title as scorm_title,
+            ap.title as assessment_title,
+            fp.title as feedback_title,
+            ep.title as external_title,
+            cp.prerequisite_type
+        FROM course_prerequisites cp
+        LEFT JOIN courses c ON cp.prerequisite_id = c.id AND cp.prerequisite_type = 'course'
+        LEFT JOIN scorm_packages sp ON cp.prerequisite_id = sp.id AND cp.prerequisite_type = 'scorm'
+        LEFT JOIN assessment_package ap ON cp.prerequisite_id = ap.id AND cp.prerequisite_type = 'assessment'
+        LEFT JOIN feedback_package fp ON cp.prerequisite_id = fp.id AND cp.prerequisite_type = 'feedback'
+        LEFT JOIN external_content ep ON cp.prerequisite_id = ep.id AND cp.prerequisite_type = 'external'
+        WHERE cp.course_id = ? AND (cp.deleted_at IS NULL OR cp.deleted_at = '0000-00-00 00:00:00')
+        ORDER BY cp.sort_order ASC";
         
         $stmt = $this->conn->prepare($sql);
         $stmt->execute([$courseId]);
-        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+        $results = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        // Add a generic 'title' and 'type' field for frontend rendering
+        foreach ($results as &$row) {
+            switch ($row['prerequisite_type']) {
+                case 'course':
+                    $row['title'] = $row['course_title'];
+                    $row['type'] = 'course';
+                    break;
+                case 'scorm':
+                    $row['title'] = $row['scorm_title'];
+                    $row['type'] = 'scorm';
+                    break;
+                case 'assessment':
+                    $row['title'] = $row['assessment_title'];
+                    $row['type'] = 'assessment';
+                    break;
+                case 'feedback':
+                    $row['title'] = $row['feedback_title'];
+                    $row['type'] = 'feedback';
+                    break;
+                case 'external':
+                    $row['title'] = $row['external_title'];
+                    $row['type'] = 'external';
+                    break;
+                default:
+                    $row['title'] = null;
+                    $row['type'] = $row['prerequisite_type'];
+            }
+            if (empty($row['title'])) {
+                $row['title'] = 'Untitled';
+            }
+            if (empty($row['type'])) {
+                $row['type'] = 'unknown';
+            }
+        }
+        return $results;
     }
 
     // Get course post-requisites
