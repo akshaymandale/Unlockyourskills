@@ -18,6 +18,18 @@ class CourseModel
         error_log("User ID: $userId, Client ID: $clientId");
         error_log("Data keys received: " . json_encode(array_keys($data)));
         error_log("Full data received: " . json_encode($data));
+        // Decode JSON fields if they are strings
+        foreach (['modules', 'prerequisites', 'post_requisites'] as $key) {
+            if (isset($data[$key]) && is_string($data[$key])) {
+                $decoded = json_decode($data[$key], true);
+                if (json_last_error() === JSON_ERROR_NONE) {
+                    $data[$key] = $decoded;
+                } else {
+                    error_log("[ERROR] Failed to decode $key: " . json_last_error_msg());
+                    $data[$key] = [];
+                }
+            }
+        }
         
         try {
             $this->conn->beginTransaction();
@@ -204,7 +216,7 @@ class CourseModel
         $stmt = $this->conn->prepare($sql);
         $stmt->execute([
             ':course_id' => $courseId,
-            ':title' => $moduleData['title'],
+            ':title' => $moduleData['title'] ?? $moduleData['name'] ?? '',
             ':description' => $moduleData['description'],
             ':module_order' => $moduleData['sort_order'] ?? 0, // Map sort_order to module_order
             ':is_required' => isset($moduleData['is_required']) ? 1 : 0,

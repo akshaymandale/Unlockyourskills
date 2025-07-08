@@ -127,6 +127,38 @@
         return isValid;
     }
 
+    function showFieldError(field, message) {
+        field.classList.add('is-invalid');
+        field.classList.remove('is-valid');
+        const existingFeedback = field.parentNode.querySelector('.invalid-feedback');
+        if (existingFeedback) {
+            existingFeedback.remove();
+        }
+        const feedback = document.createElement('div');
+        feedback.className = 'invalid-feedback';
+        feedback.textContent = message;
+        field.parentNode.appendChild(feedback);
+    }
+
+    function clearFieldError(field) {
+        field.classList.remove('is-invalid');
+        field.classList.add('is-valid');
+        const feedback = field.parentNode.querySelector('.invalid-feedback');
+        if (feedback) {
+            feedback.remove();
+        }
+    }
+
+    function validateDurationMinutes(field) {
+        const value = parseInt(field.value, 10);
+        if (!isNaN(value) && value > 60) {
+            showFieldError(field, 'Duration (Minutes) cannot be more than 60.');
+            return false;
+        }
+        clearFieldError(field);
+        return true;
+    }
+
     function validateCourseCreationForm() {
         let isFormValid = true;
         
@@ -149,6 +181,12 @@
                 isFormValid = false;
             }
         });
+
+        // Validate Duration (Minutes) does not exceed 60
+        const durationMinutesField = document.getElementById('duration_minutes');
+        if (durationMinutesField && !validateDurationMinutes(durationMinutesField)) {
+            isFormValid = false;
+        }
 
         // Require at least one module
         const modulesContainer = document.getElementById('modulesContainer');
@@ -247,6 +285,7 @@
     }
 
     function submitCourseCreationForm() {
+        console.log('[DEBUG] submitCourseCreationForm called');
         const form = document.getElementById('courseCreationForm');
         const formData = new FormData(form);
         const submitButton = document.getElementById('create_course');
@@ -363,6 +402,17 @@
             field._courseCreationBlurHandler = handler;
             field.addEventListener('blur', handler);
         });
+
+        // Add event listeners for Duration (Minutes) validation
+        const durationMinutesField = document.getElementById('duration_minutes');
+        if (durationMinutesField) {
+            durationMinutesField.addEventListener('blur', function() {
+                validateDurationMinutes(durationMinutesField);
+            });
+            durationMinutesField.addEventListener('input', function() {
+                clearFieldError(durationMinutesField);
+            });
+        }
         
         console.log('[DEBUG] Course creation validation initialized');
     }
