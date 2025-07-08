@@ -7,6 +7,14 @@
         <input type="hidden" id="existing_modules" value="<?= htmlspecialchars(json_encode($modules ?? [])) ?>">
         <input type="hidden" id="existing_prerequisites" value="<?= htmlspecialchars(json_encode($prerequisites ?? [])) ?>">
         <input type="hidden" id="existing_post_requisites" value="<?= htmlspecialchars(json_encode($postRequisites ?? [])) ?>">
+        <?php error_log('[DEBUG] $subcategories in modal: ' . print_r($subcategories, true)); ?>
+        <?php error_log('[DEBUG] $editCourseData[\'subcategory_id\'] in modal: ' . print_r($editCourseData['subcategory_id'] ?? null, true)); ?>
+    <?php endif; ?>
+    <?php if (isset($isEditMode) && $isEditMode && isset($editCourseData['category_id'])): ?>
+        <input type="hidden" id="edit_category_id" value="<?= htmlspecialchars($editCourseData['category_id']) ?>">
+    <?php endif; ?>
+    <?php if (isset($isEditMode) && $isEditMode && isset($editCourseData['subcategory_id'])): ?>
+        <input type="hidden" id="edit_subcategory_id" value="<?= htmlspecialchars($editCourseData['subcategory_id']) ?>">
     <?php endif; ?>
     <!-- Navigation Tabs -->
     <ul class="nav nav-tabs nav-bordered" id="courseCreationTabs" role="tablist">
