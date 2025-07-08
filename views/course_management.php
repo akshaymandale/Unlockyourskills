@@ -423,6 +423,14 @@ document.addEventListener('DOMContentLoaded', function() {
             });
         });
     }
+
+    // Refresh page on editCourseModal close
+    var editCourseModal = document.getElementById('editCourseModal');
+    if (editCourseModal) {
+        editCourseModal.addEventListener('hidden.bs.modal', function() {
+            window.location.reload();
+        });
+    }
 });
 
 function initializeCourseManagement() {
