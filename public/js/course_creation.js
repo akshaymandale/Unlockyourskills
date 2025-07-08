@@ -917,10 +917,15 @@ function renderModuleContent(content, moduleId) {
         const type = item.type || item.content_type || 'unknown';
         const title = item.title || item.name || 'Untitled';
         const icon = getContentIcon(type);
+        // Capitalize type for badge
+        const typeBadge = type.charAt(0).toUpperCase() + type.slice(1);
         return `
             <div class="content-item d-flex align-items-center p-2 border rounded mb-2">
                 <i class="${icon} me-2"></i>
-                <span class="flex-grow-1">${title}</span>
+                <span class="flex-grow-1">
+                    ${title}
+                </span>
+                <div class="badge bg-primary-subtle text-primary ms-2">${typeBadge}</div>
                 <div class="btn-group btn-group-sm ms-2">
                     <button type="button" class="btn btn-outline-secondary btn-sm" onclick="moveModuleContentUp(${moduleId}, ${idx})" ${idx === 0 ? 'disabled' : ''} title="Move Up">
                         <i class="fas fa-arrow-up"></i>
@@ -955,13 +960,15 @@ function renderPrerequisites() {
     } else {
         let html = '<div class="module-content-container border rounded p-2 bg-light">';
         courseManagerState.prerequisites.forEach((item, index) => {
-            const type = item.type || 'unknown';
+            const type = item.type || item.content_type || 'unknown';
             const title = item.title || item.name || 'Untitled';
             const icon = getContentIcon(type);
+            const typeBadge = type.charAt(0).toUpperCase() + type.slice(1);
             html += `
                 <div class="content-item d-flex align-items-center p-2 border rounded mb-2">
                     <i class="${icon} me-2"></i>
                     <span class="flex-grow-1">${title}</span>
+                    <div class="badge bg-primary-subtle text-primary ms-2">${typeBadge}</div>
                     <div class="btn-group btn-group-sm ms-2">
                         <button type="button" class="btn btn-outline-secondary btn-sm" onclick="movePrerequisiteUp(${index})" ${index === 0 ? 'disabled' : ''} title="Move Up">
                             <i class="fas fa-arrow-up"></i>
@@ -998,24 +1005,19 @@ function renderPostRequisites() {
             </div>
         `;
     } else {
-        html += '<div class="post-requisites-list">';
+        html += '<div class="module-content-container border rounded p-2 bg-light">';
         courseManagerState.post_requisites.forEach((item, index) => {
-            const type = item.type || 'unknown';
+            const type = item.type || item.content_type || 'unknown';
             const title = item.title || item.name || 'Untitled';
             const icon = getContentIcon(type);
-            
+            const typeBadge = type.charAt(0).toUpperCase() + type.slice(1);
             html += `
-                <div class="post-requisite-item d-flex align-items-center p-2 border rounded mb-2">
+                <div class="content-item d-flex align-items-center p-2 border rounded mb-2">
                     <i class="${icon} me-2"></i>
                     <span class="flex-grow-1">${title}</span>
-                    <div class="btn-group btn-group-sm">
-                        <button type="button" class="btn btn-outline-secondary" onclick="movePostRequisiteUp(${index})" ${index === 0 ? 'disabled' : ''}>
-                            <i class="fas fa-arrow-up"></i>
-                        </button>
-                        <button type="button" class="btn btn-outline-secondary" onclick="movePostRequisiteDown(${index})" ${index === courseManagerState.post_requisites.length - 1 ? 'disabled' : ''}>
-                            <i class="fas fa-arrow-down"></i>
-                        </button>
-                        <button type="button" class="btn btn-outline-danger" onclick="removePostRequisite(${index})">
+                    <div class="badge bg-primary-subtle text-primary ms-2">${typeBadge}</div>
+                    <div class="btn-group btn-group-sm ms-2">
+                        <button type="button" class="btn btn-outline-danger btn-sm" onclick="removePostRequisite(${index})" title="Delete">
                             <i class="fas fa-times"></i>
                         </button>
                     </div>
@@ -1107,6 +1109,11 @@ function populateCategorySelect(categories) {
         categories.forEach(category => {
             select.innerHTML += `<option value="${category.id}">${category.name}</option>`;
         });
+        // Set selected value if in edit mode
+        const editCategoryIdInput = document.getElementById('edit_category_id');
+        if (editCategoryIdInput && editCategoryIdInput.value) {
+            select.value = editCategoryIdInput.value;
+        }
     }
 }
 
@@ -1353,7 +1360,8 @@ function showVLRContentModal(title, content, type, moduleId = null, preselectedI
                                              data-vlr-id="${item.id}" 
                                              data-vlr-type="${item.type}"
                                              data-title="${item.title.toLowerCase()}"
-                                             data-description="${(item.description || '').toLowerCase()}">
+                                             data-description="${(item.description || '').toLowerCase()}"
+                                             data-vlr-json='${JSON.stringify(item).replace(/'/g, "&#39;")}'>
                                             <i class="fas ${getContentIcon(item.type)} mt-1" style="font-size: 2em; color: var(--bs-primary, #4b0082); filter: drop-shadow(0 2px 4px #b197fc33);" title="${getVLRTypeDisplayName(item.type)}" data-bs-toggle="tooltip"></i>
                                             <div class="flex-grow-1">
                                                 <div class="fw-bold mb-1 text-truncate" title="${item.title}" data-bs-toggle="tooltip" style="font-size:1.1em;">${item.title.length > 30 ? item.title.substring(0, 27) + '...' : item.title}</div>
@@ -1561,11 +1569,10 @@ function initializeVLRCheckboxes(modal, type, moduleId, preselectedIds = []) {
             const itemCard = checkbox.closest('.vlr-content-item');
             const itemTitle = itemCard.querySelector('.fw-bold').textContent.trim();
             const itemType = itemCard.dataset.vlrType;
-            selectedItems.push({
-                id: itemId,
-                type: itemType,
-                title: itemTitle
-            });
+            const itemJson = itemCard.getAttribute('data-vlr-json');
+            let itemObj = {};
+            try { itemObj = JSON.parse(itemJson.replace(/&#39;/g, "'")); } catch (e) { itemObj = {}; }
+            selectedItems.push(itemObj);
         });
         if (selectedItems.length > 0) {
             addSelectedVLR(type, moduleId, selectedItems);

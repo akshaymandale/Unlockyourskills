@@ -16,6 +16,9 @@
     <?php if (isset($isEditMode) && $isEditMode && isset($editCourseData['subcategory_id'])): ?>
         <input type="hidden" id="edit_subcategory_id" value="<?= htmlspecialchars($editCourseData['subcategory_id']) ?>">
     <?php endif; ?>
+    <?php if (isset($isEditMode) && $isEditMode && isset($editCourseData['id'])): ?>
+        <input type="hidden" id="course_id" value="<?= htmlspecialchars($editCourseData['id']) ?>">
+    <?php endif; ?>
     <input type="hidden" name="modules" id="modulesInput">
     <input type="hidden" name="prerequisites" id="prerequisitesInput">
     <input type="hidden" name="post_requisites" id="postRequisitesInput">
