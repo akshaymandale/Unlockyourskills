@@ -657,8 +657,17 @@ class CourseCreationController extends BaseController
                 } else {
                     $this->jsonResponse(['success' => false, 'message' => 'Failed to update course']);
                 }
+            } else if ($this->isAjaxRequest()) {
+                // Handle AJAX form-data request
+                $_POST['updated_by'] = $userId;
+                $result = $this->courseModel->updateCourse($id, $_POST, $clientId);
+                $this->jsonResponse([
+                    'success' => (bool)$result,
+                    'message' => $result ? 'Course updated successfully' : 'Failed to update course'
+                ]);
+                return;
             } else {
-                // Handle form data request
+                // Handle non-AJAX form-data request (classic form submit)
                 $_POST['updated_by'] = $userId;
                 $result = $this->courseModel->updateCourse($id, $_POST, $clientId);
                 

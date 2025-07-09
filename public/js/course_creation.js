@@ -579,14 +579,23 @@ function loadExistingPostRequisites() {
 function loadExistingTags() {
     console.log('[DEBUG] loadExistingTags() called');
     const hiddenInput = document.getElementById('tagsList');
-    if (hiddenInput && hiddenInput.value) {
+    if (hiddenInput) {
+        let tags = hiddenInput.value;
         try {
-            const tags = JSON.parse(hiddenInput.value);
+            if (!tags || tags === 'null') {
+                tags = [];
+            } else if (typeof tags === 'string') {
+                tags = JSON.parse(tags);
+            }
+            if (!Array.isArray(tags)) {
+                tags = [];
+            }
             courseManagerState.tags = tags;
-            console.log('[DEBUG] Loaded existing tags:', tags);
+            console.log('[DEBUG] Loaded existing tags:', tags, typeof tags);
             renderTags();
         } catch (error) {
-            console.error('[ERROR] Failed to parse existing tags:', error);
+            console.error('[ERROR] Failed to parse existing tags:', error, tags);
+            courseManagerState.tags = [];
         }
     }
 }
@@ -594,14 +603,23 @@ function loadExistingTags() {
 function loadExistingLearningObjectives() {
     console.log('[DEBUG] loadExistingLearningObjectives() called');
     const hiddenInput = document.getElementById('learningObjectivesList');
-    if (hiddenInput && hiddenInput.value) {
+    if (hiddenInput) {
+        let learningObjectives = hiddenInput.value;
         try {
-            const objectives = JSON.parse(hiddenInput.value);
-            courseManagerState.learningObjectives = objectives;
-            console.log('[DEBUG] Loaded existing learning objectives:', objectives);
+            if (!learningObjectives || learningObjectives === 'null') {
+                learningObjectives = [];
+            } else if (typeof learningObjectives === 'string') {
+                learningObjectives = JSON.parse(learningObjectives);
+            }
+            if (!Array.isArray(learningObjectives)) {
+                learningObjectives = [];
+            }
+            courseManagerState.learningObjectives = learningObjectives;
+            console.log('[DEBUG] Loaded existing learning objectives:', learningObjectives, typeof learningObjectives);
             renderLearningObjectives();
         } catch (error) {
-            console.error('[ERROR] Failed to parse existing learning objectives:', error);
+            console.error('[ERROR] Failed to parse existing learning objectives:', error, learningObjectives);
+            courseManagerState.learningObjectives = [];
         }
     }
 }
