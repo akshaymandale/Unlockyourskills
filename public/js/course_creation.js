@@ -1278,9 +1278,10 @@ window.showVLRModal = function(context, moduleIdOrType) {
     if (context === 'module_content') {
         moduleId = moduleIdOrType;
         title = 'Select VLR Content for Module';
-        // Preselect current module content
+        // Preselect current module content (robust: always use content_id if present)
         const module = courseManagerState.modules.find(m => m.id === moduleId);
-        preselectedIds = module ? module.content.map(item => ({ id: item.id, type: item.type })) : [];
+        preselectedIds = module ? module.content.map(item => ({ id: Number(item.content_id || item.id), type: (item.type || '').toLowerCase() })) : [];
+        console.log('[DEBUG] showVLRModal preselectedIds for module_content:', preselectedIds);
         // Filter allowed types by course type
         const courseType = document.getElementById('course_type')?.value;
         if (courseType === 'e-learning') {
@@ -1295,7 +1296,9 @@ window.showVLRModal = function(context, moduleIdOrType) {
         type = 'module_content';
     } else if (context === 'prerequisite') {
         title = 'Select Prerequisite Content';
-        preselectedIds = courseManagerState.prerequisites.map(item => ({ id: item.id, type: item.type }));
+        // Preselect using prerequisite_id if present
+        preselectedIds = courseManagerState.prerequisites.map(item => ({ id: Number(item.prerequisite_id || item.id), type: (item.type || item.content_type || '').toLowerCase() }));
+        console.log('[DEBUG] showVLRModal preselectedIds for prerequisite:', preselectedIds);
         type = 'prerequisite';
     } else if (context === 'post_requisite') {
         type = moduleIdOrType; // e.g. 'assessment', 'feedback', etc.
@@ -1531,11 +1534,17 @@ function initializeVLRCheckboxes(modal, type, moduleId, preselectedIds = []) {
     const selectedCountSpan = modal.querySelector('#selectedCount');
     const selectedCountBtn = modal.querySelector('#selectedCountBtn');
     const addSelectedBtn = modal.querySelector('#addSelectedVLRBtn');
+    // Debug: print all checkbox id/type values
+    checkboxes.forEach(checkbox => {
+        const checkboxId = Number(checkbox.value);
+        const checkboxType = (checkbox.closest('.vlr-content-item').dataset.vlrType || '').toLowerCase();
+        console.log('[DEBUG] VLR Checkbox:', { id: checkboxId, type: checkboxType });
+    });
     // Pre-check checkboxes for already selected items
     checkboxes.forEach(checkbox => {
         checkbox.checked = false;
-        const checkboxId = parseInt(checkbox.value);
-        const checkboxType = checkbox.closest('.vlr-content-item').dataset.vlrType;
+        const checkboxId = Number(checkbox.value);
+        const checkboxType = (checkbox.closest('.vlr-content-item').dataset.vlrType || '').toLowerCase();
         if (preselectedIds.some(sel => sel.id === checkboxId && sel.type === checkboxType)) {
             checkbox.checked = true;
         }
@@ -1612,15 +1621,37 @@ function initializeVLRCheckboxes(modal, type, moduleId, preselectedIds = []) {
 
 function addSelectedVLR(type, moduleId, selectedItems) {
     if (type === 'module_content') {
-        // Assign to module content
+        // Assign to module content (robust: always store id and content_id as VLR content id)
         const module = courseManagerState.modules.find(m => m.id === moduleId);
         if (module) {
-            module.content = selectedItems.map((item, idx) => ({ ...item, sort_order: idx }));
+            module.content = selectedItems.map((item, idx) => {
+                const t = item.type || item.content_type || '';
+                const contentId = Number(item.id);
+                return {
+                    ...item,
+                    id: contentId,
+                    content_id: contentId,
+                    type: t,
+                    content_type: t,
+                    sort_order: idx
+                };
+            });
             renderModules();
         }
     } else if (type === 'prerequisite') {
-        // Assign to prerequisites
-        courseManagerState.prerequisites = selectedItems.map((item, idx) => ({ ...item, sort_order: idx }));
+        // Assign to prerequisites (robust: always store id and prerequisite_id as VLR content id)
+        courseManagerState.prerequisites = selectedItems.map((item, idx) => {
+            const t = item.type || item.content_type || '';
+            const prereqId = Number(item.id);
+            return {
+                ...item,
+                id: prereqId,
+                prerequisite_id: prereqId,
+                type: t,
+                content_type: t,
+                sort_order: idx
+            };
+        });
         renderPrerequisites();
     } else {
         // Post-requisite (type is the content_type)
