@@ -655,7 +655,14 @@ class CourseModel
         
         $stmt = $this->conn->prepare($sql);
         $stmt->execute([$moduleId]);
-        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+        $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        // Ensure each item has a 'type' field for frontend preselection
+        foreach ($rows as &$row) {
+            if (!isset($row['type']) && isset($row['content_type'])) {
+                $row['type'] = $row['content_type'];
+            }
+        }
+        return $rows;
     }
 
     // Get course prerequisites
@@ -667,6 +674,13 @@ class CourseModel
             ap.title as assessment_title,
             fp.title as feedback_title,
             ep.title as external_title,
+            d.title as document_title,
+            asg.title as assignment_title,
+            aud.title as audio_title,
+            vid.title as video_title,
+            img.title as image_title,
+            iac.title as interactive_title,
+            nsp.title as non_scorm_title,
             cp.prerequisite_type
         FROM course_prerequisites cp
         LEFT JOIN courses c ON cp.prerequisite_id = c.id AND cp.prerequisite_type = 'course'
@@ -674,6 +688,13 @@ class CourseModel
         LEFT JOIN assessment_package ap ON cp.prerequisite_id = ap.id AND cp.prerequisite_type = 'assessment'
         LEFT JOIN feedback_package fp ON cp.prerequisite_id = fp.id AND cp.prerequisite_type = 'feedback'
         LEFT JOIN external_content ep ON cp.prerequisite_id = ep.id AND cp.prerequisite_type = 'external'
+        LEFT JOIN documents d ON cp.prerequisite_id = d.id AND cp.prerequisite_type = 'document'
+        LEFT JOIN assignment_package asg ON cp.prerequisite_id = asg.id AND cp.prerequisite_type = 'assignment'
+        LEFT JOIN audio_package aud ON cp.prerequisite_id = aud.id AND cp.prerequisite_type = 'audio'
+        LEFT JOIN video_package vid ON cp.prerequisite_id = vid.id AND cp.prerequisite_type = 'video'
+        LEFT JOIN image_package img ON cp.prerequisite_id = img.id AND cp.prerequisite_type = 'image'
+        LEFT JOIN interactive_ai_content_package iac ON cp.prerequisite_id = iac.id AND cp.prerequisite_type = 'interactive'
+        LEFT JOIN non_scorm_package nsp ON cp.prerequisite_id = nsp.id AND cp.prerequisite_type = 'non_scorm'
         WHERE cp.course_id = ? AND (cp.deleted_at IS NULL OR cp.deleted_at = '0000-00-00 00:00:00')
         ORDER BY cp.sort_order ASC";
         
@@ -703,9 +724,41 @@ class CourseModel
                     $row['title'] = $row['external_title'];
                     $row['type'] = 'external';
                     break;
+                case 'document':
+                    $row['title'] = $row['document_title'];
+                    $row['type'] = 'document';
+                    break;
+                case 'assignment':
+                    $row['title'] = $row['assignment_title'];
+                    $row['type'] = 'assignment';
+                    break;
+                case 'audio':
+                    $row['title'] = $row['audio_title'];
+                    $row['type'] = 'audio';
+                    break;
+                case 'video':
+                    $row['title'] = $row['video_title'];
+                    $row['type'] = 'video';
+                    break;
+                case 'image':
+                    $row['title'] = $row['image_title'];
+                    $row['type'] = 'image';
+                    break;
+                case 'interactive':
+                    $row['title'] = $row['interactive_title'];
+                    $row['type'] = 'interactive';
+                    break;
+                case 'non_scorm':
+                    $row['title'] = $row['non_scorm_title'];
+                    $row['type'] = 'non_scorm';
+                    break;
                 default:
                     $row['title'] = null;
                     $row['type'] = $row['prerequisite_type'];
+            }
+            // Fallback: use cp.prerequisite_name if join title is empty
+            if (empty($row['title']) && !empty($row['prerequisite_name'])) {
+                $row['title'] = $row['prerequisite_name'];
             }
             if (empty($row['title'])) {
                 $row['title'] = 'Untitled';
@@ -799,6 +852,18 @@ class CourseModel
     // Update course
     public function updateCourse($courseId, $data, $clientId = null)
     {
+        // Decode JSON fields if they are strings (same as createCourse)
+        foreach (['modules', 'prerequisites', 'post_requisites'] as $key) {
+            if (isset($data[$key]) && is_string($data[$key])) {
+                $decoded = json_decode($data[$key], true);
+                if (json_last_error() === JSON_ERROR_NONE) {
+                    $data[$key] = $decoded;
+                } else {
+                    error_log("[ERROR] Failed to decode $key in updateCourse: " . json_last_error_msg());
+                    $data[$key] = [];
+                }
+            }
+        }
         try {
             $this->conn->beginTransaction();
 
@@ -856,6 +921,36 @@ class CourseModel
             $stmt = $this->conn->prepare($sql);
             $stmt->execute($params);
 
+            // --- FULL UPDATE OF RELATED TABLES ---
+            // 1. Delete all existing modules, module content, prerequisites, post-requisites for this course
+            $this->deleteCourseModules($courseId);
+            $this->deleteCoursePrerequisites($courseId);
+            $this->deleteCoursePostRequisites($courseId);
+
+            // 2. Re-insert modules, module content, prerequisites, post-requisites from $data
+            $userId = $data['updated_by'] ?? null;
+            // Modules
+            if (!empty($data['modules']) && is_array($data['modules'])) {
+                foreach ($data['modules'] as $moduleData) {
+                    $moduleData['created_by'] = $userId;
+                    $this->createModule($courseId, $moduleData);
+                }
+            }
+            // Prerequisites
+            if (!empty($data['prerequisites']) && is_array($data['prerequisites'])) {
+                foreach ($data['prerequisites'] as $prerequisiteData) {
+                    $prerequisiteData['created_by'] = $userId;
+                    $this->addPrerequisite($courseId, $prerequisiteData);
+                }
+            }
+            // Post-requisites
+            if (!empty($data['post_requisites']) && is_array($data['post_requisites'])) {
+                foreach ($data['post_requisites'] as $requisiteData) {
+                    $requisiteData['created_by'] = $userId;
+                    $this->addPostRequisite($courseId, $requisiteData);
+                }
+            }
+
             $this->conn->commit();
             return true;
 
@@ -864,6 +959,30 @@ class CourseModel
             error_log("Course update error: " . $e->getMessage());
             return false;
         }
+    }
+
+    // Helper to delete all modules and their content for a course
+    private function deleteCourseModules($courseId) {
+        // Delete module content first
+        $sql = "DELETE FROM course_module_content WHERE module_id IN (SELECT id FROM course_modules WHERE course_id = ?)";
+        $stmt = $this->conn->prepare($sql);
+        $stmt->execute([$courseId]);
+        // Delete modules
+        $sql = "DELETE FROM course_modules WHERE course_id = ?";
+        $stmt = $this->conn->prepare($sql);
+        $stmt->execute([$courseId]);
+    }
+    // Helper to delete all prerequisites for a course
+    private function deleteCoursePrerequisites($courseId) {
+        $sql = "DELETE FROM course_prerequisites WHERE course_id = ?";
+        $stmt = $this->conn->prepare($sql);
+        $stmt->execute([$courseId]);
+    }
+    // Helper to delete all post-requisites for a course
+    private function deleteCoursePostRequisites($courseId) {
+        $sql = "DELETE FROM course_post_requisites WHERE course_id = ?";
+        $stmt = $this->conn->prepare($sql);
+        $stmt->execute([$courseId]);
     }
 
     // Delete course (soft delete)
