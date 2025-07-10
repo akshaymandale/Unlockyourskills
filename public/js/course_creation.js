@@ -1285,9 +1285,12 @@ window.showVLRModal = function(context, moduleIdOrType) {
         // Filter allowed types by course type
         const courseType = document.getElementById('course_type')?.value;
         if (courseType === 'e-learning') {
-            allowedTypes = ['scorm', 'nonscorm', 'external', 'interactive', 'audio', 'video', 'image'];
+            allowedTypes = ['scorm', 'non_scorm', 'document', 'external', 'interactive', 'audio', 'video', 'image'];
         } else if (courseType === 'blended') {
-            allowedTypes = ['assignment', 'document', 'video', 'audio', 'interactive'];
+            allowedTypes = [
+                'assignment', 'document', 'video', 'audio', 'interactive',
+                'scorm', 'non_scorm', 'assessment', 'image', 'external'
+            ];
         } else if (courseType === 'classroom') {
             allowedTypes = ['document', 'assignment', 'image', 'external'];
         } else if (courseType === 'assessment') {
@@ -1483,7 +1486,8 @@ function showVLRContentModal(title, content, type, moduleId = null, preselectedI
 function getVLRTypeDisplayName(type) {
     const typeNames = {
         'scorm': 'SCORM Packages',
-        'nonscorm': 'Non-SCORM Packages',
+        'non_scorm': 'Non-SCORM Packages',
+        'nonscorm': 'Non-SCORM Packages', // fallback for legacy
         'assessment': 'Assessments',
         'audio': 'Audio Packages',
         'video': 'Video Packages',
