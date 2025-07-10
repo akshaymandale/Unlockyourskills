@@ -482,7 +482,11 @@ class CourseModel
             } elseif ($filters['course_status'] === 'draft') {
                 $sql .= " AND c.is_published = 0";
             } elseif ($filters['course_status'] === 'archived') {
-                $sql .= " AND c.deleted_at IS NOT NULL";
+                $sql .= " AND c.is_deleted = 1";
+            } elseif ($filters['course_status'] === 'inactive') {
+                $sql .= " AND c.course_status = 'inactive'";
+            } elseif ($filters['course_status'] === 'active') {
+                $sql .= " AND c.course_status = 'active'";
             }
         }
 
@@ -565,6 +569,10 @@ class CourseModel
                 $sql .= " AND c.is_published = 0";
             } elseif ($filters['course_status'] === 'archived') {
                 $sql .= " AND c.is_deleted = 1";
+            } elseif ($filters['course_status'] === 'inactive') {
+                $sql .= " AND c.course_status = 'inactive'";
+            } elseif ($filters['course_status'] === 'active') {
+                $sql .= " AND c.course_status = 'active'";
             }
         }
 
@@ -579,7 +587,7 @@ class CourseModel
         }
 
         if (!empty($filters['search'])) {
-            $sql .= " AND (c.title LIKE ? OR c.description LIKE ? OR c.short_description LIKE ?)";
+            $sql .= " AND (c.name LIKE ? OR c.description LIKE ? OR c.short_description LIKE ?)";
             $searchTerm = '%' . $filters['search'] . '%';
             $params[] = $searchTerm;
             $params[] = $searchTerm;
