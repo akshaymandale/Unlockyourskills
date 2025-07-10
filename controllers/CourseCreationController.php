@@ -618,48 +618,53 @@ class CourseCreationController extends BaseController
             ]);
             return;
         }
-        
         // Handle legacy routing where id comes from GET parameter
         if ($id === null) {
             $id = $_GET['id'] ?? $_POST['id'] ?? null;
         }
-        
         if (!$id) {
             $this->jsonResponse(['success' => false, 'message' => 'Course ID is required']);
             return;
         }
-        
         try {
             $clientId = $_SESSION['user']['client_id'] ?? null;
             $userId = $_SESSION['id'];
-            
-            // Check if this is a JSON request
             $contentType = $_SERVER['CONTENT_TYPE'] ?? '';
-            
             if (strpos($contentType, 'application/json') !== false) {
-                // Handle JSON request
                 $input = file_get_contents('php://input');
                 $jsonData = json_decode($input, true);
-                
                 if ($jsonData === null) {
                     $this->jsonResponse(['success' => false, 'message' => 'Invalid JSON data']);
                     return;
                 }
-                
-                // Add updated_by to the data
                 $jsonData['updated_by'] = $userId;
-                
-                // Process JSON data for update
                 $result = $this->courseModel->updateCourse($id, $jsonData, $clientId);
-                
                 if ($result) {
                     $this->jsonResponse(['success' => true, 'message' => 'Course updated successfully']);
                 } else {
                     $this->jsonResponse(['success' => false, 'message' => 'Failed to update course']);
                 }
-            } else if ($this->isAjaxRequest()) {
-                // Handle AJAX form-data request
+            } else if ($this->isAjaxRequest() || isset($_FILES['thumbnail']) || isset($_FILES['banner'])) {
+                // Handle AJAX form-data request with file uploads
                 $_POST['updated_by'] = $userId;
+                // Handle thumbnail
+                if (isset($_FILES['thumbnail']) && !empty($_FILES['thumbnail']['name'])) {
+                    $thumbnailPath = $this->courseModel->uploadFile($_FILES['thumbnail'], 'uploads/logos/');
+                    $_POST['thumbnail_image'] = $thumbnailPath;
+                } else if (!empty($_POST['existing_thumbnail_image'])) {
+                    $_POST['thumbnail_image'] = $_POST['existing_thumbnail_image'];
+                } else {
+                    $_POST['thumbnail_image'] = null;
+                }
+                // Handle banner
+                if (isset($_FILES['banner']) && !empty($_FILES['banner']['name'])) {
+                    $bannerPath = $this->courseModel->uploadFile($_FILES['banner'], 'uploads/logos/');
+                    $_POST['banner_image'] = $bannerPath;
+                } else if (!empty($_POST['existing_banner_image'])) {
+                    $_POST['banner_image'] = $_POST['existing_banner_image'];
+                } else {
+                    $_POST['banner_image'] = null;
+                }
                 $result = $this->courseModel->updateCourse($id, $_POST, $clientId);
                 $this->jsonResponse([
                     'success' => (bool)$result,
@@ -669,8 +674,25 @@ class CourseCreationController extends BaseController
             } else {
                 // Handle non-AJAX form-data request (classic form submit)
                 $_POST['updated_by'] = $userId;
+                // Handle thumbnail
+                if (isset($_FILES['thumbnail']) && !empty($_FILES['thumbnail']['name'])) {
+                    $thumbnailPath = $this->courseModel->uploadFile($_FILES['thumbnail'], 'uploads/logos/');
+                    $_POST['thumbnail_image'] = $thumbnailPath;
+                } else if (!empty($_POST['existing_thumbnail_image'])) {
+                    $_POST['thumbnail_image'] = $_POST['existing_thumbnail_image'];
+                } else {
+                    $_POST['thumbnail_image'] = null;
+                }
+                // Handle banner
+                if (isset($_FILES['banner']) && !empty($_FILES['banner']['name'])) {
+                    $bannerPath = $this->courseModel->uploadFile($_FILES['banner'], 'uploads/logos/');
+                    $_POST['banner_image'] = $bannerPath;
+                } else if (!empty($_POST['existing_banner_image'])) {
+                    $_POST['banner_image'] = $_POST['existing_banner_image'];
+                } else {
+                    $_POST['banner_image'] = null;
+                }
                 $result = $this->courseModel->updateCourse($id, $_POST, $clientId);
-                
                 if ($result) {
                     $_SESSION['toast'] = ['type' => 'success', 'message' => 'Course updated successfully!'];
                     header('Location: /Unlockyourskills/course-management');

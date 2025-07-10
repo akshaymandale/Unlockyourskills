@@ -727,22 +727,89 @@ function addTag(value, type) {
 
 function setupImagePreviewHandlers() {
     console.log('[DEBUG] setupImagePreviewHandlers() called');
-    // Setup image preview for course thumbnail
-    const imageInput = document.getElementById('course_image');
-    const previewContainer = document.getElementById('image_preview');
-    
-    if (imageInput && previewContainer) {
-        imageInput.addEventListener('change', (e) => {
+    // Thumbnail
+    const thumbnailInput = document.getElementById('thumbnail');
+    const thumbnailPreview = document.getElementById('thumbnailPreviewContainer');
+    const existingThumbnail = document.getElementById('existing_thumbnail_image');
+    if (thumbnailInput && thumbnailPreview) {
+        // Show existing image in edit mode
+        if (existingThumbnail && existingThumbnail.value) {
+            showImagePreviewWithRemove(thumbnailPreview, existingThumbnail.value, 'thumbnail', existingThumbnail);
+        }
+        thumbnailInput.addEventListener('change', function(e) {
             const file = e.target.files[0];
             if (file) {
                 const reader = new FileReader();
                 reader.onload = (e) => {
-                    previewContainer.innerHTML = `<img src="${e.target.result}" class="img-thumbnail" style="max-width: 200px;">`;
+                    showImagePreviewWithRemove(thumbnailPreview, e.target.result, 'thumbnail', existingThumbnail, true);
                 };
                 reader.readAsDataURL(file);
             }
         });
     }
+    // Banner
+    const bannerInput = document.getElementById('banner');
+    const bannerPreview = document.getElementById('bannerPreviewContainer');
+    const existingBanner = document.getElementById('existing_banner_image');
+    if (bannerInput && bannerPreview) {
+        if (existingBanner && existingBanner.value) {
+            showImagePreviewWithRemove(bannerPreview, existingBanner.value, 'banner', existingBanner);
+        }
+        bannerInput.addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    showImagePreviewWithRemove(bannerPreview, e.target.result, 'banner', existingBanner, true);
+                };
+                reader.readAsDataURL(file);
+            }
+        });
+    }
+}
+
+function showImagePreviewWithRemove(container, src, type, hiddenInput, isNew = false) {
+    container.innerHTML = '';
+    const wrapper = document.createElement('div');
+    wrapper.className = 'preview-wrapper';
+    wrapper.style.position = 'relative';
+    wrapper.style.display = 'inline-block';
+    wrapper.style.marginTop = '10px';
+    const img = document.createElement('img');
+    img.src = isNew ? src : (src.startsWith('uploads/') ? src : 'uploads/logos/' + src);
+    img.style.maxWidth = '150px';
+    img.style.maxHeight = '100px';
+    img.style.objectFit = 'cover';
+    img.style.border = '1px solid #ddd';
+    img.style.borderRadius = '5px';
+    wrapper.appendChild(img);
+    const removeBtn = document.createElement('button');
+    removeBtn.type = 'button';
+    removeBtn.className = 'remove-preview';
+    removeBtn.innerHTML = '×';
+    removeBtn.style.position = 'absolute';
+    removeBtn.style.top = '-5px';
+    removeBtn.style.right = '-5px';
+    removeBtn.style.background = '#dc3545';
+    removeBtn.style.color = 'white';
+    removeBtn.style.border = 'none';
+    removeBtn.style.borderRadius = '50%';
+    removeBtn.style.width = '20px';
+    removeBtn.style.height = '20px';
+    removeBtn.style.fontSize = '12px';
+    removeBtn.style.cursor = 'pointer';
+    removeBtn.onclick = function() {
+        container.innerHTML = '';
+        if (type === 'thumbnail') {
+            document.getElementById('thumbnail').value = '';
+            if (hiddenInput) hiddenInput.value = '';
+        } else if (type === 'banner') {
+            document.getElementById('banner').value = '';
+            if (hiddenInput) hiddenInput.value = '';
+        }
+    };
+    wrapper.appendChild(removeBtn);
+    container.appendChild(wrapper);
 }
 
 function getTabIndex(tabId) {
