@@ -108,14 +108,9 @@
                                     <select class="form-select" id="course_type" name="course_type">
                                         <option value=""><?= Localization::translate('course_creation.select_category') ?></option>
                                         <?php 
-                                        // Map database values back to frontend values for display
-                                        $courseTypeDisplayMap = [
-                                            'self_paced' => 'e-learning',
-                                            'instructor_led' => 'classroom', 
-                                            'hybrid' => 'blended'
-                                        ];
+                                        // Use course_delivery_type directly (no mapping needed)
                                         $displayCourseType = isset($isEditMode) && $isEditMode && isset($editCourseData['course_type']) ? 
-                                            ($courseTypeDisplayMap[$editCourseData['course_type']] ?? 'e-learning') : '';
+                                            $editCourseData['course_type'] : '';
                                         ?>
                                         <option value="e-learning" <?= ($displayCourseType == 'e-learning') ? 'selected' : '' ?>><?= Localization::translate('course_creation.e_learning') ?></option>
                                         <option value="classroom" <?= ($displayCourseType == 'classroom') ? 'selected' : '' ?>><?= Localization::translate('course_creation.classroom') ?></option>
