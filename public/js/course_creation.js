@@ -305,6 +305,19 @@ function handleFormSubmit(e) {
             module.sort_order = idx; // 0-based order for DB
         });
     }
+    // --- PATCH: Ensure prerequisites always have real prerequisite_id/content_id ---
+    if (window.courseManagerState && Array.isArray(window.courseManagerState.prerequisites)) {
+        window.courseManagerState.prerequisites.forEach((prereq, idx) => {
+            // If loaded from DB, the real id is in prerequisite_id or id
+            if (prereq.prerequisite_id) {
+                prereq.content_id = prereq.prerequisite_id;
+                prereq.id = prereq.prerequisite_id;
+            } else if (prereq.id) {
+                prereq.content_id = prereq.id;
+            }
+            prereq.sort_order = idx;
+        });
+    }
     if (document.getElementById('modulesInput')) {
         document.getElementById('modulesInput').value = JSON.stringify(window.courseManagerState.modules || []);
     }
