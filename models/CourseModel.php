@@ -62,7 +62,7 @@ class CourseModel
                 $bannerPath = $this->uploadFile($files['banner'], 'uploads/logos/');
             }
 
-            // Map course_type to database enum values
+            // Map course_type to database enum values for internal logic
             $courseTypeMap = [
                 'e-learning' => 'self_paced',
                 'blended' => 'hybrid',
@@ -80,6 +80,7 @@ class CourseModel
                 'category_id' => $data['category_id'],
                 'subcategory_id' => $data['subcategory_id'],
                 'course_type' => $mappedCourseType,
+                'course_delivery_type' => $data['course_type'], // Store the original frontend value
                 'difficulty_level' => $data['difficulty_level'],
                 'course_status' => $data['course_status'] ?? 'active',
                 'module_structure' => $data['module_structure'] ?? 'sequential',
@@ -106,14 +107,14 @@ class CourseModel
             // Insert course
             $sql = "INSERT INTO courses (
                 client_id, name, description, short_description, category_id, subcategory_id,
-                course_type, difficulty_level, course_status, module_structure, course_points,
+                course_type, course_delivery_type, difficulty_level, course_status, module_structure, course_points,
                 course_cost, currency, reassign_course, reassign_days, show_in_search,
                 certificate_option, duration_hours, duration_minutes,
                 is_self_paced, is_featured, is_published, thumbnail_image, banner_image,
                 target_audience, learning_objectives, tags, created_by
             ) VALUES (
                 :client_id, :name, :description, :short_description, :category_id, :subcategory_id,
-                :course_type, :difficulty_level, :course_status, :module_structure, :course_points,
+                :course_type, :course_delivery_type, :difficulty_level, :course_status, :module_structure, :course_points,
                 :course_cost, :currency, :reassign_course, :reassign_days, :show_in_search,
                 :certificate_option, :duration_hours, :duration_minutes,
                 :is_self_paced, :is_featured, :is_published, :thumbnail_image, :banner_image,
@@ -244,7 +245,8 @@ class CourseModel
     {
         // Map frontend fields to database fields
         $contentType = $contentData['type'] ?? $contentData['content_type'] ?? '';
-        $contentId = $contentData['id'] ?? $contentData['content_id'] ?? 0;
+        // Always prefer content_id if present, only use id if content_id is not set
+        $contentId = $contentData['content_id'] ?? $contentData['id'] ?? 0;
         $createdBy = $contentData['created_by'] ?? null;
         
         // Skip if required fields are missing
@@ -296,7 +298,8 @@ class CourseModel
         // Map frontend type to database prerequisite_type
         $frontendType = $prerequisiteData['type'] ?? $prerequisiteData['prerequisite_type'] ?? '';
         $prerequisiteType = $this->mapPrerequisiteType($frontendType);
-        $prerequisiteId = $prerequisiteData['id'] ?? $prerequisiteData['prerequisite_id'] ?? $prerequisiteData['content_id'] ?? 0;
+        // Always use content_id if present, then id, then prerequisite_id
+        $prerequisiteId = $prerequisiteData['content_id'] ?? $prerequisiteData['id'] ?? $prerequisiteData['prerequisite_id'] ?? 0;
         
         error_log("Processing prerequisite - frontendType: '$frontendType', mappedType: '$prerequisiteType', id: '$prerequisiteId'");
         error_log("Full prerequisite data: " . json_encode($prerequisiteData));
@@ -595,7 +598,8 @@ class CourseModel
         $sql = "SELECT c.*, 
                        cc.name as category_name, 
                        csc.name as subcategory_name,
-                       up.full_name as created_by_name
+                       up.full_name as created_by_name,
+                       c.course_delivery_type as course_type
                 FROM courses c
                 LEFT JOIN course_categories cc ON c.category_id = cc.id
                 LEFT JOIN course_subcategories csc ON c.subcategory_id = csc.id
@@ -682,8 +686,8 @@ class CourseModel
             iac.title as interactive_title,
             nsp.title as non_scorm_title,
             cp.prerequisite_type
-        FROM course_prerequisites cp
-        LEFT JOIN courses c ON cp.prerequisite_id = c.id AND cp.prerequisite_type = 'course'
+                FROM course_prerequisites cp
+                LEFT JOIN courses c ON cp.prerequisite_id = c.id AND cp.prerequisite_type = 'course'
         LEFT JOIN scorm_packages sp ON cp.prerequisite_id = sp.id AND cp.prerequisite_type = 'scorm'
         LEFT JOIN assessment_package ap ON cp.prerequisite_id = ap.id AND cp.prerequisite_type = 'assessment'
         LEFT JOIN feedback_package fp ON cp.prerequisite_id = fp.id AND cp.prerequisite_type = 'feedback'
@@ -695,8 +699,8 @@ class CourseModel
         LEFT JOIN image_package img ON cp.prerequisite_id = img.id AND cp.prerequisite_type = 'image'
         LEFT JOIN interactive_ai_content_package iac ON cp.prerequisite_id = iac.id AND cp.prerequisite_type = 'interactive'
         LEFT JOIN non_scorm_package nsp ON cp.prerequisite_id = nsp.id AND cp.prerequisite_type = 'non_scorm'
-        WHERE cp.course_id = ? AND (cp.deleted_at IS NULL OR cp.deleted_at = '0000-00-00 00:00:00')
-        ORDER BY cp.sort_order ASC";
+                WHERE cp.course_id = ? AND (cp.deleted_at IS NULL OR cp.deleted_at = '0000-00-00 00:00:00')
+                ORDER BY cp.sort_order ASC";
         
         $stmt = $this->conn->prepare($sql);
         $stmt->execute([$courseId]);
@@ -867,7 +871,7 @@ class CourseModel
         try {
             $this->conn->beginTransaction();
 
-            // Map course_type to database enum values (same as createCourse)
+            // Map course_type to database enum values for internal logic (same as createCourse)
             $courseTypeMap = [
                 'e-learning' => 'self_paced',
                 'blended' => 'hybrid',
@@ -879,7 +883,7 @@ class CourseModel
             $sql = "UPDATE courses SET
                 name = :name, description = :description, short_description = :short_description,
                 category_id = :category_id, subcategory_id = :subcategory_id, course_type = :course_type,
-                difficulty_level = :difficulty_level, course_status = :course_status, module_structure = :module_structure,
+                course_delivery_type = :course_delivery_type, difficulty_level = :difficulty_level, course_status = :course_status, module_structure = :module_structure,
                 course_points = :course_points, course_cost = :course_cost, currency = :currency,
                 reassign_course = :reassign_course, reassign_days = :reassign_days, show_in_search = :show_in_search,
                 certificate_option = :certificate_option, duration_hours = :duration_hours, duration_minutes = :duration_minutes,
@@ -895,6 +899,7 @@ class CourseModel
                 ':category_id' => $data['category_id'],
                 ':subcategory_id' => $data['subcategory_id'],
                 ':course_type' => $mappedCourseType,
+                ':course_delivery_type' => $data['course_type'], // Store the original frontend value
                 ':difficulty_level' => $data['difficulty_level'],
                 ':course_status' => $data['course_status'] ?? 'active',
                 ':module_structure' => $data['module_structure'] ?? 'sequential',
