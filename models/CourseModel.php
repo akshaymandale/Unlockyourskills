@@ -445,7 +445,7 @@ class CourseModel
                 LEFT JOIN course_categories cc ON c.category_id = cc.id
                 LEFT JOIN course_subcategories csc ON c.subcategory_id = csc.id
                 LEFT JOIN user_profiles up ON c.created_by = up.id
-                WHERE c.deleted_at IS NULL";
+                WHERE c.is_deleted = 0";
         
         $params = [];
 
