@@ -184,7 +184,7 @@ class CourseModel
     }
 
     // Helper method to upload files
-    private function uploadFile($file, $uploadDir)
+    public function uploadFile($file, $uploadDir)
     {
         if (!is_dir($uploadDir)) {
             mkdir($uploadDir, 0755, true);
@@ -903,8 +903,16 @@ class CourseModel
                 certificate_option = :certificate_option, duration_hours = :duration_hours, duration_minutes = :duration_minutes,
                 is_self_paced = :is_self_paced, is_featured = :is_featured, is_published = :is_published,
                 target_audience = :target_audience, learning_objectives = :learning_objectives, tags = :tags,
-                updated_by = :updated_by, updated_at = CURRENT_TIMESTAMP
-                WHERE id = :id AND (client_id = :client_id OR :client_id IS NULL)";
+                updated_by = :updated_by, updated_at = CURRENT_TIMESTAMP";
+
+            // Add thumbnail and banner image if present
+            if (array_key_exists('thumbnail_image', $data)) {
+                $sql .= ", thumbnail_image = :thumbnail_image";
+            }
+            if (array_key_exists('banner_image', $data)) {
+                $sql .= ", banner_image = :banner_image";
+            }
+            $sql .= " WHERE id = :id AND (client_id = :client_id OR :client_id IS NULL)";
 
             $params = [
                 ':name' => $data['name'],
@@ -936,6 +944,12 @@ class CourseModel
                 ':id' => $courseId,
                 ':client_id' => $clientId
             ];
+            if (array_key_exists('thumbnail_image', $data)) {
+                $params[':thumbnail_image'] = $data['thumbnail_image'];
+            }
+            if (array_key_exists('banner_image', $data)) {
+                $params[':banner_image'] = $data['banner_image'];
+            }
 
             $stmt = $this->conn->prepare($sql);
             $stmt->execute($params);

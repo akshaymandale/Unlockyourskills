@@ -19,6 +19,10 @@
     <?php if (isset($isEditMode) && $isEditMode && isset($editCourseData['id'])): ?>
         <input type="hidden" id="course_id" value="<?= htmlspecialchars($editCourseData['id']) ?>">
     <?php endif; ?>
+    <?php if (isset($isEditMode) && $isEditMode): ?>
+        <input type="hidden" id="existing_thumbnail_image" name="existing_thumbnail_image" value="<?= htmlspecialchars($editCourseData['thumbnail_image'] ?? '') ?>">
+        <input type="hidden" id="existing_banner_image" name="existing_banner_image" value="<?= htmlspecialchars($editCourseData['banner_image'] ?? '') ?>">
+    <?php endif; ?>
     <input type="hidden" name="modules" id="modulesInput">
     <input type="hidden" name="prerequisites" id="prerequisitesInput">
     <input type="hidden" name="post_requisites" id="postRequisitesInput">
