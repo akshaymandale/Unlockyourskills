@@ -254,7 +254,7 @@
                         <div class="row">
                             <div class="col-md-6">
                                 <div class="form-check">
-                                    <input class="form-check-input" type="radio" name="module_structure" id="sequential" value="sequential" checked>
+                                    <input class="form-check-input" type="radio" name="module_structure" id="sequential" value="sequential" <?= (isset($isEditMode) && $isEditMode && isset($editCourseData['module_structure']) ? ($editCourseData['module_structure'] == 'sequential' ? 'checked' : '') : 'checked') ?>>
                                     <label class="form-check-label" for="sequential">
                                         <i class="mdi mdi-arrow-right-bold me-1"></i>Sequential
                                     </label>
@@ -263,7 +263,7 @@
                             </div>
                             <div class="col-md-6">
                                 <div class="form-check">
-                                    <input class="form-check-input" type="radio" name="module_structure" id="non_sequential" value="non_sequential">
+                                    <input class="form-check-input" type="radio" name="module_structure" id="non_sequential" value="non_sequential" <?= (isset($isEditMode) && $isEditMode && isset($editCourseData['module_structure']) && $editCourseData['module_structure'] == 'non_sequential' ? 'checked' : '') ?>>
                                     <label class="form-check-label" for="non_sequential">
                                         <i class="mdi mdi-arrow-all me-1"></i>Non-Sequential
                                     </label>
