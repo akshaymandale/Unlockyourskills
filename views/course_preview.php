@@ -47,8 +47,13 @@ if (!isset($course) || !$course) {
             
             <div class="col-md-4 text-end">
                 <div class="course-status">
-                    <span class="badge bg-<?= (isset($course['status']) && $course['status'] === 'published') ? 'success' : 'secondary' ?> fs-6">
-                        <?= htmlspecialchars(ucfirst($course['status'] ?? 'draft')) ?>
+                    <?php 
+                    $status = isset($course['course_status']) ? strtolower($course['course_status']) : 'active';
+                    $statusLabel = ($status === 'inactive') ? 'Inactive' : 'Active';
+                    $statusClass = ($status === 'inactive') ? 'secondary' : 'success';
+                    ?>
+                    <span class="badge bg-<?= $statusClass ?> fs-6">
+                        <?= htmlspecialchars($statusLabel) ?>
                     </span>
                 </div>
             </div>
@@ -112,7 +117,10 @@ if (!isset($course) || !$course) {
                         <h5><i class="fas fa-bullseye me-2"></i>Learning Objectives</h5>
                         <ul>
                             <?php 
-                            $objectives = json_decode($course['learning_objectives'], true);
+                            $objectives = $course['learning_objectives'];
+                            if (is_string($objectives)) {
+                                $objectives = json_decode($objectives, true);
+                            }
                             if (!is_array($objectives)) {
                                 $objectives = [];
                             }
