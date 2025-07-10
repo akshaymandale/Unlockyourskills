@@ -242,16 +242,34 @@ class CourseCreationController extends BaseController
     /**
      * Delete a course
      */
-    public function deleteCourse($courseId) {
+    public function deleteCourse($courseId = null) {
         if (!isset($_SESSION['id'])) {
             $this->jsonResponse(['success' => false, 'message' => 'Unauthorized']);
             return;
         }
-        
+        // Accept courseId from POST or JSON body if not provided
+        if ($courseId === null) {
+            if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+                $input = file_get_contents('php://input');
+                $data = json_decode($input, true);
+                if (isset($data['course_id'])) {
+                    $courseId = $data['course_id'];
+                } elseif (isset($_POST['course_id'])) {
+                    $courseId = $_POST['course_id'];
+                }
+            } elseif (isset($_POST['course_id'])) {
+                $courseId = $_POST['course_id'];
+            } elseif (isset($_GET['course_id'])) {
+                $courseId = $_GET['course_id'];
+            }
+        }
+        if (!$courseId) {
+            $this->jsonResponse(['success' => false, 'message' => 'Course ID is required']);
+            return;
+        }
         try {
             $clientId = $_SESSION['user']['client_id'] ?? null;
             $result = $this->courseModel->deleteCourse($courseId, $clientId);
-            
             if ($result) {
                 $this->jsonResponse([
                     'success' => true,
