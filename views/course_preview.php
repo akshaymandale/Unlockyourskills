@@ -112,7 +112,10 @@ if (!isset($course) || !$course) {
                         <h5><i class="fas fa-bullseye me-2"></i>Learning Objectives</h5>
                         <ul>
                             <?php 
-                            $objectives = json_decode($course['learning_objectives'], true) ?: [];
+                            $objectives = json_decode($course['learning_objectives'], true);
+                            if (!is_array($objectives)) {
+                                $objectives = [];
+                            }
                             foreach ($objectives as $objective): 
                             ?>
                                 <li><?= htmlspecialchars($objective) ?></li>
