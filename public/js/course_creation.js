@@ -318,6 +318,19 @@ function handleFormSubmit(e) {
             prereq.sort_order = idx;
         });
     }
+    // --- PATCH: Store tags and learning objectives as comma-separated strings ---
+    if (window.courseManagerState) {
+        // Tags
+        const tagsInput = document.getElementById('tagsList');
+        if (tagsInput) {
+            tagsInput.value = (window.courseManagerState.tags || []).join(',');
+        }
+        // Learning Objectives
+        const objectivesInput = document.getElementById('learningObjectivesList');
+        if (objectivesInput) {
+            objectivesInput.value = (window.courseManagerState.learningObjectives || []).join(',');
+        }
+    }
     if (document.getElementById('modulesInput')) {
         document.getElementById('modulesInput').value = JSON.stringify(window.courseManagerState.modules || []);
     }
@@ -598,7 +611,13 @@ function loadExistingTags() {
             if (!tags || tags === 'null') {
                 tags = [];
             } else if (typeof tags === 'string') {
-                tags = JSON.parse(tags);
+                // Always try to parse as JSON first
+                try {
+                    tags = JSON.parse(tags);
+                } catch (jsonErr) {
+                    // Fallback: comma-separated string
+                    tags = tags.split(',').map(t => t.trim()).filter(t => t);
+                }
             }
             if (!Array.isArray(tags)) {
                 tags = [];
@@ -622,7 +641,13 @@ function loadExistingLearningObjectives() {
             if (!learningObjectives || learningObjectives === 'null') {
                 learningObjectives = [];
             } else if (typeof learningObjectives === 'string') {
-                learningObjectives = JSON.parse(learningObjectives);
+                // Always try to parse as JSON first
+                try {
+                    learningObjectives = JSON.parse(learningObjectives);
+                } catch (jsonErr) {
+                    // Fallback: comma-separated string
+                    learningObjectives = learningObjectives.split(',').map(t => t.trim()).filter(t => t);
+                }
             }
             if (!Array.isArray(learningObjectives)) {
                 learningObjectives = [];

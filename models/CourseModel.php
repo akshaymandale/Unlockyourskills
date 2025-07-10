@@ -99,8 +99,8 @@ class CourseModel
                 'thumbnail_image' => $thumbnailPath,
                 'banner_image' => $bannerPath,
                 'target_audience' => trim($data['target_audience'] ?? ''),
-                'learning_objectives' => !empty($data['learning_objectives']) ? json_encode($data['learning_objectives']) : null,
-                'tags' => !empty($data['tags']) ? json_encode($data['tags']) : null,
+                'learning_objectives' => !empty($data['learning_objectives']) ? (is_array($data['learning_objectives']) ? implode(',', $data['learning_objectives']) : $data['learning_objectives']) : null,
+                'tags' => !empty($data['tags']) ? (is_array($data['tags']) ? implode(',', $data['tags']) : $data['tags']) : null,
                 'created_by' => $userId
             ];
 
@@ -626,6 +626,20 @@ class CourseModel
             
             // Get post-requisites (unified)
             $course['post_requisites'] = $this->getCoursePostRequisites($courseId);
+
+            // Ensure learning_objectives and tags are arrays for frontend prefill
+            if (isset($course['learning_objectives'])) {
+                $decoded = json_decode($course['learning_objectives'], true);
+                $course['learning_objectives'] = (is_array($decoded)) ? $decoded : [];
+            } else {
+                $course['learning_objectives'] = [];
+            }
+            if (isset($course['tags'])) {
+                $decoded = json_decode($course['tags'], true);
+                $course['tags'] = (is_array($decoded)) ? $decoded : [];
+            } else {
+                $course['tags'] = [];
+            }
         }
 
         return $course;
@@ -916,8 +930,8 @@ class CourseModel
                 ':is_featured' => isset($data['is_featured']) ? 1 : 0,
                 ':is_published' => isset($data['is_published']) ? 1 : 0,
                 ':target_audience' => trim($data['target_audience'] ?? ''),
-                ':learning_objectives' => !empty($data['learning_objectives']) ? json_encode($data['learning_objectives']) : null,
-                ':tags' => !empty($data['tags']) ? json_encode($data['tags']) : null,
+                ':learning_objectives' => !empty($data['learning_objectives']) ? (is_array($data['learning_objectives']) ? implode(',', $data['learning_objectives']) : $data['learning_objectives']) : null,
+                ':tags' => !empty($data['tags']) ? (is_array($data['tags']) ? implode(',', $data['tags']) : $data['tags']) : null,
                 ':updated_by' => $data['updated_by'],
                 ':id' => $courseId,
                 ':client_id' => $clientId

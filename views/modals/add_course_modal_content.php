@@ -161,7 +161,7 @@
                                             class="form-control border-0">
                                     </div>
                                     <input type="hidden" name="learning_objectives" id="learningObjectivesList" 
-                                        value="<?= isset($isEditMode) && $isEditMode && isset($editCourseData['learning_objectives']) ? htmlspecialchars($editCourseData['learning_objectives']) : '' ?>">
+                                        value="<?= isset($isEditMode) && $isEditMode && isset($editCourseData['learning_objectives']) ? htmlspecialchars(json_encode($editCourseData['learning_objectives'])) : '' ?>">
                                 </div>
                                 <div class="mb-3">
                                     <label class="form-label"><?= Localization::translate('course_creation.tags') ?></label>
@@ -172,7 +172,7 @@
                                             class="form-control border-0">
                                     </div>
                                     <input type="hidden" name="tags" id="tagsList" 
-                                        value="<?= isset($isEditMode) && $isEditMode && isset($editCourseData['tags']) ? htmlspecialchars($editCourseData['tags']) : '' ?>">
+                                        value="<?= isset($isEditMode) && $isEditMode && isset($editCourseData['tags']) ? htmlspecialchars(json_encode($editCourseData['tags'])) : '' ?>">
                                 </div>
                             </div>
                             <div class="col-md-6">
