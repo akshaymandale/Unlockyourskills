@@ -769,49 +769,68 @@ class UserModel {
      * Get Admin users by client
      */
     public function getAdminUsersByClient($clientId, $limit = 10, $offset = 0, $search = '', $filters = []) {
-        if (empty($clientId) || !is_numeric($clientId)) {
+        try {
+            $sql = "SELECT up.*, c.client_name, c.client_code 
+                    FROM user_profiles up 
+                    LEFT JOIN clients c ON up.client_id = c.id 
+                    WHERE up.client_id = ? AND up.user_role = 'Admin' AND up.is_deleted = 0";
+            
+            $params = [$clientId];
+            
+            // Add search conditions
+            if (!empty($search)) {
+                $sql .= " AND (up.full_name LIKE ? OR up.email LIKE ? OR up.profile_id LIKE ?)";
+                $searchTerm = '%' . $search . '%';
+                $params[] = $searchTerm;
+                $params[] = $searchTerm;
+                $params[] = $searchTerm;
+            }
+            
+            // Add filters
+            if (!empty($filters['user_status'])) {
+                $sql .= " AND up.user_status = ?";
+                $params[] = $filters['user_status'];
+            }
+            
+            if (!empty($filters['locked_status'])) {
+                $sql .= " AND up.locked_status = ?";
+                $params[] = $filters['locked_status'];
+            }
+            
+            $sql .= " ORDER BY up.full_name ASC LIMIT ? OFFSET ?";
+            $params[] = $limit;
+            $params[] = $offset;
+            
+            $stmt = $this->conn->prepare($sql);
+            $stmt->execute($params);
+            return $stmt->fetchAll(PDO::FETCH_ASSOC);
+        } catch (PDOException $e) {
+            error_log("Error in getAdminUsersByClient: " . $e->getMessage());
             return [];
         }
-        $sql = "SELECT up.*, c.client_name, c.max_users
-                FROM user_profiles up
-                LEFT JOIN clients c ON up.client_id = c.id
-                WHERE up.client_id = ? AND up.user_role = 'Admin' AND up.is_deleted = 0";
+    }
 
-        $params = [$clientId];
-
-        if (!empty($search)) {
-            $sql .= " AND (up.full_name LIKE ? OR up.email LIKE ? OR up.profile_id LIKE ? OR up.contact_number LIKE ?)";
-            $params[] = "%$search%";
-            $params[] = "%$search%";
-            $params[] = "%$search%";
-            $params[] = "%$search%";
+    /**
+     * Get user count by role
+     */
+    public function getUserCountByRole($roleName, $clientId = null) {
+        try {
+            $sql = "SELECT COUNT(*) as count FROM user_profiles WHERE user_role = ? AND is_deleted = 0";
+            $params = [$roleName];
+            
+            if ($clientId) {
+                $sql .= " AND client_id = ?";
+                $params[] = $clientId;
+            }
+            
+            $stmt = $this->conn->prepare($sql);
+            $stmt->execute($params);
+            $result = $stmt->fetch(PDO::FETCH_ASSOC);
+            return $result['count'] ?? 0;
+        } catch (PDOException $e) {
+            error_log("Error in getUserCountByRole: " . $e->getMessage());
+            return 0;
         }
-
-        if (!empty($filters['user_status'])) {
-            $sql .= " AND up.user_status = ?";
-            $params[] = $filters['user_status'];
-        }
-
-        if (!empty($filters['locked_status'])) {
-            $sql .= " AND up.locked_status = ?";
-            $params[] = $filters['locked_status'];
-        }
-
-        if (!empty($filters['gender'])) {
-            $sql .= " AND up.gender = ?";
-            $params[] = $filters['gender'];
-        }
-
-        $sql .= " ORDER BY up.id DESC LIMIT ? OFFSET ?";
-        $params[] = (int)$limit;
-        $params[] = (int)$offset;
-
-        $stmt = $this->conn->prepare($sql);
-        foreach ($params as $index => $param) {
-            $stmt->bindValue($index + 1, $param, is_int($param) ? PDO::PARAM_INT : PDO::PARAM_STR);
-        }
-        $stmt->execute();
-        return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
 }
 ?>

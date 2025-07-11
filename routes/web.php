@@ -177,6 +177,19 @@ Router::middleware(['Auth'])->group(function() {
     Router::post('/api/custom-fields/check-label', 'SettingsController@checkFieldLabel');
     
     // ===================================
+    // USER ROLES & PERMISSIONS
+    // ===================================
+    
+    // User Roles & Permissions
+    Router::get('/user-roles', 'UserRolesController@index');
+    Router::post('/user-roles/create', 'UserRolesController@create');
+    Router::post('/user-roles/update', 'UserRolesController@update');
+    Router::post('/user-roles/delete', 'UserRolesController@delete');
+    Router::post('/user-roles/toggle-status', 'UserRolesController@toggleStatus');
+    Router::post('/user-roles/save-permissions', 'UserRolesController@savePermissions');
+    Router::post('/user-roles/get-role', 'UserRolesController@getRole');
+    
+    // ===================================
     // ASSESSMENT QUESTIONS
     // ===================================
     
