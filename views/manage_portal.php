@@ -210,7 +210,7 @@ require_once 'core/UrlHelper.php';
                     </div>
 
                     <div class="col-md-6">
-                        <div class="card user-box shadow-sm" onclick="location.href='index.php?controller=UserSettingsController'">
+                        <div class="card user-box shadow-sm" onclick="location.href='<?= UrlHelper::url('user-roles') ?>'">
                             <h5><i class="fas fa-user-shield"></i> <?= Localization::translate('user_roles_permissions'); ?></h5>
                             <p><small class="text-muted"><?= Localization::translate('manage_user_roles_permissions'); ?></small></p>
                         </div>
