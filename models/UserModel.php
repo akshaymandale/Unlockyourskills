@@ -331,15 +331,15 @@ class UserModel {
     /**
      * Get client-specific user roles (excluding super admin)
      */
-    public function getClientUserRoles() {
-        return $this->userRoleModel->getClientRoles();
+    public function getClientUserRoles($clientId) {
+        return $this->userRoleModel->getClientRoles($clientId);
     }
 
     /**
      * Get admin roles only
      */
-    public function getAdminUserRoles() {
-        return $this->userRoleModel->getAdminRoles();
+    public function getAdminUserRoles($clientId) {
+        return $this->userRoleModel->getAdminRoles($clientId);
     }
 
     public function getDistinctGenders() {

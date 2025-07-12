@@ -58,8 +58,8 @@ $countries = $stmt->fetchAll(PDO::FETCH_ASSOC);
 // Get user roles and admin role status
 require_once __DIR__ . '/../../models/UserModel.php';
 $userModel = new UserModel();
-$userRoles = $userModel->getClientUserRoles();
-$adminRoles = $userModel->getAdminUserRoles();
+$userRoles = $userModel->getClientUserRoles($targetClientId);
+$adminRoles = $userModel->getAdminUserRoles($targetClientId);
 
 // Get admin role status for the target client
 $adminRoleStatus = null;

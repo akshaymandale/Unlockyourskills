@@ -159,7 +159,7 @@ include 'includes/sidebar.php';
                 </h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="<?= Localization::translate('clients_close'); ?>"></button>
             </div>
-            <form id="addClientForm" method="POST" action="/clients" enctype="multipart/form-data">
+            <form id="addClientForm" method="POST" action="/Unlockyourskills/clients" enctype="multipart/form-data">
                 <div class="modal-body">
                     <div class="row">
                         <!-- Basic Information -->

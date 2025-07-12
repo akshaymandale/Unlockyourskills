@@ -456,8 +456,8 @@ Router::middleware(['Auth'])->group(function() {
     
     // Client Management (Super Admin Only)
     Router::get('/clients', 'ClientController@index');
-    Router::get('/clients/create', 'ClientController@add');
-    Router::post('/clients', 'ClientController@save');
+    Router::get('/clients/create', 'ClientController@create');
+    Router::post('/clients', 'ClientController@store');
     Router::get('/clients/{id}/edit', 'ClientController@edit');
     Router::post('/clients/{id}', 'ClientController@update');
     Router::delete('/clients/{id}', 'ClientController@delete');

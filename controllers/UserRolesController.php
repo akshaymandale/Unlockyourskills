@@ -59,11 +59,22 @@ class UserRolesController extends BaseController {
                     $this->redirectWithToast('Invalid client ID.', 'error', UrlHelper::url('user-roles'));
                     return;
                 }
+            } else {
+                // Default to first client if none selected
+                $clientsList = $this->clientModel->getAllClients();
+                if (!empty($clientsList)) {
+                    $clientId = $clientsList[0]['id'];
+                    $client = $clientsList[0];
+                }
             }
         }
+        if (!$clientId) {
+            $this->redirectWithToast('No client selected.', 'error', UrlHelper::url('dashboard'));
+            return;
+        }
 
-        // Get all roles
-        $roles = $this->userRoleModel->getAllRoles();
+        // Get all roles for this client
+        $roles = $this->userRoleModel->getAllRoles($clientId);
         
         // Get user count for each role
         foreach ($roles as &$role) {
@@ -155,8 +166,20 @@ class UserRolesController extends BaseController {
             return;
         }
 
+        $clientId = $currentUser['system_role'] === 'admin' ? $currentUser['client_id'] : null;
+        if ($currentUser['system_role'] === 'super_admin') {
+            $targetClientId = $_POST['client_id'] ?? ($_GET['client_id'] ?? null);
+            if ($targetClientId) {
+                $clientId = IdEncryption::getId($targetClientId);
+            }
+        }
+        if (!$clientId) {
+            $this->redirectWithToast('No client selected.', 'error', UrlHelper::url('user-roles'));
+            return;
+        }
+
         // Check if role name already exists
-        if ($this->userRoleModel->getRoleByName($roleName)) {
+        if ($this->userRoleModel->getRoleByName($roleName, $clientId)) {
             $this->redirectWithToast('Role name already exists.', 'error', UrlHelper::url('user-roles'));
             return;
         }
@@ -168,7 +191,7 @@ class UserRolesController extends BaseController {
             'display_order' => $displayOrder
         ];
 
-        if ($this->userRoleModel->createRole($roleData)) {
+        if ($this->userRoleModel->createRole($roleData, $clientId)) {
             $this->redirectWithToast('Role created successfully!', 'success', UrlHelper::url('user-roles'));
         } else {
             $this->redirectWithToast('Failed to create role.', 'error', UrlHelper::url('user-roles'));
@@ -202,6 +225,18 @@ class UserRolesController extends BaseController {
             return;
         }
 
+        $clientId = $currentUser['system_role'] === 'admin' ? $currentUser['client_id'] : null;
+        if ($currentUser['system_role'] === 'super_admin') {
+            $targetClientId = $_POST['client_id'] ?? ($_GET['client_id'] ?? null);
+            if ($targetClientId) {
+                $clientId = IdEncryption::getId($targetClientId);
+            }
+        }
+        if (!$clientId) {
+            $this->redirectWithToast('No client selected.', 'error', UrlHelper::url('user-roles'));
+            return;
+        }
+
         $roleData = [
             'role_name' => $roleName,
             'system_role' => $systemRole,
@@ -209,7 +244,7 @@ class UserRolesController extends BaseController {
             'display_order' => $displayOrder
         ];
 
-        if ($this->userRoleModel->updateRole($roleId, $roleData)) {
+        if ($this->userRoleModel->updateRole($roleId, $roleData, $clientId)) {
             $this->redirectWithToast('Role updated successfully!', 'success', UrlHelper::url('user-roles'));
         } else {
             $this->redirectWithToast('Failed to update role.', 'error', UrlHelper::url('user-roles'));
@@ -238,14 +273,26 @@ class UserRolesController extends BaseController {
             return;
         }
 
+        $clientId = $currentUser['system_role'] === 'admin' ? $currentUser['client_id'] : null;
+        if ($currentUser['system_role'] === 'super_admin') {
+            $targetClientId = $_POST['client_id'] ?? ($_GET['client_id'] ?? null);
+            if ($targetClientId) {
+                $clientId = IdEncryption::getId($targetClientId);
+            }
+        }
+        if (!$clientId) {
+            $this->redirectWithToast('No client selected.', 'error', UrlHelper::url('user-roles'));
+            return;
+        }
+
         // Check if role is in use
-        $role = $this->userRoleModel->getRoleById($roleId);
+        $role = $this->userRoleModel->getRoleById($roleId, $clientId);
         if (!$role) {
             $this->redirectWithToast('Role not found.', 'error', UrlHelper::url('user-roles'));
             return;
         }
 
-        $userCount = $this->userModel->getUserCountByRole($role['role_name']);
+        $userCount = $this->userModel->getUserCountByRole($role['role_name'], $clientId);
         if ($userCount > 0) {
             $this->redirectWithToast("Cannot delete role. It is assigned to {$userCount} user(s).", 'error', UrlHelper::url('user-roles'));
             return;
@@ -318,8 +365,20 @@ class UserRolesController extends BaseController {
 
         $permissions = $data['permissions'];
         
+        $clientId = $currentUser['system_role'] === 'admin' ? $currentUser['client_id'] : null;
+        if ($currentUser['system_role'] === 'super_admin') {
+            $targetClientId = $_GET['client_id'] ?? null;
+            if ($targetClientId) {
+                $clientId = IdEncryption::getId($targetClientId);
+            }
+        }
+        if (!$clientId) {
+            $this->jsonResponse(['success' => false, 'message' => 'No client selected.']);
+            return;
+        }
+
         // Save permissions to database
-        $result = $this->userRoleModel->saveModulePermissions($permissions);
+        $result = $this->userRoleModel->saveModulePermissions($permissions, $clientId);
         
         if ($result) {
             $this->jsonResponse(['success' => true, 'message' => 'Permissions saved successfully']);
@@ -350,7 +409,19 @@ class UserRolesController extends BaseController {
             return;
         }
 
-        $role = $this->userRoleModel->getRoleById($roleId);
+        $clientId = $currentUser['system_role'] === 'admin' ? $currentUser['client_id'] : null;
+        if ($currentUser['system_role'] === 'super_admin') {
+            $targetClientId = $_POST['client_id'] ?? ($_GET['client_id'] ?? null);
+            if ($targetClientId) {
+                $clientId = IdEncryption::getId($targetClientId);
+            }
+        }
+        if (!$clientId) {
+            $this->jsonResponse(['success' => false, 'message' => 'No client selected.']);
+            return;
+        }
+
+        $role = $this->userRoleModel->getRoleById($roleId, $clientId);
         if (!$role) {
             $this->jsonResponse(['success' => false, 'message' => 'Role not found']);
             return;
