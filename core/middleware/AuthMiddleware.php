@@ -14,8 +14,10 @@ class AuthMiddleware extends Middleware
     
     public function handle()
     {
-        error_log('AuthMiddleware::handle - session_id: ' . session_id());
-        error_log('AuthMiddleware::handle - \\$_SESSION: ' . print_r($_SESSION, true));
+        error_log('=== AUTH MIDDLEWARE DEBUG ===');
+        error_log('Request URI: ' . $_SERVER['REQUEST_URI']);
+        error_log('Session: ' . print_r($_SESSION, true));
+        error_log('Is AJAX: ' . (isset($_SERVER['HTTP_X_REQUESTED_WITH']) ? $_SERVER['HTTP_X_REQUESTED_WITH'] : 'NO'));
         
         // Debug logging
         error_log("AuthMiddleware::handle called for URI: " . ($_SERVER['REQUEST_URI'] ?? 'unknown'));

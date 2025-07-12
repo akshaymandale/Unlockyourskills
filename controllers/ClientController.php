@@ -335,7 +335,17 @@ class ClientController extends BaseController {
      * Update client
      */
     public function update($id = null) {
+        // Debug logging
+        error_log("=== CLIENT UPDATE DEBUG ===");
+        error_log("Request Method: " . $_SERVER['REQUEST_METHOD']);
+        error_log("URL: " . $_SERVER['REQUEST_URI']);
+        error_log("Session data: " . print_r($_SESSION, true));
+        error_log("POST data: " . print_r($_POST, true));
+        error_log("Files data: " . print_r($_FILES, true));
+        error_log("Headers: " . print_r(getallheaders(), true));
+        
         if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+            error_log("Invalid method - redirecting");
             header('Location: index.php?controller=ClientController&error=invalid_method');
             exit;
         }
@@ -531,16 +541,17 @@ class ClientController extends BaseController {
     /**
      * Check if client can be deleted (AJAX endpoint)
      */
-    public function canDelete() {
-        $id = $_GET['id'] ?? null;
-        if (!$id) {
+    public function canDelete($id = null) {
+        // Use route parameter if provided, otherwise fall back to GET parameter
+        $clientId = $id ?? ($_GET['id'] ?? null);
+        if (!$clientId) {
             header('Content-Type: application/json');
             echo json_encode(['error' => 'Client ID is required']);
             exit;
         }
 
         try {
-            $client = $this->clientModel->getClientById($id);
+            $client = $this->clientModel->getClientById($clientId);
             if (!$client) {
                 header('Content-Type: application/json');
                 echo json_encode(['error' => 'Client not found']);
@@ -548,7 +559,7 @@ class ClientController extends BaseController {
             }
 
             // Check if client has users
-            $users = $this->userModel->getUsersByClient($id, 1, 0);
+            $users = $this->userModel->getUsersByClient($clientId, 1, 0);
             if (!empty($users)) {
                 header('Content-Type: application/json');
                 echo json_encode([
@@ -575,15 +586,16 @@ class ClientController extends BaseController {
     /**
      * Delete client
      */
-    public function delete() {
-        $id = $_GET['id'] ?? null;
-        if (!$id) {
+    public function delete($id = null) {
+        // Use route parameter if provided, otherwise fall back to GET parameter
+        $clientId = $id ?? ($_GET['id'] ?? null);
+        if (!$clientId) {
             $this->toastError('Client ID is required.', 'index.php?controller=ClientController');
             return;
         }
 
         try {
-            $client = $this->clientModel->getClientById($id);
+            $client = $this->clientModel->getClientById($clientId);
             if (!$client) {
                 $this->toastError('Client not found.', 'index.php?controller=ClientController');
                 return;
@@ -592,7 +604,7 @@ class ClientController extends BaseController {
             // User check is done in canDelete() method before showing confirmation
             // This method is called only after user confirms deletion
 
-            if ($this->clientModel->deleteClient($id)) {
+            if ($this->clientModel->deleteClient($clientId)) {
                 // Delete logo file if exists (optional for soft delete)
                 // Note: For soft delete, we might want to keep the logo file
                 // if ($client['logo_path'] && file_exists($client['logo_path'])) {

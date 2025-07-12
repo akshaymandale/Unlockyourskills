@@ -149,6 +149,15 @@ document.addEventListener('DOMContentLoaded', function() {
                 // Submit form via AJAX
                 const formData = new FormData(this);
 
+                // Debug logging for edit form
+                console.log('=== CLIENT EDIT DEBUG ===');
+                console.log('Form action:', this.action);
+                console.log('Form method:', this.method);
+                console.log('FormData contents:');
+                for (let [key, value] of formData.entries()) {
+                    console.log('  ', key, ':', value);
+                }
+
                 fetch(this.action, {
                     method: 'POST',
                     body: formData,
@@ -156,7 +165,19 @@ document.addEventListener('DOMContentLoaded', function() {
                         'X-Requested-With': 'XMLHttpRequest'
                     }
                 })
-                .then(response => response.json())
+                .then(response => {
+                    console.log('Response status:', response.status);
+                    console.log('Response headers:', response.headers);
+                    return response.text().then(text => {
+                        console.log('Response text:', text);
+                        try {
+                            return JSON.parse(text);
+                        } catch (e) {
+                            console.error('JSON parse error:', e);
+                            throw new Error('Invalid JSON response: ' + text.substring(0, 100));
+                        }
+                    });
+                })
                 .then(data => {
                     if (data.success) {
                         // Success - hide modal and redirect with toast message

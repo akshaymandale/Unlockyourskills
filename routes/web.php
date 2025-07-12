@@ -459,7 +459,9 @@ Router::middleware(['Auth'])->group(function() {
     Router::get('/clients/create', 'ClientController@create');
     Router::post('/clients', 'ClientController@store');
     Router::get('/clients/{id}/edit', 'ClientController@edit');
-    Router::post('/clients/{id}', 'ClientController@update');
+    Router::put('/clients/{id}', 'ClientController@update');
+    Router::get('/clients/{id}/can-delete', 'ClientController@canDelete');
+    Router::get('/clients/{id}/delete', 'ClientController@delete');
     Router::delete('/clients/{id}', 'ClientController@delete');
     
     // Client AJAX operations
