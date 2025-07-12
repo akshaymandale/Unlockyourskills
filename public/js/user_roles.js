@@ -64,13 +64,13 @@ class UserRolesManager {
     // Edit role
     editRole(roleId) {
         console.log('✏️ Editing role:', roleId);
-        
+        const body = 'role_id=' + roleId + (window.CURRENT_CLIENT_ID ? '&client_id=' + window.CURRENT_CLIENT_ID : '');
         fetch(getUrl('user-roles/get-role'), {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/x-www-form-urlencoded',
             },
-            body: 'role_id=' + roleId
+            body: body
         })
         .then(response => response.json())
         .then(data => {
@@ -130,6 +130,17 @@ class UserRolesManager {
     // Perform the actual delete operation
     performDeleteRole(roleId) {
         document.getElementById('delete_role_id').value = roleId;
+        if (window.CURRENT_CLIENT_ID) {
+            let input = document.getElementById('delete_client_id');
+            if (!input) {
+                input = document.createElement('input');
+                input.type = 'hidden';
+                input.name = 'client_id';
+                input.id = 'delete_client_id';
+                document.getElementById('deleteRoleForm').appendChild(input);
+            }
+            input.value = window.CURRENT_CLIENT_ID;
+        }
         document.getElementById('deleteRoleForm').submit();
     }
 
@@ -199,12 +210,16 @@ class UserRolesManager {
 
     // Submit permissions to server
     submitPermissions(permissions, saveButton = null, originalText = null) {
+        const payload = { permissions: permissions };
+        if (window.CURRENT_CLIENT_ID) {
+            payload.client_id = window.CURRENT_CLIENT_ID;
+        }
         fetch(getUrl('user-roles/save-permissions'), {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
             },
-            body: JSON.stringify({ permissions: permissions })
+            body: JSON.stringify(payload)
         })
         .then(response => response.json())
         .then(data => {

@@ -3,6 +3,12 @@ require_once 'core/UrlHelper.php';
 include 'views/includes/header.php';
 include 'views/includes/navbar.php';
 include 'views/includes/sidebar.php';
+
+if (isset($_SESSION['user']) && $_SESSION['user']['system_role'] === 'super_admin' && isset($client) && $client) {
+    echo '<script>window.CURRENT_CLIENT_ID = ' . (int)$client['id'] . ';</script>';
+} elseif (isset($_SESSION['user']) && $_SESSION['user']['system_role'] === 'admin' && isset($_SESSION['user']['client_id'])) {
+    echo '<script>window.CURRENT_CLIENT_ID = ' . (int)$_SESSION['user']['client_id'] . ';</script>';
+}
 ?>
 
 <div class="main-content">
@@ -240,6 +246,9 @@ include 'views/includes/sidebar.php';
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <form id="addRoleForm" method="POST" action="<?= UrlHelper::url('user-roles/create') ?>">
+                <?php if (isset($_SESSION['user']) && $_SESSION['user']['system_role'] === 'super_admin' && isset($client) && $client): ?>
+                    <input type="hidden" name="client_id" value="<?= (int)$client['id'] ?>">
+                <?php endif; ?>
                 <div class="modal-body">
                     <div class="mb-3">
                         <label for="role_name" class="form-label">Role Name *</label>
@@ -288,6 +297,9 @@ include 'views/includes/sidebar.php';
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <form id="editRoleForm" method="POST" action="<?= UrlHelper::url('user-roles/update') ?>">
+                <?php if (isset($_SESSION['user']) && $_SESSION['user']['system_role'] === 'super_admin' && isset($client) && $client): ?>
+                    <input type="hidden" name="client_id" value="<?= (int)$client['id'] ?>">
+                <?php endif; ?>
                 <input type="hidden" id="edit_role_id" name="role_id">
                 <div class="modal-body">
                     <div class="mb-3">

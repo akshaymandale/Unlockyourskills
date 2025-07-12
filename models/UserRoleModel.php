@@ -10,14 +10,14 @@ class UserRoleModel {
     }
 
     /**
-     * Get all roles
+     * Get all roles for a client
      */
-    public function getAllRoles() {
+    public function getAllRoles($clientId) {
         try {
-            $sql = "SELECT * FROM user_roles WHERE is_active = 1 ORDER BY display_order ASC, role_name ASC";
+            $sql = "SELECT * FROM user_roles WHERE is_active = 1 AND client_id = ? ORDER BY display_order ASC, role_name ASC";
             $stmt = $this->db->prepare($sql);
-            $stmt->execute();
-            return $stmt->fetchAll(PDO::FETCH_ASSOC);
+            $stmt->execute([$clientId]);
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
         } catch (PDOException $e) {
             error_log("Error in getAllRoles: " . $e->getMessage());
             return [];
@@ -25,13 +25,13 @@ class UserRoleModel {
     }
 
     /**
-     * Get role by ID
+     * Get role by ID for a client
      */
-    public function getRoleById($id) {
+    public function getRoleById($id, $clientId) {
         try {
-            $sql = "SELECT * FROM user_roles WHERE id = ? AND is_active = 1";
+            $sql = "SELECT * FROM user_roles WHERE id = ? AND client_id = ? AND is_active = 1";
             $stmt = $this->db->prepare($sql);
-            $stmt->execute([$id]);
+            $stmt->execute([$id, $clientId]);
             return $stmt->fetch(PDO::FETCH_ASSOC);
         } catch (PDOException $e) {
             error_log("Error in getRoleById: " . $e->getMessage());
@@ -40,14 +40,14 @@ class UserRoleModel {
     }
 
     /**
-     * Get role by name
+     * Get role by name for a client
      */
-    public function getRoleByName($roleName) {
+    public function getRoleByName($roleName, $clientId) {
         try {
-            $sql = "SELECT * FROM user_roles WHERE role_name = ? AND is_active = 1";
+            $sql = "SELECT * FROM user_roles WHERE role_name = ? AND client_id = ? AND is_active = 1";
             $stmt = $this->db->prepare($sql);
-            $stmt->execute([$roleName]);
-            return $stmt->fetch(PDO::FETCH_ASSOC);
+            $stmt->execute([$roleName, $clientId]);
+        return $stmt->fetch(PDO::FETCH_ASSOC);
         } catch (PDOException $e) {
             error_log("Error in getRoleByName: " . $e->getMessage());
             return false;
@@ -55,14 +55,15 @@ class UserRoleModel {
     }
 
     /**
-     * Create new role
+     * Create new role for a client
      */
-    public function createRole($data) {
+    public function createRole($data, $clientId) {
         try {
-            $sql = "INSERT INTO user_roles (role_name, system_role, description, display_order, is_active, created_at, updated_at) 
-                    VALUES (?, ?, ?, ?, 1, NOW(), NOW())";
+            $sql = "INSERT INTO user_roles (client_id, role_name, system_role, description, display_order, is_active, created_at, updated_at) 
+                    VALUES (?, ?, ?, ?, ?, 1, NOW(), NOW())";
             $stmt = $this->db->prepare($sql);
             return $stmt->execute([
+                $clientId,
                 $data['role_name'],
                 $data['system_role'],
                 $data['description'],
@@ -75,9 +76,9 @@ class UserRoleModel {
     }
 
     /**
-     * Update role
+     * Update role for a client
      */
-    public function updateRole($id, $data) {
+    public function updateRole($id, $data, $clientId) {
         try {
             $sql = "UPDATE user_roles SET 
                     role_name = ?, 
@@ -85,14 +86,15 @@ class UserRoleModel {
                     description = ?, 
                     display_order = ?, 
                     updated_at = NOW() 
-                    WHERE id = ?";
+                    WHERE id = ? AND client_id = ?";
             $stmt = $this->db->prepare($sql);
             return $stmt->execute([
                 $data['role_name'],
                 $data['system_role'],
                 $data['description'],
                 $data['display_order'],
-                $id
+                $id,
+                $clientId
             ]);
         } catch (PDOException $e) {
             error_log("Error in updateRole: " . $e->getMessage());
@@ -143,23 +145,24 @@ class UserRoleModel {
     }
 
     /**
-     * Save module permissions
+     * Save module permissions for a client
      */
-    public function saveModulePermissions($permissions) {
+    public function saveModulePermissions($permissions, $clientId) {
         try {
-            // First, delete existing permissions
-            $sql = "DELETE FROM role_permissions";
+            // First, delete existing permissions for this client
+            $sql = "DELETE FROM role_permissions WHERE client_id = ?";
             $stmt = $this->db->prepare($sql);
-            $stmt->execute();
+            $stmt->execute([$clientId]);
 
             // Insert new permissions
-            $sql = "INSERT INTO role_permissions (role_id, module_name, can_access, can_create, can_edit, can_delete, created_at) 
-                    VALUES (?, ?, ?, ?, ?, ?, NOW())";
+            $sql = "INSERT INTO role_permissions (client_id, role_id, module_name, can_access, can_create, can_edit, can_delete, created_at) 
+                    VALUES (?, ?, ?, ?, ?, ?, ?, NOW())";
             $stmt = $this->db->prepare($sql);
 
             foreach ($permissions as $roleId => $modules) {
                 foreach ($modules as $moduleName => $permission) {
                     $stmt->execute([
+                        $clientId,
                         $roleId,
                         $moduleName,
                         isset($permission['access']) ? 1 : 0,
@@ -177,13 +180,13 @@ class UserRoleModel {
     }
 
     /**
-     * Get permissions for a role
+     * Get permissions for a role for a client
      */
-    public function getRolePermissions($roleId) {
+    public function getRolePermissions($roleId, $clientId) {
         try {
-            $sql = "SELECT * FROM role_permissions WHERE role_id = ?";
+            $sql = "SELECT * FROM role_permissions WHERE role_id = ? AND client_id = ?";
             $stmt = $this->db->prepare($sql);
-            $stmt->execute([$roleId]);
+            $stmt->execute([$roleId, $clientId]);
             return $stmt->fetchAll(PDO::FETCH_ASSOC);
         } catch (PDOException $e) {
             error_log("Error in getRolePermissions: " . $e->getMessage());
@@ -192,17 +195,17 @@ class UserRoleModel {
     }
 
     /**
-     * Get all permissions (for matrix display)
+     * Get all permissions for a client (for matrix display)
      */
-    public function getAllPermissions() {
+    public function getAllPermissions($clientId) {
         try {
             $sql = "SELECT rp.*, ur.role_name 
                     FROM role_permissions rp 
                     JOIN user_roles ur ON rp.role_id = ur.id 
-                    WHERE ur.is_active = 1 
+                    WHERE ur.is_active = 1 AND rp.client_id = ? 
                     ORDER BY ur.display_order, ur.role_name, rp.module_name";
             $stmt = $this->db->prepare($sql);
-            $stmt->execute();
+            $stmt->execute([$clientId]);
             return $stmt->fetchAll(PDO::FETCH_ASSOC);
         } catch (PDOException $e) {
             error_log("Error in getAllPermissions: " . $e->getMessage());
@@ -211,17 +214,17 @@ class UserRoleModel {
     }
 
     /**
-     * Check if user has permission for a module
+     * Check if user has permission for a module (client-specific)
      */
-    public function hasPermission($userId, $moduleName, $permission = 'access') {
+    public function hasPermission($userId, $moduleName, $clientId, $permission = 'access') {
         try {
             $sql = "SELECT rp.can_access, rp.can_create, rp.can_edit, rp.can_delete 
                     FROM role_permissions rp 
                     JOIN user_roles ur ON rp.role_id = ur.id 
-                    JOIN user_profiles up ON up.user_role = ur.role_name 
-                    WHERE up.id = ? AND rp.module_name = ? AND ur.is_active = 1";
+                    JOIN user_profiles up ON up.user_role = ur.role_name AND up.client_id = ur.client_id 
+                    WHERE up.id = ? AND rp.module_name = ? AND ur.is_active = 1 AND rp.client_id = ?";
             $stmt = $this->db->prepare($sql);
-            $stmt->execute([$userId, $moduleName]);
+            $stmt->execute([$userId, $moduleName, $clientId]);
             $result = $stmt->fetch(PDO::FETCH_ASSOC);
 
             if (!$result) {
@@ -259,6 +262,30 @@ class UserRoleModel {
         } catch (PDOException $e) {
             error_log("Error in getRolesCount: " . $e->getMessage());
             return 0;
+        }
+    }
+
+    public function getClientRoles($clientId) {
+        try {
+            $sql = "SELECT * FROM user_roles WHERE client_id = ? AND is_active = 1 AND system_role != 'super_admin' ORDER BY display_order ASC, role_name ASC";
+            $stmt = $this->db->prepare($sql);
+            $stmt->execute([$clientId]);
+            return $stmt->fetchAll(PDO::FETCH_ASSOC);
+        } catch (PDOException $e) {
+            error_log('Error in getClientRoles: ' . $e->getMessage());
+            return [];
+        }
+    }
+
+    public function getAdminRoles($clientId) {
+        try {
+            $sql = "SELECT * FROM user_roles WHERE client_id = ? AND is_active = 1 AND system_role = 'admin' ORDER BY display_order ASC, role_name ASC";
+            $stmt = $this->db->prepare($sql);
+            $stmt->execute([$clientId]);
+            return $stmt->fetchAll(PDO::FETCH_ASSOC);
+        } catch (PDOException $e) {
+            error_log('Error in getAdminRoles: ' . $e->getMessage());
+            return [];
         }
     }
 }
