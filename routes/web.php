@@ -468,6 +468,9 @@ Router::middleware(['Auth'])->group(function() {
     // Navigate to client-specific user management
     Router::get('/clients/{id}/users', 'UserManagementController@clientUsers');
     
+    // Client users AJAX operations
+    Router::post('/clients/{id}/users/ajax/search', 'UserManagementController@ajaxSearch');
+
 });
 
 // ===================================

@@ -637,7 +637,7 @@ class UserManagementController extends BaseController {
         }
     }
 
-    public function ajaxSearch() {
+    public function ajaxSearch($clientId = null) {
         header('Content-Type: application/json');
 
         try {
@@ -666,11 +666,13 @@ class UserManagementController extends BaseController {
             }
 
             // Handle client filtering for super admin
-            $clientId = null;
             $currentUser = $_SESSION['user'] ?? null;
             
-            if ($currentUser && $currentUser['system_role'] === 'super_admin') {
-                // Super admin can filter by client
+            // If clientId is passed as URL parameter, use it (for /clients/{id}/users/ajax/search)
+            if ($clientId && is_numeric($clientId)) {
+                // Client ID from URL parameter - use it directly
+            } elseif ($currentUser && $currentUser['system_role'] === 'super_admin') {
+                // Super admin can filter by client from POST data
                 if (!empty($_POST['client_id']) && is_numeric($_POST['client_id'])) {
                     $clientId = $_POST['client_id'];
                 }

@@ -107,10 +107,10 @@ class ConfirmationLoader {
         }
 
         const moduleMap = {
-            'vlr': getProjectUrl('public/js/modules/vlr_confirmations.js'),
-            'assessment': getProjectUrl('public/js/modules/assessment_confirmations.js'),
-            'user': getProjectUrl('public/js/modules/user_confirmations.js'),
-            'survey': getProjectUrl('public/js/modules/survey_confirmations.js')
+            'vlr': '/Unlockyourskills/public/js/modules/vlr_confirmations.js',
+            'assessment': '/Unlockyourskills/public/js/modules/assessment_confirmations.js',
+            'user': '/Unlockyourskills/public/js/modules/user_confirmations.js',
+            'survey': '/Unlockyourskills/public/js/modules/survey_confirmations.js'
         };
 
         const modulePath = moduleMap[context];
