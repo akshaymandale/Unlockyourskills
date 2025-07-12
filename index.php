@@ -63,6 +63,8 @@ Localization::loadLanguage($lang);
 error_log('[INDEX DEBUG] Request URI: ' . ($_SERVER['REQUEST_URI'] ?? ''));
 error_log('[INDEX DEBUG] Request Method: ' . ($_SERVER['REQUEST_METHOD'] ?? ''));
 error_log('[INDEX DEBUG] POST: ' . json_encode($_POST));
+error_log('[INDEX DEBUG] GET: ' . json_encode($_GET));
+error_log('[INDEX DEBUG] Path parameter: ' . ($_GET['path'] ?? 'NOT SET'));
 
 // ===================================
 // ROUTING SYSTEM
@@ -70,6 +72,7 @@ error_log('[INDEX DEBUG] POST: ' . json_encode($_POST));
 
 // Check if this is a legacy URL (backward compatibility)
 if (isset($_GET['controller']) || isset($_POST['controller'])) {
+    error_log('[INDEX DEBUG] Using LEGACY routing system');
     // LEGACY ROUTING SYSTEM - Maintain backward compatibility
     $controller = $_POST['controller'] ?? $_GET['controller'] ?? 'LoginController';
     $action = $_POST['action'] ?? $_GET['action'] ?? 'index';
@@ -106,6 +109,7 @@ if (isset($_GET['controller']) || isset($_POST['controller'])) {
     }
 } else {
     // NEW ROUTING SYSTEM
+    error_log('[INDEX DEBUG] Using NEW routing system');
     try {
         // Load routes
         require_once 'routes/web.php';
