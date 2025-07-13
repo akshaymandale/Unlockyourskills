@@ -15,6 +15,13 @@ require_once 'core/Request.php';
 error_reporting(E_ALL);
 ini_set('display_errors', 1);
 
+// Set session save path to application sessions directory
+$sessionPath = __DIR__ . '/sessions';
+if (!is_dir($sessionPath)) {
+    mkdir($sessionPath, 0777, true);
+}
+session_save_path($sessionPath);
+
 // Set session cookie path to match the application path
 session_set_cookie_params([
     'path' => '/',

@@ -11,9 +11,8 @@ let currentFilters = {
 
 // Helper function to generate project URLs
 function getProjectUrl(path) {
-    // Get the base URL from the current location
-    const baseUrl = window.location.origin + window.location.pathname.replace(/\/[^\/]*$/, '');
-    return baseUrl + '/' + path.replace(/^\//, '');
+    const baseUrl = window.location.origin + '/Unlockyourskills/';
+    return baseUrl + path.replace(/^\//, '');
 }
 
 // Debounce function for search input
@@ -302,15 +301,21 @@ function escapeHtml(text) {
  * This function only runs once on page load.
  */
 function initializeModals() {
+    console.log('🔥 External JS: initializeModals called');
     const addUserModal = document.getElementById('addUserModal');
+    console.log('🔥 External JS: Add user modal found:', !!addUserModal);
+    
     if (addUserModal) {
         addUserModal.addEventListener('show.bs.modal', function(event) {
+            console.log('🔥 External JS: Add user modal show event fired');
             const button = event.relatedTarget;
             const clientId = button ? button.getAttribute('data-client-id') : '';
+            console.log('🔥 External JS: Client ID from button:', clientId);
             loadAddUserModalContent(clientId);
         });
         // Add a listener to clear content when the modal is hidden to ensure it's fresh next time.
         addUserModal.addEventListener('hidden.bs.modal', function() {
+            console.log('🔥 External JS: Add user modal hidden event fired');
             const modalContent = document.getElementById('addUserModalContent');
             if(modalContent) modalContent.innerHTML = '';
         });
@@ -396,29 +401,49 @@ function attachValidationHandler(modalContent) {
  * Loads the content for the Add User modal and attaches the validation handler.
  */
 function loadAddUserModalContent(clientId = '') {
+    console.log('🔥 External JS: loadAddUserModalContent called with clientId:', clientId);
     const modalContent = document.getElementById('addUserModalContent');
-    if (!modalContent) return;
+    if (!modalContent) {
+        console.error('🔥 External JS: Modal content element not found');
+        return;
+    }
     
     modalContent.innerHTML = `<div class="text-center py-5"><div class="spinner-border text-primary" role="status"><span class="visually-hidden">Loading...</span></div></div>`;
 
     let url = getProjectUrl('users/modal/add');
     if (clientId) url += '?client_id=' + encodeURIComponent(clientId);
+    
+    console.log('🔥 External JS: Fetching URL:', url);
 
-    fetch(url)
-        .then(response => response.text())
+    fetch(url, {
+        credentials: 'include'
+    })
+        .then(response => {
+            console.log('🔥 External JS: Response status:', response.status);
+            return response.text();
+        })
         .then(html => {
+            console.log('🔥 External JS: Received HTML length:', html.length);
+            console.log('🔥 External JS: HTML preview:', html.substring(0, 200));
             modalContent.innerHTML = html;
 
             // Initialize validation for the Add User modal
             if (typeof initializeAddUserModalValidation === 'function') {
+                console.log('🔥 External JS: Calling initializeAddUserModalValidation');
                 initializeAddUserModalValidation();
             }
 
-            if (typeof initializeLocationDropdowns === 'function') initializeLocationDropdowns('modal_');
-            if (typeof initializeTimezoneDropdown === 'function') initializeTimezoneDropdown('modal_');
+            if (typeof initializeLocationDropdowns === 'function') {
+                console.log('🔥 External JS: Calling initializeLocationDropdowns');
+                initializeLocationDropdowns('modal_');
+            }
+            if (typeof initializeTimezoneDropdown === 'function') {
+                console.log('🔥 External JS: Calling initializeTimezoneDropdown');
+                initializeTimezoneDropdown('modal_');
+            }
         })
         .catch(error => {
-            console.error('Error loading add user form:', error);
+            console.error('🔥 External JS: Error loading add user form:', error);
             modalContent.innerHTML = `<div class="alert alert-danger p-4">Error loading form. Please close this modal and try again.</div>`;
         });
 }
@@ -434,7 +459,9 @@ function loadEditUserModalContent(userId) {
 
     const url = getProjectUrl('users/modal/edit') + '?user_id=' + encodeURIComponent(userId);
 
-    fetch(url)
+    fetch(url, {
+        credentials: 'include'
+    })
         .then(response => response.text())
         .then(html => {
             modalContent.innerHTML = html;
