@@ -271,6 +271,18 @@ function getUrl(path) {
 document.addEventListener('DOMContentLoaded', function() {
     console.log('🎯 User Roles page loaded, initializing manager...');
     window.userRolesManager = new UserRolesManager();
+
+    // Add Role form submission debug
+    const addRoleForm = document.getElementById('addRoleForm');
+    if (addRoleForm) {
+        addRoleForm.addEventListener('submit', function(e) {
+            console.log('[AddRoleForm] Submitting form...');
+            const formData = new FormData(addRoleForm);
+            for (let [key, value] of formData.entries()) {
+                console.log(`[AddRoleForm] ${key}:`, value);
+            }
+        });
+    }
 });
 
 // Global functions for inline onclick handlers (for backward compatibility)

@@ -43,16 +43,18 @@ class UserManagementController extends BaseController {
 
         // Determine user scope based on role
         if ($currentUser && $currentUser['system_role'] === 'super_admin') {
-            // Super admin can see all users or filter by client
+            // Super admin can see users from their own client or filter by specific client
             if ($clientId) {
                 // When coming from client management, show only Admin users for that client
                 $users = $this->userModel->getAdminUsersByClient($clientId, $limit, $offset);
                 $totalUsers = count($this->userModel->getAdminUsersByClient($clientId, 999999, 0));
                 $client = $this->clientModel->getClientById($clientId);
             } else {
-                $users = $this->userModel->getAllUsersPaginated($limit, $offset);
-                $totalUsers = $this->userModel->getTotalUserCount();
-                $client = null;
+                // Super admin viewing their own client's users (not all users)
+                $currentUserClientId = $currentUser['client_id'];
+                $users = $this->userModel->getUsersByClient($currentUserClientId, $limit, $offset);
+                $totalUsers = count($this->userModel->getUsersByClient($currentUserClientId, 999999, 0));
+                $client = $this->clientModel->getClientById($currentUserClientId);
             }
             $clients = $this->clientModel->getAllClients(999999, 0);
         } elseif ($currentUser && $currentUser['system_role'] === 'admin') {
@@ -570,10 +572,17 @@ class UserManagementController extends BaseController {
 
             $result = $this->userModel->updateLockStatus($profile_id, 1); // 1 = locked
 
+            // Determine redirect URL
+            $redirectUrl = UrlHelper::url('users');
+            $clientContextId = $_GET['client_id'] ?? $_SESSION['target_client_id'] ?? null;
+            if ($clientContextId) {
+                $redirectUrl = UrlHelper::url('clients/' . $clientContextId . '/users');
+            }
+
             if ($result) {
-                $this->toastSuccess('User locked successfully!', UrlHelper::url('users'));
+                $this->toastSuccess('User locked successfully!', $redirectUrl);
             } else {
-                $this->toastError('Failed to lock user.', UrlHelper::url('users'));
+                $this->toastError('Failed to lock user.', $redirectUrl);
             }
         } else {
             $this->toastError('Invalid request parameters.', UrlHelper::url('users'));
@@ -608,10 +617,17 @@ class UserManagementController extends BaseController {
 
             $result = $this->userModel->updateLockStatus($profile_id, 0); // 0 = unlocked
 
+            // Determine redirect URL
+            $redirectUrl = UrlHelper::url('users');
+            $clientContextId = $_GET['client_id'] ?? $_SESSION['target_client_id'] ?? null;
+            if ($clientContextId) {
+                $redirectUrl = UrlHelper::url('clients/' . $clientContextId . '/users');
+            }
+
             if ($result) {
-                $this->toastSuccess('User unlocked successfully!', UrlHelper::url('users'));
+                $this->toastSuccess('User unlocked successfully!', $redirectUrl);
             } else {
-                $this->toastError('Failed to unlock user.', UrlHelper::url('users'));
+                $this->toastError('Failed to unlock user.', $redirectUrl);
             }
         } else {
             $this->toastError('Invalid request parameters.', UrlHelper::url('users'));
@@ -671,6 +687,8 @@ class UserManagementController extends BaseController {
             // If clientId is passed as URL parameter, use it (for /clients/{id}/users/ajax/search)
             if ($clientId && is_numeric($clientId)) {
                 // Client ID from URL parameter - use it directly
+                // Set client management mode for this request
+                $_SESSION['client_management_mode'] = true;
             } elseif ($currentUser && $currentUser['system_role'] === 'super_admin') {
                 // Super admin can filter by client from POST data
                 if (!empty($_POST['client_id']) && is_numeric($_POST['client_id'])) {
@@ -693,9 +711,10 @@ class UserManagementController extends BaseController {
                     $totalUsers = count($this->userModel->getUsersByClient($clientId, 999999, 0, $search, $filters));
                 }
             } else {
-                // Get all users (super admin viewing all)
-            $users = $this->userModel->getAllUsersPaginated($limit, $offset, $search, $filters);
-            $totalUsers = $this->userModel->getTotalUserCount($search, $filters);
+                // Super admin viewing their own client's users (not all users)
+                $currentUserClientId = $currentUser['client_id'];
+                $users = $this->userModel->getUsersByClient($currentUserClientId, $limit, $offset, $search, $filters);
+                $totalUsers = count($this->userModel->getUsersByClient($currentUserClientId, 999999, 0, $search, $filters));
             }
             
             $totalPages = ceil($totalUsers / $limit);
@@ -926,6 +945,13 @@ class UserManagementController extends BaseController {
      * Handle Add User Modal Form Submission
      */
     public function submitAddUserModal() {
+        // Debug logging
+        error_log("UserManagementController::submitAddUserModal called");
+        error_log("Request method: " . $_SERVER['REQUEST_METHOD']);
+        error_log("POST data: " . print_r($_POST, true));
+        error_log("FILES data: " . print_r($_FILES, true));
+        error_log("Session data: " . print_r($_SESSION, true));
+        
         header('Content-Type: application/json');
 
         try {

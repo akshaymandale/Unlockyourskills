@@ -22,6 +22,11 @@ class UserModel {
     }
     
     public function insertUser($postData, $fileData) {
+        // Debug logging
+        error_log("UserModel::insertUser called");
+        error_log("postData: " . print_r($postData, true));
+        error_log("fileData: " . print_r($fileData, true));
+        
         if (!is_array($postData)) {
             die("Error: insertUser expects an array but received " . gettype($postData));
         }
@@ -29,6 +34,12 @@ class UserModel {
         // Extract values safely, setting NULL if empty
         $client_id = $postData['client_id'] ?? null;
         $profile_id = $postData['profile_id'] ?? null;
+        
+        // Generate profile_id if not provided
+        if (empty($profile_id)) {
+            $profile_id = $this->generateProfileId($client_id);
+        }
+        
         $full_name = $postData['full_name'] ?? null;
         $email = $postData['email'] ?? null;
         $contact_number = $postData['contact_number'] ?? null;
@@ -88,7 +99,10 @@ class UserModel {
         $currentUserId = $_SESSION['user']['id'] ?? null;
 
         // Use target_client_id if provided (for super admin), otherwise use client_id
-        $finalClientId = $data['target_client_id'] ?? $client_id;
+        $finalClientId = $postData['target_client_id'] ?? $client_id;
+
+        // Debug log for final client id
+        error_log('insertUser: finalClientId=' . $finalClientId);
 
         // Insert into Database (with audit fields)
         $sql = "INSERT INTO user_profiles
@@ -797,13 +811,12 @@ class UserModel {
                 $params[] = $filters['locked_status'];
             }
             
-            $sql .= " ORDER BY up.full_name ASC LIMIT ? OFFSET ?";
-            $params[] = $limit;
-            $params[] = $offset;
+            $sql .= " ORDER BY up.full_name ASC LIMIT " . (int)$limit . " OFFSET " . (int)$offset;
             
             $stmt = $this->conn->prepare($sql);
             $stmt->execute($params);
-            return $stmt->fetchAll(PDO::FETCH_ASSOC);
+            $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
+            return $rows;
         } catch (PDOException $e) {
             error_log("Error in getAdminUsersByClient: " . $e->getMessage());
             return [];
@@ -831,6 +844,45 @@ class UserModel {
             error_log("Error in getUserCountByRole: " . $e->getMessage());
             return 0;
         }
+    }
+
+    /**
+     * Generate unique profile ID
+     */
+    private function generateProfileId($clientId) {
+        // Get client name for prefix
+        $clientStmt = $this->conn->prepare("SELECT client_name FROM clients WHERE id = ?");
+        $clientStmt->execute([$clientId]);
+        $client = $clientStmt->fetch(PDO::FETCH_ASSOC);
+        
+        $prefix = 'UYS'; // Default prefix
+        if ($client) {
+            // Get first 2 characters of client name, remove non-alphanumeric, uppercase
+            $prefix = strtoupper(preg_replace("/[^A-Za-z0-9]/", "", substr($client['client_name'], 0, 2)));
+            if (empty($prefix)) {
+                $prefix = 'UYS'; // Fallback if client name is empty or has no alphanumeric chars
+            }
+        }
+        
+        // Generate timestamp (last 6 digits)
+        $timestamp = substr(time(), -6);
+        
+        // Generate random 3-digit number
+        $random = str_pad(rand(0, 999), 3, '0', STR_PAD_LEFT);
+        
+        $profileId = $prefix . $timestamp . $random;
+        
+        // Ensure uniqueness by checking if it exists
+        $checkStmt = $this->conn->prepare("SELECT COUNT(*) FROM user_profiles WHERE profile_id = ?");
+        $checkStmt->execute([$profileId]);
+        $exists = $checkStmt->fetchColumn();
+        
+        // If exists, generate a new one (recursive, but with limit)
+        if ($exists > 0) {
+            return $this->generateProfileId($clientId);
+        }
+        
+        return $profileId;
     }
 }
 ?>

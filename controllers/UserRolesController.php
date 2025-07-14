@@ -80,6 +80,7 @@ class UserRolesController extends BaseController {
         foreach ($roles as &$role) {
             $role['user_count'] = $this->userModel->getUserCountByRole($role['role_name'], $clientId);
         }
+        unset($role); // Break the reference to avoid view variable scoping issues
 
         // Get all clients for super admin
         $clients = [];
