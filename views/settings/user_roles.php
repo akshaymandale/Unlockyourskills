@@ -10,8 +10,22 @@ if (isset($_SESSION['user']) && $_SESSION['user']['system_role'] === 'super_admi
 } elseif (isset($_SESSION['user']) && $_SESSION['user']['system_role'] === 'admin' && isset($_SESSION['user']['client_id'])) {
     echo '<script>window.CURRENT_CLIENT_ID = ' . (int)$_SESSION['user']['client_id'] . ';</script>';
 }
-?>
 
+// Build a lookup array for permissions: $permMatrix[role_id][module_name]['access'|'create'|'edit'|'delete']
+$permMatrix = [];
+if (!empty($permissions)) {
+    foreach ($permissions as $perm) {
+        $roleId = $perm['role_id'];
+        $module = $perm['module_name'];
+        $permMatrix[$roleId][$module] = [
+            'access' => !empty($perm['can_access']),
+            'create' => !empty($perm['can_create']),
+            'edit'   => !empty($perm['can_edit']),
+            'delete' => !empty($perm['can_delete'])
+        ];
+    }
+}
+?>
 
 
 <div class="main-content">
@@ -181,7 +195,8 @@ if (!isset($debug_roles)) {
                                                            id="access_<?= $role['id'] ?>_<?= $moduleKey ?>"
                                                            data-role="<?= $role['id'] ?>" 
                                                            data-module="<?= $moduleKey ?>" 
-                                                           data-permission="access">
+                                                           data-permission="access"
+                                                           <?= (!empty($permMatrix[$role['id']][$moduleKey]['access'])) ? 'checked' : '' ?>>
                                                     <label class="form-check-label" for="access_<?= $role['id'] ?>_<?= $moduleKey ?>">
                                                         <small>Access</small>
                                                     </label>
@@ -191,7 +206,8 @@ if (!isset($debug_roles)) {
                                                            id="create_<?= $role['id'] ?>_<?= $moduleKey ?>"
                                                            data-role="<?= $role['id'] ?>" 
                                                            data-module="<?= $moduleKey ?>" 
-                                                           data-permission="create">
+                                                           data-permission="create"
+                                                           <?= (!empty($permMatrix[$role['id']][$moduleKey]['create'])) ? 'checked' : '' ?>>
                                                     <label class="form-check-label" for="create_<?= $role['id'] ?>_<?= $moduleKey ?>">
                                                         <small>Create</small>
                                                     </label>
@@ -201,7 +217,8 @@ if (!isset($debug_roles)) {
                                                            id="edit_<?= $role['id'] ?>_<?= $moduleKey ?>"
                                                            data-role="<?= $role['id'] ?>" 
                                                            data-module="<?= $moduleKey ?>" 
-                                                           data-permission="edit">
+                                                           data-permission="edit"
+                                                           <?= (!empty($permMatrix[$role['id']][$moduleKey]['edit'])) ? 'checked' : '' ?>>
                                                     <label class="form-check-label" for="edit_<?= $role['id'] ?>_<?= $moduleKey ?>">
                                                         <small>Edit</small>
                                                     </label>
@@ -211,7 +228,8 @@ if (!isset($debug_roles)) {
                                                            id="delete_<?= $role['id'] ?>_<?= $moduleKey ?>"
                                                            data-role="<?= $role['id'] ?>" 
                                                            data-module="<?= $moduleKey ?>" 
-                                                           data-permission="delete">
+                                                           data-permission="delete"
+                                                           <?= (!empty($permMatrix[$role['id']][$moduleKey]['delete'])) ? 'checked' : '' ?>>
                                                     <label class="form-check-label" for="delete_<?= $role['id'] ?>_<?= $moduleKey ?>">
                                                         <small>Delete</small>
                                                     </label>
@@ -253,12 +271,14 @@ if (!isset($debug_roles)) {
                         <label for="system_role" class="form-label">System Role *</label>
                         <select class="form-select" id="system_role" name="system_role">
                             <option value="">Select System Role</option>
-                            <option value="super_admin">Super Admin</option>
-                            <option value="admin">Admin</option>
-                            <option value="manager">Manager</option>
-                            <option value="instructor">Instructor</option>
-                            <option value="learner">Learner</option>
-                            <option value="guest">Guest</option>
+                            <?php if ($_SESSION['user']['system_role'] === 'super_admin'): ?>
+                                <option value="admin">Admin</option>
+                            <?php else: ?>
+                                <option value="manager">Manager</option>
+                                <option value="instructor">Instructor</option>
+                                <option value="learner">Learner</option>
+                                <option value="guest">Guest</option>
+                            <?php endif; ?>
                         </select>
                         <div class="invalid-feedback"></div>
                     </div>
@@ -305,12 +325,14 @@ if (!isset($debug_roles)) {
                         <label for="edit_system_role" class="form-label">System Role *</label>
                         <select class="form-select" id="edit_system_role" name="system_role" required>
                             <option value="">Select System Role</option>
-                            <option value="super_admin">Super Admin</option>
-                            <option value="admin">Admin</option>
-                            <option value="manager">Manager</option>
-                            <option value="instructor">Instructor</option>
-                            <option value="learner">Learner</option>
-                            <option value="guest">Guest</option>
+                            <?php if ($_SESSION['user']['system_role'] === 'super_admin'): ?>
+                                <option value="admin">Admin</option>
+                            <?php else: ?>
+                                <option value="manager">Manager</option>
+                                <option value="instructor">Instructor</option>
+                                <option value="learner">Learner</option>
+                                <option value="guest">Guest</option>
+                            <?php endif; ?>
                         </select>
                         <div class="invalid-feedback"></div>
                     </div>

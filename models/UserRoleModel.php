@@ -58,6 +58,7 @@ class UserRoleModel {
      * Create new role for a client
      */
     public function createRole($data, $clientId) {
+        error_log("[createRole] TEST LOG ENTRY");
         try {
             error_log("[createRole] Attempting to insert: " . json_encode(['client_id' => $clientId, 'data' => $data]));
             $sql = "INSERT INTO user_roles (client_id, role_name, system_role, description, display_order, is_active, created_at, updated_at) 
@@ -71,6 +72,10 @@ class UserRoleModel {
                 $data['display_order']
             ]);
             error_log("[createRole] Insert result: " . var_export($result, true));
+            if (!$result) {
+                $errorInfo = $stmt->errorInfo();
+                error_log("[createRole] SQLSTATE: " . $errorInfo[0] . " | Error: " . $errorInfo[2]);
+            }
             return $result;
         } catch (PDOException $e) {
             error_log("[createRole] Error: " . $e->getMessage());

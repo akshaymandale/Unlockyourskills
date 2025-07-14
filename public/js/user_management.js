@@ -348,15 +348,26 @@ function initializeModals() {
     const editUserModal = document.getElementById('editUserModal');
     if (editUserModal) {
         editUserModal.addEventListener('show.bs.modal', function(event) {
-            const button = event.relatedTarget;
-            const userId = button ? button.getAttribute('data-user-id') : '';
+            // Try to get userId from data attribute if relatedTarget is missing
+            let userId = '';
+            if (event.relatedTarget) {
+                userId = event.relatedTarget.getAttribute('data-user-id');
+            }
+            if (!userId) {
+                userId = editUserModal.getAttribute('data-user-id');
+            }
+            console.log('[DEBUG] Edit User modal show.bs.modal event. userId:', userId);
             if (userId) {
-            loadEditUserModalContent(userId);
+                loadEditUserModalContent(userId);
+            } else {
+                console.warn('[DEBUG] No userId found on show.bs.modal event.');
             }
         });
         editUserModal.addEventListener('hidden.bs.modal', function() {
             const modalContent = document.getElementById('editUserModalContent');
             if(modalContent) modalContent.innerHTML = '';
+            // Clean up the data attribute
+            editUserModal.removeAttribute('data-user-id');
         });
     }
     
@@ -365,11 +376,15 @@ function initializeModals() {
         const editButton = event.target.closest('.edit-user-btn');
         if (editButton) {
             const userId = editButton.getAttribute('data-user-id');
-            const modal = new bootstrap.Modal(document.getElementById('editUserModal'));
+            console.log('[DEBUG] Edit User button clicked. userId:', userId);
+            const modalEl = document.getElementById('editUserModal');
+            // Set the userId as a data attribute on the modal
+            modalEl.setAttribute('data-user-id', userId);
+            const modal = new bootstrap.Modal(modalEl);
             modal.show();
             // The 'show.bs.modal' event will handle loading the content.
-            }
-        });
+        }
+    });
     }
 
 /**
@@ -482,6 +497,7 @@ function loadEditUserModalContent(userId) {
     modalContent.innerHTML = `<div class="text-center py-5"><div class="spinner-border text-primary" role="status"><span class="visually-hidden">Loading...</span></div></div>`;
 
     const url = getProjectUrl('users/modal/edit') + '?user_id=' + encodeURIComponent(userId);
+    console.log('[DEBUG] Making AJAX call to:', url);
 
     fetch(url, {
         credentials: 'include'

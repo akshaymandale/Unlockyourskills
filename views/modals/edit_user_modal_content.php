@@ -61,7 +61,7 @@ $countries = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
 // Fetch languages and roles
 $languages = $userModel->getLanguages();
-$userRoles = $userModel->getClientUserRoles();
+$userRoles = $userModel->getClientUserRoles($user['client_id']);
 
 // Get client name
 $clientName = $_SESSION['client_code'] ?? 'DEFAULT';
