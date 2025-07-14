@@ -917,8 +917,8 @@ class UserManagementController extends BaseController {
             $countries = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
             // Get user roles
-            $userRoles = $this->userModel->getClientUserRoles();
-            $adminRoles = $this->userModel->getAdminUserRoles();
+            $userRoles = $this->userModel->getClientUserRoles($user['client_id']);
+            $adminRoles = $this->userModel->getAdminUserRoles($user['client_id']);
 
             // Get admin role status for the user's client
             $adminRoleStatus = null;

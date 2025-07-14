@@ -82,6 +82,9 @@ class UserRolesController extends BaseController {
         }
         unset($role); // Break the reference to avoid view variable scoping issues
 
+        // Fetch all module permissions for this client
+        $permissions = $this->userRoleModel->getAllPermissions($clientId);
+
         // Get all clients for super admin
         $clients = [];
         if ($currentUser['system_role'] === 'super_admin') {
@@ -145,6 +148,7 @@ class UserRolesController extends BaseController {
      */
     public function create() {
         if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+            error_log("[UserRolesController] Not a POST request");
             $this->redirectWithToast('Invalid request method.', 'error', UrlHelper::url('user-roles'));
             return;
         }
@@ -152,6 +156,7 @@ class UserRolesController extends BaseController {
         // Check user permissions
         $currentUser = $_SESSION['user'] ?? null;
         if (!$currentUser || !in_array($currentUser['system_role'], ['admin', 'super_admin'])) {
+            error_log("[UserRolesController] Permission denied or not logged in");
             $this->redirectWithToast('Access denied.', 'error', UrlHelper::url('dashboard'));
             return;
         }
@@ -163,6 +168,7 @@ class UserRolesController extends BaseController {
 
         // Validation
         if (empty($roleName) || empty($systemRole)) {
+            error_log("[UserRolesController] Missing roleName or systemRole");
             $this->redirectWithToast('Role name and system role are required.', 'error', UrlHelper::url('user-roles'));
             return;
         }
@@ -175,12 +181,14 @@ class UserRolesController extends BaseController {
             }
         }
         if (!$clientId) {
+            error_log("[UserRolesController] No clientId");
             $this->redirectWithToast('No client selected.', 'error', UrlHelper::url('user-roles'));
             return;
         }
 
         // Check if role name already exists
         if ($this->userRoleModel->getRoleByName($roleName, $clientId)) {
+            error_log("[UserRolesController] Duplicate role name for client_id=$clientId: $roleName");
             $this->redirectWithToast('Role name already exists.', 'error', UrlHelper::url('user-roles'));
             return;
         }
