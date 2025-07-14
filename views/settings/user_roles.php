@@ -1,3 +1,4 @@
+
 <?php
 require_once 'core/UrlHelper.php';
 include 'views/includes/header.php';
@@ -10,6 +11,8 @@ if (isset($_SESSION['user']) && $_SESSION['user']['system_role'] === 'super_admi
     echo '<script>window.CURRENT_CLIENT_ID = ' . (int)$_SESSION['user']['client_id'] . ';</script>';
 }
 ?>
+
+
 
 <div class="main-content">
     <div class="container mt-4 user-roles-management">
@@ -97,49 +100,40 @@ if (isset($_SESSION['user']) && $_SESSION['user']['system_role'] === 'super_admi
                             </tr>
                         </thead>
                         <tbody>
-                            <?php if (!empty($roles)): ?>
-                                <?php foreach ($roles as $role): ?>
-                                    <tr>
-                                        <td>
-                                            <strong><?= htmlspecialchars($role['role_name']) ?></strong>
-                                        </td>
-                                        <td>
-                                            <span class="badge bg-info"><?= htmlspecialchars($role['system_role']) ?></span>
-                                        </td>
-                                        <td><?= htmlspecialchars($role['description'] ?? '') ?></td>
-                                        <td>
-                                            <span class="badge bg-secondary"><?= $role['user_count'] ?> users</span>
-                                        </td>
-                                        <td>
-                                            <div class="form-check form-switch">
-                                                <input class="form-check-input" type="checkbox" 
-                                                       onchange="toggleRoleStatus(<?= $role['id'] ?>, this.checked)"
-                                                       <?= $role['is_active'] ? 'checked' : '' ?>>
-                                            </div>
-                                        </td>
-                                        <td>
-                                            <div class="btn-group" role="group">
-                                                <button type="button" class="btn btn-sm btn-outline-primary" 
-                                                        onclick="editRole(<?= $role['id'] ?>)">
-                                                    <i class="fas fa-edit"></i>
+                            <?php
+if (!isset($debug_roles)) {
+    $debug_roles = $roles;
+}
+?>
+                            <?php foreach ($debug_roles as $role): ?>
+                                <tr id="role-row-<?= $role['id'] ?>">
+                                    <td><strong><?= htmlspecialchars($role['role_name']) ?></strong></td>
+                                    <td><span class="badge bg-info"><?= htmlspecialchars($role['system_role']) ?></span></td>
+                                    <td><?= htmlspecialchars($role['description'] ?? '') ?></td>
+                                    <td><span class="badge bg-secondary"><?= $role['user_count'] ?> users</span></td>
+                                    <td>
+                                        <div class="form-check form-switch">
+                                            <input class="form-check-input" type="checkbox" 
+                                                   onchange="toggleRoleStatus(<?= $role['id'] ?>, this.checked)"
+                                                   <?= $role['is_active'] ? 'checked' : '' ?>>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <div class="btn-group" role="group">
+                                            <button type="button" class="btn btn-sm btn-outline-primary" 
+                                                    onclick="editRole(<?= $role['id'] ?>)">
+                                                <i class="fas fa-edit"></i>
+                                            </button>
+                                            <?php if ($role['user_count'] == 0): ?>
+                                                <button type="button" class="btn btn-sm btn-outline-danger" 
+                                                        onclick="deleteRole(<?= $role['id'] ?>)">
+                                                    <i class="fas fa-trash"></i>
                                                 </button>
-                                                <?php if ($role['user_count'] == 0): ?>
-                                                    <button type="button" class="btn btn-sm btn-outline-danger" 
-                                                            onclick="deleteRole(<?= $role['id'] ?>)">
-                                                        <i class="fas fa-trash"></i>
-                                                    </button>
-                                                <?php endif; ?>
-                                            </div>
-                                        </td>
-                                    </tr>
-                                <?php endforeach; ?>
-                            <?php else: ?>
-                                <tr>
-                                    <td colspan="6" class="text-center text-muted">
-                                        <i class="fas fa-info-circle"></i> No roles found. Create your first role to get started.
+                                            <?php endif; ?>
+                                        </div>
                                     </td>
                                 </tr>
-                            <?php endif; ?>
+                            <?php endforeach; ?>
                         </tbody>
                     </table>
                 </div>
@@ -363,6 +357,7 @@ if (isset($_SESSION['user']) && $_SESSION['user']['system_role'] === 'super_admi
 </div>
 
 <?php include 'views/includes/footer.php'; ?>
+
 
 <!-- Include User Roles JavaScript -->
 <script src="<?= UrlHelper::url('public/js/user_roles.js') ?>"></script>

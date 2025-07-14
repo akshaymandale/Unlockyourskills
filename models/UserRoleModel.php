@@ -59,18 +59,21 @@ class UserRoleModel {
      */
     public function createRole($data, $clientId) {
         try {
+            error_log("[createRole] Attempting to insert: " . json_encode(['client_id' => $clientId, 'data' => $data]));
             $sql = "INSERT INTO user_roles (client_id, role_name, system_role, description, display_order, is_active, created_at, updated_at) 
                     VALUES (?, ?, ?, ?, ?, 1, NOW(), NOW())";
             $stmt = $this->db->prepare($sql);
-            return $stmt->execute([
+            $result = $stmt->execute([
                 $clientId,
                 $data['role_name'],
                 $data['system_role'],
                 $data['description'],
                 $data['display_order']
             ]);
+            error_log("[createRole] Insert result: " . var_export($result, true));
+            return $result;
         } catch (PDOException $e) {
-            error_log("Error in createRole: " . $e->getMessage());
+            error_log("[createRole] Error: " . $e->getMessage());
             return false;
         }
     }
@@ -142,6 +145,23 @@ class UserRoleModel {
             'learner' => 'Learner',
             'guest' => 'Guest'
         ];
+    }
+
+    /**
+     * Get system role for user role
+     */
+    public function getSystemRoleForUserRole($userRole) {
+        // Reverse mapping from display name to system role
+        $roleMapping = [
+            'Super Admin' => 'super_admin',
+            'Admin' => 'admin',
+            'Manager' => 'manager',
+            'Instructor' => 'instructor',
+            'Learner' => 'learner',
+            'User' => 'user',
+            'Guest' => 'guest'
+        ];
+        return $roleMapping[$userRole] ?? 'user'; // Default to 'user' if not found
     }
 
     /**

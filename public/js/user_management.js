@@ -127,9 +127,32 @@ function loadUsers(page = 1) {
     usersTableBody.innerHTML = '';
 
     // Determine if we are in client management mode
+    let clientId = null;
+    
+    // First try to get from URL search parameters (for backward compatibility)
     const urlParams = new URLSearchParams(window.location.search);
-    const clientId = urlParams.get('client_id');
-    let ajaxUrl = getProjectUrl('users/ajax/search');
+    clientId = urlParams.get('client_id');
+    
+    // If not found in search params, try to extract from URL path /clients/{id}/users
+    if (!clientId) {
+        const pathParts = window.location.pathname.split('/');
+        const clientsIndex = pathParts.indexOf('clients');
+        if (clientsIndex !== -1 && clientsIndex + 1 < pathParts.length && pathParts[clientsIndex + 2] === 'users') {
+            clientId = pathParts[clientsIndex + 1];
+            console.log('🔥 External JS: Extracted client_id from URL path:', clientId);
+        }
+    }
+    
+    // Determine the correct AJAX URL based on client context
+    let ajaxUrl;
+    if (clientId && !isNaN(clientId)) {
+        // Use client-specific endpoint for better session handling
+        ajaxUrl = getProjectUrl('clients/' + clientId + '/users/ajax/search');
+        console.log('🔥 External JS: Using client-specific AJAX URL:', ajaxUrl);
+    } else {
+        ajaxUrl = getProjectUrl('users/ajax/search');
+        console.log('🔥 External JS: Using general AJAX URL:', ajaxUrl);
+    }
     
     const params = new URLSearchParams({
         page,
@@ -142,6 +165,7 @@ function loadUsers(page = 1) {
 
     if (clientId && !isNaN(clientId)) {
         params.append('client_id', clientId);
+        console.log('🔥 External JS: Adding client_id to AJAX request:', clientId);
     }
     
     fetch(ajaxUrl, {
