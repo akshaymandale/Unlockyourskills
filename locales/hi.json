@@ -1349,5 +1349,7 @@
         "confirm_remove_assessment": "क्या आप वाकई इस मूल्यांकन को हटाना चाहते हैं?",
         "confirm_remove_feedback": "क्या आप वाकई इस प्रतिक्रिया को हटाना चाहते हैं?",
         "confirm_remove_survey": "क्या आप वाकई इस सर्वेक्षण को हटाना चाहते हैं?"
-    }
+    },
+    "course_applicability": "कोर्स लागूता",
+    "define_course_applicability": "किस उपयोगकर्ता या समूह पर कोर्स लागू होता है, इसे परिभाषित करें"
 }

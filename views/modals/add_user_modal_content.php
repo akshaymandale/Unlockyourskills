@@ -365,13 +365,23 @@ $isSuperAdminForClient = $isFromClientManagement;
                                             class="form-control"
                                             data-required="<?= $field['is_required'] ? '1' : '0'; ?>">
                                         <option value="">Select an option...</option>
-                                        <?php if ($field['field_options']): ?>
-                                            <?php foreach ($field['field_options'] as $option): ?>
-                                                <option value="<?= htmlspecialchars($option); ?>">
-                                                    <?= htmlspecialchars($option); ?>
-                                                </option>
-                                            <?php endforeach; ?>
-                                        <?php endif; ?>
+                                        <?php
+                                        $options = $field['field_options'];
+                                        if (is_string($options)) {
+                                            $options = preg_split('/\r\n|\r|\n/', $options);
+                                        }
+                                        if (is_array($options)):
+                                            foreach ($options as $option):
+                                                $option = trim($option);
+                                                if ($option === '') continue;
+                                        ?>
+                                            <option value="<?= htmlspecialchars($option); ?>">
+                                                <?= htmlspecialchars($option); ?>
+                                            </option>
+                                        <?php
+                                            endforeach;
+                                        endif;
+                                        ?>
                                     </select>
                                     <div class="invalid-feedback"></div>
                                     <?php break;
