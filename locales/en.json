@@ -1579,5 +1579,7 @@
         "confirm_remove_assessment": "Are you sure you want to remove this assessment?",
         "confirm_remove_feedback": "Are you sure you want to remove this feedback?",
         "confirm_remove_survey": "Are you sure you want to remove this survey?"
-    }
+    },
+    "course_applicability": "Course Applicability",
+    "define_course_applicability": "Define which users or groups a course applies to"
 }

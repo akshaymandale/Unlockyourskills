@@ -71,9 +71,9 @@ require_once 'core/UrlHelper.php';
                     </div>
                     
                     <div class="col-md-6">
-                        <div class="card user-box shadow-sm" onclick="location.href='index.php?controller=CourseModuleController'">
-                            <h5><i class="fas fa-book-open"></i> <?= Localization::translate('course_module_creation'); ?></h5>
-                            <p><small class="text-muted"><?= Localization::translate('organize_courses'); ?></small></p>
+                        <div class="card user-box shadow-sm" onclick="location.href='<?= UrlHelper::url('course-applicability') ?>'">
+                            <h5><i class="fas fa-tasks"></i> <?= Localization::translate('course_applicability'); ?></h5>
+                            <p><small class="text-muted"><?= Localization::translate('define_course_applicability'); ?></small></p>
                         </div>
                     </div>
                 </div>
