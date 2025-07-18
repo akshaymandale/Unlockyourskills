@@ -9,6 +9,21 @@ if (!isset($_SESSION['user']['client_id'])) {
 require_once 'core/UrlHelper.php';
 require_once 'core/IdEncryption.php';
 require_once 'config/Localization.php';
+require_once 'models/UserRoleModel.php';
+$userRoleModel = new UserRoleModel();
+$currentUser = $_SESSION['user'] ?? null;
+$canAccessUserManagement = false;
+$canCreateUser = false;
+$canEditUser = false;
+$canDeleteUser = false;
+$canLockUser = false;
+if ($currentUser) {
+    $canAccessUserManagement = $userRoleModel->hasPermission($currentUser['id'], 'user_management', 'access', $currentUser['client_id']);
+    $canCreateUser = $userRoleModel->hasPermission($currentUser['id'], 'user_management', 'create', $currentUser['client_id']);
+    $canEditUser = $userRoleModel->hasPermission($currentUser['id'], 'user_management', 'edit', $currentUser['client_id']);
+    $canDeleteUser = $userRoleModel->hasPermission($currentUser['id'], 'user_management', 'delete', $currentUser['client_id']);
+    $canLockUser = $canEditUser; // Lock/unlock is typically an edit operation
+}
 
 $systemRole = $_SESSION['user']['system_role'] ?? '';
 $canManageAll = in_array($systemRole, ['super_admin', 'admin']);
@@ -109,6 +124,7 @@ if (isset($_GET['client_id'])) {
                                 $addUserTitle = 'User limit reached: ' . $userLimitStatus['current'] . '/' . $userLimitStatus['limit'];
                             }
                             ?>
+                            <?php if ($canCreateUser): ?>
                             <?php if ($addUserDisabled): ?>
                             <button type="button" class="btn theme-btn-primary" title="<?= $addUserTitle; ?>" disabled>
                                 <i class="fas fa-plus me-2"></i><?= $addUserText; ?>
@@ -117,6 +133,7 @@ if (isset($_GET['client_id'])) {
                             <button type="button" class="btn theme-btn-primary" title="<?= $addUserTitle; ?>" data-bs-toggle="modal" data-bs-target="#addUserModal" data-client-id="<?= isset($_GET['client_id']) ? htmlspecialchars($_GET['client_id']) : ''; ?>">
                                 <i class="fas fa-plus me-2"></i><?= $addUserText; ?>
                                 </button>
+                            <?php endif; ?>
                             <?php endif; ?>
                     </div>
                         </div>
@@ -309,6 +326,9 @@ if (isset($_GET['client_id'])) {
 <script>
 // Pass backend data to JavaScript
 const currentUserRole = '<?= $_SESSION['user']['system_role'] ?? 'guest'; ?>';
+const canEditUser = <?= $canEditUser ? 'true' : 'false' ?>;
+const canDeleteUser = <?= $canDeleteUser ? 'true' : 'false' ?>;
+const canLockUser = <?= $canLockUser ? 'true' : 'false' ?>;
 
 document.addEventListener('DOMContentLoaded', function() {
     console.log('🔥 User Management: DOM loaded');
@@ -563,31 +583,49 @@ function createUserRow(user) {
     const disabledClass = isSuperAdmin ? 'disabled' : '';
     const disabledStyle = isSuperAdmin ? 'style="pointer-events: none; opacity: 0.5; cursor: not-allowed;"' : '';
     
+    // Debug log for permissions and user
+    console.log('createUserRow:', {
+        canEditUser,
+        canDeleteUser,
+        canLockUser,
+        isSuperAdmin,
+        user
+    });
     // Only render action buttons if encryptedId is present
     let actionButtons = '';
     if (encryptedId) {
-        actionButtons = `
-            <button type="button"
-                    class="btn theme-btn-primary ${disabledClass} edit-user-btn"
-                    ${disabledStyle}
-                    title="${isSuperAdmin ? 'Edit disabled for Super Admin' : 'Edit User'}"
-                    ${isSuperAdmin ? 'disabled' : `data-user-id="${encryptedId}"`}>
-                <i class="fas fa-edit"></i>
-            </button>
+        if (canEditUser && !isSuperAdmin) {
+            actionButtons += `
+                <button type="button"
+                        class="btn theme-btn-primary ${disabledClass} edit-user-btn"
+                        ${disabledStyle}
+                        title="${isSuperAdmin ? 'Edit disabled for Super Admin' : 'Edit User'}"
+                        ${isSuperAdmin ? 'disabled' : `data-user-id="${encryptedId}"`}>
+                    <i class="fas fa-edit"></i>
+                </button>
+            `;
+        }
 
-            ${(user.locked_status == '1') ?
-                `<a href="#" class="btn theme-btn-warning ${isSuperAdmin ? 'disabled' : 'unlock-user'}" ${isSuperAdmin ? disabledStyle : ''} ${isSuperAdmin ? '' : `data-id="${encryptedId}" data-name="${escapeHtml(user.full_name)}"`} title="${isSuperAdmin ? 'Unlock disabled for Super Admin' : 'Unlock User'}">
-                    <i class="fas fa-lock-open"></i>
-                </a>` :
-                `<a href="#" class="btn theme-btn-danger ${isSuperAdmin ? 'disabled' : 'lock-user'}" ${isSuperAdmin ? disabledStyle : ''} ${isSuperAdmin ? '' : `data-id="${encryptedId}" data-name="${escapeHtml(user.full_name)}"`} title="${isSuperAdmin ? 'Lock disabled for Super Admin' : 'Lock User'}">
-                    <i class="fas fa-lock"></i>
-                </a>`
-            }
+        if (canLockUser && !isSuperAdmin) {
+            actionButtons += `
+                ${(user.locked_status == '1') ?
+                    `<a href="#" class="btn theme-btn-warning ${isSuperAdmin ? 'disabled' : 'unlock-user'}" ${isSuperAdmin ? disabledStyle : ''} ${isSuperAdmin ? '' : `data-id="${encryptedId}" data-name="${escapeHtml(user.full_name)}"`} title="${isSuperAdmin ? 'Unlock disabled for Super Admin' : 'Unlock User'}">
+                        <i class="fas fa-lock-open"></i>
+                    </a>` :
+                    `<a href="#" class="btn theme-btn-danger ${isSuperAdmin ? 'disabled' : 'lock-user'}" ${isSuperAdmin ? disabledStyle : ''} ${isSuperAdmin ? '' : `data-id="${encryptedId}" data-name="${escapeHtml(user.full_name)}"`} title="${isSuperAdmin ? 'Lock disabled for Super Admin' : 'Lock User'}">
+                        <i class="fas fa-lock"></i>
+                    </a>`
+                }
+            `;
+        }
 
-            <a href="#" class="btn theme-btn-danger ${isSuperAdmin ? 'disabled' : 'delete-user'}" ${isSuperAdmin ? disabledStyle : ''} ${isSuperAdmin ? '' : `data-id="${encryptedId}" data-name="${escapeHtml(user.full_name)}"`} title="${isSuperAdmin ? 'Delete disabled for Super Admin' : 'Delete User'}">
-                <i class="fas fa-trash-alt"></i>
-            </a>
-        `;
+        if (canDeleteUser && !isSuperAdmin) {
+            actionButtons += `
+                <a href="#" class="btn theme-btn-danger ${isSuperAdmin ? 'disabled' : 'delete-user'}" ${isSuperAdmin ? disabledStyle : ''} ${isSuperAdmin ? '' : `data-id="${encryptedId}" data-name="${escapeHtml(user.full_name)}"`} title="${isSuperAdmin ? 'Delete disabled for Super Admin' : 'Delete User'}">
+                    <i class="fas fa-trash-alt"></i>
+                </a>
+            `;
+        }
     } else {
         actionButtons = `<span class="text-danger small">Missing ID</span>`;
     }

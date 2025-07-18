@@ -196,7 +196,7 @@ if (!isset($debug_roles)) {
                                                            data-role="<?= $role['id'] ?>" 
                                                            data-module="<?= $moduleKey ?>" 
                                                            data-permission="access"
-                                                           <?= (!empty($permMatrix[$role['id']][$moduleKey]['access'])) ? 'checked' : '' ?>>
+                                                           <?= (!isset($permMatrix[$role['id']][$moduleKey]['access']) || $permMatrix[$role['id']][$moduleKey]['access']) ? 'checked' : '' ?>>
                                                     <label class="form-check-label" for="access_<?= $role['id'] ?>_<?= $moduleKey ?>">
                                                         <small>Access</small>
                                                     </label>
@@ -207,7 +207,7 @@ if (!isset($debug_roles)) {
                                                            data-role="<?= $role['id'] ?>" 
                                                            data-module="<?= $moduleKey ?>" 
                                                            data-permission="create"
-                                                           <?= (!empty($permMatrix[$role['id']][$moduleKey]['create'])) ? 'checked' : '' ?>>
+                                                           <?= (!isset($permMatrix[$role['id']][$moduleKey]['create']) || $permMatrix[$role['id']][$moduleKey]['create']) ? 'checked' : '' ?>>
                                                     <label class="form-check-label" for="create_<?= $role['id'] ?>_<?= $moduleKey ?>">
                                                         <small>Create</small>
                                                     </label>
@@ -218,7 +218,7 @@ if (!isset($debug_roles)) {
                                                            data-role="<?= $role['id'] ?>" 
                                                            data-module="<?= $moduleKey ?>" 
                                                            data-permission="edit"
-                                                           <?= (!empty($permMatrix[$role['id']][$moduleKey]['edit'])) ? 'checked' : '' ?>>
+                                                           <?= (!isset($permMatrix[$role['id']][$moduleKey]['edit']) || $permMatrix[$role['id']][$moduleKey]['edit']) ? 'checked' : '' ?>>
                                                     <label class="form-check-label" for="edit_<?= $role['id'] ?>_<?= $moduleKey ?>">
                                                         <small>Edit</small>
                                                     </label>
@@ -229,7 +229,7 @@ if (!isset($debug_roles)) {
                                                            data-role="<?= $role['id'] ?>" 
                                                            data-module="<?= $moduleKey ?>" 
                                                            data-permission="delete"
-                                                           <?= (!empty($permMatrix[$role['id']][$moduleKey]['delete'])) ? 'checked' : '' ?>>
+                                                           <?= (!isset($permMatrix[$role['id']][$moduleKey]['delete']) || $permMatrix[$role['id']][$moduleKey]['delete']) ? 'checked' : '' ?>>
                                                     <label class="form-check-label" for="delete_<?= $role['id'] ?>_<?= $moduleKey ?>">
                                                         <small>Delete</small>
                                                     </label>
