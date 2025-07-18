@@ -35,20 +35,40 @@ class CourseApplicabilityModel {
                 ':field_value' => $data['custom_field_value']
             ]);
         } elseif ($type === 'user') {
+            // Remove all existing user applicability rules for this course
+            $del = $this->conn->prepare("DELETE FROM course_applicability WHERE course_id = :course_id AND applicability_type = 'user'");
+            $del->execute([':course_id' => $courseId]);
+            // Ensure user_ids is an array of integers
+            if (isset($data['user_ids'])) {
+                if (!is_array($data['user_ids'])) {
+                    $data['user_ids'] = array_filter(array_map('trim', explode(',', $data['user_ids'])));
+                } else {
+                    // Flatten any comma-containing values
+                    $flat = [];
+                    foreach ($data['user_ids'] as $v) {
+                        foreach (explode(',', $v) as $id) {
+                            $id = trim($id);
+                            if ($id !== '') $flat[] = $id;
+                        }
+                    }
+                    $data['user_ids'] = $flat;
+                }
+            }
+            error_log('assignApplicability: user_ids after normalization = ' . print_r($data['user_ids'], true));
             $sql = "INSERT INTO course_applicability (course_id, applicability_type, user_id) VALUES (:course_id, 'user', :user_id)";
             $stmt = $this->conn->prepare($sql);
             $success = true;
-            foreach ($data['user_ids'] as $userId) {
-                // Check for duplicate for each user
-                $check = $this->conn->prepare("SELECT COUNT(*) FROM course_applicability WHERE course_id = :course_id AND applicability_type = 'user' AND user_id = :user_id");
-                $check->execute([':course_id' => $courseId, ':user_id' => $userId]);
-                if ($check->fetchColumn() > 0) {
-                    $success = false;
-                    continue;
+            try {
+                foreach ($data['user_ids'] as $userId) {
+                    error_log('assignApplicability: inserting user_id = ' . $userId);
+                    if (!is_numeric($userId) || empty($userId)) continue;
+                    $success = $success && $stmt->execute([':course_id' => $courseId, ':user_id' => (int)$userId]);
                 }
-                $success = $success && $stmt->execute([':course_id' => $courseId, ':user_id' => $userId]);
+            } catch (PDOException $e) {
+                error_log('assignApplicability: PDOException: ' . $e->getMessage());
+                $success = false;
             }
-            return $success ? true : 'duplicate';
+            return $success;
         }
         return false;
     }

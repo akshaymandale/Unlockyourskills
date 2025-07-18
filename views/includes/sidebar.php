@@ -23,8 +23,8 @@ require_once 'core/UrlHelper.php';
             </a>
         </li>
         <?php endif; ?>
-        <li class="list-group-item">
-            <a href="#">
+        <li class="list-group-item<?= strpos($_SERVER['REQUEST_URI'], 'my-courses') !== false ? ' active' : '' ?>">
+            <a href="<?= UrlHelper::url('my-courses') ?>">
                 <i class="fas fa-book"></i> <span><?= Localization::translate('my_courses'); ?></span>
             </a>
         </li>
