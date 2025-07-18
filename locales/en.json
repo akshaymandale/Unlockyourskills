@@ -1581,5 +1581,16 @@
         "confirm_remove_survey": "Are you sure you want to remove this survey?"
     },
     "course_applicability": "Course Applicability",
-    "define_course_applicability": "Define which users or groups a course applies to"
+    "define_course_applicability": "Define which users or groups a course applies to",
+    "select_course": "Select Course",
+    "applicability_type": "Applicability Type",
+    "applicable_to_all_users": "Applicable to All Users",
+    "applicability_by_custom_field": "Applicability by Custom Field",
+    "applicability_specific_users": "Applicability to Specific Users",
+    "select_custom_field": "Select Custom Field",
+    "select_custom_field_value": "Select Custom Field Value",
+    "select_users": "Select Users",
+    "hold_ctrl_to_select_multiple": "Hold Ctrl (Cmd on Mac) to select multiple users",
+    "assign_applicability": "Assign Applicability",
+    "current_applicability_rules": "Current Applicability Rules"
 }

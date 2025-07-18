@@ -1268,8 +1268,63 @@ function bindPostRequisiteButtons() {
 // Global functions for external access
 window.addModuleContent = function(moduleId) {
     console.log('[DEBUG] addModuleContent() called for module:', moduleId);
+    // Determine allowed types for the selected course type from the dropdown
+    const courseType = document.getElementById('course_type')?.value;
+    let allowedTypes = [];
+    switch (courseType) {
+        case 'e-learning':
+            allowedTypes = ['scorm', 'non_scorm', 'document', 'external', 'interactive', 'audio', 'video', 'image'];
+            break;
+        case 'blended':
+            allowedTypes = ['assignment', 'document', 'video', 'audio', 'interactive', 'scorm', 'non_scorm', 'assessment', 'image', 'external'];
+            break;
+        case 'classroom':
+            allowedTypes = ['document', 'assignment', 'image', 'external'];
+            break;
+        case 'assessment':
+            allowedTypes = ['assessment'];
+            break;
+        default:
+            console.log('[DEBUG] No course type selected.');
+            showToast('Please select a course type first.', 'error');
+            return;
+    }
+    console.log('[DEBUG] Selected course type:', courseType);
+    console.log('[DEBUG] Allowed VLR types for this course type:', allowedTypes);
+    console.log('[DEBUG] window.vlrContent:', window.vlrContent);
+    // Check if any VLR content is available for the identified allowed types
+    let hasContentForCourseType = false;
+    if (window.vlrContent && allowedTypes.length > 0) {
+        if (Array.isArray(window.vlrContent)) {
+            // Array form: check if any item matches allowed types
+            hasContentForCourseType = window.vlrContent.some(item => {
+                const match = item && allowedTypes.includes(item.type);
+                console.log(`[DEBUG] Array check: item type '${item?.type}', match:`, match);
+                return match;
+            });
+        } else if (typeof window.vlrContent === 'object') {
+            // Object form: check if any allowed type has a non-empty array
+            hasContentForCourseType = allowedTypes.some(type => {
+                const arr = window.vlrContent[type];
+                console.log(`[DEBUG] Object check: type '${type}':`, arr);
+                return arr && Array.isArray(arr) && arr.length > 0;
+            });
+        }
+    }
+    console.log('[DEBUG] hasContentForCourseType:', hasContentForCourseType);
+    // If no content is available for the course type, show an error and stop
+    if (!hasContentForCourseType) {
+        const msg = 'No VLR content available for the selected course type. Please add content first.';
+        console.log('[DEBUG] Showing error toast:', msg);
+        showErrorToast(msg);
+        return;
+    }
+    // If content is available, proceed to show the modal
     if (window.showVLRModal) {
         window.showVLRModal('module_content', moduleId);
+    } else {
+        console.error('showVLRModal function is not defined.');
+        showErrorToast('An unexpected error occurred.');
     }
 };
 
@@ -1854,3 +1909,14 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 }); 
+
+// Helper to show error toast in a robust way
+function showErrorToast(msg) {
+    if (window.showToast && typeof window.showToast.error === 'function') {
+        window.showToast.error(msg);
+    } else if (typeof window.showSimpleToast === 'function') {
+        window.showSimpleToast(msg, 'error');
+    } else {
+        alert(msg);
+    }
+}

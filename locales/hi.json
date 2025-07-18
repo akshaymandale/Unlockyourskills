@@ -1351,5 +1351,16 @@
         "confirm_remove_survey": "क्या आप वाकई इस सर्वेक्षण को हटाना चाहते हैं?"
     },
     "course_applicability": "कोर्स लागूता",
-    "define_course_applicability": "किस उपयोगकर्ता या समूह पर कोर्स लागू होता है, इसे परिभाषित करें"
+    "define_course_applicability": "किस उपयोगकर्ता या समूह पर कोर्स लागू होता है, इसे परिभाषित करें",
+    "select_course": "कोर्स चुनें",
+    "applicability_type": "लागूता प्रकार",
+    "applicable_to_all_users": "सभी उपयोगकर्ताओं पर लागू",
+    "applicability_by_custom_field": "कस्टम फ़ील्ड के अनुसार लागूता",
+    "applicability_specific_users": "विशिष्ट उपयोगकर्ताओं पर लागू",
+    "select_custom_field": "कस्टम फ़ील्ड चुनें",
+    "select_custom_field_value": "कस्टम फ़ील्ड मान चुनें",
+    "select_users": "उपयोगकर्ता चुनें",
+    "hold_ctrl_to_select_multiple": "एक से अधिक उपयोगकर्ता चुनने के लिए Ctrl (Mac पर Cmd) दबाएँ",
+    "assign_applicability": "लागूता असाइन करें",
+    "current_applicability_rules": "वर्तमान लागूता नियम"
 }

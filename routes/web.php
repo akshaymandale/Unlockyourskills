@@ -502,3 +502,10 @@ Router::prefix('api')->middleware(['Auth'])->group(function() {
 
 // Note: Fallback routes removed to prevent regex issues
 Router::post('/users/modal/submit-add', 'UserManagementController@submitAddUserModal');
+
+// Course Applicability routes
+Router::get('/course-applicability', 'CourseApplicabilityController@index');
+Router::get('/course-applicability/getApplicability', 'CourseApplicabilityController@getApplicability');
+Router::post('/course-applicability/assign', 'CourseApplicabilityController@assign');
+Router::post('/course-applicability/remove', 'CourseApplicabilityController@remove');
+Router::get('/course-applicability/getUsersByCustomField', 'CourseApplicabilityController@getUsersByCustomField');
