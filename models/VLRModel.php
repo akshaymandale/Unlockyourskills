@@ -630,10 +630,17 @@ class VLRModel
 
     // Assessment get data for display
 
-    public function getAllAssessments()
+    public function getAllAssessments($clientId = null)
     {
-        $stmt = $this->conn->prepare("SELECT * FROM assessment_package WHERE is_deleted = 0 ORDER BY created_at DESC");
-        $stmt->execute();
+        $sql = "SELECT * FROM assessment_package WHERE is_deleted = 0";
+        $params = [];
+        if ($clientId !== null) {
+            $sql .= " AND client_id = ?";
+            $params[] = $clientId;
+        }
+        $sql .= " ORDER BY created_at DESC";
+        $stmt = $this->conn->prepare($sql);
+        $stmt->execute($params);
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
 

@@ -27,43 +27,44 @@ try {
     exit;
 }
 
-// Check request method
-if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
-    echo json_encode(['error' => 'Invalid request method']);
+// Support both GET and POST for field_id
+$fieldId = $_GET['field_id'] ?? $_POST['field_id'] ?? null;
+if (!$fieldId) {
+    echo json_encode(['success' => false, 'message' => 'Field ID required']);
     exit;
 }
 
-// Check authentication
-$currentUser = $_SESSION['user'] ?? null;
-if (!$currentUser || !in_array($currentUser['system_role'], ['admin', 'super_admin'])) {
-    echo json_encode(['error' => 'Access denied']);
-    exit;
-}
+$customFieldModel = new CustomFieldModel();
+$field = $customFieldModel->getCustomFieldById($fieldId);
 
-// Get field label from POST data
-$fieldLabel = $_POST['field_label'] ?? '';
-$excludeId = $_POST['exclude_id'] ?? null;
-
-if (empty($fieldLabel)) {
-    echo json_encode(['exists' => false]);
-    exit;
-}
-
-try {
-    // Get client ID for filtering
-    $clientId = null;
-    if ($currentUser['system_role'] === 'admin') {
-        $clientId = $currentUser['client_id'];
+if ($field && !empty($field['field_options'])) {
+    $options = $field['field_options'];
+    // If options is a string (e.g., 'hr\r\ntechno'), split it into an array
+    if (is_string($options)) {
+        $options = preg_split('/\r\n|\r|\n/', $options);
+        $options = array_filter(array_map('trim', $options)); // Remove empty/whitespace
     }
-
-    // Check if field label exists
-    $customFieldModel = new CustomFieldModel();
-    $exists = $customFieldModel->checkFieldLabelExists($fieldLabel, $clientId, $excludeId);
-
-    echo json_encode(['exists' => $exists]);
-    
-} catch (Exception $e) {
-    error_log("API check-label error: " . $e->getMessage());
-    echo json_encode(['error' => 'Internal server error']);
+    // Now filter to only those options that are actually used by users
+    $db = new Database();
+    $conn = $db->connect();
+    $usedOptions = [];
+    $stmt = $conn->prepare("SELECT DISTINCT field_value FROM custom_field_values WHERE custom_field_id = :field_id AND is_deleted = 0 AND field_value IS NOT NULL AND field_value != ''");
+    $stmt->execute([':field_id' => $fieldId]);
+    $rows = $stmt->fetchAll(PDO::FETCH_COLUMN);
+    // For checkboxes, values may be comma-separated, so split them
+    foreach ($rows as $row) {
+        foreach (explode(',', $row) as $val) {
+            $val = trim($val);
+            if ($val !== '') {
+                $usedOptions[$val] = true;
+            }
+        }
+    }
+    $filteredOptions = array_values(array_filter($options, function($opt) use ($usedOptions) {
+        return isset($usedOptions[$opt]);
+    }));
+    echo json_encode(['success' => true, 'options' => $filteredOptions]);
+} else {
+    echo json_encode(['success' => true, 'options' => []]);
 }
 ?>
