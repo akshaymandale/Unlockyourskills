@@ -41,36 +41,16 @@ class UserManagementController extends BaseController {
             unset($_SESSION['client_management_mode']);
         }
 
-        // Determine user scope based on role
-        if ($currentUser && $currentUser['system_role'] === 'super_admin') {
-            // Super admin can see users from their own client or filter by specific client
-            if ($clientId) {
-                // When coming from client management, show only Admin users for that client
-                $users = $this->userModel->getAdminUsersByClient($clientId, $limit, $offset);
-                $totalUsers = count($this->userModel->getAdminUsersByClient($clientId, 999999, 0));
-                $client = $this->clientModel->getClientById($clientId);
-            } else {
-                // Super admin viewing their own client's users (not all users)
-                $currentUserClientId = $currentUser['client_id'];
-                $users = $this->userModel->getUsersByClient($currentUserClientId, $limit, $offset);
-                $totalUsers = count($this->userModel->getUsersByClient($currentUserClientId, 999999, 0));
-                $client = $this->clientModel->getClientById($currentUserClientId);
-            }
-            $clients = $this->clientModel->getAllClients(999999, 0);
-        } elseif ($currentUser && $currentUser['system_role'] === 'admin') {
-            // Client admin can only see users from their client
+        // Allow all user roles to access user management
+        if ($currentUser) {
             $clientId = $currentUser['client_id'];
             $users = $this->userModel->getUsersByClient($clientId, $limit, $offset);
             $totalUsers = count($this->userModel->getUsersByClient($clientId, 999999, 0));
             $client = $this->clientModel->getClientById($clientId);
-            $clients = [$client]; // Only their client
+            $clients = [$client];
         } else {
-            // For debugging: show what we have in session
-            error_log("UserManagementController access denied. Session data: " . print_r($_SESSION, true));
-            error_log("Current user: " . print_r($currentUser, true));
-
-            // Regular users shouldn't access user management
-            $this->toastError('Access denied. Please check your login status and permissions.', 'index.php');
+            // Not logged in
+            $this->toastError('Access denied. Please check your login status.', 'index.php');
             return;
         }
 
@@ -92,19 +72,8 @@ class UserManagementController extends BaseController {
 
         // Get custom field creation setting for current client
         $customFieldCreationEnabled = false;
-        if ($currentUser && $currentUser['system_role'] === 'super_admin') {
-            // For super admin, check if filtering by specific client
-            if ($clientId && $client) {
-                $customFieldCreationEnabled = $client['custom_field_creation'] == 1;
-            } else {
-                // Super admin viewing all users - enable custom fields by default
-                $customFieldCreationEnabled = true;
-            }
-        } elseif ($currentUser && $currentUser['system_role'] === 'admin') {
-            // For client admin, check their client's setting
-            if ($client) {
-                $customFieldCreationEnabled = $client['custom_field_creation'] == 1;
-            }
+        if ($client) {
+            $customFieldCreationEnabled = $client['custom_field_creation'] == 1;
         }
 
         require 'views/user_management.php';

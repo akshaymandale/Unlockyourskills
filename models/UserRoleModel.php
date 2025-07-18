@@ -241,7 +241,7 @@ class UserRoleModel {
     /**
      * Check if user has permission for a module (client-specific)
      */
-    public function hasPermission($userId, $moduleName, $clientId, $permission = 'access') {
+    public function hasPermission($userId, $moduleName, $permission, $clientId) {
         try {
             $sql = "SELECT rp.can_access, rp.can_create, rp.can_edit, rp.can_delete 
                     FROM role_permissions rp 
@@ -252,8 +252,9 @@ class UserRoleModel {
             $stmt->execute([$userId, $moduleName, $clientId]);
             $result = $stmt->fetch(PDO::FETCH_ASSOC);
 
+            // If no row exists, treat as permission granted (default checked)
             if (!$result) {
-                return false;
+                return true;
             }
 
             switch ($permission) {
@@ -266,11 +267,11 @@ class UserRoleModel {
                 case 'delete':
                     return (bool)$result['can_delete'];
                 default:
-                    return false;
+                    return true; // Default to granted for unknown permission type
             }
         } catch (PDOException $e) {
             error_log("Error in hasPermission: " . $e->getMessage());
-            return false;
+            return true; // Fail open: grant permission if error
         }
     }
 

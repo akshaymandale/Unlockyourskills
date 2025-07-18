@@ -207,15 +207,20 @@ function updateUsersTable(users) {
         const disabledClass = isSuperAdmin ? 'disabled' : '';
         const disabledStyle = isSuperAdmin ? 'style="pointer-events: none; opacity: 0.5; cursor: not-allowed;"' : '';
         
-        // Generate lock/unlock button based on current status
-        const lockUnlockButton = (user.locked_status == '1') ?
-            `<button class="btn btn-sm btn-outline-warning unlock-user ${disabledClass}" ${disabledStyle} data-id="${user.encrypted_id}" data-name="${escapeHtml(user.full_name || '')}" data-email="${escapeHtml(user.email || '')}" title="${isSuperAdmin ? 'Unlock disabled for Super Admin' : 'Unlock User'}">
-                <i class="fas fa-lock-open"></i>
-            </button>` :
-            `<button class="btn btn-sm btn-outline-danger lock-user ${disabledClass}" ${disabledStyle} data-id="${user.encrypted_id}" data-name="${escapeHtml(user.full_name || '')}" data-email="${escapeHtml(user.email || '')}" title="${isSuperAdmin ? 'Lock disabled for Super Admin' : 'Lock User'}">
-                <i class="fas fa-lock"></i>
-            </button>`;
-        
+        // Permission-aware action buttons
+        let actionButtons = '';
+        if (canEditUser && !isSuperAdmin) {
+            actionButtons += `<button class="btn btn-sm btn-outline-primary edit-user-btn" data-user-id="${user.encrypted_id}" title="Edit User"><i class="fas fa-edit"></i></button>`;
+        }
+        if (canLockUser && !isSuperAdmin) {
+            actionButtons += (user.locked_status == '1')
+                ? `<button class="btn btn-sm btn-outline-warning unlock-user" data-id="${user.encrypted_id}" data-name="${escapeHtml(user.full_name || '')}" title="Unlock User"><i class="fas fa-lock-open"></i></button>`
+                : `<button class="btn btn-sm btn-outline-danger lock-user" data-id="${user.encrypted_id}" data-name="${escapeHtml(user.full_name || '')}" title="Lock User"><i class="fas fa-lock"></i></button>`;
+        }
+        if (canDeleteUser && !isSuperAdmin) {
+            actionButtons += `<button class="btn btn-sm btn-outline-danger delete-user" data-id="${user.encrypted_id}" data-name="${escapeHtml(user.full_name || '')}" title="Delete User"><i class="fas fa-trash"></i></button>`;
+        }
+
         const row = `
             <tr>
                 <td>${escapeHtml(user.profile_id || '')}</td>
@@ -225,13 +230,7 @@ function updateUsersTable(users) {
             <td>${userStatusBadge}</td>
             <td>${lockedStatusBadge}</td>
             <td>
-                    <button class="btn btn-sm btn-outline-primary edit-user-btn" data-user-id="${user.encrypted_id}" title="Edit User">
-                    <i class="fas fa-edit"></i>
-                </button>
-                    ${lockUnlockButton}
-                    <button class="btn btn-sm btn-outline-danger delete-user" data-id="${user.encrypted_id}" data-name="${escapeHtml(user.full_name || '')}" data-email="${escapeHtml(user.email || '')}" title="Delete User">
-                        <i class="fas fa-trash"></i>
-                    </button>
+                ${actionButtons}
             </td>
             </tr>
         `;

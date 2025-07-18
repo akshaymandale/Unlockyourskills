@@ -1,6 +1,13 @@
 <?php
 // views/manage_portal.php
 require_once 'core/UrlHelper.php';
+require_once 'models/UserRoleModel.php';
+$userRoleModel = new UserRoleModel();
+$currentUser = $_SESSION['user'] ?? null;
+$canAccessUserManagement = false;
+if ($currentUser) {
+    $canAccessUserManagement = $userRoleModel->hasPermission($currentUser['id'], 'user_management', 'access', $currentUser['client_id']);
+}
 ?>
 
 <?php include 'includes/header.php'; ?>
@@ -42,12 +49,14 @@ require_once 'core/UrlHelper.php';
                 <h3 class="text-purple"><?= Localization::translate('user_details'); ?></h3>
                 
                 <div class="row">
+                    <?php if ($canAccessUserManagement): ?>
                     <div class="col-md-6">
                         <div class="card user-box shadow-sm" onclick="location.href='<?= UrlHelper::url('users') ?>'">
                             <h5><i class="fas fa-user-cog"></i> <?= Localization::translate('user_management'); ?></h5>
                             <p><small class="text-muted"><?= Localization::translate('create_edit_remove_user'); ?></small></p>
                         </div>
                     </div>
+                    <?php endif; ?>
                     
                     <div class="col-md-6">
                         <div class="card user-box shadow-sm" onclick="location.href='index.php?controller=UserSettingsController'">
