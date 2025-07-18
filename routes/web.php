@@ -509,3 +509,5 @@ Router::get('/course-applicability/getApplicability', 'CourseApplicabilityContro
 Router::post('/course-applicability/assign', 'CourseApplicabilityController@assign');
 Router::post('/course-applicability/remove', 'CourseApplicabilityController@remove');
 Router::get('/course-applicability/getUsersByCustomField', 'CourseApplicabilityController@getUsersByCustomField');
+// Course Applicability AJAX user search
+Router::get('/course-applicability/search-users', 'CourseApplicabilityController@searchUsers');

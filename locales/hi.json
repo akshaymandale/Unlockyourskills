@@ -1362,5 +1362,7 @@
     "select_users": "उपयोगकर्ता चुनें",
     "hold_ctrl_to_select_multiple": "एक से अधिक उपयोगकर्ता चुनने के लिए Ctrl (Mac पर Cmd) दबाएँ",
     "assign_applicability": "लागूता असाइन करें",
-    "current_applicability_rules": "वर्तमान लागूता नियम"
+    "current_applicability_rules": "वर्तमान लागूता नियम",
+    "search_course": "कोर्स खोजें",
+    "search_users": "यूज़र खोजें"
 }

@@ -1592,5 +1592,7 @@
     "select_users": "Select Users",
     "hold_ctrl_to_select_multiple": "Hold Ctrl (Cmd on Mac) to select multiple users",
     "assign_applicability": "Assign Applicability",
-    "current_applicability_rules": "Current Applicability Rules"
+    "current_applicability_rules": "Current Applicability Rules",
+    "search_course": "Search Course",
+    "search_users": "Search Users"
 }

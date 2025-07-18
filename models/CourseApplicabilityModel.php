@@ -12,10 +12,21 @@ class CourseApplicabilityModel {
     // Assign applicability (all, by custom field, or by user)
     public function assignApplicability($courseId, $type, $data) {
         if ($type === 'all') {
+            // Check for duplicate
+            $check = $this->conn->prepare("SELECT COUNT(*) FROM course_applicability WHERE course_id = :course_id AND applicability_type = 'all'");
+            $check->execute([':course_id' => $courseId]);
+            if ($check->fetchColumn() > 0) return 'duplicate';
             $sql = "INSERT INTO course_applicability (course_id, applicability_type) VALUES (:course_id, 'all')";
             $stmt = $this->conn->prepare($sql);
             return $stmt->execute([':course_id' => $courseId]);
         } elseif ($type === 'custom_field') {
+            $check = $this->conn->prepare("SELECT COUNT(*) FROM course_applicability WHERE course_id = :course_id AND applicability_type = 'custom_field' AND custom_field_id = :field_id AND custom_field_value = :field_value");
+            $check->execute([
+                ':course_id' => $courseId,
+                ':field_id' => $data['custom_field_id'],
+                ':field_value' => $data['custom_field_value']
+            ]);
+            if ($check->fetchColumn() > 0) return 'duplicate';
             $sql = "INSERT INTO course_applicability (course_id, applicability_type, custom_field_id, custom_field_value) VALUES (:course_id, 'custom_field', :field_id, :field_value)";
             $stmt = $this->conn->prepare($sql);
             return $stmt->execute([
@@ -28,9 +39,16 @@ class CourseApplicabilityModel {
             $stmt = $this->conn->prepare($sql);
             $success = true;
             foreach ($data['user_ids'] as $userId) {
+                // Check for duplicate for each user
+                $check = $this->conn->prepare("SELECT COUNT(*) FROM course_applicability WHERE course_id = :course_id AND applicability_type = 'user' AND user_id = :user_id");
+                $check->execute([':course_id' => $courseId, ':user_id' => $userId]);
+                if ($check->fetchColumn() > 0) {
+                    $success = false;
+                    continue;
+                }
                 $success = $success && $stmt->execute([':course_id' => $courseId, ':user_id' => $userId]);
             }
-            return $success;
+            return $success ? true : 'duplicate';
         }
         return false;
     }

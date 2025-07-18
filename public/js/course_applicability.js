@@ -83,8 +83,9 @@ document.addEventListener('DOMContentLoaded', function() {
                         } else if (rule.applicability_type === 'user') {
                             desc = `User ID: ${rule.user_id}`;
                         }
+                        // Add course name to the grid row
                         return `<div class='d-flex justify-content-between align-items-center border-bottom py-2'>
-                            <span>${desc}</span>
+                            <span><strong>${rule.course_name}</strong> &mdash; ${desc}</span>
                             <button class='btn btn-sm btn-danger remove-applicability' data-id='${rule.id}'>Remove</button>
                         </div>`;
                     }).join('');
@@ -141,4 +142,221 @@ document.addEventListener('DOMContentLoaded', function() {
     // Initial state
     toggleSections();
     loadRules();
+
+    // --- Autocomplete for course selection ---
+    const courseAutocomplete = document.getElementById('courseAutocomplete');
+    let coursesList = [];
+
+    // This array will be rendered server-side for all courses
+    if (window.coursesListData) {
+        coursesList = window.coursesListData;
+    }
+
+    // Create dropdown for autocomplete
+    const autocompleteDropdown = document.createElement('div');
+    autocompleteDropdown.className = 'autocomplete-dropdown list-group position-absolute';
+    autocompleteDropdown.style.zIndex = 1000;
+    autocompleteDropdown.style.display = 'none';
+    autocompleteDropdown.style.background = '#fff';
+    autocompleteDropdown.style.border = '1px solid #ced4da';
+    autocompleteDropdown.style.maxHeight = '220px';
+    autocompleteDropdown.style.overflowY = 'auto';
+    autocompleteDropdown.style.boxShadow = '0 2px 8px rgba(0,0,0,0.08)';
+    autocompleteDropdown.style.width = '100%';
+    autocompleteDropdown.style.left = 0;
+    autocompleteDropdown.style.top = '100%';
+    autocompleteDropdown.style.marginTop = '2px';
+    courseAutocomplete.parentNode.style.position = 'relative';
+    courseAutocomplete.parentNode.appendChild(autocompleteDropdown);
+
+    courseAutocomplete.addEventListener('input', function() {
+        const value = this.value.trim().toLowerCase();
+        autocompleteDropdown.innerHTML = '';
+        if (!value) {
+            autocompleteDropdown.style.display = 'none';
+            document.getElementById('courseSelect').value = '';
+            return;
+        }
+        const matches = coursesList.filter(c => c.name.toLowerCase().includes(value));
+        if (matches.length === 0) {
+            autocompleteDropdown.style.display = 'none';
+            return;
+        }
+        matches.forEach(course => {
+            const item = document.createElement('button');
+            item.type = 'button';
+            item.className = 'list-group-item list-group-item-action';
+            item.textContent = course.name;
+            item.style.textAlign = 'left';
+            item.style.whiteSpace = 'nowrap';
+            item.style.overflow = 'hidden';
+            item.style.textOverflow = 'ellipsis';
+            item.addEventListener('mouseover', function() {
+                item.style.background = '#f0f0f0';
+            });
+            item.addEventListener('mouseout', function() {
+                item.style.background = '#fff';
+            });
+            item.addEventListener('click', function() {
+                courseAutocomplete.value = course.name;
+                document.getElementById('courseSelect').value = course.id;
+                autocompleteDropdown.style.display = 'none';
+                loadRules();
+            });
+            autocompleteDropdown.appendChild(item);
+        });
+        autocompleteDropdown.style.display = 'block';
+    });
+
+    // Hide dropdown on blur
+    courseAutocomplete.addEventListener('blur', function() {
+        setTimeout(() => { autocompleteDropdown.style.display = 'none'; }, 200);
+    });
+
+    // Hide dropdown on form submit
+    form.addEventListener('submit', function() {
+        autocompleteDropdown.style.display = 'none';
+    });
+
+    // --- AJAX Autocomplete and checkbox list for user selection (scalable) ---
+    const userAutocomplete = document.getElementById('userAutocomplete');
+    const userDropdown = document.getElementById('userDropdown');
+    const userCheckboxList = document.getElementById('userCheckboxList');
+    const userSelectHidden = document.getElementById('userSelect');
+    const selectedUsersSummary = document.getElementById('selectedUsersSummary');
+    let selectedUserIds = [];
+    let selectedUsersMap = {};
+    let userSearchTimeout = null;
+    let userSearchPage = 1;
+    let userSearchHasMore = false;
+    let userSearchQuery = '';
+
+    function renderUserCheckboxList(users) {
+        userCheckboxList.innerHTML = '';
+        users.forEach(user => {
+            const wrapper = document.createElement('div');
+            wrapper.className = 'form-check';
+            const checkbox = document.createElement('input');
+            checkbox.type = 'checkbox';
+            checkbox.className = 'form-check-input';
+            checkbox.id = 'user_cb_' + user.id;
+            checkbox.value = user.id;
+            checkbox.checked = selectedUserIds.includes(user.id.toString());
+            checkbox.addEventListener('change', function() {
+                if (this.checked) {
+                    if (!selectedUserIds.includes(user.id.toString())) {
+                        selectedUserIds.push(user.id.toString());
+                        selectedUsersMap[user.id] = user;
+                    }
+                } else {
+                    selectedUserIds = selectedUserIds.filter(id => id !== user.id.toString());
+                    delete selectedUsersMap[user.id];
+                }
+                updateSelectedUsersSummary();
+                userSelectHidden.value = selectedUserIds.join(',');
+            });
+            const label = document.createElement('label');
+            label.className = 'form-check-label';
+            label.htmlFor = checkbox.id;
+            label.textContent = user.name + ' (' + user.email + ')';
+            wrapper.appendChild(checkbox);
+            wrapper.appendChild(label);
+            userCheckboxList.appendChild(wrapper);
+        });
+        // Pagination controls
+        const paginationDiv = document.createElement('div');
+        paginationDiv.className = 'd-flex justify-content-between align-items-center mt-2';
+        if (userSearchPage > 1) {
+            const prevBtn = document.createElement('button');
+            prevBtn.type = 'button';
+            prevBtn.className = 'btn btn-sm btn-outline-secondary';
+            prevBtn.textContent = 'Previous';
+            prevBtn.onclick = function() {
+                userSearchPage--;
+                ajaxSearchUsers(userSearchQuery, userSearchPage);
+            };
+            paginationDiv.appendChild(prevBtn);
+        }
+        if (userSearchHasMore) {
+            const nextBtn = document.createElement('button');
+            nextBtn.type = 'button';
+            nextBtn.className = 'btn btn-sm btn-outline-secondary ms-auto';
+            nextBtn.textContent = 'Next';
+            nextBtn.onclick = function() {
+                userSearchPage++;
+                ajaxSearchUsers(userSearchQuery, userSearchPage);
+            };
+            paginationDiv.appendChild(nextBtn);
+        }
+        if (paginationDiv.children.length > 0) {
+            userCheckboxList.appendChild(paginationDiv);
+        }
+        userSelectHidden.value = selectedUserIds.join(',');
+    }
+
+    function updateSelectedUsersSummary() {
+        selectedUsersSummary.innerHTML = '';
+        if (selectedUserIds.length === 0) {
+            selectedUsersSummary.innerHTML = '<span class="text-muted">No users selected.</span>';
+            return;
+        }
+        selectedUserIds.forEach(id => {
+            const user = selectedUsersMap[id];
+            if (!user) return;
+            const badge = document.createElement('span');
+            badge.className = 'badge bg-primary me-1 mb-1';
+            badge.textContent = user.name + ' (' + user.email + ')';
+            const removeBtn = document.createElement('button');
+            removeBtn.type = 'button';
+            removeBtn.className = 'btn-close btn-close-white ms-2';
+            removeBtn.style.fontSize = '0.7em';
+            removeBtn.style.marginLeft = '6px';
+            removeBtn.addEventListener('click', function() {
+                selectedUserIds = selectedUserIds.filter(uid => uid !== id);
+                delete selectedUsersMap[id];
+                updateSelectedUsersSummary();
+                userSelectHidden.value = selectedUserIds.join(',');
+                // Uncheck in visible list if present
+                const cb = document.getElementById('user_cb_' + id);
+                if (cb) cb.checked = false;
+            });
+            badge.appendChild(removeBtn);
+            selectedUsersSummary.appendChild(badge);
+        });
+    }
+
+    function ajaxSearchUsers(query, page = 1) {
+        userCheckboxList.innerHTML = '<div class="text-muted">Searching...</div>';
+        userSearchQuery = query;
+        userSearchPage = page;
+        fetch(`/Unlockyourskills/course-applicability/search-users?query=${encodeURIComponent(query)}&page=${page}`)
+            .then(res => res.json())
+            .then(data => {
+                userSearchHasMore = !!data.has_more;
+                if (data.success && Array.isArray(data.users)) {
+                    renderUserCheckboxList(data.users);
+                } else {
+                    userCheckboxList.innerHTML = '<div class="text-danger">Error loading users.</div>';
+                }
+            })
+            .catch(() => {
+                userCheckboxList.innerHTML = '<div class="text-danger">Error loading users.</div>';
+            });
+    }
+
+    userAutocomplete.addEventListener('input', function() {
+        const value = this.value.trim();
+        if (userSearchTimeout) clearTimeout(userSearchTimeout);
+        userSearchTimeout = setTimeout(() => {
+            ajaxSearchUsers(value, 1);
+        }, 300);
+    });
+
+    userAutocomplete.addEventListener('focus', function() {
+        ajaxSearchUsers(userAutocomplete.value.trim(), userSearchPage);
+    });
+
+    // Initial render: show empty search (all users, first page)
+    ajaxSearchUsers('', 1);
+    updateSelectedUsersSummary();
 }); 
