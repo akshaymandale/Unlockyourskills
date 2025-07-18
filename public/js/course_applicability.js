@@ -95,11 +95,57 @@ document.addEventListener('DOMContentLoaded', function() {
             });
     }
 
-    courseSelect.addEventListener('change', loadRules);
+    // When course or applicability type changes, reload user checkboxes with pre-checked users
+    function loadApplicableUsersForCourse(courseId) {
+        if (!courseId) return;
+        fetch(`/Unlockyourskills/course-applicability/getApplicableUsers?course_id=${encodeURIComponent(courseId)}`)
+            .then(res => res.json())
+            .then(data => {
+                if (data.success && Array.isArray(data.user_ids)) {
+                    selectedUserIds = data.user_ids.map(String); // Pre-check these users
+                    // Fix: Map full_name to name for summary
+                    if (data.users) {
+                        selectedUsersMap = {};
+                        data.users.forEach(u => {
+                            selectedUsersMap[String(u.id)] = {
+                                ...u,
+                                name: u.name || u.full_name || 'Unknown'
+                            };
+                        });
+                    }
+                    updateSelectedUsersSummary();
+                    ajaxSearchUsers(userAutocomplete.value.trim(), userSearchPage);
+                }
+            });
+    }
+
+    // Listen for course selection and applicability type change
+    courseSelect.addEventListener('change', function() {
+        if (document.querySelector('input[name="applicability_type"]:checked').value === 'user') {
+            loadApplicableUsersForCourse(this.value);
+        }
+    });
+    applicabilityRadios.forEach(radio => {
+        radio.addEventListener('change', function() {
+            if (this.value === 'user') {
+                loadApplicableUsersForCourse(courseSelect.value);
+            }
+        });
+    });
 
     // Assign applicability
     form.addEventListener('submit', function(e) {
         e.preventDefault();
+        // Remove any existing user_ids[] hidden inputs
+        form.querySelectorAll('input[name="user_ids[]"]').forEach(el => el.remove());
+        // Add one hidden input per selected user
+        selectedUserIds.forEach(id => {
+            const input = document.createElement('input');
+            input.type = 'hidden';
+            input.name = 'user_ids[]';
+            input.value = id;
+            form.appendChild(input);
+        });
         const formData = new FormData(form);
         fetch('/Unlockyourskills/course-applicability/assign', {
             method: 'POST',

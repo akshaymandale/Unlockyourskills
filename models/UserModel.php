@@ -903,5 +903,15 @@ class UserModel {
         $stmt->execute();
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
+
+    // Get user details for an array of user IDs
+    public function getUsersByIds($userIds) {
+        if (empty($userIds)) return [];
+        $in = str_repeat('?,', count($userIds) - 1) . '?';
+        $sql = "SELECT id, full_name, email FROM user_profiles WHERE id IN ($in)";
+        $stmt = $this->conn->prepare($sql);
+        $stmt->execute($userIds);
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
 }
 ?>

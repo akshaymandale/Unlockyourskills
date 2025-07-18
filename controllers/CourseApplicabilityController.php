@@ -113,4 +113,27 @@ class CourseApplicabilityController {
         echo json_encode(['success' => true, 'users' => $result, 'has_more' => $hasMore]);
         exit;
     }
+
+    // AJAX: Get users with applicability_type='user' for a course
+    public function getApplicableUsers() {
+        $courseId = $_GET['course_id'] ?? null;
+        if (!$courseId) {
+            echo json_encode(['success' => false, 'message' => 'Course ID required']);
+            exit;
+        }
+        $rules = $this->applicabilityModel->getApplicability($courseId);
+        $userIds = [];
+        foreach ($rules as $rule) {
+            if ($rule['applicability_type'] === 'user' && !empty($rule['user_id'])) {
+                $userIds[] = $rule['user_id'];
+            }
+        }
+        // Optionally, return user details for summary
+        $users = [];
+        if (!empty($userIds)) {
+            $users = $this->userModel->getUsersByIds($userIds);
+        }
+        echo json_encode(['success' => true, 'user_ids' => $userIds, 'users' => $users]);
+        exit;
+    }
 } 
