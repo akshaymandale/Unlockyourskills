@@ -884,5 +884,24 @@ class UserModel {
         
         return $profileId;
     }
+
+    // Search users by client, name/email, paginated
+    public function searchUsersByClient($clientId, $query, $limit, $offset) {
+        $sql = "SELECT id, full_name, email FROM user_profiles WHERE client_id = :client_id AND is_deleted = 0 ";
+        $params = [':client_id' => $clientId];
+        if ($query) {
+            $sql .= " AND (full_name LIKE :q OR email LIKE :q) ";
+            $params[':q'] = '%' . $query . '%';
+        }
+        $sql .= " ORDER BY full_name ASC LIMIT :limit OFFSET :offset";
+        $stmt = $this->conn->prepare($sql);
+        foreach ($params as $k => $v) {
+            $stmt->bindValue($k, $v);
+        }
+        $stmt->bindValue(':limit', (int)$limit, PDO::PARAM_INT);
+        $stmt->bindValue(':offset', (int)$offset, PDO::PARAM_INT);
+        $stmt->execute();
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
 }
 ?>

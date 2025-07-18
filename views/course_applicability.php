@@ -18,14 +18,8 @@ require_once 'includes/sidebar.php';
                         <label for="courseSelect" class="form-label">
                             <?= Localization::translate('select_course'); ?>
                         </label>
-                        <select id="courseSelect" name="course_id" class="form-control">
-                            <option value=""><?= Localization::translate('select_course'); ?></option>
-                            <?php foreach ($courses as $course): ?>
-                                <option value="<?= $course['id']; ?>">
-                                    <?= htmlspecialchars($course['name']); ?>
-                                </option>
-                            <?php endforeach; ?>
-                        </select>
+                        <input type="text" id="courseAutocomplete" class="form-control" placeholder="<?= Localization::translate('search_courses'); ?>">
+                        <input type="hidden" id="courseSelect" name="course_id">
                     </div>
                 </div>
                 <div class="row mb-3">
@@ -83,16 +77,11 @@ require_once 'includes/sidebar.php';
                         <label for="userSelect" class="form-label">
                             <?= Localization::translate('select_users'); ?>
                         </label>
-                        <select id="userSelect" name="user_ids[]" class="form-control" multiple>
-                            <?php foreach ($users as $user): ?>
-                                <option value="<?= $user['id']; ?>">
-                                    <?= htmlspecialchars($user['full_name']); ?> (<?= htmlspecialchars($user['email']); ?>)
-                                </option>
-                            <?php endforeach; ?>
-                        </select>
-                        <small class="text-muted">
-                            <?= Localization::translate('hold_ctrl_to_select_multiple'); ?>
-                        </small>
+                        <input type="text" id="userAutocomplete" class="form-control mb-2" placeholder="<?= Localization::translate('search_users'); ?>">
+                        <div id="userDropdown" class="autocomplete-dropdown list-group position-absolute w-100" style="z-index:1000; display:none;"></div>
+                        <div id="userCheckboxList" class="border rounded p-2" style="max-height:220px; overflow-y:auto;"></div>
+                        <div id="selectedUsersSummary" class="mt-2"></div>
+                        <input type="hidden" id="userSelect" name="user_ids[]">
                     </div>
                 </div>
                 <div class="row mb-3">
@@ -116,5 +105,30 @@ require_once 'includes/sidebar.php';
         </div>
     </div>
 </div>
+<?php
+// Render courses as a JS array for autocomplete
+$jsCourses = array_map(function($c) {
+    return [
+        'id' => $c['id'],
+        'name' => $c['name']
+    ];
+}, $courses);
+?>
+<script>
+window.coursesListData = <?= json_encode($jsCourses); ?>;
+</script>
+<?php
+// Render users as a JS array for autocomplete
+$jsUsers = array_map(function($u) {
+    return [
+        'id' => $u['id'],
+        'name' => $u['full_name'],
+        'email' => $u['email']
+    ];
+}, $users);
+?>
+<script>
+window.usersListData = <?= json_encode($jsUsers); ?>;
+</script>
 <script src="/Unlockyourskills/public/js/course_applicability.js"></script>
 <?php include 'includes/footer.php'; ?> 
