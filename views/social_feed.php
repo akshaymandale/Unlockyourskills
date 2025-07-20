@@ -7,6 +7,19 @@ if (!isset($_SESSION['user']['client_id'])) {
 
 require_once 'core/UrlHelper.php';
 require_once 'config/Localization.php';
+require_once 'models/UserRoleModel.php';
+$userRoleModel = new UserRoleModel();
+$currentUser = $_SESSION['user'] ?? null;
+$canAccessSocialFeed = false;
+$canCreatePost = false;
+$canEditPost = false;
+$canDeletePost = false;
+if ($currentUser) {
+    $canAccessSocialFeed = $userRoleModel->hasPermission($currentUser['id'], 'social_feed', 'access', $currentUser['client_id']);
+    $canCreatePost = $userRoleModel->hasPermission($currentUser['id'], 'social_feed', 'create', $currentUser['client_id']);
+    $canEditPost = $userRoleModel->hasPermission($currentUser['id'], 'social_feed', 'edit', $currentUser['client_id']);
+    $canDeletePost = $userRoleModel->hasPermission($currentUser['id'], 'social_feed', 'delete', $currentUser['client_id']);
+}
 
 $systemRole = $_SESSION['user']['system_role'] ?? '';
 $canCreateGlobal = in_array($systemRole, ['super_admin', 'admin']);
@@ -54,9 +67,11 @@ include 'includes/sidebar.php';
                     <div>
                         <p class="text-muted mb-0">Manage posts, announcements, and community engagement</p>
                     </div>
-                    <button type="button" class="btn theme-btn-primary" data-bs-toggle="modal" data-bs-target="#createPostModal">
+                    <?php if ($canCreatePost): ?>
+                    <button type="button" class="btn theme-btn-primary" data-bs-toggle="modal" data-bs-target="#createPostModal" data-action-permission="social_feed:create">
                         <i class="fas fa-plus me-2"></i>Create Post
                     </button>
+                    <?php endif; ?>
                 </div>
             </div>
         </div>
@@ -204,9 +219,11 @@ include 'includes/sidebar.php';
                 <i class="fas fa-newspaper fa-3x text-muted mb-3"></i>
                 <h5 class="text-muted">No posts found</h5>
                 <p class="text-muted">Try adjusting your search criteria or create a new post.</p>
+                <?php if ($canCreatePost): ?>
                 <button type="button" class="btn theme-btn-primary" data-bs-toggle="modal" data-bs-target="#createPostModal">
                     <i class="fas fa-plus me-2"></i>Create First Post
                 </button>
+                <?php endif; ?>
             </div>
         </div>
     </div>

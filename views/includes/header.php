@@ -111,6 +111,11 @@ require_once __DIR__ . '/../../config/Localization.php';
 </head>
 <body>
 
+<?php
+require_once __DIR__ . '/../../includes/permission_helper.php';
+outputFrontendPermissions();
+?>
+
 <script>
 window.currentUserId = <?= json_encode($_SESSION['id'] ?? null) ?>;
 </script>

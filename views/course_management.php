@@ -30,9 +30,19 @@ if (!isset($_SESSION['user']['client_id'])) {
 require_once 'core/UrlHelper.php';
 require_once 'core/IdEncryption.php';
 require_once 'config/Localization.php';
-
-$systemRole = $_SESSION['user']['system_role'] ?? '';
-$canManageAll = in_array($systemRole, ['super_admin', 'admin']);
+require_once 'models/UserRoleModel.php';
+$userRoleModel = new UserRoleModel();
+$currentUser = $_SESSION['user'] ?? null;
+$canAccessCourseManagement = false;
+$canCreateCourse = false;
+$canEditCourse = false;
+$canDeleteCourse = false;
+if ($currentUser) {
+    $canAccessCourseManagement = $userRoleModel->hasPermission($currentUser['id'], 'course_management', 'access', $currentUser['client_id']);
+    $canCreateCourse = $userRoleModel->hasPermission($currentUser['id'], 'course_management', 'create', $currentUser['client_id']);
+    $canEditCourse = $userRoleModel->hasPermission($currentUser['id'], 'course_management', 'edit', $currentUser['client_id']);
+    $canDeleteCourse = $userRoleModel->hasPermission($currentUser['id'], 'course_management', 'delete', $currentUser['client_id']);
+}
 
 // Set default client name from session (current user's client)
 $clientName = $_SESSION['user']['client_name'] ?? 'DEFAULT';
@@ -111,9 +121,23 @@ if (isset($_GET['client_id'])) {
                             $addCourseUrl .= '?client_id=' . urlencode($_GET['client_id']);
                         }
                         ?>
-                        <button type="button" class="btn theme-btn-primary" title="Add New Course" id="addCourseBtn">
+                        <?php
+                        $addCourseDisabled = '';
+                        $addCourseTitle = 'Add a new course';
+                        if (!$canCreateCourse) {
+                            $addCourseDisabled = 'disabled';
+                            $addCourseTitle = 'You do not have permission to add courses';
+                        }
+                        ?>
+                        <?php if ($canCreateCourse): ?>
+                        <button type="button" class="btn theme-btn-primary"
+                                title="<?= $addCourseTitle ?>"
+                                id="addCourseBtn"
+                                data-action-permission="course_management:create"
+                                <?= $addCourseDisabled ?>>
                             <i class="fas fa-plus me-2"></i>Add Course
                         </button>
+                        <?php endif; ?>
                     </div>
                 </div>
             </div>
@@ -647,15 +671,19 @@ function displayCourses(courses) {
             <td>${formatDate(course.created_at)}</td>
             <td>
                 <div class="btn-group" role="group">
-                    <button type="button" class="btn btn-sm btn-outline-primary" onclick="editCourse(${course.id})" title="Edit Course">
+                    <?php if ($canEditCourse): ?>
+                    <button type="button" class="btn btn-sm btn-outline-primary" onclick="editCourse(${course.id})" title="Edit Course" data-action-permission="course_management:edit">
                         <i class="fas fa-edit"></i>
                     </button>
+                    <?php endif; ?>
                     <button type="button" class="btn btn-sm btn-outline-info" onclick="previewCourse(${course.id})" title="Preview Course">
                         <i class="fas fa-eye"></i>
                     </button>
-                    <button type="button" class="btn btn-sm btn-outline-danger" onclick="deleteCourse(${course.id}, '${course.name}')" title="Delete Course">
+                    <?php if ($canDeleteCourse): ?>
+                    <button type="button" class="btn btn-sm btn-outline-danger" onclick="deleteCourse(${course.id}, '${course.name}')" title="Delete Course" data-action-permission="course_management:delete">
                         <i class="fas fa-trash"></i>
                     </button>
+                    <?php endif; ?>
                 </div>
             </td>
         `;
@@ -933,5 +961,7 @@ function attachAddCourseFormHandler() {
 <?php include 'views/includes/footer.php'; ?>
 <script src="/Unlockyourskills/public/js/course_creation_validation.js"></script>
 <script src="/Unlockyourskills/public/js/course_creation.js"></script>
+<script src="public/js/permission_manager.js"></script>
+<script>window.updatePermissions && window.updatePermissions();</script>
 </body>
 </html> 

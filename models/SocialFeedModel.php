@@ -93,14 +93,6 @@ class SocialFeedModel {
                     up.email as author_email,
                     up.profile_picture as author_avatar,
                     up.system_role as author_role,
-                    CASE 
-                        WHEN p.user_id = ? THEN 1 
-                        ELSE 0 
-                    END as can_edit,
-                    CASE 
-                        WHEN p.user_id = ? OR ? = 'super_admin' THEN 1 
-                        ELSE 0 
-                    END as can_delete,
                     (SELECT COUNT(*) FROM feed_comments WHERE post_id = p.id) as comment_count,
                     (SELECT COUNT(*) FROM feed_reactions WHERE post_id = p.id) as reaction_count,
                     (SELECT COUNT(*) FROM feed_reports WHERE post_id = p.id AND status != 'dismissed') as report_count
@@ -114,19 +106,17 @@ class SocialFeedModel {
             // Add user permissions to params AFTER the WHERE clause params
             $userId = $_SESSION['user']['id'] ?? 0;
             $userRole = $_SESSION['user']['system_role'] ?? '';
-            
-            // Create a new params array with the correct order
-            $finalParams = [];
-            $finalParams[] = $userId; // can_edit parameter
-            $finalParams[] = $userId; // can_delete parameter
-            $finalParams[] = $userRole; // can_delete role parameter
-            foreach ($params as $p) $finalParams[] = $p; // WHERE clause params (client_id, etc)
+            $finalParams = $params; // Only WHERE clause params
 
             $stmt = $this->conn->prepare($query);
             $stmt->execute($finalParams);
             $posts = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-            // Format posts
+            // RBAC: Set can_edit/can_delete in PHP
+            require_once 'models/UserRoleModel.php';
+            $userRoleModel = new UserRoleModel();
+            $currentUser = $_SESSION['user'] ?? null;
+            $isAdmin = in_array($currentUser['system_role'], ['super_admin', 'admin']);
             foreach ($posts as &$post) {
                 $post['author'] = [
                     'id' => $post['user_id'],
@@ -135,23 +125,48 @@ class SocialFeedModel {
                     'avatar' => $post['author_avatar'],
                     'role' => $post['author_role']
                 ];
-
-                // Get media files
                 $post['media'] = $this->getPostMedia($post['id']);
-
-                // Get poll data if exists
                 if ($post['post_type'] === 'poll') {
                     $post['poll'] = $this->getPostPoll($post['id']);
                 }
-
-                // Get link data if exists
                 if ($post['post_type'] === 'link' && !empty($post['link_preview'])) {
                     $post['link'] = json_decode($post['link_preview'], true);
                 }
+                $post['reactions'] = $this->getPostReactions($post['id']);
+                // RBAC logic:
+                $canEdit = $userRoleModel->hasPermission($currentUser['id'], 'social_feed', 'edit', $currentUser['client_id']);
+                $canDelete = $userRoleModel->hasPermission($currentUser['id'], 'social_feed', 'delete', $currentUser['client_id']);
+                $post['can_edit'] = ($isAdmin || $post['user_id'] == $currentUser['id']) && $canEdit ? 1 : 0;
+                $post['can_delete'] = ($isAdmin || $post['user_id'] == $currentUser['id']) && $canDelete ? 1 : 0;
+            }
+            unset($post);
+
+            // Format posts
+            // foreach ($posts as &$post) {
+            //     $post['author'] = [
+            //         'id' => $post['user_id'],
+            //         'name' => $post['author_name'],
+            //         'email' => $post['author_email'],
+            //         'avatar' => $post['author_avatar'],
+            //         'role' => $post['author_role']
+            //     ];
+
+                // Get media files
+                // $post['media'] = $this->getPostMedia($post['id']);
+
+                // Get poll data if exists
+                // if ($post['post_type'] === 'poll') {
+                //     $post['poll'] = $this->getPostPoll($post['id']);
+                // }
+
+                // Get link data if exists
+                // if ($post['post_type'] === 'link' && !empty($post['link_preview'])) {
+                //     $post['link'] = json_decode($post['link_preview'], true);
+                // }
 
                 // Get reactions
-                $post['reactions'] = $this->getPostReactions($post['id']);
-            }
+                // $post['reactions'] = $this->getPostReactions($post['id']);
+            // }
 
             // Calculate pagination
             $totalPages = ceil($totalPosts / $limit);

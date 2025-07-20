@@ -6,10 +6,16 @@ if (!isset($_SESSION['user']['client_id'])) {
 }
 
 require_once 'core/UrlHelper.php';
+require_once 'includes/permission_helper.php';
+if (!canAccess('announcements')) {
+    header('Location: index.php?controller=DashboardController');
+    exit;
+}
 
 $systemRole = $_SESSION['user']['system_role'] ?? '';
 $canCreateGlobal = in_array($systemRole, ['super_admin', 'admin']);
 $canManageAll = in_array($systemRole, ['super_admin', 'admin']);
+$canCreateAnnouncement = canCreate('announcements');
 
 include 'includes/header.php';
 include 'includes/navbar.php';
@@ -53,9 +59,11 @@ include 'includes/sidebar.php';
                     <div>
                         <p class="text-muted mb-0">Create and manage announcements for your organization</p>
                     </div>
+                    <?php if ($canCreateAnnouncement): ?>
                     <button type="button" class="btn theme-btn-primary" data-bs-toggle="modal" data-bs-target="#createAnnouncementModal">
                         <i class="fas fa-plus me-2"></i>Create Announcement
                     </button>
+                    <?php endif; ?>
                 </div>
             </div>
         </div>
@@ -194,9 +202,11 @@ include 'includes/sidebar.php';
                 <i class="fas fa-bullhorn fa-3x text-muted mb-3"></i>
                 <h5 class="text-muted">No announcements found</h5>
                 <p class="text-muted">Try adjusting your search criteria or create a new announcement.</p>
+                <?php if ($canCreateAnnouncement): ?>
                 <button type="button" class="btn theme-btn-primary" data-bs-toggle="modal" data-bs-target="#createAnnouncementModal">
                     <i class="fas fa-plus me-2"></i>Create First Announcement
                 </button>
+                <?php endif; ?>
             </div>
         </div>
     </div>
@@ -777,6 +787,29 @@ function createAnnouncementCard(announcement) {
     const statusBadge = getStatusBadge(announcement.status);
     const audienceBadge = getAudienceBadge(announcement.audience_type);
 
+    // RBAC: Only show edit/delete if allowed
+    let editBtn = '';
+    if (announcement.can_edit) {
+        editBtn = `
+            <button type="button" class="btn btn-sm theme-btn-secondary edit-announcement-btn"
+                    data-announcement-id="${announcement.id}"
+                    title="Edit Announcement">
+                <i class="fas fa-edit"></i>
+            </button>
+        `;
+    }
+    let deleteBtn = '';
+    if (announcement.can_delete) {
+        deleteBtn = `
+            <button type="button" class="btn btn-sm theme-btn-danger delete-announcement-btn"
+                    data-announcement-id="${announcement.id}"
+                    data-announcement-title="${escapeHtml(announcement.title)}"
+                    title="Delete Announcement">
+                <i class="fas fa-trash-alt"></i>
+            </button>
+        `;
+    }
+
     return `
         <div class="col-lg-6 col-xl-4 mb-4">
             <div class="card h-100 announcement-card">
@@ -829,23 +862,14 @@ function createAnnouncementCard(announcement) {
                 </div>
                 <div class="card-footer">
                     <div class="btn-group w-100" role="group">
-                        <button type="button" class="btn btn-sm theme-btn-secondary edit-announcement-btn"
-                                data-announcement-id="${announcement.id}"
-                                title="Edit Announcement">
-                            <i class="fas fa-edit"></i>
-                        </button>
+                        ${editBtn}
                         <button type="button" class="btn btn-sm btn-outline-info view-stats-btn"
                                 data-announcement-id="${announcement.id}"
                                 title="View Statistics">
                             <i class="fas fa-chart-bar"></i>
                         </button>
                         ${getStatusActionButton(announcement)}
-                        <button type="button" class="btn btn-sm theme-btn-danger delete-announcement-btn"
-                                data-announcement-id="${announcement.id}"
-                                data-announcement-title="${escapeHtml(announcement.title)}"
-                                title="Delete Announcement">
-                            <i class="fas fa-trash-alt"></i>
-                        </button>
+                        ${deleteBtn}
                     </div>
                 </div>
             </div>

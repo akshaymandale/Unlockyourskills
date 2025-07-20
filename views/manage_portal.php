@@ -8,6 +8,14 @@ $canAccessUserManagement = false;
 if ($currentUser) {
     $canAccessUserManagement = $userRoleModel->hasPermission($currentUser['id'], 'user_management', 'access', $currentUser['client_id']);
 }
+$canAccessCourseManagement = false;
+if ($currentUser) {
+    $canAccessCourseManagement = $userRoleModel->hasPermission($currentUser['id'], 'course_management', 'access', $currentUser['client_id']);
+}
+$canAccessSocialFeed = false;
+if ($currentUser) {
+    $canAccessSocialFeed = $userRoleModel->hasPermission($currentUser['id'], 'social_feed', 'access', $currentUser['client_id']);
+}
 ?>
 
 <?php include 'includes/header.php'; ?>
@@ -59,9 +67,9 @@ if ($currentUser) {
                     <?php endif; ?>
                     
                     <div class="col-md-6">
-                        <div class="card user-box shadow-sm" onclick="location.href='index.php?controller=UserSettingsController'">
-                            <h5><i class="fas fa-user-shield"></i> <?= Localization::translate('user_settings'); ?></h5>
-                            <p><small class="text-muted"><?= Localization::translate('manage_user_roles_permissions'); ?></small></p>
+                        <div class="card user-box shadow-sm" id="userSettingsCard" style="cursor: pointer;">
+                            <h5><i class="fas fa-user-cog"></i> <?= Localization::translate('user_settings'); ?></h5>
+                            <p><small class="text-muted">Edit your profile and account settings</small></p>
                         </div>
                     </div>
                 </div>
@@ -72,12 +80,14 @@ if ($currentUser) {
                 <h3 class="text-purple"><?= Localization::translate('course_details'); ?></h3>
                 
                 <div class="row">
+                    <?php if ($canAccessCourseManagement): ?>
                     <div class="col-md-6">
                         <div class="card user-box shadow-sm" onclick="location.href='<?= UrlHelper::url('course-management') ?>'">
                             <h5><i class="fas fa-chalkboard-teacher"></i> <?= Localization::translate('course_creation'); ?></h5>
                             <p><small class="text-muted"><?= Localization::translate('create_courses'); ?></small></p>
                         </div>
                     </div>
+                    <?php endif; ?>
                     
                     <div class="col-md-6">
                         <div class="card user-box shadow-sm" onclick="location.href='<?= UrlHelper::url('course-applicability') ?>'">
@@ -122,6 +132,7 @@ if ($currentUser) {
 
                 <div class="row">
                     <!-- Opinion Poll Management -->
+                    <?php if (canAccess('opinion_polls')): ?>
                     <div class="col-md-6">
                         <div class="card user-box shadow-sm" onclick="window.location.href='<?= UrlHelper::url('opinion-polls') ?>'">
                             <h5><i class="fas fa-poll text-purple"></i> Opinion Poll Management</h5>
@@ -132,8 +143,10 @@ if ($currentUser) {
                             </div>
                         </div>
                     </div>
+                    <?php endif; ?>
 
                     <!-- Announcement Management -->
+                    <?php if (canAccess('announcements')): ?>
                     <div class="col-md-6">
                         <div class="card user-box shadow-sm" onclick="window.location.href='<?= UrlHelper::url('announcements') ?>'">
                             <h5><i class="fas fa-bullhorn text-purple"></i> Announcement Management</h5>
@@ -144,8 +157,10 @@ if ($currentUser) {
                             </div>
                         </div>
                     </div>
+                    <?php endif; ?>
 
                     <!-- Event Management -->
+                    <?php if (canAccess('events')): ?>
                     <div class="col-md-6">
                         <div class="card user-box shadow-sm" onclick="window.location.href='<?= UrlHelper::url('events') ?>'">
                             <h5><i class="fas fa-calendar-alt text-purple"></i> Event Management</h5>
@@ -156,6 +171,7 @@ if ($currentUser) {
                             </div>
                         </div>
                     </div>
+                    <?php endif; ?>
 
                     <!-- Discussion Forums (Coming Soon) -->
                     <div class="col-md-6">
@@ -190,6 +206,7 @@ if ($currentUser) {
                         </div>
                     </div>
 
+                    <?php if ($canAccessSocialFeed): ?>
                     <!-- Social Feed (News Wall) -->
                     <div class="col-md-6">
                         <div class="card user-box shadow-sm" onclick="window.location.href='<?= UrlHelper::url('feed') ?>'">
@@ -201,6 +218,7 @@ if ($currentUser) {
                             </div>
                         </div>
                     </div>
+                    <?php endif; ?>
                 </div>
             </div>
 
@@ -250,3 +268,17 @@ if ($currentUser) {
 
 
 <?php include 'includes/footer.php'; ?>
+
+<script>
+// User Settings card event listener
+document.addEventListener('DOMContentLoaded', function() {
+    const userSettingsCard = document.getElementById('userSettingsCard');
+    if (userSettingsCard) {
+        userSettingsCard.addEventListener('click', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            alert('User Settings - Profile editing feature coming soon!');
+        });
+    }
+});
+</script>

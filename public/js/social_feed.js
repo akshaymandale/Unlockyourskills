@@ -875,12 +875,15 @@ class SocialFeed {
                 </div>
                 <div class="card-footer">
                     <div class="btn-group w-100" role="group">
+                        ${post.can_edit ? `
                         <button type="button" class="btn btn-sm theme-btn-secondary edit-post-btn"
                                 data-post-id="${post.id}"
+                                data-action-permission="social_feed:edit"
                                 onclick="socialFeed.editPost(${post.id})"
                                 title="Edit Post">
                             <i class="fas fa-edit"></i>
                         </button>
+                        ` : ''}
                         <button type="button" class="btn btn-sm btn-outline-info view-stats-btn"
                                 data-post-id="${post.id}"
                                 onclick="socialFeed.viewPostStatistics(${post.id})"
@@ -900,13 +903,16 @@ class SocialFeed {
                             <i class="fas fa-flag"></i>
                         </button>
                         ${this.getStatusActionButton(post)}
+                        ${post.can_delete ? `
                         <button type="button" class="btn btn-sm theme-btn-danger delete-post-btn"
                                 data-post-id="${post.id}"
                                 data-post-title="${this.escapeHtml(post.title || 'Post')}"
+                                data-action-permission="social_feed:delete"
                                 onclick="socialFeed.confirmDeletePost(${post.id})"
                                 title="Delete Post">
                             <i class="fas fa-trash-alt"></i>
                         </button>
+                        ` : ''}
                     </div>
                 </div>
             </div>

@@ -546,6 +546,7 @@ function createPollCard(poll) {
 
 // Generate edit button with restrictions
 function getEditButton(poll) {
+    if (!poll.can_edit) return '';
     const now = new Date();
     const startTime = new Date(poll.start_datetime);
     const isLive = startTime <= now && poll.status === 'active';
@@ -570,6 +571,7 @@ function getEditButton(poll) {
 
 // Generate delete button with restrictions
 function getDeleteButton(poll) {
+    if (!poll.can_delete) return '';
     const now = new Date();
     const startTime = new Date(poll.start_datetime);
     const isLive = startTime <= now && poll.status === 'active';
