@@ -72,7 +72,22 @@ class EventModel {
             $stmt->bindValue($index + 1, $param, is_int($param) ? PDO::PARAM_INT : PDO::PARAM_STR);
         }
         $stmt->execute();
-        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+        $events = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        // Add RBAC flags if not set by controller
+        if (!empty($_SESSION['user'])) {
+            require_once 'includes/permission_helper.php';
+            $currentUser = $_SESSION['user'];
+            foreach ($events as &$event) {
+                if (!isset($event['can_edit'])) {
+                    $event['can_edit'] = (canEdit('events') && ($currentUser['system_role'] === 'super_admin' || $event['created_by'] == $currentUser['id'])) ? 1 : 0;
+                }
+                if (!isset($event['can_delete'])) {
+                    $event['can_delete'] = (canDelete('events') && ($currentUser['system_role'] === 'super_admin' || $event['created_by'] == $currentUser['id'])) ? 1 : 0;
+                }
+            }
+            unset($event);
+        }
+        return $events;
     }
 
     /**

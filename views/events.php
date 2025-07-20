@@ -6,6 +6,8 @@ if (!isset($_SESSION['user']['client_id'])) {
 }
 
 require_once 'core/UrlHelper.php';
+require_once 'includes/permission_helper.php';
+$canCreateEvent = canCreate('events');
 
 $systemRole = $_SESSION['user']['system_role'] ?? '';
 $canCreateGlobal = in_array($systemRole, ['super_admin', 'admin']);
@@ -53,9 +55,11 @@ include 'includes/sidebar.php';
                     <div>
                         <p class="text-muted mb-0">Create and manage events, webinars, and live sessions</p>
                     </div>
+                    <?php if ($canCreateEvent): ?>
                     <button type="button" class="btn theme-btn-primary" data-bs-toggle="modal" data-bs-target="#createEventModal">
                         <i class="fas fa-plus me-2"></i>Create Event
                     </button>
+                    <?php endif; ?>
                 </div>
             </div>
         </div>
@@ -197,9 +201,11 @@ include 'includes/sidebar.php';
                 <i class="fas fa-calendar-alt fa-3x text-muted mb-3"></i>
                 <h5 class="text-muted">No events found</h5>
                 <p class="text-muted">Try adjusting your search criteria or create a new event.</p>
+                <?php if ($canCreateEvent): ?>
                 <button type="button" class="btn theme-btn-primary" data-bs-toggle="modal" data-bs-target="#createEventModal">
                     <i class="fas fa-plus me-2"></i>Create First Event
                 </button>
+                <?php endif; ?>
             </div>
         </div>
     </div>
@@ -987,25 +993,12 @@ function createEventCard(event) {
                 </div>
                 <div class="card-footer">
                     <div class="btn-group w-100" role="group">
-                        <button type="button" class="btn btn-sm theme-btn-secondary edit-event-btn"
-                                data-event-id="${event.id}"
-                                title="Edit Event">
-                            <i class="fas fa-edit"></i>
-                        </button>
+                        ${event.can_edit ? `<button type="button" class="btn btn-sm theme-btn-secondary edit-event-btn" data-event-id="${event.id}" title="Edit Event"><i class="fas fa-edit"></i></button>` : ''}
                         ${hasRSVP ? `
-                        <button type="button" class="btn btn-sm btn-outline-info view-attendees-btn"
-                                data-event-id="${event.id}"
-                                title="View Attendees">
-                            <i class="fas fa-users"></i>
-                        </button>
+                        <button type="button" class="btn btn-sm btn-outline-info view-attendees-btn" data-event-id="${event.id}" title="View Attendees"><i class="fas fa-users"></i></button>
                         ` : ''}
                         ${getStatusActionButtons(event)}
-                        <button type="button" class="btn btn-sm theme-btn-danger delete-event-btn"
-                                data-event-id="${event.id}"
-                                data-event-title="${escapeHtml(event.title)}"
-                                title="Delete Event">
-                            <i class="fas fa-trash-alt"></i>
-                        </button>
+                        ${event.can_delete ? `<button type="button" class="btn btn-sm theme-btn-danger delete-event-btn" data-event-id="${event.id}" data-event-title="${escapeHtml(event.title)}" title="Delete Event"><i class="fas fa-trash-alt"></i></button>` : ''}
                     </div>
                 </div>
             </div>

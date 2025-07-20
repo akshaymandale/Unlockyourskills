@@ -2,6 +2,7 @@
 
 require_once 'models/EventModel.php';
 require_once 'controllers/BaseController.php';
+require_once 'includes/permission_helper.php';
 
 class EventController extends BaseController {
     private $eventModel;
@@ -27,10 +28,8 @@ class EventController extends BaseController {
             $this->toastError('Unauthorized access. Please log in.', 'index.php?controller=LoginController');
             return;
         }
-
-        // Check user permissions
-        $systemRole = $_SESSION['user']['system_role'] ?? '';
-        if (!in_array($systemRole, ['super_admin', 'admin', 'instructor'])) {
+        // RBAC: Check access permission
+        if (!canAccess('events')) {
             $this->toastError('You do not have permission to access this page.', 'index.php?controller=DashboardController');
             return;
         }
@@ -56,6 +55,10 @@ class EventController extends BaseController {
         // Check if user is logged in
         if (!isset($_SESSION['user']['client_id'])) {
             echo json_encode(['success' => false, 'message' => 'Unauthorized access']);
+            exit();
+        }
+        if (!canAccess('events')) {
+            echo json_encode(['success' => false, 'message' => 'No permission']);
             exit();
         }
 
@@ -94,6 +97,14 @@ class EventController extends BaseController {
             $totalEvents = count($this->eventModel->getAllEvents(999999, 0, $search, $filters, $clientId));
             $totalPages = ceil($totalEvents / $limit);
 
+            // Add RBAC flags for frontend
+            $currentUser = $_SESSION['user'] ?? null;
+            foreach ($events as &$event) {
+                $event['can_edit'] = (canEdit('events') && ($currentUser['system_role'] === 'super_admin' || $event['created_by'] == $currentUser['id'])) ? 1 : 0;
+                $event['can_delete'] = (canDelete('events') && ($currentUser['system_role'] === 'super_admin' || $event['created_by'] == $currentUser['id'])) ? 1 : 0;
+            }
+            unset($event);
+
             $response = [
                 'success' => true,
                 'events' => $events,
@@ -130,6 +141,10 @@ class EventController extends BaseController {
         // Check if user is logged in
         if (!isset($_SESSION['user']['client_id'])) {
             $this->toastError('Unauthorized access. Please log in.', 'index.php?controller=LoginController');
+            return;
+        }
+        if (!canCreate('events')) {
+            $this->toastError('You do not have permission to create events.', 'index.php?controller=EventController');
             return;
         }
 
@@ -337,6 +352,10 @@ class EventController extends BaseController {
         // Check if user is logged in
         if (!isset($_SESSION['user']['client_id'])) {
             $this->toastError('Unauthorized access. Please log in.', 'index.php?controller=LoginController');
+            return;
+        }
+        if (!canEdit('events')) {
+            $this->toastError('You do not have permission to edit events.', 'index.php?controller=EventController');
             return;
         }
 
@@ -612,6 +631,10 @@ class EventController extends BaseController {
         // Check if user is logged in
         if (!isset($_SESSION['user']['client_id'])) {
             $this->toastError('Unauthorized access. Please log in.', 'index.php?controller=LoginController');
+            return;
+        }
+        if (!canDelete('events')) {
+            $this->toastError('You do not have permission to delete events.', 'index.php?controller=EventController');
             return;
         }
 

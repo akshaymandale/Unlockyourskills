@@ -1,6 +1,7 @@
 <?php
 require_once 'models/PollModel.php';
 require_once 'controllers/BaseController.php';
+require_once 'includes/permission_helper.php';
 
 class OpinionPollController extends BaseController {
     private $pollModel;
@@ -13,9 +14,14 @@ class OpinionPollController extends BaseController {
      * Display opinion poll management page
      */
     public function index() {
-        // Check if user is logged in and get client_id
+        // Check if user is logged in
         if (!isset($_SESSION['user']['client_id'])) {
             $this->toastError('Unauthorized access. Please log in.', 'index.php?controller=LoginController');
+            return;
+        }
+        // RBAC: Check access permission
+        if (!canAccess('opinion_polls')) {
+            $this->toastError('You do not have permission to access this page.', 'index.php?controller=DashboardController');
             return;
         }
 
@@ -84,6 +90,14 @@ class OpinionPollController extends BaseController {
             $totalPolls = count($this->pollModel->getAllPolls(999999, 0, $search, $filters, $clientId));
             $totalPages = ceil($totalPolls / $limit);
 
+            // Add RBAC flags for frontend
+            $currentUser = $_SESSION['user'] ?? null;
+            foreach ($polls as &$poll) {
+                $poll['can_edit'] = (canEdit('opinion_polls') && ($currentUser['system_role'] === 'super_admin' || $poll['created_by'] == $currentUser['id'])) ? 1 : 0;
+                $poll['can_delete'] = (canDelete('opinion_polls') && ($currentUser['system_role'] === 'super_admin' || $poll['created_by'] == $currentUser['id'])) ? 1 : 0;
+            }
+            unset($poll);
+
             $response = [
                 'success' => true,
                 'polls' => $polls,
@@ -119,6 +133,11 @@ class OpinionPollController extends BaseController {
         // Check if user is logged in
         if (!isset($_SESSION['user']['client_id'])) {
             $this->toastError('Unauthorized access. Please log in.', 'index.php?controller=LoginController');
+            return;
+        }
+
+        if (!canCreate('opinion_polls')) {
+            $this->toastError('You do not have permission to create opinion polls.', 'index.php?controller=OpinionPollController');
             return;
         }
 
@@ -380,6 +399,11 @@ class OpinionPollController extends BaseController {
         // Check if user is logged in
         if (!isset($_SESSION['user']['client_id'])) {
             $this->toastError('Unauthorized access. Please log in.', 'index.php?controller=LoginController');
+            return;
+        }
+
+        if (!canEdit('opinion_polls')) {
+            $this->toastError('You do not have permission to edit opinion polls.', 'index.php?controller=OpinionPollController');
             return;
         }
 
@@ -731,6 +755,11 @@ class OpinionPollController extends BaseController {
                 exit;
             }
             $this->toastError('Poll ID is required.', 'index.php?controller=OpinionPollController');
+            return;
+        }
+
+        if (!canDelete('opinion_polls')) {
+            $this->toastError('You do not have permission to delete opinion polls.', 'index.php?controller=OpinionPollController');
             return;
         }
 

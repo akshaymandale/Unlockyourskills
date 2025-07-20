@@ -6,6 +6,8 @@ if (!isset($_SESSION['user'])) {
 }
 
 require_once 'core/UrlHelper.php';
+require_once 'includes/permission_helper.php';
+$canCreateOpinionPoll = canCreate('opinion_polls');
 
 $currentUser = $_SESSION['user'];
 $systemRole = $_SESSION['user']['system_role'] ?? '';
@@ -54,9 +56,11 @@ $canManageAll = in_array($systemRole, ['super_admin', 'admin']);
                     <div>
                         <p class="text-muted mb-0">Create and manage opinion polls for your organization</p>
                     </div>
+                    <?php if ($canCreateOpinionPoll): ?>
                     <button type="button" class="btn theme-btn-primary" data-bs-toggle="modal" data-bs-target="#createPollModal">
                         <i class="fas fa-plus me-2"></i>Create Opinion Poll
                     </button>
+                    <?php endif; ?>
                 </div>
             </div>
         </div>
@@ -193,9 +197,11 @@ $canManageAll = in_array($systemRole, ['super_admin', 'admin']);
                 <i class="fas fa-poll fa-3x text-muted mb-3"></i>
                 <h5 class="text-muted">No opinion polls found</h5>
                 <p class="text-muted">Try adjusting your search criteria or create a new opinion poll.</p>
+                <?php if ($canCreateOpinionPoll): ?>
                 <button type="button" class="btn theme-btn-primary" data-bs-toggle="modal" data-bs-target="#createPollModal">
                     <i class="fas fa-plus me-2"></i>Create First Opinion Poll
                 </button>
+                <?php endif; ?>
             </div>
         </div>
     </div>

@@ -201,7 +201,21 @@ class AnnouncementModel {
 
         $stmt = $this->conn->prepare($sql);
         $stmt->execute($params);
-        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+        $announcements = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+        // RBAC: Set can_edit/can_delete in PHP
+        require_once 'models/UserRoleModel.php';
+        $userRoleModel = new UserRoleModel();
+        $currentUser = $_SESSION['user'] ?? null;
+        $isAdmin = in_array($currentUser['system_role'], ['super_admin', 'admin']);
+        foreach ($announcements as &$announcement) {
+            $canEdit = $userRoleModel->hasPermission($currentUser['id'], 'announcements', 'edit', $currentUser['client_id']);
+            $canDelete = $userRoleModel->hasPermission($currentUser['id'], 'announcements', 'delete', $currentUser['client_id']);
+            $announcement['can_edit'] = ($isAdmin || $announcement['created_by'] == $currentUser['id']) && $canEdit ? 1 : 0;
+            $announcement['can_delete'] = ($isAdmin || $announcement['created_by'] == $currentUser['id']) && $canDelete ? 1 : 0;
+        }
+        unset($announcement);
+        return $announcements;
     }
 
     /**

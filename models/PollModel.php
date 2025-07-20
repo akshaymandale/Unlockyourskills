@@ -84,7 +84,22 @@ class PollModel {
             $stmt->bindValue($index + 1, $param, is_int($param) ? PDO::PARAM_INT : PDO::PARAM_STR);
         }
         $stmt->execute();
-        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+        $polls = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        // Add RBAC flags if not set by controller
+        if (!empty($_SESSION['user'])) {
+            require_once 'includes/permission_helper.php';
+            $currentUser = $_SESSION['user'];
+            foreach ($polls as &$poll) {
+                if (!isset($poll['can_edit'])) {
+                    $poll['can_edit'] = (canEdit('opinion_polls') && ($currentUser['system_role'] === 'super_admin' || $poll['created_by'] == $currentUser['id'])) ? 1 : 0;
+                }
+                if (!isset($poll['can_delete'])) {
+                    $poll['can_delete'] = (canDelete('opinion_polls') && ($currentUser['system_role'] === 'super_admin' || $poll['created_by'] == $currentUser['id'])) ? 1 : 0;
+                }
+            }
+            unset($poll);
+        }
+        return $polls;
     }
 
     /**

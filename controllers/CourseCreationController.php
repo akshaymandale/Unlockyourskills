@@ -4,6 +4,7 @@ require_once 'models/CourseModel.php';
 require_once 'models/CourseCategoryModel.php';
 require_once 'models/CourseSubcategoryModel.php';
 require_once 'core/UrlHelper.php';
+require_once 'includes/permission_helper.php';
 
 class CourseCreationController extends BaseController
 {
@@ -97,6 +98,11 @@ class CourseCreationController extends BaseController
     public function courseManagement() {
         if (!isset($_SESSION['id'])) {
             $this->redirectWithToast('Please login to access course management.', 'error', '/login');
+            return;
+        }
+        // RBAC: Check access permission
+        if (!canAccess('course_management')) {
+            $this->redirectWithToast('You do not have permission to access Course Management.', 'error', '/dashboard');
             return;
         }
         
@@ -265,6 +271,11 @@ class CourseCreationController extends BaseController
         }
         if (!$courseId) {
             $this->jsonResponse(['success' => false, 'message' => 'Course ID is required']);
+            return;
+        }
+        // RBAC: Check delete permission
+        if (!canDelete('course_management')) {
+            $this->jsonResponse(['success' => false, 'message' => 'Permission denied']);
             return;
         }
         try {
@@ -584,6 +595,12 @@ class CourseCreationController extends BaseController
             return;
         }
         
+        // RBAC: Check edit permission
+        if (!canEdit('course_management')) {
+            $this->redirectWithToast('You do not have permission to edit courses.', 'error', '/Unlockyourskills/course-management');
+            return;
+        }
+        
         try {
             $clientId = $_SESSION['user']['client_id'] ?? null;
             $course = $this->courseModel->getCourseById($id, $clientId);
@@ -642,6 +659,11 @@ class CourseCreationController extends BaseController
         }
         if (!$id) {
             $this->jsonResponse(['success' => false, 'message' => 'Course ID is required']);
+            return;
+        }
+        // RBAC: Check edit permission
+        if (!canEdit('course_management')) {
+            $this->jsonResponse(['success' => false, 'message' => 'Permission denied']);
             return;
         }
         try {
