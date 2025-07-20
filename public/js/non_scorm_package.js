@@ -302,9 +302,10 @@ document.addEventListener("DOMContentLoaded", function () {
     }
 
     // ✅ Open Modal for Editing Non-SCORM Content
-    document.querySelectorAll(".edit-non-scorm").forEach(button => {
-        button.addEventListener("click", function () {
-            const nonScormData = JSON.parse(this.dataset.package);
+    document.addEventListener('click', function(e) {
+        const btn = e.target.closest('.edit-non-scorm');
+        if (btn) {
+            const nonScormData = JSON.parse(btn.dataset.package);
 
             // Clear all preview containers first to prevent showing old previews
             document.querySelectorAll('#contentPackagePreview, #launchFilePreview, #thumbnailImagePreview, #manifestFilePreview').forEach(container => {
@@ -435,7 +436,7 @@ document.addEventListener("DOMContentLoaded", function () {
             document.getElementById("nonScormModalLabel").textContent = "Edit Non-SCORM Package";
             const modal = new bootstrap.Modal(document.getElementById("nonScormModal"));
             modal.show();
-        });
+        }
     });
 
     // ✅ Clear Form Function

@@ -116,12 +116,19 @@ if ($currentUser) {
 
                 <h3 class="text-purple mt-4"><?= Localization::translate('course_content'); ?></h3>
                 <div class="row">
+                    <!-- VLR Management -->
+                    <?php if (canAccess('vlr')): ?>
                     <div class="col-md-6">
-                        <div class="card user-box shadow-sm" onclick="location.href='<?= UrlHelper::url('vlr') ?>'">
-                            <h5><i class="fas fa-file-alt"></i> <?= Localization::translate('vlr'); ?></h5>
-                            <p><small class="text-muted"><?= Localization::translate('manage_vlr'); ?></small></p>
+                        <div class="card user-box shadow-sm" onclick="window.location.href='<?= UrlHelper::url('vlr') ?>'">
+                            <h5><i class="fas fa-layer-group text-purple"></i> VLR Management</h5>
+                            <p><small class="text-muted">Manage all learning resources and packages (SCORM, non-SCORM, assessment, audio, video, document, image, external, survey, feedback, interactive, AI content, assignment)</small></p>
+                            <div class="mt-2">
+                                <span class="badge bg-success">Active</span>
+                                <span class="badge bg-light text-dark">New Feature</span>
+                            </div>
                         </div>
                     </div>
+                    <?php endif; ?>
                 </div>
             </div>
 

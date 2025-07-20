@@ -3,6 +3,7 @@
 require_once 'models/VLRModel.php';
 require_once 'controllers/BaseController.php';
 require_once 'core/UrlHelper.php';
+require_once 'includes/permission_helper.php';
 
 class VLRController extends BaseController
 {
@@ -34,6 +35,11 @@ class VLRController extends BaseController
 
         // Debug output
         error_log("VLR Index - Client ID: " . $clientId . ", Filter Client ID: " . ($filterClientId ?? 'null') . ", User Role: " . ($currentUser['system_role'] ?? 'unknown'));
+
+        if (!canAccess('vlr')) {
+            $this->toastError('You do not have permission to access this page.', '/unlockyourskills/dashboard');
+            return;
+        }
 
         $scormPackages = $this->VLRModel->getScormPackages($filterClientId);
         $nonScormPackages = $this->VLRModel->getNonScormPackages($filterClientId);
