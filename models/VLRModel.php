@@ -92,6 +92,22 @@ class VLRModel
         // Debugging - Check if data is fetched
         error_log(print_r($data, true)); // Logs to XAMPP/PHP logs
 
+        // Add can_edit and can_delete flags
+        $currentUser = $_SESSION['user'] ?? null;
+        if (!$currentUser) {
+            foreach ($data as &$package) {
+                $package['can_edit'] = 0;
+                $package['can_delete'] = 0;
+            }
+            unset($package);
+            return $data;
+        }
+        foreach ($data as &$package) {
+            $package['can_edit'] = (canEdit('vlr') && ($currentUser['system_role'] === 'super_admin' || $package['created_by'] == $currentUser['id'])) ? 1 : 0;
+            $package['can_delete'] = (canDelete('vlr') && ($currentUser['system_role'] === 'super_admin' || $package['created_by'] == $currentUser['id'])) ? 1 : 0;
+        }
+        unset($package);
+
         return $data;
     }
 
@@ -258,6 +274,22 @@ class VLRModel
         // Debugging - Check if data is fetched
         error_log(print_r($data, true)); // Logs to XAMPP/PHP logs
 
+        // Add can_edit and can_delete flags
+        $currentUser = $_SESSION['user'] ?? null;
+        if (!$currentUser) {
+            foreach ($data as &$package) {
+                $package['can_edit'] = 0;
+                $package['can_delete'] = 0;
+            }
+            unset($package);
+            return $data;
+        }
+        foreach ($data as &$package) {
+            $package['can_edit'] = (canEdit('vlr') && ($currentUser['system_role'] === 'super_admin' || $package['created_by'] == $currentUser['id'])) ? 1 : 0;
+            $package['can_delete'] = (canDelete('vlr') && ($currentUser['system_role'] === 'super_admin' || $package['created_by'] == $currentUser['id'])) ? 1 : 0;
+        }
+        unset($package);
+
         return $data;
     }
 
@@ -299,6 +331,22 @@ class VLRModel
 
         // Debugging - Check if data is fetched
         error_log(print_r($data, true)); // Logs to XAMPP/PHP logs
+
+        // Add can_edit and can_delete flags
+        $currentUser = $_SESSION['user'] ?? null;
+        if (!$currentUser) {
+            foreach ($data as &$package) {
+                $package['can_edit'] = 0;
+                $package['can_delete'] = 0;
+            }
+            unset($package);
+            return $data;
+        }
+        foreach ($data as &$package) {
+            $package['can_edit'] = (canEdit('vlr') && ($currentUser['system_role'] === 'super_admin' || $package['created_by'] == $currentUser['id'])) ? 1 : 0;
+            $package['can_delete'] = (canDelete('vlr') && ($currentUser['system_role'] === 'super_admin' || $package['created_by'] == $currentUser['id'])) ? 1 : 0;
+        }
+        unset($package);
 
         return $data;
     }
@@ -641,7 +689,25 @@ class VLRModel
         $sql .= " ORDER BY created_at DESC";
         $stmt = $this->conn->prepare($sql);
         $stmt->execute($params);
-        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+        $data = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+        // Add can_edit and can_delete flags
+        $currentUser = $_SESSION['user'] ?? null;
+        if (!$currentUser) {
+            foreach ($data as &$package) {
+                $package['can_edit'] = 0;
+                $package['can_delete'] = 0;
+            }
+            unset($package);
+            return $data;
+        }
+        foreach ($data as &$package) {
+            $package['can_edit'] = (canEdit('vlr') && ($currentUser['system_role'] === 'super_admin' || $package['created_by'] == $currentUser['id'])) ? 1 : 0;
+            $package['can_delete'] = (canDelete('vlr') && ($currentUser['system_role'] === 'super_admin' || $package['created_by'] == $currentUser['id'])) ? 1 : 0;
+        }
+        unset($package);
+
+        return $data;
     }
 
     public function getAssessmentByIdWithQuestions($assessmentId)
@@ -778,7 +844,25 @@ public function getAudioPackages()
         ORDER BY a.created_at DESC
     ");
     $stmt->execute();
-    return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    $data = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+    // Add can_edit and can_delete flags
+    $currentUser = $_SESSION['user'] ?? null;
+    if (!$currentUser) {
+        foreach ($data as &$package) {
+            $package['can_edit'] = 0;
+            $package['can_delete'] = 0;
+        }
+        unset($package);
+        return $data;
+    }
+    foreach ($data as &$package) {
+        $package['can_edit'] = (canEdit('vlr') && ($currentUser['system_role'] === 'super_admin' || $package['created_by'] == $currentUser['id'])) ? 1 : 0;
+        $package['can_delete'] = (canDelete('vlr') && ($currentUser['system_role'] === 'super_admin' || $package['created_by'] == $currentUser['id'])) ? 1 : 0;
+    }
+    unset($package);
+
+    return $data;
 }
 
 // ✅ Soft Delete Audio Package
@@ -866,7 +950,25 @@ public function getVideoPackages()
         ORDER BY v.created_at DESC
     ");
     $stmt->execute();
-    return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    $data = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+    // Add can_edit and can_delete flags
+    $currentUser = $_SESSION['user'] ?? null;
+    if (!$currentUser) {
+        foreach ($data as &$package) {
+            $package['can_edit'] = 0;
+            $package['can_delete'] = 0;
+        }
+        unset($package);
+        return $data;
+    }
+    foreach ($data as &$package) {
+        $package['can_edit'] = (canEdit('vlr') && ($currentUser['system_role'] === 'super_admin' || $package['created_by'] == $currentUser['id'])) ? 1 : 0;
+        $package['can_delete'] = (canDelete('vlr') && ($currentUser['system_role'] === 'super_admin' || $package['created_by'] == $currentUser['id'])) ? 1 : 0;
+    }
+    unset($package);
+
+    return $data;
 }
 
 // ✅ Soft Delete Video Package
@@ -951,7 +1053,25 @@ public function getImagePackages()
         ORDER BY i.created_at DESC
     ");
     $stmt->execute();
-    return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    $data = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+    // Add can_edit and can_delete flags
+    $currentUser = $_SESSION['user'] ?? null;
+    if (!$currentUser) {
+        foreach ($data as &$package) {
+            $package['can_edit'] = 0;
+            $package['can_delete'] = 0;
+        }
+        unset($package);
+        return $data;
+    }
+    foreach ($data as &$package) {
+        $package['can_edit'] = (canEdit('vlr') && ($currentUser['system_role'] === 'super_admin' || $package['created_by'] == $currentUser['id'])) ? 1 : 0;
+        $package['can_delete'] = (canDelete('vlr') && ($currentUser['system_role'] === 'super_admin' || $package['created_by'] == $currentUser['id'])) ? 1 : 0;
+    }
+    unset($package);
+
+    return $data;
 }
 
 // ✅ Soft Delete Image Package
@@ -1041,7 +1161,25 @@ public function deleteImagePackage($id)
             $stmt = $this->conn->prepare("SELECT * FROM survey_package WHERE is_deleted = 0 ORDER BY created_at DESC");
             $stmt->execute();
         }
-        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+        $data = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+        // Add can_edit and can_delete flags
+        $currentUser = $_SESSION['user'] ?? null;
+        if (!$currentUser) {
+            foreach ($data as &$package) {
+                $package['can_edit'] = 0;
+                $package['can_delete'] = 0;
+            }
+            unset($package);
+            return $data;
+        }
+        foreach ($data as &$package) {
+            $package['can_edit'] = (canEdit('vlr') && ($currentUser['system_role'] === 'super_admin' || $package['created_by'] == $currentUser['id'])) ? 1 : 0;
+            $package['can_delete'] = (canDelete('vlr') && ($currentUser['system_role'] === 'super_admin' || $package['created_by'] == $currentUser['id'])) ? 1 : 0;
+        }
+        unset($package);
+
+        return $data;
     }
 
     //Get Survey by ID with Questions
@@ -1096,7 +1234,25 @@ public function deleteImagePackage($id)
             $stmt = $this->conn->prepare("SELECT * FROM feedback_package WHERE is_deleted = 0 ORDER BY created_at DESC");
             $stmt->execute();
         }
-        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+        $data = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+        // Add can_edit and can_delete flags
+        $currentUser = $_SESSION['user'] ?? null;
+        if (!$currentUser) {
+            foreach ($data as &$package) {
+                $package['can_edit'] = 0;
+                $package['can_delete'] = 0;
+            }
+            unset($package);
+            return $data;
+        }
+        foreach ($data as &$package) {
+            $package['can_edit'] = (canEdit('vlr') && ($currentUser['system_role'] === 'super_admin' || $package['created_by'] == $currentUser['id'])) ? 1 : 0;
+            $package['can_delete'] = (canDelete('vlr') && ($currentUser['system_role'] === 'super_admin' || $package['created_by'] == $currentUser['id'])) ? 1 : 0;
+        }
+        unset($package);
+
+        return $data;
     }
 
     //Get Feedback by ID with Questions
@@ -1358,7 +1514,25 @@ public function deleteImagePackage($id)
     {
         $stmt = $this->conn->prepare("SELECT * FROM interactive_ai_content_package WHERE is_deleted = 0 ORDER BY created_at DESC");
         $stmt->execute();
-        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+        $data = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+        // Add can_edit and can_delete flags
+        $currentUser = $_SESSION['user'] ?? null;
+        if (!$currentUser) {
+            foreach ($data as &$package) {
+                $package['can_edit'] = 0;
+                $package['can_delete'] = 0;
+            }
+            unset($package);
+            return $data;
+        }
+        foreach ($data as &$package) {
+            $package['can_edit'] = (canEdit('vlr') && ($currentUser['system_role'] === 'super_admin' || $package['created_by'] == $currentUser['id'])) ? 1 : 0;
+            $package['can_delete'] = (canDelete('vlr') && ($currentUser['system_role'] === 'super_admin' || $package['created_by'] == $currentUser['id'])) ? 1 : 0;
+        }
+        unset($package);
+
+        return $data;
     }
 
     // Soft Delete Interactive & AI Powered Content Package
@@ -1536,6 +1710,23 @@ public function deleteImagePackage($id)
             $stmt = $this->conn->prepare("SELECT * FROM non_scorm_package WHERE is_deleted = 0 ORDER BY created_at DESC");
             $stmt->execute();
             $data = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+            // Add can_edit and can_delete flags
+            $currentUser = $_SESSION['user'] ?? null;
+            if (!$currentUser) {
+                foreach ($data as &$package) {
+                    $package['can_edit'] = 0;
+                    $package['can_delete'] = 0;
+                }
+                unset($package);
+                return $data;
+            }
+            foreach ($data as &$package) {
+                $package['can_edit'] = (canEdit('vlr') && ($currentUser['system_role'] === 'super_admin' || $package['created_by'] == $currentUser['id'])) ? 1 : 0;
+                $package['can_delete'] = (canDelete('vlr') && ($currentUser['system_role'] === 'super_admin' || $package['created_by'] == $currentUser['id'])) ? 1 : 0;
+            }
+            unset($package);
+
             return $data;
         } catch (Exception $e) {
             error_log("Error fetching Non-SCORM packages: " . $e->getMessage());
@@ -1692,6 +1883,23 @@ public function deleteImagePackage($id)
                 $stmt->execute();
             }
             $data = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+            // Add can_edit and can_delete flags
+            $currentUser = $_SESSION['user'] ?? null;
+            if (!$currentUser) {
+                foreach ($data as &$package) {
+                    $package['can_edit'] = 0;
+                    $package['can_delete'] = 0;
+                }
+                unset($package);
+                return $data;
+            }
+            foreach ($data as &$package) {
+                $package['can_edit'] = (canEdit('vlr') && ($currentUser['system_role'] === 'super_admin' || $package['created_by'] == $currentUser['id'])) ? 1 : 0;
+                $package['can_delete'] = (canDelete('vlr') && ($currentUser['system_role'] === 'super_admin' || $package['created_by'] == $currentUser['id'])) ? 1 : 0;
+            }
+            unset($package);
+
             error_log("VLRModel getAssignmentPackages - Client ID: " . ($clientId ?? 'null') . ", Count: " . count($data));
             return $data;
         } catch (Exception $e) {

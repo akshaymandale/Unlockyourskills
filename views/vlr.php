@@ -6,6 +6,10 @@ $clientName = $_SESSION['username'] ?? 'DEFAULT';
 
 $vlrController = new VLRController();
 $languageList = $vlrController->getLanguages();
+
+require_once 'includes/permission_helper.php';
+$canCreateVLR = canCreate('vlr');
+$canAccessVLR = canAccess('vlr');
 ?>
 
 <?php include 'includes/header.php'; ?>
@@ -99,10 +103,12 @@ $languageList = $vlrController->getLanguages();
                     <h3><?= Localization::translate('scorm'); ?></h3>
 
                     <!-- ✅ SCORM "Add" Button - Opens Modal -->
+                    <?php if ($canCreateVLR): ?>
                     <button class="btn btn-primary mb-3" data-bs-toggle="modal" id="addScormBtn"
                         data-bs-target="#scormModal">
                         + <?= Localization::translate('add_scorm'); ?>
                     </button>
+                    <?php endif; ?>
 
                     <!-- ✅ SCORM ADD MODAL -->
                     <div class="modal fade" id="scormModal" tabindex="-1" role="dialog"
@@ -382,13 +388,17 @@ $languageList = $vlrController->getLanguages();
                                                         <?= htmlspecialchars($displayTitle) ?>
                                                     </h5>
                                                     <div class="scorm-actions">
+                                                        <?php if (!empty($scorm['can_edit'])): ?>
                                                         <a href="#" class="edit-scorm" data-scorm='<?= json_encode($scorm); ?>'>
                                                             <i class="fas fa-edit edit-icon"
                                                                 title="<?= Localization::translate('edit'); ?>"></i>
                                                         </a>
+                                                        <?php endif; ?>
+                                                        <?php if (!empty($scorm['can_delete'])): ?>
                                                         <a href="#" class="delete-scorm" data-id="<?= $scorm['id'] ?>" data-title="<?= htmlspecialchars($scorm['title']) ?>">
                                                             <i class="fas fa-trash-alt delete-icon"
                                                                 title="<?= Localization::translate('delete'); ?>"></i></a>
+                                                        <?php endif; ?>
                                                     </div>
                                                 </div>
                                             </div>
@@ -415,10 +425,12 @@ $languageList = $vlrController->getLanguages();
                     <h3><?= Localization::translate('non_scorm'); ?></h3>
 
                     <!-- ✅ Non-SCORM "Add" Button - Opens Modal -->
+                    <?php if ($canCreateVLR): ?>
                     <button class="btn btn-primary mb-3" data-bs-toggle="modal" id="addNonScormBtn"
                         data-bs-target="#nonScormModal">
                         + <?= Localization::translate('add_non_scorm'); ?>
                     </button>
+                    <?php endif; ?>
 
                     <!-- ✅ NON-SCORM ADD MODAL -->
                     <div class="modal fade" id="nonScormModal" tabindex="-1" role="dialog"
@@ -924,12 +936,16 @@ $languageList = $vlrController->getLanguages();
                                                         <?= htmlspecialchars($displayTitle) ?>
                                                     </h5>
                                                     <div class="nonscorm-actions">
+                                                        <?php if (!empty($package['can_edit'])): ?>
                                                         <a href="#" class="edit-non-scorm" data-package='<?= json_encode($package); ?>'>
                                                             <i class="fas fa-edit edit-icon" title="<?= Localization::translate('edit'); ?>"></i>
                                                         </a>
+                                                        <?php endif; ?>
+                                                        <?php if (!empty($package['can_delete'])): ?>
                                                         <a href="#" class="delete-non-scorm" data-id="<?= $package['id'] ?>" data-title="<?= htmlspecialchars($package['title']) ?>">
                                                             <i class="fas fa-trash-alt delete-icon" title="<?= Localization::translate('delete'); ?>"></i>
                                                         </a>
+                                                        <?php endif; ?>
                                                     </div>
                                                 </div>
                                             </div>
@@ -952,10 +968,12 @@ $languageList = $vlrController->getLanguages();
                     <h3><?= Localization::translate('assessment'); ?></h3>
                     <div class="d-flex gap-2">
                         <!-- Add Assessment Button -->
+                        <?php if ($canCreateVLR): ?>
                         <button class="btn btn-sm btn-primary" id="addAssessmentBtn" data-bs-toggle="modal"
                             data-bs-target="#assessment_assessmentModal">
                             + <?= Localization::translate('add_assessment'); ?>
                         </button>
+                        <?php endif; ?>
 
                         <!-- ✅ Assessment Modal -->
                         <div class="modal fade" id="assessment_assessmentModal" tabindex="-1"
@@ -1299,15 +1317,19 @@ $languageList = $vlrController->getLanguages();
                                                     <?= htmlspecialchars(strlen($assessment['title']) > 20 ? substr($assessment['title'], 0, 17) . '...' : $assessment['title']) ?>
                                                 </h5>
                                                 <div class="assessment-actions">
+                                                    <?php if (!empty($assessment['can_edit'])): ?>
                                                     <a href="#" class="edit-assessment"
                                                         data-assessment='<?= json_encode($assessment); ?>'>
                                                         <i class="fas fa-edit edit-icon"
                                                             title="<?= Localization::translate('edit'); ?>"></i>
                                                     </a>
+                                                    <?php endif; ?>
+                                                    <?php if (!empty($assessment['can_delete'])): ?>
                                                     <a href="#" class="delete-assessment" data-id="<?= $assessment['id'] ?>" data-title="<?= htmlspecialchars($assessment['title']) ?>">
                                                         <i class="fas fa-trash-alt delete-icon"
                                                             title="<?= Localization::translate('delete'); ?>"></i>
                                                     </a>
+                                                    <?php endif; ?>
                                                 </div>
                                             </div>
                                         </div>
@@ -1333,10 +1355,12 @@ $languageList = $vlrController->getLanguages();
                     <h3><?= Localization::translate('audio'); ?></h3>
 
                     <!-- ✅ Audio "Add" Button -->
+                    <?php if ($canCreateVLR): ?>
                     <button class="btn btn-primary mb-3" data-bs-toggle="modal" id="addAudioBtn"
                         data-bs-target="#audioModal">
                         + <?= Localization::translate('add_audio'); ?>
                     </button>
+                    <?php endif; ?>
                 </div>
 
                 <!-- ✅ Audio Modal -->
@@ -1488,14 +1512,18 @@ $languageList = $vlrController->getLanguages();
                                                         <i class="fas fa-eye preview-icon"
                                                             title="<?= Localization::translate('preview'); ?>"></i>
                                                     </a>
+                                                    <?php if (!empty($audio['can_edit'])): ?>
                                                     <a href="#" class="edit-audio" data-audio='<?= json_encode($audio); ?>'>
                                                         <i class="fas fa-edit edit-icon"
                                                             title="<?= Localization::translate('edit'); ?>"></i>
                                                     </a>
+                                                    <?php endif; ?>
+                                                    <?php if (!empty($audio['can_delete'])): ?>
                                                     <a href="#" class="delete-audio" data-id="<?= $audio['id'] ?>" data-title="<?= htmlspecialchars($audio['title']) ?>">
                                                         <i class="fas fa-trash-alt delete-icon"
                                                             title="<?= Localization::translate('delete'); ?>"></i>
                                                     </a>
+                                                    <?php endif; ?>
                                                 </div>
                                             </div>
                                         </div>
@@ -1515,10 +1543,12 @@ $languageList = $vlrController->getLanguages();
                 <div class="d-flex justify-content-between align-items-center">
                     <h3><?= Localization::translate('video'); ?></h3>
                     <!-- ✅ Video "Add" Button -->
+                    <?php if ($canCreateVLR): ?>
                     <button class="btn btn-primary mb-3" data-bs-toggle="modal" id="addVideoBtn"
                         data-bs-target="#videoModal">
                         + <?= Localization::translate('add_video'); ?>
                     </button>
+                    <?php endif; ?>
                 </div>
                 <!-- ✅ Video Modal -->
                 <div class="modal fade" id="videoModal" tabindex="-1" aria-labelledby="videoModalLabel"
@@ -1670,14 +1700,18 @@ $languageList = $vlrController->getLanguages();
                                                         <i class="fas fa-eye preview-icon"
                                                             title="<?= Localization::translate('preview'); ?>"></i>
                                                     </a>
+                                                    <?php if (!empty($video['can_edit'])): ?>
                                                     <a href="#" class="edit-video" data-video='<?= json_encode($video); ?>'>
                                                         <i class="fas fa-edit edit-icon"
                                                             title="<?= Localization::translate('edit'); ?>"></i>
                                                     </a>
+                                                    <?php endif; ?>
+                                                    <?php if (!empty($video['can_delete'])): ?>
                                                     <a href="#" class="delete-video" data-id="<?= $video['id'] ?>" data-title="<?= htmlspecialchars($video['title']) ?>">
                                                         <i class="fas fa-trash-alt delete-icon"
                                                             title="<?= Localization::translate('delete'); ?>"></i>
                                                     </a>
+                                                    <?php endif; ?>
                                                 </div>
                                             </div>
                                         </div>
@@ -1700,10 +1734,12 @@ $languageList = $vlrController->getLanguages();
                 <!-- Document Header Section -->
                 <div class="d-flex justify-content-between align-items-center mb-3">
                     <h3><?= Localization::translate('documents'); ?></h3>
+                    <?php if ($canCreateVLR): ?>
                     <button class="btn btn-sm btn-primary" data-bs-toggle="modal" data-bs-target="#documentModal"
                         id="addDocumentBtn">
                         + <?= Localization::translate('add_document'); ?>
                     </button>
+                    <?php endif; ?>
 
                     <div class="modal fade" id="documentModal" tabindex="-1" aria-labelledby="documentModalLabel"
                         aria-hidden="true">
@@ -2002,15 +2038,19 @@ $languageList = $vlrController->getLanguages();
                                                             <i class="fas fa-eye preview-icon"
                                                                 title="<?= Localization::translate('preview'); ?>"></i>
                                                         </a>
+                                                        <?php if (!empty($document['can_edit'])): ?>
                                                         <a href="#" class="edit-document"
                                                             data-document='<?= json_encode($document); ?>'>
                                                             <i class="fas fa-edit edit-icon"
                                                                 title="<?= Localization::translate('edit'); ?>"></i>
                                                         </a>
+                                                        <?php endif; ?>
+                                                        <?php if (!empty($document['can_delete'])): ?>
                                                         <a href="#" class="delete-document" data-id="<?= $document['id'] ?>" data-title="<?= htmlspecialchars($document['title']) ?>">
                                                             <i class="fas fa-trash-alt delete-icon"
                                                                 title="<?= Localization::translate('delete'); ?>"></i>
                                                         </a>
+                                                        <?php endif; ?>
                                                     </div>
                                                 </div>
                                             </div>
@@ -2032,10 +2072,12 @@ $languageList = $vlrController->getLanguages();
                 <div class="d-flex justify-content-between align-items-center">
                     <h3><?= Localization::translate('image'); ?></h3>
                     <!-- ✅ Image "Add" Button -->
+                    <?php if ($canCreateVLR): ?>
                     <button class="btn btn-primary mb-3" data-bs-toggle="modal" id="addImageBtn"
                         data-bs-target="#imageModal">
                         + <?= Localization::translate('add_image'); ?>
                     </button>
+                    <?php endif; ?>
                 </div>
                 <!-- ✅ Image Modal -->
                 <div class="modal fade" id="imageModal" tabindex="-1" aria-labelledby="imageModalLabel"
@@ -2181,14 +2223,18 @@ $languageList = $vlrController->getLanguages();
                                                         <i class="fas fa-eye preview-icon"
                                                             title="<?= Localization::translate('preview'); ?>"></i>
                                                     </a>
+                                                    <?php if (!empty($image['can_edit'])): ?>
                                                     <a href="#" class="edit-image" data-image='<?= json_encode($image); ?>'>
                                                         <i class="fas fa-edit edit-icon"
                                                             title="<?= Localization::translate('edit'); ?>"></i>
                                                     </a>
+                                                    <?php endif; ?>
+                                                    <?php if (!empty($image['can_delete'])): ?>
                                                     <a href="#" class="delete-image" data-id="<?= $image['id'] ?>" data-title="<?= htmlspecialchars($image['title']) ?>">
                                                         <i class="fas fa-trash-alt delete-icon"
                                                             title="<?= Localization::translate('delete'); ?>"></i>
                                                     </a>
+                                                    <?php endif; ?>
                                                 </div>
                                             </div>
                                         </div>
@@ -2210,10 +2256,12 @@ $languageList = $vlrController->getLanguages();
                 <!-- External Content Header Section -->
                 <div class="d-flex justify-content-between align-items-center mb-3">
                     <h3><?= Localization::translate('external_content'); ?></h3>
+                    <?php if ($canCreateVLR): ?>
                     <button class="btn btn-sm btn-primary" data-bs-toggle="modal"
                         data-bs-target="#externalContentModal">
                         + <?= Localization::translate('add_external_content'); ?>
                     </button>
+                    <?php endif; ?>
 
                     <!-- ✅ Modal for Adding External Content -->
                     <!-- Modal Popup -->
@@ -2585,15 +2633,19 @@ $languageList = $vlrController->getLanguages();
                                                             <i class="fas fa-eye preview-icon"
                                                                 title="<?= Localization::translate('preview'); ?>"></i>
                                                         </a>
+                                                        <?php if (!empty($content['can_edit'])): ?>
                                                         <a href="#" class="edit-content"
                                                             data-content='<?= json_encode($content); ?>'>
                                                             <i class="fas fa-edit edit-icon"
                                                                 title="<?= Localization::translate('edit'); ?>"></i>
                                                         </a>
+                                                        <?php endif; ?>
+                                                        <?php if (!empty($content['can_delete'])): ?>
                                                         <a href="#" class="delete-external" data-id="<?= $content['id'] ?>" data-title="<?= htmlspecialchars($content['title']) ?>">
                                                             <i class="fas fa-trash-alt delete-icon"
                                                                 title="<?= Localization::translate('delete'); ?>"></i>
                                                         </a>
+                                                        <?php endif; ?>
                                                     </div>
                                                 </div>
                                             </div>
@@ -2616,10 +2668,12 @@ $languageList = $vlrController->getLanguages();
                 <div class="d-flex justify-content-between align-items-center">
                     <h3><?= Localization::translate('survey'); ?></h3>
                     <div class="d-flex gap-2">
+                        <?php if ($canCreateVLR): ?>
                         <button class="btn btn-sm btn-primary" id="addSurveyBtn" data-bs-toggle="modal"
                             data-bs-target="#survey_surveyModal">
                             + <?= Localization::translate('add_survey'); ?>
                         </button>
+                        <?php endif; ?>
 
                         <!-- ✅ Survey Modal -->
                         <div class="modal fade" id="survey_surveyModal" tabindex="-1"
@@ -2829,15 +2883,19 @@ $languageList = $vlrController->getLanguages();
                                                     <?= htmlspecialchars(strlen($survey['title']) > 20 ? substr($survey['title'], 0, 17) . '...' : $survey['title']) ?>
                                                 </h5>
                                                 <div class="survey-actions">
+                                                    <?php if (!empty($survey['can_edit'])): ?>
                                                     <a href="#" class="edit-survey"
                                                         data-survey='<?= json_encode($survey); ?>'>
                                                         <i class="fas fa-edit edit-icon"
                                                             title="<?= Localization::translate('edit'); ?>"></i>
                                                     </a>
+                                                    <?php endif; ?>
+                                                    <?php if (!empty($survey['can_delete'])): ?>
                                                     <a href="#" class="delete-survey" data-id="<?= $survey['id'] ?>" data-title="<?= htmlspecialchars($survey['title']) ?>">
                                                         <i class="fas fa-trash-alt delete-icon"
                                                             title="<?= Localization::translate('delete'); ?>"></i>
                                                     </a>
+                                                    <?php endif; ?>
                                                 </div>
                                             </div>
                                         </div>
@@ -2858,10 +2916,12 @@ $languageList = $vlrController->getLanguages();
                 <div class="d-flex justify-content-between align-items-center">
                     <h3><?= Localization::translate('feedback'); ?></h3>
                     <div class="d-flex gap-2">
+                        <?php if ($canCreateVLR): ?>
                         <button class="btn btn-sm btn-primary" id="addFeedbackBtn" data-bs-toggle="modal"
                             data-bs-target="#feedback_feedbackModal">
                             + <?= Localization::translate('add_feedback'); ?>
                         </button>
+                        <?php endif; ?>
 
                         <!-- ✅ Feedback Modal -->
                         <div class="modal fade" id="feedback_feedbackModal" tabindex="-1"
@@ -3066,15 +3126,19 @@ $languageList = $vlrController->getLanguages();
                                                     <?= htmlspecialchars(strlen($feedback['title']) > 20 ? substr($feedback['title'], 0, 17) . '...' : $feedback['title']) ?>
                                                 </h5>
                                                 <div class="feedback-actions">
+                                                    <?php if (!empty($feedback['can_edit'])): ?>
                                                     <a href="#" class="edit-feedback"
                                                         data-feedback='<?= json_encode($feedback); ?>'>
                                                         <i class="fas fa-edit edit-icon"
                                                             title="<?= Localization::translate('edit'); ?>"></i>
                                                     </a>
+                                                    <?php endif; ?>
+                                                    <?php if (!empty($feedback['can_delete'])): ?>
                                                     <a href="#" class="delete-feedback" data-id="<?= $feedback['id'] ?>" data-title="<?= htmlspecialchars($feedback['title']) ?>">
                                                         <i class="fas fa-trash-alt delete-icon"
                                                             title="<?= Localization::translate('delete'); ?>"></i>
                                                     </a>
+                                                    <?php endif; ?>
                                                 </div>
                                             </div>
                                         </div>
@@ -3098,10 +3162,12 @@ $languageList = $vlrController->getLanguages();
                     <h3><?= Localization::translate('interactive_ai_content'); ?></h3>
 
                     <!-- ✅ Interactive "Add" Button - Opens Modal -->
+                    <?php if ($canCreateVLR): ?>
                     <button class="btn btn-primary mb-3" data-bs-toggle="modal" id="addInteractiveBtn"
                         data-bs-target="#interactiveModal">
                         + <?= Localization::translate('add_interactive_package'); ?>
                     </button>
+                    <?php endif; ?>
 
                     <!-- ✅ INTERACTIVE ADD MODAL -->
                     <div class="modal fade" id="interactiveModal" tabindex="-1" role="dialog"
@@ -3522,12 +3588,16 @@ $languageList = $vlrController->getLanguages();
                                                         <?= htmlspecialchars($displayTitle) ?>
                                                     </h5>
                                                     <div class="interactive-actions">
+                                                        <?php if (!empty($interactive['can_edit'])): ?>
                                                         <a href="#" class="edit-interactive" data-interactive='<?= json_encode($interactive); ?>'>
                                                             <i class="fas fa-edit edit-icon" title="<?= Localization::translate('edit'); ?>"></i>
                                                         </a>
+                                                        <?php endif; ?>
+                                                        <?php if (!empty($interactive['can_delete'])): ?>
                                                         <a href="#" class="delete-interactive" data-id="<?= $interactive['id'] ?>" data-title="<?= htmlspecialchars($interactive['title']) ?>">
                                                             <i class="fas fa-trash-alt delete-icon" title="<?= Localization::translate('delete'); ?>"></i>
                                                         </a>
+                                                        <?php endif; ?>
                                                     </div>
                                                 </div>
                                             </div>
@@ -3549,10 +3619,12 @@ $languageList = $vlrController->getLanguages();
                     <h3><?= Localization::translate('assignment'); ?></h3>
 
                     <!-- ✅ Assignment "Add" Button -->
+                    <?php if ($canCreateVLR): ?>
                     <button class="btn btn-primary mb-3" data-bs-toggle="modal" id="addAssignmentBtn"
                         data-bs-target="#assignmentModal">
                         + <?= Localization::translate('add_assignment'); ?>
                     </button>
+                    <?php endif; ?>
                 </div>
 
                 <!-- ✅ Assignment Modal -->
@@ -3806,14 +3878,18 @@ $languageList = $vlrController->getLanguages();
                                                     <?= htmlspecialchars(strlen($assignment['title']) > 20 ? substr($assignment['title'], 0, 17) . '...' : $assignment['title']) ?>
                                                 </h5>
                                                 <div class="assignment-actions">
+                                                    <?php if (!empty($assignment['can_edit'])): ?>
                                                     <a href="#" class="edit-assignment" data-assignment='<?= json_encode($assignment); ?>'>
                                                         <i class="fas fa-edit edit-icon"
                                                             title="<?= Localization::translate('edit'); ?>"></i>
                                                     </a>
+                                                    <?php endif; ?>
+                                                    <?php if (!empty($assignment['can_delete'])): ?>
                                                     <a href="#" class="delete-assignment" data-id="<?= $assignment['id'] ?>" data-title="<?= htmlspecialchars($assignment['title']) ?>">
                                                         <i class="fas fa-trash-alt delete-icon"
                                                             title="<?= Localization::translate('delete'); ?>"></i>
                                                     </a>
+                                                    <?php endif; ?>
                                                 </div>
                                             </div>
                                         </div>
