@@ -1364,5 +1364,8 @@
     "assign_applicability": "लागूता असाइन करें",
     "current_applicability_rules": "वर्तमान लागूता नियम",
     "search_course": "कोर्स खोजें",
-    "search_users": "यूज़र खोजें"
+    "search_users": "यूज़र खोजें",
+    "not_started": "शुरू नहीं हुआ",
+    "in_progress": "चालू है",
+    "completed": "पूरा हुआ"
 }
