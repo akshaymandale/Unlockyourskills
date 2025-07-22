@@ -146,46 +146,44 @@ class Router
     /**
      * Dispatch the current request
      */
-    public function dispatch()
+    public static function dispatch()
     {
-        $requestUri = $this->getRequestUri();
-        $requestMethod = $_SERVER['REQUEST_METHOD'];
+        $uri = self::getRequestUri();
+        $method = $_SERVER['REQUEST_METHOD'];
 
-        // Debug logging
-        error_log("Router::dispatch - Request URI: $requestUri, Method: $requestMethod");
-        error_log("Router::dispatch - Available routes count: " . count(self::$routes));
+        error_log('[ROUTER] Attempting to dispatch URI: ' . $uri . ' | Method: ' . $method);
 
         // Handle method override for forms
-        if ($requestMethod === 'POST' && isset($_POST['_method'])) {
-            $requestMethod = strtoupper($_POST['_method']);
+        if ($method === 'POST' && isset($_POST['_method'])) {
+            $method = strtoupper($_POST['_method']);
         }
 
         // Find matching route
-        $matchedRoute = $this->findRoute($requestMethod, $requestUri);
+        $matchedRoute = self::findRoute($method, $uri);
 
         if (!$matchedRoute) {
-            error_log("Router::dispatch - No route found for $requestMethod $requestUri");
-            error_log("Router::dispatch - All available routes: " . print_r(self::$routes, true));
-            $this->handleNotFound();
+            error_log('[ROUTER] FAILED: No route found for ' . $method . ' ' . $uri);
+            error_log('[ROUTER] All available routes: ' . print_r(self::$routes, true));
+            self::handleNotFound();
             return;
         }
 
-        error_log("Router::dispatch - Matched route: " . print_r($matchedRoute, true));
+        error_log('[ROUTER] SUCCESS: Matched route: ' . $matchedRoute['uri']);
 
         // Execute middleware
-        if (!$this->executeMiddleware($matchedRoute['middleware'])) {
+        if (!self::executeMiddleware($matchedRoute['middleware'])) {
             error_log("Router::dispatch - Middleware failed");
             return;
         }
 
         // Execute controller action
-        $this->executeAction($matchedRoute);
+        self::executeAction($matchedRoute);
     }
     
     /**
      * Get clean request URI
      */
-    private function getRequestUri()
+    private static function getRequestUri()
     {
         $uri = $_SERVER['REQUEST_URI'];
 
@@ -225,13 +223,13 @@ class Router
     /**
      * Find matching route
      */
-    private function findRoute($method, $uri)
+    private static function findRoute($method, $uri)
     {
         foreach (self::$routes as $route) {
             if ($route['method'] !== $method) {
                 continue;
             }
-            $pattern = $this->convertToRegex($route['uri']);
+            $pattern = self::convertToRegex($route['uri']);
             $matchResult = @preg_match($pattern, $uri, $matches);
             if ($matchResult === false) {
                 error_log("Regex error with pattern: $pattern for URI: {$route['uri']} testing against: $uri");
@@ -257,7 +255,7 @@ class Router
     /**
      * Convert route URI to regex pattern
      */
-    private function convertToRegex($uri)
+    private static function convertToRegex($uri)
     {
         try {
             // Handle empty or root URI
@@ -299,7 +297,7 @@ class Router
     /**
      * Execute middleware
      */
-    private function executeMiddleware($middleware)
+    private static function executeMiddleware($middleware)
     {
         foreach ($middleware as $middlewareName) {
             $middlewareClass = $middlewareName . 'Middleware';
@@ -328,7 +326,7 @@ class Router
     /**
      * Execute controller action
      */
-    private function executeAction($route)
+    private static function executeAction($route)
     {
         $action = $route['action'];
         $parameters = $route['parameters'];
@@ -349,13 +347,13 @@ class Router
                         // Pass parameters to method
                         call_user_func_array([$controllerInstance, $method], array_values($parameters));
                     } else {
-                        $this->handleError("Method '{$method}' not found in controller '{$controller}'");
+                        self::handleError("Method '{$method}' not found in controller '{$controller}'");
                     }
                 } else {
-                    $this->handleError("Controller class '{$controller}' not found");
+                    self::handleError("Controller class '{$controller}' not found");
                 }
             } else {
-                $this->handleError("Controller file '{$controllerFile}' not found");
+                self::handleError("Controller file '{$controllerFile}' not found");
             }
         } elseif (is_callable($action)) {
             // Closure/function
@@ -366,7 +364,7 @@ class Router
     /**
      * Handle 404 Not Found
      */
-    private function handleNotFound()
+    private static function handleNotFound()
     {
         // Redirect to login page for 404 errors
         UrlHelper::redirect('index.php?controller=LoginController');
@@ -375,7 +373,7 @@ class Router
     /**
      * Handle errors
      */
-    private function handleError($message)
+    private static function handleError($message)
     {
         http_response_code(500);
         echo "Error: " . $message;

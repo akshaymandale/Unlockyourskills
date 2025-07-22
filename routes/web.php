@@ -76,6 +76,14 @@ Router::middleware(['Auth'])->group(function() {
     Router::get('/users/{id}/unlock', 'UserManagementController@unlock'); // For GET unlock links
     
     // ===================================
+    // MY COURSES & PORTAL
+    // ===================================
+    Router::get('/my-courses', 'MyCoursesController@index');
+    Router::get('/my-courses/list', 'MyCoursesController@getUserCourses');
+    Router::get('/manage-portal', 'ManagePortalController@index');
+    Router::get('/my-courses/details/{id}', 'MyCoursesController@details');
+
+    // ===================================
     // COURSE CATEGORIES
     // ===================================
     
@@ -512,7 +520,7 @@ Router::get('/course-applicability/getUsersByCustomField', 'CourseApplicabilityC
 // Course Applicability AJAX user search
 Router::get('/course-applicability/search-users', 'CourseApplicabilityController@searchUsers');
 Router::get('/course-applicability/getApplicableUsers', 'CourseApplicabilityController@getApplicableUsers');
-
 // My Courses
 Router::get('/my-courses', 'MyCoursesController@index');
 Router::get('/my-courses/list', 'MyCoursesController@getUserCourses');
+

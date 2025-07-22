@@ -20,8 +20,8 @@ class VLRModel
         }
 
         $stmt = $this->conn->prepare("INSERT INTO scorm_packages
-        (client_id, title, zip_file, description, tags, version, language, scorm_category, time_limit, mobile_support, assessment, created_by, is_deleted, created_at)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, NOW())");
+        (client_id, title, zip_file, description, tags, version, language, scorm_category, time_limit, mobile_support, assessment, launch_path, created_by, is_deleted, created_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, NOW())");
 
         return $stmt->execute([
             $data['client_id'],
@@ -35,6 +35,7 @@ class VLRModel
             $data['time_limit'],
             $data['mobile_support'],
             $data['assessment'],
+            $data['launch_path'] ?? null,
             $data['created_by']
         ]);
     }
@@ -48,7 +49,7 @@ class VLRModel
         }
 
         $sql = "UPDATE scorm_packages
-        SET title = ?, zip_file = ?, description = ?, tags = ?, version = ?, language = ?, scorm_category = ?, time_limit = ?, mobile_support = ?, assessment = ?, updated_at = NOW()
+        SET title = ?, zip_file = ?, description = ?, tags = ?, version = ?, language = ?, scorm_category = ?, time_limit = ?, mobile_support = ?, assessment = ?, launch_path = ?, updated_at = NOW()
         WHERE id = ?";
 
         $params = [
@@ -62,6 +63,7 @@ class VLRModel
             $data['time_limit'],
             $data['mobile_support'],
             $data['assessment'],
+            $data['launch_path'] ?? null,
             $id
         ];
 

@@ -181,6 +181,81 @@ class VLRController extends BaseController
 
                 if (move_uploaded_file($_FILES['zipFile']['tmp_name'], $uploadFilePath)) {
                     $zipFileName = $uniqueFileName;
+
+                    // --- SCORM: Extract ZIP and parse manifest for launch_path ---
+                    $extractDir = $uploadDir . pathinfo($uniqueFileName, PATHINFO_FILENAME) . '/';
+                    if (!is_dir($extractDir)) {
+                        mkdir($extractDir, 0777, true);
+                    }
+                    $zip = new ZipArchive();
+                    if ($zip->open($uploadFilePath) === TRUE) {
+                        $zip->extractTo($extractDir);
+                        $zip->close();
+                        error_log('[SCORM] Extracted ZIP to: ' . $extractDir);
+                        // Look for imsmanifest.xml
+                        $manifestPath = $extractDir . 'imsmanifest.xml';
+                        if (file_exists($manifestPath)) {
+                            error_log('[SCORM] Found manifest: ' . $manifestPath);
+                            $manifestXml = simplexml_load_file($manifestPath);
+                            $namespaces = $manifestXml->getNamespaces(true);
+                            // Improved: Find the first non-empty identifierref in all <item> elements (recursive)
+                            function findFirstIdentifierref($item) {
+                                if (isset($item['identifierref']) && (string)$item['identifierref'] !== '') {
+                                    return (string)$item['identifierref'];
+                                }
+                                // Recursively check child items
+                                if (isset($item->item)) {
+                                    foreach ($item->item as $child) {
+                                        $result = findFirstIdentifierref($child);
+                                        if ($result) return $result;
+                                    }
+                                }
+                                return null;
+                            }
+                            $identifierref = null;
+                            if (isset($manifestXml->organizations->organization)) {
+                                $org = $manifestXml->organizations->organization;
+                                if (isset($org->item)) {
+                                    foreach ($org->item as $item) {
+                                        $identifierref = findFirstIdentifierref($item);
+                                        if ($identifierref) break;
+                                    }
+                                }
+                            }
+                            error_log('[SCORM] identifierref: ' . $identifierref);
+                            $launchPath = null;
+                            if ($identifierref) {
+                                foreach ($manifestXml->resources->resource as $resource) {
+                                    error_log('[SCORM] resource identifier: ' . (string)$resource['identifier'] . ', href: ' . (string)$resource['href']);
+                                    if ((string)$resource['identifier'] === $identifierref) {
+                                        $launchPath = (string)$resource['href'];
+                                        error_log('[SCORM] Matched launchPath: ' . $launchPath);
+                                        break;
+                                    }
+                                }
+                            }
+                            // Fallback: use the first <resource> href if no identifierref found
+                            if (!$launchPath && isset($manifestXml->resources->resource[0]['href'])) {
+                                $launchPath = (string)$manifestXml->resources->resource[0]['href'];
+                                error_log('[SCORM] Fallback to first resource href: ' . $launchPath);
+                            }
+                            // If found, prepend extracted folder path relative to uploads/scorm
+                            if ($launchPath) {
+                                $data['launch_path'] = 'uploads/scorm/' . pathinfo($uniqueFileName, PATHINFO_FILENAME) . '/' . $launchPath;
+                                error_log('[SCORM] Final launch_path: ' . $data['launch_path']);
+                            } else {
+                                $data['launch_path'] = null;
+                                error_log('[SCORM] No launchPath found in manifest.');
+                            }
+                        } else {
+                            $data['launch_path'] = null;
+                            error_log('[SCORM] Manifest not found at: ' . $manifestPath);
+                        }
+                    } else {
+                        $data['launch_path'] = null;
+                        error_log('[SCORM] Failed to open ZIP for extraction.');
+                    }
+                    // --- END SCORM manifest logic ---
                 } else {
                     $this->toastError('File upload failed. Please check directory permissions.', '/unlockyourskills/vlr?tab=scorm');
                     return;
@@ -232,6 +307,14 @@ class VLRController extends BaseController
                 'assessment' => trim($_POST['assessment']),
                 'created_by' => $_SESSION['id']  // Store logged-in user
             ];
+            // If launch_path was set during upload, add it to $data
+            if (isset($data['launch_path']) || (isset($launchPath) && $launchPath)) {
+                $data['launch_path'] = $data['launch_path'] ?? $launchPath;
+                error_log('[SCORM] launch_path to be saved: ' . $data['launch_path']);
+            } else if (!isset($data['launch_path'])) {
+                $data['launch_path'] = null;
+                error_log('[SCORM] launch_path is not set, saving as null.');
+            }
 
             if ($scormId) {
                 // Update existing SCORM package (with client validation)
