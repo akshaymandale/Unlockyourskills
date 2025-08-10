@@ -1,6 +1,7 @@
 <?php include 'includes/header.php'; ?>
 <?php include 'includes/navbar.php'; ?>
 <?php include 'includes/sidebar.php'; ?>
+<?php require_once 'core/IdEncryption.php'; ?>
 
 <div class="main-content">
     <div class="container mt-4 course-details" id="courseDetailsPage">
@@ -163,7 +164,8 @@
                             </div>
                         </div>
                         <?php if (!empty($pre['prerequisite_type']) && in_array($pre['prerequisite_type'], ['assessment','survey','feedback','assignment'])): ?>
-                            <a class="prerequisite-action-btn" target="_blank" href="<?= UrlHelper::url('my-courses/start') . '?type=' . urlencode($pre['prerequisite_type']) . '&id=' . urlencode($pre['prerequisite_id']) ?>">
+                            <?php $encryptedPrereqId = IdEncryption::encrypt($pre['prerequisite_id']); ?>
+                            <a class="prerequisite-action-btn" target="_blank" href="<?= UrlHelper::url('my-courses/start') . '?type=' . urlencode($pre['prerequisite_type']) . '&id=' . urlencode($encryptedPrereqId) ?>">
                                 <i class="fas fa-play me-1"></i>Start
                             </a>
                         <?php else: ?>
@@ -370,9 +372,11 @@
                                                                 case 'survey':
                                                                 case 'feedback':
                                                                 case 'assignment':
-                                                                    echo "<button class='content-action-btn content-action-success'>";
+                                                                    $encryptedId = IdEncryption::encrypt($content['id']);
+                                                                    $startUrl = UrlHelper::url('my-courses/start') . '?type=' . urlencode($type) . '&id=' . urlencode($encryptedId);
+                                                                    echo "<a href='" . htmlspecialchars($startUrl) . "' target='_blank' class='content-action-btn content-action-success'>";
                                                                     echo "<i class='fas fa-play me-1'></i>Start";
-                                                                    echo "</button>";
+                                                                    echo "</a>";
                                                                     break;
                                                                 default:
                                                                     echo "<span class='content-action-btn content-action-disabled' disabled>";
@@ -489,7 +493,8 @@
                                 <span class="postrequisite-type"><?= htmlspecialchars(ucfirst($type)) ?></span>
                             </div>
                         </div>
-                        <a class="postrequisite-action-btn" target="_blank" href="<?= UrlHelper::url('my-courses/start') . '?type=' . urlencode($post['content_type']) . '&id=' . urlencode($post['content_id']) ?>">
+                        <?php $encryptedPostreqId = IdEncryption::encrypt($post['content_id']); ?>
+                        <a class="postrequisite-action-btn" target="_blank" href="<?= UrlHelper::url('my-courses/start') . '?type=' . urlencode($post['content_type']) . '&id=' . urlencode($encryptedPostreqId) ?>">
                             <i class="fas fa-rocket me-1"></i>Launch
                         </a>
                     </div>

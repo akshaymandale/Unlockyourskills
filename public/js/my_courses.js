@@ -77,7 +77,7 @@ document.addEventListener('DOMContentLoaded', function() {
         // Module info (placeholder)
         const moduleInfo = course.module_count ? `<span class='small text-muted ms-2'><i class='fas fa-layer-group me-1'></i>${course.module_count} Modules</span>` : '';
         const statusBadge = renderStatusBadge(course.user_course_status);
-        const courseUrl = `/Unlockyourskills/my-courses/details/${course.id}`;
+        const courseUrl = `/Unlockyourskills/my-courses/details/${course.encrypted_id}`;
         console.log(`[renderCourseCard] Creating link for course "${course.name}" with URL: ${courseUrl}`); // DEBUG LOG
         return `<div class="col-md-6 col-lg-4 col-xl-3">
             <div class="card course-card h-100 shadow-lg border-0 animate-pop position-relative">
@@ -118,7 +118,7 @@ document.addEventListener('DOMContentLoaded', function() {
         else statusIcon = '<i class="fas fa-hourglass-start text-purple"></i>';
         const avatar = `<div class='course-avatar bg-purple text-white d-flex align-items-center justify-content-center me-3'><i class='fas fa-user-graduate'></i></div>`;
         const statusBadge = renderStatusBadge(course.user_course_status);
-        const courseUrl = `/Unlockyourskills/my-courses/details/${course.id}`;
+        const courseUrl = `/Unlockyourskills/my-courses/details/${course.encrypted_id}`;
         console.log(`[renderCourseRow] Creating link for course "${course.name}" with URL: ${courseUrl}`); // DEBUG LOG
         return `<div class="list-group-item d-flex align-items-center course-list-row animate-pop">
             ${avatar}

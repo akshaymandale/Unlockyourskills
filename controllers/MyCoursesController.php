@@ -2,6 +2,7 @@
 require_once 'models/MyCoursesModel.php';
 require_once 'core/UrlHelper.php';
 require_once 'config/Localization.php';
+require_once 'core/IdEncryption.php';
 
 class MyCoursesController {
     private $myCoursesModel;
@@ -31,6 +32,16 @@ class MyCoursesController {
         $page = max(1, intval($_GET['page'] ?? 1));
         $perPage = intval($_GET['per_page'] ?? 12);
         $courses = $this->myCoursesModel->getUserCourses($userId, $status, $search, $page, $perPage);
+        
+        // Add encrypted IDs for secure URLs
+        if (is_array($courses)) {
+            foreach ($courses as &$course) {
+                if (isset($course['id'])) {
+                    $course['encrypted_id'] = IdEncryption::encrypt($course['id']);
+                }
+            }
+        }
+        
         header('Content-Type: application/json');
         echo json_encode(['success' => true, 'courses' => $courses]);
         exit;
@@ -41,7 +52,7 @@ class MyCoursesController {
         if (!isset($_SESSION['user']['id'])) {
             UrlHelper::redirect('login');
         }
-        $courseId = $id;
+        $courseId = IdEncryption::getId($id);
         if (!$courseId) {
             UrlHelper::redirect('my-courses');
         }
@@ -76,7 +87,7 @@ class MyCoursesController {
             UrlHelper::redirect('login');
         }
         $type = $_GET['type'] ?? '';
-        $id = isset($_GET['id']) ? (int)$_GET['id'] : 0;
+        $id = isset($_GET['id']) ? IdEncryption::getId($_GET['id']) : 0;
         if (!$type || !$id) {
             UrlHelper::redirect('my-courses');
         }
