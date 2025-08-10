@@ -21,22 +21,35 @@ class MyCoursesModel {
     public function getUserCourses($userId, $status = '', $search = '', $page = 1, $perPage = 12) {
         $offset = ($page - 1) * $perPage;
         $params = [':user_id' => $userId];
-        $where = '1=1';
+        
+        // Derive a reasonable custom field value from session (e.g., department or role)
+        $userDepartment = '';
+        if (isset($_SESSION['user']['user_role']) && !empty($_SESSION['user']['user_role'])) {
+            $userDepartment = $_SESSION['user']['user_role'];
+        }
+        $params[':user_department'] = $userDepartment;
 
-        // Join course_applicability to get assigned courses
-        $sql = "SELECT c.id, c.name, c.category_id, c.subcategory_id, c.thumbnail_image, c.course_status, c.difficulty_level, c.created_by, c.created_at, c.updated_at,
+        // Build base query
+        $sql = "SELECT 
+                    c.id, c.name, c.category_id, c.subcategory_id, c.thumbnail_image, c.course_status, c.difficulty_level,
+                    c.created_by, c.created_at, c.updated_at,
                     cat.name AS category_name, subcat.name AS subcategory_name,
-                    uc.progress, uc.status AS user_course_status
+                    uc.completion_percentage AS progress, uc.status AS user_course_status
                 FROM courses c
                 INNER JOIN course_applicability ca ON ca.course_id = c.id
-                LEFT JOIN user_courses uc ON uc.course_id = c.id AND uc.user_id = :user_id
+                LEFT JOIN course_enrollments uc ON uc.course_id = c.id AND uc.user_id = :user_id
                 LEFT JOIN course_categories cat ON c.category_id = cat.id
                 LEFT JOIN course_subcategories subcat ON c.subcategory_id = subcat.id
-                WHERE (ca.applicability_type = 'all' OR (ca.applicability_type = 'user' AND ca.user_id = :user_id))";
+                WHERE c.is_deleted = 0 AND (
+                    ca.applicability_type = 'all'
+                    OR (ca.applicability_type = 'user' AND ca.user_id = :user_id)
+                    OR (ca.applicability_type = 'custom_field' AND ca.custom_field_value = :user_department)
+                )";
 
-        // Filter by status
+        // Filter by status (map frontend statuses to enrollment statuses)
         if ($status === 'not_started') {
-            $sql .= " AND (uc.status IS NULL OR uc.status = 'not_started')";
+            // Not started = no enrollment yet or still in 'enrolled' state
+            $sql .= " AND (uc.status IS NULL OR uc.status IN ('enrolled'))";
         } elseif ($status === 'in_progress') {
             $sql .= " AND uc.status = 'in_progress'";
         } elseif ($status === 'completed') {

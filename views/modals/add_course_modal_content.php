@@ -663,7 +663,8 @@ if (isset($vlrContent) && is_array($vlrContent)) {
     }
 }
 ?>
-<div id="vlrContentData" data-vlr-content='<?= htmlspecialchars(json_encode($vlrContent ?? []), ENT_QUOTES, "UTF-8") ?>'></div>
+<?php $vlrJson = !empty($flatVlrContent) ? $flatVlrContent : ($vlrContent ?? []); ?>
+<div id="vlrContentData" data-vlr-content='<?= htmlspecialchars(json_encode($vlrJson), ENT_QUOTES, "UTF-8") ?>'></div>
 
 <script>
 console.log('[DEBUG] PHP $vlrContent (raw):', <?= var_export(isset($vlrContent) ? $vlrContent : null, true) ?>);

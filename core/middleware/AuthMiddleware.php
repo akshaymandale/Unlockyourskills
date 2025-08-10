@@ -56,8 +56,10 @@ class AuthMiddleware extends Middleware
                 ], 401);
             }
 
-            // Regular request, redirect to login
-            $this->redirect(UrlHelper::url('login'));
+            // Regular request, redirect to login (preserve client_code if present)
+            $clientCode = $_SESSION['user']['client_code'] ?? ($_COOKIE['last_client_code'] ?? '');
+            $suffix = $clientCode ? ('?client_code=' . urlencode($clientCode)) : '';
+            $this->redirect(UrlHelper::url('login' . $suffix));
             return false;
         }
         
@@ -127,8 +129,10 @@ class AuthMiddleware extends Middleware
             ], 401);
         }
         
-        // Regular request, redirect to login with timeout message
-        $this->redirect(UrlHelper::url('login?timeout=1'));
+                // Regular request, redirect to login with timeout message (preserve client_code)
+            $clientCode = $_SESSION['user']['client_code'] ?? ($_COOKIE['last_client_code'] ?? '');
+            $qs = 'timeout=1' . ($clientCode ? ('&client_code=' . urlencode($clientCode)) : '');
+            $this->redirect(UrlHelper::url('login?' . $qs));
     }
     
     /**

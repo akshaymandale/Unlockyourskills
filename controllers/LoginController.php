@@ -46,8 +46,12 @@ class LoginController extends BaseController {
         }
         $result = $this->authModel->authenticateUser($clientCode, $username, $password);
         if ($result['valid']) {
-            $_SESSION['id'] = $result['user']['id'];
-            $_SESSION['user'] = $result['user'];
+            // Set full user session and last_activity
+            $this->setUserSession($result['user']);
+            // Remember last client code for convenience on timeouts
+            if (!headers_sent() && !empty($clientCode)) {
+                setcookie('last_client_code', $clientCode, time() + (86400 * 30), '/');
+            }
             if ($isAjax) {
                 $this->returnJsonSuccess('Login successful', [
                     'redirect' => UrlHelper::url('dashboard')
