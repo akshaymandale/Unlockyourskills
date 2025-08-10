@@ -3,7 +3,7 @@
 <?php include 'includes/sidebar.php'; ?>
 
 <div class="main-content">
-    <div class="container mt-4" id="myCoursesPage">
+    <div class="container mt-4 my-courses" id="myCoursesPage">
         <h1 class="page-title text-purple mb-4">
             <i class="fas fa-book me-2"></i> <?= Localization::translate('my_courses'); ?>
         </h1>

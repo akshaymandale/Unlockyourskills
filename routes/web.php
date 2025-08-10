@@ -82,6 +82,8 @@ Router::middleware(['Auth'])->group(function() {
     Router::get('/my-courses/list', 'MyCoursesController@getUserCourses');
     Router::get('/manage-portal', 'ManagePortalController@index');
     Router::get('/my-courses/details/{id}', 'MyCoursesController@details');
+    Router::get('/my-courses/view-content', 'MyCoursesController@viewContent');
+    Router::get('/my-courses/start', 'MyCoursesController@start');
 
     // ===================================
     // COURSE CATEGORIES

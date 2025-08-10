@@ -3,162 +3,504 @@
 <?php include 'includes/sidebar.php'; ?>
 
 <div class="main-content">
-    <div class="container mt-4">
-        <!-- Banner -->
+    <div class="container mt-4 course-details" id="courseDetailsPage">
+        <!-- Back Arrow and Title -->
+        <div class="back-arrow-container d-flex align-items-center gap-2">
+            <a href="<?= UrlHelper::url('my-courses') ?>" class="back-link me-2 d-inline-flex align-items-center">
+                <i class="fas fa-arrow-left"></i>
+            </a>
+            <span class="divider-line mx-2" style="display:inline-block"></span>
+            <h1 class="page-title text-purple mb-0 d-flex align-items-center"><i class="fas fa-info-circle me-2"></i><?= Localization::translate('course_details'); ?></h1>
+        </div>
+
+        <!-- Banner with overlay -->
         <div class="course-banner position-relative mb-4" style="height: 260px; border-radius: 18px; overflow: hidden; background: #f8f9fa;">
-            <?php if (!empty($course['thumbnail_image'])): ?>
+            <?php if (!empty($course['banner_image'])): ?>
+                <img src="/Unlockyourskills/<?= htmlspecialchars($course['banner_image']) ?>" alt="<?= htmlspecialchars($course['name']) ?>" class="w-100 h-100" style="object-fit: cover;">
+            <?php elseif (!empty($course['thumbnail_image'])): ?>
                 <img src="/Unlockyourskills/<?= htmlspecialchars($course['thumbnail_image']) ?>" alt="<?= htmlspecialchars($course['name']) ?>" class="w-100 h-100" style="object-fit: cover;">
             <?php else: ?>
                 <div class="d-flex align-items-center justify-content-center h-100 w-100">
                     <i class="fas fa-book-open fa-5x text-secondary"></i>
                 </div>
             <?php endif; ?>
+            <div class="banner-overlay"></div>
+            <div class="banner-content">
+                <div class="d-flex align-items-center gap-2 flex-wrap">
+                    <span class="badge badge-course-type"><i class="fas fa-layer-group me-1"></i><?= htmlspecialchars($course['course_type'] ?? 'e-learning') ?></span>
+                    <?php if (!empty($course['difficulty_level'])): ?>
+                        <span class="badge badge-difficulty"><i class="fas fa-signal me-1"></i><?= htmlspecialchars(ucfirst($course['difficulty_level'])) ?></span>
+                    <?php endif; ?>
+                    <?php if (!empty($course['category_name'])): ?>
+                        <span class="badge badge-category"><i class="fas fa-folder-open me-1"></i><?= htmlspecialchars($course['category_name']) ?></span>
+                    <?php endif; ?>
+                </div>
+                <h2 class="banner-title mt-2 mb-0"><?= htmlspecialchars($course['name']) ?></h2>
+            </div>
         </div>
 
-        <!-- Course Info -->
+        <?php
+        // Helper to resolve URLs for content paths
+        if (!function_exists('resolveContentUrl')) {
+            function resolveContentUrl($path) {
+                if (empty($path)) {
+                    return '';
+                }
+                if (preg_match('#^https?://#i', $path)) {
+                    return $path;
+                }
+                if ($path[0] === '/') {
+                    return $path;
+                }
+                return UrlHelper::url($path);
+            }
+        }
+        // Helper to pretty duration
+        $durationParts = [];
+        if (!empty($course['duration_hours'])) { $durationParts[] = intval($course['duration_hours']) . 'h'; }
+        if (!empty($course['duration_minutes'])) { $durationParts[] = intval($course['duration_minutes']) . 'm'; }
+        $prettyDuration = !empty($durationParts) ? implode(' ', $durationParts) : null;
+        $moduleCount = !empty($course['modules']) && is_array($course['modules']) ? count($course['modules']) : 0;
+        ?>
+
+        <!-- Meta + Description -->
         <div class="card mb-4 p-4 shadow-sm">
-            <h2 class="text-purple fw-bold mb-3"><?= htmlspecialchars($course['name']) ?></h2>
-            <p class="text-muted"><?= nl2br(htmlspecialchars($course['description'] ?? 'No description available.')) ?></p>
+            <div class="row g-3 align-items-stretch">
+                <div class="col-lg-8">
+                    <h5 class="text-purple fw-bold mb-2"><i class="fas fa-align-left me-2"></i>About this course</h5>
+                    <p class="text-muted mb-0"><?= nl2br(htmlspecialchars($course['description'] ?? 'No description available.')) ?></p>
+                </div>
+                <div class="col-lg-4">
+                    <div class="meta-grid">
+                        <div class="meta-item">
+                            <div class="meta-icon"><i class="fas fa-stream"></i></div>
+                            <div class="meta-text">
+                                <div class="meta-label">Modules</div>
+                                <div class="meta-value"><?= $moduleCount ?></div>
+                            </div>
+                        </div>
+                        <div class="meta-item">
+                            <div class="meta-icon"><i class="fas fa-clock"></i></div>
+                            <div class="meta-text">
+                                <div class="meta-label">Duration</div>
+                                <div class="meta-value"><?= htmlspecialchars($prettyDuration ?? 'N/A') ?></div>
+                            </div>
+                        </div>
+                        <div class="meta-item">
+                            <div class="meta-icon"><i class="fas fa-signal"></i></div>
+                            <div class="meta-text">
+                                <div class="meta-label">Difficulty</div>
+                                <div class="meta-value"><?= htmlspecialchars(ucfirst($course['difficulty_level'] ?? 'beginner')) ?></div>
+                            </div>
+                        </div>
+                        <div class="meta-item">
+                            <div class="meta-icon"><i class="fas fa-eye"></i></div>
+                            <div class="meta-text">
+                                <div class="meta-label">Visibility</div>
+                                <div class="meta-value"><?= htmlspecialchars(ucfirst($course['course_status'] ?? 'active')) ?></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
         </div>
 
         <!-- Prerequisites -->
         <?php if (!empty($course['prerequisites'])): ?>
-        <div class="card mb-4 p-4 shadow-sm">
-            <h5 class="text-purple fw-bold mb-3">Prerequisites</h5>
-            <ul>
+        <div class="card mb-4 p-4 shadow-sm border-0" style="background: linear-gradient(135deg, #f8f9ff 0%, #ffffff 100%); border-left: 4px solid #6a0dad !important;">
+            <div class="d-flex align-items-center mb-3">
+                <div class="prerequisite-icon-wrapper me-3">
+                    <i class="fas fa-list-check text-white"></i>
+                </div>
+                <div>
+                    <h5 class="text-purple fw-bold mb-1">Prerequisites</h5>
+                    <p class="text-muted small mb-0">Complete these requirements to access this course</p>
+                </div>
+            </div>
+            <div class="prerequisites-grid">
                 <?php foreach ($course['prerequisites'] as $pre): ?>
-                    <li><?= htmlspecialchars($pre['title']) ?></li>
+                    <div class="prerequisite-card">
+                        <div class="prerequisite-content">
+                            <div class="prerequisite-icon">
+                                <?php
+                                    $type = $pre['prerequisite_type'] ?? 'course';
+                                    $iconMap = [
+                                        'assessment' => 'fa-clipboard-check',
+                                        'survey' => 'fa-square-poll-vertical',
+                                        'feedback' => 'fa-comments',
+                                        'assignment' => 'fa-file-signature',
+                                        'course' => 'fa-book-open',
+                                        'module' => 'fa-layer-group',
+                                        'scorm' => 'fa-cubes',
+                                        'video' => 'fa-video',
+                                        'audio' => 'fa-headphones',
+                                        'document' => 'fa-file-lines',
+                                        'image' => 'fa-image',
+                                        'interactive' => 'fa-wand-magic-sparkles'
+                                    ];
+                                    $icon = $iconMap[$type] ?? 'fa-book-open';
+                                    $colorMap = [
+                                        'assessment' => '#28a745',
+                                        'survey' => '#17a2b8',
+                                        'feedback' => '#ffc107',
+                                        'assignment' => '#fd7e14',
+                                        'course' => '#6a0dad',
+                                        'module' => '#6f42c1',
+                                        'scorm' => '#e83e8c',
+                                        'video' => '#dc3545',
+                                        'audio' => '#fd7e14',
+                                        'document' => '#6c757d',
+                                        'image' => '#20c997',
+                                        'interactive' => '#6f42c1'
+                                    ];
+                                    $color = $colorMap[$type] ?? '#6a0dad';
+                                ?>
+                                <i class="fas <?= $icon ?>" style="color: <?= $color ?>;"></i>
+                            </div>
+                            <div class="prerequisite-details">
+                                <h6 class="prerequisite-title mb-1"><?= htmlspecialchars($pre['title']) ?></h6>
+                                <span class="prerequisite-type"><?= htmlspecialchars(ucfirst($type)) ?></span>
+                            </div>
+                        </div>
+                        <?php if (!empty($pre['prerequisite_type']) && in_array($pre['prerequisite_type'], ['assessment','survey','feedback','assignment'])): ?>
+                            <a class="prerequisite-action-btn" target="_blank" href="<?= UrlHelper::url('my-courses/start') . '?type=' . urlencode($pre['prerequisite_type']) . '&id=' . urlencode($pre['prerequisite_id']) ?>">
+                                <i class="fas fa-play me-1"></i>Start
+                            </a>
+                        <?php else: ?>
+                            <span class="prerequisite-status">
+                                <i class="fas fa-check-circle me-1"></i>Required
+                            </span>
+                        <?php endif; ?>
+                    </div>
                 <?php endforeach; ?>
-            </ul>
+            </div>
         </div>
         <?php endif; ?>
 
-        <!-- Modules & Content -->
-        <div class="card mb-4 p-4 shadow-sm">
-            <h5 class="text-purple fw-bold mb-3">Course Content</h5>
+        <!-- Course Content -->
+        <div class="card mb-4 p-4 shadow-sm border-0" style="background: linear-gradient(135deg, #f0f8ff 0%, #ffffff 100%); border-left: 4px solid #007bff !important;">
+            <div class="d-flex align-items-center mb-4">
+                <div class="course-content-icon-wrapper me-3">
+                    <i class="fas fa-layer-group text-white"></i>
+                </div>
+                <div>
+                    <h5 class="text-purple fw-bold mb-1">Course Content</h5>
+                    <p class="text-muted small mb-0">Explore modules and learning materials</p>
+                </div>
+            </div>
+            
             <?php if (!empty($course['modules'])): ?>
-                <div class="accordion" id="modulesAccordion">
+                <div class="course-modules-container">
                     <?php foreach ($course['modules'] as $idx => $module): ?>
-                        <div class="accordion-item">
-                            <h2 class="accordion-header" id="heading<?= $idx ?>">
-                                <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapse<?= $idx ?>" aria-expanded="false" aria-controls="collapse<?= $idx ?>">
-                                    <?= htmlspecialchars($module['title']) ?>
-                                </button>
-                            </h2>
-                            <div id="collapse<?= $idx ?>" class="accordion-collapse collapse" aria-labelledby="heading<?= $idx ?>" data-bs-parent="#modulesAccordion">
-                                <div class="accordion-body">
-                                    <?php if (!empty($module['content'])): ?>
-                                        <ul class="list-group">
-                                            <?php foreach ($module['content'] as $content): ?>
-                                                <li class="list-group-item d-flex justify-content-between align-items-center">
-                                                    <div>
-                                                        <strong><?= htmlspecialchars(ucfirst($content['type'])) ?>:</strong> <?= htmlspecialchars($content['title']) ?>
+                        <div class="module-card mb-3">
+                            <div class="module-header" data-bs-toggle="collapse" data-bs-target="#collapse<?= $idx ?>" aria-expanded="false" aria-controls="collapse<?= $idx ?>">
+                                <div class="module-header-content">
+                                    <div class="module-info">
+                                        <div class="module-icon-wrapper me-3">
+                                            <i class="fas fa-folder text-white"></i>
+                                        </div>
+                                        <div class="module-details">
+                                            <div class="module-number">Module <?= ($idx + 1) ?></div>
+                                            <h6 class="module-title mb-1"><?= htmlspecialchars($module['title']) ?></h6>
+                                        </div>
+                                    </div>
+                                    <div class="module-progress-section">
+                                        <div class="progress-info">
+                                            <span class="progress-text"><?= intval($module['module_progress'] ?? 0) ?>% Complete</span>
+                                            <div class="progress" role="progressbar" aria-label="Module progress" aria-valuenow="<?= intval($module['module_progress'] ?? 0) ?>" aria-valuemin="0" aria-valuemax="100">
+                                                <div class="progress-bar" style="width: <?= intval($module['module_progress'] ?? 0) ?>%"></div>
+                                            </div>
+                                        </div>
+                                        <div class="module-toggle">
+                                            <i class="fas fa-chevron-down"></i>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div id="collapse<?= $idx ?>" class="module-content collapse">
+                                <?php if (!empty($module['content'])): ?>
+                                    <div class="content-grid">
+                                        <?php foreach ($module['content'] as $content): ?>
+                                            <?php
+                                                $type = $content['type'];
+                                                $iconMap = [
+                                                    'scorm' => 'fa-cubes',
+                                                    'non_scorm' => 'fa-cube',
+                                                    'interactive' => 'fa-wand-magic-sparkles',
+                                                    'video' => 'fa-video',
+                                                    'audio' => 'fa-headphones',
+                                                    'document' => 'fa-file-lines',
+                                                    'image' => 'fa-image',
+                                                    'external' => 'fa-link',
+                                                    'assessment' => 'fa-clipboard-check',
+                                                    'survey' => 'fa-square-poll-vertical',
+                                                    'feedback' => 'fa-comments',
+                                                    'assignment' => 'fa-file-signature',
+                                                ];
+                                                $icon = $iconMap[$type] ?? 'fa-file';
+                                                $colorMap = [
+                                                    'scorm' => '#e83e8c',
+                                                    'non_scorm' => '#6f42c1',
+                                                    'interactive' => '#6f42c1',
+                                                    'video' => '#dc3545',
+                                                    'audio' => '#fd7e14',
+                                                    'document' => '#6c757d',
+                                                    'image' => '#20c997',
+                                                    'external' => '#17a2b8',
+                                                    'assessment' => '#28a745',
+                                                    'survey' => '#17a2b8',
+                                                    'feedback' => '#ffc107',
+                                                    'assignment' => '#fd7e14',
+                                                ];
+                                                $color = $colorMap[$type] ?? '#6c757d';
+                                            ?>
+                                            <div class="content-item-card">
+                                                <div class="content-item-left">
+                                                    <div class="content-item-header">
+                                                        <div class="content-icon-wrapper me-3" style="background: <?= $color ?>;">
+                                                            <i class="fas <?= $icon ?> text-white"></i>
+                                                        </div>
+                                                        <div class="content-details">
+                                                            <h6 class="content-title mb-1"><?= htmlspecialchars($content['title']) ?></h6>
+                                                            <span class="content-type-badge"><?= htmlspecialchars(ucfirst($type)) ?></span>
+                                                        </div>
                                                     </div>
-                                                    <div>
+                                                </div>
+                                                <div class="content-item-center">
+                                                    <div class="content-progress">
+                                                        <div class="content-progress-info">
+                                                            <span class="content-progress-text"><?= intval($content['progress'] ?? 0) ?>%</span>
+                                                            <div class="content-progress-bar" role="progressbar" aria-label="Content progress" aria-valuenow="<?= intval($content['progress'] ?? 0) ?>" aria-valuemin="0" aria-valuemax="100">
+                                                                <div class="content-progress-fill" style="width: <?= intval($content['progress'] ?? 0) ?>%"></div>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                                <div class="content-item-right">
+                                                    <div class="content-controls">
+                                                        <div class="content-actions">
                                                         <?php
-                                                            $urlBase = '/Unlockyourskills/';
                                                             switch ($content['type']) {
                                                                 case 'scorm':
                                                                     $launchUrl = $content['scorm_launch_path'] ?? '';
                                                                     if ($launchUrl) {
-                                                                        echo "<button class='btn btn-sm theme-btn-primary launch-content-btn' data-type='iframe' data-url='{$urlBase}" . htmlspecialchars($launchUrl) . "' data-title='" . htmlspecialchars($content['title']) . "'>Launch</button>";
+                                                                        $resolved = resolveContentUrl($launchUrl);
+                                                                        $viewer = UrlHelper::url('my-courses/view-content') . '?type=scorm&title=' . urlencode($content['title']) . '&src=' . urlencode($resolved);
+                                                                        echo "<a href='" . htmlspecialchars($viewer) . "' target='_blank' class='content-action-btn content-action-primary'>";
+                                                                        echo "<i class='fas fa-rocket me-1'></i>Launch";
+                                                                        echo "</a>";
                                                                     } else {
-                                                                        echo "<span class='text-danger'>No SCORM launch path</span>";
+                                                                        echo "<span class='content-error'><i class='fas fa-exclamation-triangle me-1'></i>No SCORM launch path</span>";
                                                                     }
                                                                     break;
                                                                 case 'non_scorm':
                                                                 case 'interactive':
-                                                                    $launchUrl = $content['non_scorm_launch_path'] ?? $content['interactive_launch_url'] ?? '';
+                                                                    $launchUrl = $content['non_scorm_launch_path'] ?? ($content['interactive_launch_url'] ?? '');
                                                                     if ($launchUrl) {
-                                                                        echo "<button class='btn btn-sm theme-btn-primary launch-content-btn' data-type='iframe' data-url='{$urlBase}" . htmlspecialchars($launchUrl) . "' data-title='" . htmlspecialchars($content['title']) . "'>Launch</button>";
+                                                                        $resolved = resolveContentUrl($launchUrl);
+                                                                        $viewer = UrlHelper::url('my-courses/view-content') . '?type=iframe&title=' . urlencode($content['title']) . '&src=' . urlencode($resolved);
+                                                                        echo "<a href='" . htmlspecialchars($viewer) . "' target='_blank' class='content-action-btn content-action-primary'>";
+                                                                        echo "<i class='fas fa-rocket me-1'></i>Launch";
+                                                                        echo "</a>";
                                                                     } else {
-                                                                        echo "<span class='text-danger'>No launch path</span>";
+                                                                        echo "<span class='content-error'><i class='fas fa-exclamation-triangle me-1'></i>No launch path</span>";
                                                                     }
                                                                     break;
                                                                 case 'video':
                                                                     $videoUrl = $content['video_file_path'] ?? '';
                                                                     if ($videoUrl) {
-                                                                        echo "<button class='btn btn-sm theme-btn-primary launch-content-btn' data-type='video' data-url='{$urlBase}" . htmlspecialchars($videoUrl) . "' data-title='" . htmlspecialchars($content['title']) . "'>Play</button>";
+                                                                        $resolved = resolveContentUrl($videoUrl);
+                                                                        $viewer = UrlHelper::url('my-courses/view-content') . '?type=video&title=' . urlencode($content['title']) . '&src=' . urlencode($resolved);
+                                                                        echo "<a href='" . htmlspecialchars($viewer) . "' target='_blank' class='content-action-btn content-action-primary'>";
+                                                                        echo "<i class='fas fa-play me-1'></i>Play";
+                                                                        echo "</a>";
                                                                     } else {
-                                                                        echo "<span class='text-danger'>No video file</span>";
+                                                                        echo "<span class='content-error'><i class='fas fa-exclamation-triangle me-1'></i>No video file</span>";
                                                                     }
                                                                     break;
                                                                 case 'audio':
                                                                     $audioUrl = $content['audio_file_path'] ?? '';
                                                                     if ($audioUrl) {
-                                                                        echo "<audio controls preload='none' style='height: 30px;'><source src='{$urlBase}" . htmlspecialchars($audioUrl) . "' type='audio/mpeg'></audio>";
+                                                                        $resolved = resolveContentUrl($audioUrl);
+                                                                        echo "<div class='audio-player-wrapper'>";
+                                                                        echo "<audio controls preload='none'><source src='" . htmlspecialchars($resolved) . "' type='audio/mpeg'></audio>";
+                                                                        echo "</div>";
                                                                     } else {
-                                                                        echo "<span class='text-danger'>No audio file</span>";
+                                                                        echo "<span class='content-error'><i class='fas fa-exclamation-triangle me-1'></i>No audio file</span>";
                                                                     }
                                                                     break;
                                                                 case 'document':
                                                                     $docUrl = $content['document_file_path'] ?? '';
                                                                     if ($docUrl) {
-                                                                        echo "<a href='{$urlBase}" . htmlspecialchars($docUrl) . "' target='_blank' class='btn btn-sm btn-outline-secondary'>View</a>";
+                                                                        $resolved = resolveContentUrl($docUrl);
+                                                                        $viewer = UrlHelper::url('my-courses/view-content') . '?type=document&title=' . urlencode($content['title']) . '&src=' . urlencode($resolved);
+                                                                        echo "<a href='" . htmlspecialchars($viewer) . "' target='_blank' class='content-action-btn content-action-secondary'>";
+                                                                        echo "<i class='fas fa-eye me-1'></i>View";
+                                                                        echo "</a>";
                                                                     } else {
-                                                                        echo "<span class='text-danger'>No document file</span>";
+                                                                        echo "<span class='content-error'><i class='fas fa-exclamation-triangle me-1'></i>No document file</span>";
                                                                     }
                                                                     break;
                                                                 case 'image':
                                                                     $imgUrl = $content['image_file_path'] ?? '';
                                                                     if ($imgUrl) {
-                                                                        echo "<a href='{$urlBase}" . htmlspecialchars($imgUrl) . "' target='_blank' class='btn btn-sm btn-outline-secondary'>View</a>";
+                                                                        $resolved = resolveContentUrl($imgUrl);
+                                                                        $viewer = UrlHelper::url('my-courses/view-content') . '?type=image&title=' . urlencode($content['title']) . '&src=' . urlencode($resolved);
+                                                                        echo "<a href='" . htmlspecialchars($viewer) . "' target='_blank' class='content-action-btn content-action-secondary'>";
+                                                                        echo "<i class='fas fa-eye me-1'></i>View";
+                                                                        echo "</a>";
                                                                     } else {
-                                                                        echo "<span class='text-danger'>No image file</span>";
+                                                                        echo "<span class='content-error'><i class='fas fa-exclamation-triangle me-1'></i>No image file</span>";
                                                                     }
                                                                     break;
                                                                 case 'external':
                                                                     $extUrl = $content['external_content_url'] ?? '';
                                                                     if ($extUrl) {
-                                                                        echo "<a href='" . htmlspecialchars($extUrl) . "' target='_blank' class='btn btn-sm btn-outline-info'>Open Link</a>";
+                                                                        $resolved = resolveContentUrl($extUrl);
+                                                                        $viewer = UrlHelper::url('my-courses/view-content') . '?type=external&title=' . urlencode($content['title']) . '&src=' . urlencode($resolved);
+                                                                        echo "<a href='" . htmlspecialchars($viewer) . "' target='_blank' class='content-action-btn content-action-info'>";
+                                                                        echo "<i class='fas fa-external-link-alt me-1'></i>Open Link";
+                                                                        echo "</a>";
                                                                     } else {
-                                                                        echo "<span class='text-danger'>No external link</span>";
+                                                                        echo "<span class='content-error'><i class='fas fa-exclamation-triangle me-1'></i>No external link</span>";
                                                                     }
                                                                     break;
                                                                 case 'assessment':
                                                                 case 'survey':
                                                                 case 'feedback':
                                                                 case 'assignment':
-                                                                    // For demo, just show a Start button (link to actual package if needed)
-                                                                    echo "<button class='btn btn-sm btn-outline-success'>Start</button>";
+                                                                    echo "<button class='content-action-btn content-action-success'>";
+                                                                    echo "<i class='fas fa-play me-1'></i>Start";
+                                                                    echo "</button>";
                                                                     break;
                                                                 default:
-                                                                    echo "<button class='btn btn-sm btn-outline-secondary' disabled>Not available</button>";
+                                                                    echo "<span class='content-action-btn content-action-disabled' disabled>";
+                                                                    echo "<i class='fas fa-ban me-1'></i>Not available";
+                                                                    echo "</span>";
                                                                     break;
                                                             }
                                                         ?>
+                                                        </div>
+                                                        <div class="content-toggle" data-bs-toggle="collapse" data-bs-target="#contentDetails<?= $idx ?>_<?= $content['id'] ?? $loop->index ?>" aria-expanded="false">
+                                                            <i class="fas fa-chevron-down"></i>
+                                                        </div>
                                                     </div>
-                                                </li>
-                                            <?php endforeach; ?>
-                                        </ul>
-                                    <?php else: ?>
-                                        <p class="text-muted">No content in this module.</p>
-                                    <?php endif; ?>
-                                </div>
+                                                </div>
+                                            </div>
+                                            
+                                            <!-- Content Details Collapsible Section -->
+                                            <div id="contentDetails<?= $idx ?>_<?= $content['id'] ?? $loop->index ?>" class="content-details-collapse collapse">
+                                                <div class="content-details-body">
+                                                    <div class="content-metadata">
+                                                        <div class="metadata-item">
+                                                            <span class="metadata-label">Type:</span>
+                                                            <span class="metadata-value"><?= htmlspecialchars(ucfirst($type)) ?></span>
+                                                        </div>
+                                                        <?php if (!empty($content['description'])): ?>
+                                                        <div class="metadata-item">
+                                                            <span class="metadata-label">Description:</span>
+                                                            <span class="metadata-value"><?= htmlspecialchars($content['description']) ?></span>
+                                                        </div>
+                                                        <?php endif; ?>
+                                                        <?php if (!empty($content['duration'])): ?>
+                                                        <div class="metadata-item">
+                                                            <span class="metadata-label">Duration:</span>
+                                                            <span class="metadata-value"><?= htmlspecialchars($content['duration']) ?></span>
+                                                        </div>
+                                                        <?php endif; ?>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        <?php endforeach; ?>
+                                    </div>
+                                <?php else: ?>
+                                    <div class="empty-content-message">
+                                        <i class="fas fa-inbox text-muted mb-2"></i>
+                                        <p class="text-muted mb-0">No content in this module.</p>
+                                    </div>
+                                <?php endif; ?>
                             </div>
                         </div>
                     <?php endforeach; ?>
                 </div>
             <?php else: ?>
-                <p class="text-muted">No modules available for this course.</p>
+                <div class="empty-modules-message">
+                    <i class="fas fa-folder-open text-muted mb-3"></i>
+                    <p class="text-muted mb-0">No modules available for this course.</p>
+                </div>
             <?php endif; ?>
         </div>
 
         <!-- Post-requisites -->
         <?php if (!empty($course['post_requisites'])): ?>
-        <div class="card mb-4 p-4 shadow-sm">
-            <h5 class="text-purple fw-bold mb-3">Post-requisites</h5>
-            <ul>
+        <div class="card mb-4 p-4 shadow-sm border-0" style="background: linear-gradient(135deg, #fff8f9 0%, #ffffff 100%); border-left: 4px solid #20c997 !important;">
+            <div class="d-flex align-items-center mb-3">
+                <div class="postrequisite-icon-wrapper me-3">
+                    <i class="fas fa-diagram-next text-white"></i>
+                </div>
+                <div>
+                    <h5 class="text-purple fw-bold mb-1">Post-requisites</h5>
+                    <p class="text-muted small mb-0">Available after completing this course</p>
+                </div>
+            </div>
+            <div class="postrequisites-grid">
                 <?php foreach ($course['post_requisites'] as $post): ?>
-                    <li><?= htmlspecialchars($post['title'] ?? 'N/A') ?> (<?= htmlspecialchars($post['content_type']) ?>)</li>
+                    <div class="postrequisite-card">
+                        <div class="postrequisite-content">
+                            <div class="postrequisite-icon">
+                                <?php
+                                    $type = $post['content_type'] ?? 'assessment';
+                                    $iconMap = [
+                                        'assessment' => 'fa-clipboard-check',
+                                        'survey' => 'fa-square-poll-vertical',
+                                        'feedback' => 'fa-comments',
+                                        'assignment' => 'fa-file-signature',
+                                        'course' => 'fa-book-open',
+                                        'module' => 'fa-layer-group',
+                                        'scorm' => 'fa-cubes',
+                                        'video' => 'fa-video',
+                                        'audio' => 'fa-headphones',
+                                        'document' => 'fa-file-lines',
+                                        'image' => 'fa-image',
+                                        'interactive' => 'fa-wand-magic-sparkles'
+                                    ];
+                                    $icon = $iconMap[$type] ?? 'fa-clipboard-check';
+                                    $colorMap = [
+                                        'assessment' => '#28a745',
+                                        'survey' => '#17a2b8',
+                                        'feedback' => '#ffc107',
+                                        'assignment' => '#fd7e14',
+                                        'course' => '#6a0dad',
+                                        'module' => '#6f42c1',
+                                        'scorm' => '#e83e8c',
+                                        'video' => '#dc3545',
+                                        'audio' => '#fd7e14',
+                                        'document' => '#6c757d',
+                                        'image' => '#20c997',
+                                        'interactive' => '#6f42c1'
+                                    ];
+                                    $color = $colorMap[$type] ?? '#28a745';
+                                ?>
+                                <i class="fas <?= $icon ?>" style="color: <?= $color ?>;"></i>
+                            </div>
+                            <div class="postrequisite-details">
+                                <h6 class="postrequisite-title mb-1"><?= htmlspecialchars($post['content_title'] ?? $post['title'] ?? 'N/A') ?></h6>
+                                <span class="postrequisite-type"><?= htmlspecialchars(ucfirst($type)) ?></span>
+                            </div>
+                        </div>
+                        <a class="postrequisite-action-btn" target="_blank" href="<?= UrlHelper::url('my-courses/start') . '?type=' . urlencode($post['content_type']) . '&id=' . urlencode($post['content_id']) ?>">
+                            <i class="fas fa-rocket me-1"></i>Launch
+                        </a>
+                    </div>
                 <?php endforeach; ?>
-            </ul>
+            </div>
         </div>
         <?php endif; ?>
     </div>
 </div>
 
-<!-- Content Player Modal -->
+<!-- Content Player Modal (kept for legacy triggers) -->
 <div class="modal fade" id="contentPlayerModal" tabindex="-1" aria-labelledby="contentPlayerModalLabel" aria-hidden="true">
   <div class="modal-dialog modal-fullscreen">
     <div class="modal-content">

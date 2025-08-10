@@ -601,7 +601,7 @@ class CourseModel
     }
 
     // Get course by ID with all related data
-    public function getCourseById($courseId, $clientId = null)
+    public function getCourseById($courseId, $clientId = null, $userId = null)
     {
         $sql = "SELECT c.*, 
                        cc.name as category_name, 
@@ -627,7 +627,7 @@ class CourseModel
 
         if ($course) {
             // Get modules
-            $course['modules'] = $this->getCourseModules($courseId);
+            $course['modules'] = $this->getCourseModules($courseId, $userId);
             
             // Get prerequisites
             $course['prerequisites'] = $this->getCoursePrerequisites($courseId);
@@ -654,14 +654,19 @@ class CourseModel
     }
 
     // Get course modules
-    public function getCourseModules($courseId)
+    public function getCourseModules($courseId, $userId = null)
     {
-        $sql = "SELECT * FROM course_modules 
-                WHERE course_id = ? AND (deleted_at IS NULL OR deleted_at = '0000-00-00 00:00:00') 
-                ORDER BY module_order ASC";
+        $sql = "SELECT cm.*, 
+                       COALESCE(mp.completion_percentage, 0) as module_progress,
+                       COALESCE(mp.status, 'not_started') as module_status
+                FROM course_modules cm
+                LEFT JOIN course_enrollments ce ON ce.course_id = cm.course_id AND ce.user_id = :user_id
+                LEFT JOIN module_progress mp ON mp.module_id = cm.id AND mp.enrollment_id = ce.id
+                WHERE cm.course_id = :course_id AND (cm.deleted_at IS NULL OR cm.deleted_at = '0000-00-00 00:00:00') 
+                ORDER BY cm.module_order ASC";
         
         $stmt = $this->conn->prepare($sql);
-        $stmt->execute([$courseId]);
+        $stmt->execute([':course_id' => $courseId, ':user_id' => $userId]);
         $modules = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
         // Get module content for each module
@@ -682,12 +687,136 @@ class CourseModel
         $stmt = $this->conn->prepare($sql);
         $stmt->execute([$moduleId]);
         $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
-        // Ensure each item has a 'type' field for frontend preselection
+        
+        // Enrich each content item with launch/file URLs as per content type
         foreach ($rows as &$row) {
+            // Normalize type for frontend
             if (!isset($row['type']) && isset($row['content_type'])) {
                 $row['type'] = $row['content_type'];
             }
+
+            $contentId = $row['content_id'] ?? null;
+            $type = $row['content_type'] ?? '';
+            if (!$contentId) {
+                continue;
+            }
+
+            try {
+                switch ($type) {
+                    case 'scorm': {
+                        $q = $this->conn->prepare("SELECT launch_path, zip_file FROM scorm_packages WHERE id = ? AND (is_deleted = 0 OR is_deleted IS NULL)");
+                        $q->execute([$contentId]);
+                        $data = $q->fetch(PDO::FETCH_ASSOC);
+                        if ($data && !empty($data['launch_path'])) {
+                            $launch = $data['launch_path'];
+                            // Normalize to a web path that actually exists
+                            $isAbsolute = preg_match('#^(https?://|/)#i', $launch);
+                            if (!$isAbsolute) {
+                                // If only a file is stored, rebuild with extracted folder from zip_file
+                                $folder = !empty($data['zip_file']) ? pathinfo($data['zip_file'], PATHINFO_FILENAME) : '';
+                                if (!empty($folder)) {
+                                    $candidate = 'uploads/scorm/' . $folder . '/' . ltrim($launch, '/');
+                                } else {
+                                    $candidate = 'uploads/scorm/' . ltrim($launch, '/');
+                                }
+                                // If file exists, use it; else fallback to raw
+                                if (file_exists($candidate)) {
+                                    $launch = $candidate;
+                                }
+                            }
+                            $row['scorm_launch_path'] = $launch;
+                        }
+                        break;
+                    }
+                    case 'non_scorm': {
+                        $q = $this->conn->prepare("SELECT content_url, launch_file FROM non_scorm_package WHERE id = ? AND (is_deleted = 0 OR is_deleted IS NULL)");
+                        $q->execute([$contentId]);
+                        $data = $q->fetch(PDO::FETCH_ASSOC);
+                        if ($data) {
+                            $row['non_scorm_launch_path'] = $data['content_url'] ?: ($data['launch_file'] ?? null);
+                        }
+                        break;
+                    }
+                    case 'interactive': {
+                        $q = $this->conn->prepare("SELECT content_url, content_file, embed_code FROM interactive_ai_content_package WHERE id = ? AND (is_deleted = 0 OR is_deleted IS NULL)");
+                        $q->execute([$contentId]);
+                        $data = $q->fetch(PDO::FETCH_ASSOC);
+                        if ($data) {
+                            $row['interactive_launch_url'] = $data['content_url'] ?: ($data['content_file'] ?? null);
+                        }
+                        break;
+                    }
+                    case 'video': {
+                        $q = $this->conn->prepare("SELECT video_file FROM video_package WHERE id = ? AND (is_deleted = 0 OR is_deleted IS NULL)");
+                        $q->execute([$contentId]);
+                        $data = $q->fetch(PDO::FETCH_ASSOC);
+                        if ($data && !empty($data['video_file'])) {
+                            $file = $data['video_file'];
+                            $row['video_file_path'] = (preg_match('#^(https?://|/)#i', $file) || strpos($file, 'uploads/') === 0)
+                                ? $file
+                                : ('uploads/video/' . $file);
+                        }
+                        break;
+                    }
+                    case 'audio': {
+                        $q = $this->conn->prepare("SELECT audio_file FROM audio_package WHERE id = ? AND (is_deleted = 0 OR is_deleted IS NULL)");
+                        $q->execute([$contentId]);
+                        $data = $q->fetch(PDO::FETCH_ASSOC);
+                        if ($data && !empty($data['audio_file'])) {
+                            $file = $data['audio_file'];
+                            $row['audio_file_path'] = (preg_match('#^(https?://|/)#i', $file) || strpos($file, 'uploads/') === 0)
+                                ? $file
+                                : ('uploads/audio/' . $file);
+                        }
+                        break;
+                    }
+                    case 'document': {
+                        $q = $this->conn->prepare("SELECT word_excel_ppt_file, ebook_manual_file, research_file FROM documents WHERE id = ? AND (is_deleted = 0 OR is_deleted IS NULL)");
+                        $q->execute([$contentId]);
+                        $data = $q->fetch(PDO::FETCH_ASSOC);
+                        if ($data) {
+                            $file = $data['word_excel_ppt_file'] ?: ($data['ebook_manual_file'] ?: ($data['research_file'] ?? null));
+                            if ($file) {
+                                $row['document_file_path'] = (preg_match('#^(https?://|/)#i', $file) || strpos($file, 'uploads/') === 0)
+                                    ? $file
+                                    : ('uploads/documents/' . $file);
+                            }
+                        }
+                        break;
+                    }
+                    case 'image': {
+                        $q = $this->conn->prepare("SELECT image_file FROM image_package WHERE id = ? AND (is_deleted = 0 OR is_deleted IS NULL)");
+                        $q->execute([$contentId]);
+                        $data = $q->fetch(PDO::FETCH_ASSOC);
+                        if ($data && !empty($data['image_file'])) {
+                            $file = $data['image_file'];
+                            $row['image_file_path'] = (preg_match('#^(https?://|/)#i', $file) || strpos($file, 'uploads/') === 0)
+                                ? $file
+                                : ('uploads/image/' . $file);
+                        }
+                        break;
+                    }
+                    case 'external': {
+                        $q = $this->conn->prepare("SELECT course_url, video_url, article_url, audio_url FROM external_content WHERE id = ? AND (is_deleted = 0 OR is_deleted IS NULL)");
+                        $q->execute([$contentId]);
+                        $data = $q->fetch(PDO::FETCH_ASSOC);
+                        if ($data) {
+                            $url = $data['course_url'] ?: ($data['video_url'] ?: ($data['article_url'] ?: ($data['audio_url'] ?? null)));
+                            if ($url) {
+                                $row['external_content_url'] = $url;
+                            }
+                        }
+                        break;
+                    }
+                    default:
+                        // No enrichment needed
+                        break;
+                }
+            } catch (Throwable $t) {
+                // ignore enrichment errors
+            }
         }
+        
         return $rows;
     }
 
@@ -1169,7 +1298,7 @@ class CourseModel
 
             // Survey
             try {
-                $sql = "SELECT id, title, COALESCE(description, '') as description, 'survey' as type FROM survey_package WHERE client_id = ? AND is_deleted = 0";
+                $sql = "SELECT id, title, '' as description, 'survey' as type FROM survey_package WHERE client_id = ? AND is_deleted = 0";
                 $stmt = $this->conn->prepare($sql);
                 $stmt->execute([$clientId]);
                 $vlrContent['surveys'] = $stmt->fetchAll(PDO::FETCH_ASSOC);
@@ -1181,7 +1310,7 @@ class CourseModel
 
             // Feedback
             try {
-                $sql = "SELECT id, title, COALESCE(description, '') as description, 'feedback' as type FROM feedback_package WHERE client_id = ? AND is_deleted = 0";
+                $sql = "SELECT id, title, '' as description, 'feedback' as type FROM feedback_package WHERE client_id = ? AND is_deleted = 0";
                 $stmt = $this->conn->prepare($sql);
                 $stmt->execute([$clientId]);
                 $vlrContent['feedback'] = $stmt->fetchAll(PDO::FETCH_ASSOC);

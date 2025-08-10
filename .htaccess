@@ -39,11 +39,10 @@ php_flag allow_url_include Off
 
 RewriteEngine On
 
-# Handle static assets (don't rewrite)
-RewriteCond %{REQUEST_FILENAME} !-f
-RewriteCond %{REQUEST_FILENAME} !-d
-RewriteCond %{REQUEST_URI} ^/(public|css|js|images|uploads|assets)/ [NC]
-RewriteRule . - [L]
+# Serve existing files or directories directly (do not rewrite)
+RewriteCond %{REQUEST_FILENAME} -f [OR]
+RewriteCond %{REQUEST_FILENAME} -d
+RewriteRule ^ - [L]
 
 # Handle clean URLs - route everything through index.php
 RewriteCond %{REQUEST_FILENAME} !-f

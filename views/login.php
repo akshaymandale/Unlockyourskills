@@ -48,7 +48,8 @@
             </script>
                 <div class="form-group">
                     <input type="text" id="client_code" name="client_code" class="login-input"
-                           placeholder="Enter Client Code (e.g., ACME_CORP)">
+                           placeholder="Enter Client Code (e.g., ACME_CORP)"
+                           value="<?= htmlspecialchars($_GET['client_code'] ?? ($_COOKIE['last_client_code'] ?? '')) ?>">
                     <div class="error-message" id="client_code_error"></div>
                 </div>
 
