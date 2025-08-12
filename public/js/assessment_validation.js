@@ -124,7 +124,12 @@ document.addEventListener("DOMContentLoaded", function () {
                 //do nothing
                 break;
             case "assessment_timeLimit":
-                //do nothing
+                if (value === "" || isNaN(value) || parseInt(value) <= 0) {
+                    showError(field, translate("assessment.validation.time_limit_required"));
+                    isValid = false;
+                } else {
+                    hideError(field);
+                }
                 break;
             case "assessment_numberOfQuestions":
                     if (value === "" || isNaN(value)) {

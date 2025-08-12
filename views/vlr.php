@@ -1056,8 +1056,9 @@ $canAccessVLR = canAccess('vlr');
                                                     <div class="form-group mb-3">
                                                         <label for="assessment_timeLimit" class="form-label">
                                                             <?= Localization::translate('assessment.field.time_limit'); ?>
+                                                            <span class="text-danger">*</span>
                                                         </label>
-                                                        <input type="text" class="form-control"
+                                                        <input type="text" class="form-control" 
                                                             id="assessment_timeLimit" name="time_limit">
                                                     </div>
                                                 </div>
@@ -3910,6 +3911,22 @@ $canAccessVLR = canAccess('vlr');
 
 
 <?php require_once __DIR__ . '/../core/UrlHelper.php'; ?>
+
+<!-- Assessment Validation Translations -->
+<script>
+window.translations = {
+    'assessment.validation.title_required': '<?= Localization::translate('assessment.validation.title_required') ?>',
+    'assessment.validation.time_limit_required': '<?= Localization::translate('assessment.validation.time_limit_required') ?>',
+    'assessment.validation.time_limit_invalid': '<?= Localization::translate('assessment.validation.time_limit_invalid') ?>',
+    'assessment.validation.num_questions_required': '<?= Localization::translate('assessment.validation.num_questions_required') ?>',
+    'assessment.validation.num_questions_exceeds': '<?= Localization::translate('assessment.validation.num_questions_exceeds') ?>',
+    'assessment.validation.passing_percentage_invalid': '<?= Localization::translate('assessment.validation.passing_percentage_invalid') ?>',
+    'assessment.validation.negative_percentage_required': '<?= Localization::translate('assessment.validation.negative_percentage_required') ?>',
+    'assessment.validation.tags_required': '<?= Localization::translate('assessment.validation.tags_required') ?>',
+    'assessment.validation.questions_required': '<?= Localization::translate('assessment.validation.questions_required') ?>'
+};
+</script>
+
 <script src="<?= UrlHelper::url('public/js/scorm_validation.js') ?>"></script>
 <script src="<?= UrlHelper::url('public/js/scorm_package.js') ?>"></script>
 <script src="<?= UrlHelper::url('public/js/assessment_validation.js') ?>"></script>
