@@ -77,8 +77,78 @@ $timeRemaining = $attempt['time_remaining'] ?? ($timeLimit * 60);
             </div>
         </div>
 
-        <!-- Main Content -->
-        <div class="assessment-content">
+        <!-- Start Assessment Screen -->
+        <div class="assessment-content" id="start-screen">
+            <div class="container-fluid">
+                <div class="row justify-content-center">
+                    <div class="col-lg-8">
+                        <div class="start-assessment-container text-center">
+                            <div class="start-icon mb-4">
+                                <i class="fas fa-clipboard-check fa-5x text-primary"></i>
+                            </div>
+                            <h2 class="mb-4">Ready to Start Your Assessment?</h2>
+                            <p class="lead mb-4">You're about to begin: <strong><?php echo htmlspecialchars($assessment['title'] ?? ''); ?></strong></p>
+                            
+                            <div class="assessment-details mb-4">
+                                <div class="row">
+                                    <div class="col-md-4">
+                                        <div class="detail-card">
+                                            <i class="fas fa-question-circle fa-2x text-info mb-2"></i>
+                                            <h5><?php echo $totalQuestions; ?> Questions</h5>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <div class="detail-card">
+                                            <i class="fas fa-clock fa-2x text-warning mb-2"></i>
+                                            <h5><?php echo gmdate('H:i:s', $timeLimit * 60); ?> Time Limit</h5>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <div class="detail-card">
+                                            <i class="fas fa-percentage fa-2x text-success mb-2"></i>
+                                            <h5><?php echo ($assessment['passing_percentage'] ?? 70); ?>% to Pass</h5>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="safety-features mb-4">
+                                <h5 class="text-primary mb-3">
+                                    <i class="fas fa-shield-alt me-2"></i>Your Progress is Protected
+                                </h5>
+                                <div class="row">
+                                    <div class="col-md-4">
+                                        <div class="safety-item">
+                                            <i class="fas fa-wifi text-success"></i>
+                                            <small>Auto-save every 30 seconds</small>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <div class="safety-item">
+                                            <i class="fas fa-undo text-info"></i>
+                                            <small>Session recovery up to 24h</small>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <div class="safety-item">
+                                            <i class="fas fa-bolt text-warning"></i>
+                                            <small>Offline mode protection</small>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <button type="button" class="btn btn-primary btn-lg" id="start-assessment-btn">
+                                <i class="fas fa-play me-2"></i>Start Assessment
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Main Content (Hidden initially) -->
+        <div class="assessment-content" id="assessment-content" style="display: none;">
             <div class="container-fluid">
                 <div class="row">
                     <!-- Question Area -->

@@ -5773,8 +5773,7 @@ body select:focus,
 .course-details .divider-line { height: 20px; width: 1px; background: #e5d6ff; }
 
 /* Course Details - Modern Prerequisites & Post-requisites Styling */
-.prerequisites-grid,
-.postrequisites-grid {
+.prerequisites-grid {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); /* Slightly increased minimum width */
     gap: 20px; /* Increased gap for better breathing room */
@@ -5783,6 +5782,15 @@ body select:focus,
     grid-auto-rows: minmax(min-content, max-content); /* Allow rows to adjust to content */
     /* Ensure proper grid behavior */
     grid-auto-flow: row dense; /* Fill grid efficiently */
+}
+
+.postrequisites-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr); /* Fixed 2 columns */
+    gap: 20px; /* Increased gap for better breathing room */
+    margin-top: 16px;
+    align-items: start; /* Ensure cards align to top */
+    grid-auto-rows: minmax(min-content, max-content); /* Allow rows to adjust to content */
 }
 
 /* Wrapper for prerequisite and post-requisite items */
@@ -6146,9 +6154,13 @@ body select:focus,
 
 /* Responsive Design */
 @media (max-width: 768px) {
-    .prerequisites-grid,
-    .postrequisites-grid {
+    .prerequisites-grid {
         grid-template-columns: 1fr;
+        gap: 12px;
+    }
+    
+    .postrequisites-grid {
+        grid-template-columns: 1fr; /* Single column on mobile */
         gap: 12px;
     }
     

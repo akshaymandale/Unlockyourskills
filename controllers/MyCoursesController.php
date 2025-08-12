@@ -82,7 +82,7 @@ class MyCoursesController {
                         foreach ($module['content'] as $content) {
                             if ($content['content_type'] === 'assessment') {
                                 $assessmentId = $content['content_id'];
-                                $attempts = $assessmentModel->getUserAssessmentAttempts($assessmentId, $userId, $clientId);
+                                $attempts = $assessmentModel->getUserCompletedAssessmentAttempts($assessmentId, $userId, $clientId);
                                 $assessmentAttempts[$assessmentId] = $attempts;
                                 
                                 // Get assessment details including num_attempts
@@ -98,7 +98,7 @@ class MyCoursesController {
                 foreach ($course['prerequisites'] as $pre) {
                     if ($pre['prerequisite_type'] === 'assessment') {
                         $assessmentId = $pre['prerequisite_id'];
-                        $attempts = $assessmentModel->getUserAssessmentAttempts($assessmentId, $userId, $clientId);
+                        $attempts = $assessmentModel->getUserCompletedAssessmentAttempts($assessmentId, $userId, $clientId);
                         $assessmentAttempts[$assessmentId] = $attempts;
                         
                         // Get assessment details including num_attempts
@@ -112,7 +112,7 @@ class MyCoursesController {
                 foreach ($course['post_requisites'] as $post) {
                     if ($post['content_type'] === 'assessment') {
                         $assessmentId = $post['content_id'];
-                        $attempts = $assessmentModel->getUserAssessmentAttempts($assessmentId, $userId, $clientId);
+                        $attempts = $assessmentModel->getUserCompletedAssessmentAttempts($assessmentId, $userId, $clientId);
                         $assessmentAttempts[$assessmentId] = $attempts;
                         
                         // Get assessment details including num_attempts

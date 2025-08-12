@@ -46,6 +46,105 @@ class AssessmentPlayer {
         this.init();
     }
 
+    // Show assessment safety information popup
+    showAssessmentSafetyInfo() {
+        // Create modal HTML
+        const modalHtml = `
+            <div class="modal fade" id="assessmentSafetyModal" tabindex="-1" aria-labelledby="assessmentSafetyModalLabel" aria-hidden="true">
+                <div class="modal-dialog modal-lg">
+                    <div class="modal-content">
+                        <div class="modal-header bg-primary text-white">
+                            <h5 class="modal-title" id="assessmentSafetyModalLabel">
+                                <i class="fas fa-shield-alt me-2"></i>Assessment Safety Features
+                            </h5>
+                            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                        </div>
+                        <div class="modal-body">
+                            <div class="alert alert-info">
+                                <i class="fas fa-info-circle me-2"></i>
+                                <strong>Your assessment progress is automatically protected!</strong>
+                            </div>
+                            
+                            <h6 class="text-primary mb-3">
+                                <i class="fas fa-wifi me-2"></i>Internet Connection Issues
+                            </h6>
+                            <ul class="list-unstyled mb-4">
+                                <li><i class="fas fa-check text-success me-2"></i>Your answers are saved locally every 30 seconds</li>
+                                <li><i class="fas fa-check text-success me-2"></i>Offline mode automatically activates when connection is lost</li>
+                                <li><i class="fas fa-check text-success me-2"></i>Answers sync automatically when connection is restored</li>
+                                <li><i class="fas fa-check text-success me-2"></i>No data loss during temporary disconnections</li>
+                            </ul>
+
+                            <h6 class="text-primary mb-3">
+                                <i class="fas fa-bolt me-2"></i>Power Outages & System Crashes
+                            </h6>
+                            <ul class="list-unstyled mb-4">
+                                <li><i class="fas fa-check text-success me-2"></i>Progress is saved to your browser's secure storage</li>
+                                <li><i class="fas fa-check text-success me-2"></i>Session recovery available for up to 24 hours</li>
+                                <li><i class="fas fa-check text-success me-2"></i>Resume exactly where you left off</li>
+                                <li><i class="fas fa-check text-success me-2"></i>All answers and progress are preserved</li>
+                            </ul>
+
+                            <h6 class="text-primary mb-3">
+                                <i class="fas fa-window-close me-2"></i>Accidentally Closing Tabs/Browser
+                            </h6>
+                            <ul class="list-unstyled mb-4">
+                                <li><i class="fas fa-check text-success me-2"></i>Warning popup prevents accidental closure</li>
+                                <li><i class="fas fa-check text-success me-2"></i>Progress automatically saves when switching tabs</li>
+                                <li><i class="fas fa-check text-success me-2"></i>Return to the same question when you come back</li>
+                                <li><i class="fas fa-check text-success me-2"></i>Timer continues from where it left off</li>
+                            </ul>
+
+                            <div class="alert alert-warning">
+                                <i class="fas fa-exclamation-triangle me-2"></i>
+                                <strong>Important:</strong> Always ensure you have a stable internet connection before starting the assessment. 
+                                While your progress is protected, it's best to complete the assessment in one session.
+                            </div>
+
+                            <div class="row mt-4">
+                                <div class="col-md-6">
+                                    <div class="card border-success">
+                                        <div class="card-body text-center">
+                                            <i class="fas fa-save fa-2x text-success mb-2"></i>
+                                            <h6 class="card-title">Auto-Save</h6>
+                                            <small class="text-muted">Every 30 seconds</small>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="card border-info">
+                                        <div class="card-body text-center">
+                                            <i class="fas fa-undo fa-2x text-info mb-2"></i>
+                                            <h6 class="card-title">Session Recovery</h6>
+                                            <small class="text-muted">Up to 24 hours</small>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-primary" data-bs-dismiss="modal">
+                                <i class="fas fa-check me-2"></i>I Understand
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+
+        // Add modal to body
+        document.body.insertAdjacentHTML('beforeend', modalHtml);
+
+        // Show modal
+        const modal = new bootstrap.Modal(document.getElementById('assessmentSafetyModal'));
+        modal.show();
+
+        // Remove modal from DOM after it's hidden
+        document.getElementById('assessmentSafetyModal').addEventListener('hidden.bs.modal', function() {
+            this.remove();
+        });
+    }
+
     // Check for existing session and attempt recovery
     checkForExistingSession() {
         const savedSession = localStorage.getItem(`assessment_session_${this.attemptId}`);
@@ -93,81 +192,218 @@ class AssessmentPlayer {
     // Show recovery notification
     showRecoveryNotification() {
         const notification = document.createElement('div');
-        notification.className = 'alert alert-info alert-dismissible fade show position-fixed';
-        notification.style.cssText = 'top: 20px; left: 20px; z-index: 9999; max-width: 400px;';
+        notification.className = 'alert alert-success alert-dismissible fade show position-fixed';
+        notification.style.cssText = 'top: 20px; left: 20px; z-index: 9999; max-width: 450px;';
         notification.innerHTML = `
-            <strong>Session Recovered!</strong> Your previous progress has been restored.
-            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            <div class="d-flex align-items-start">
+                <i class="fas fa-check-circle text-success me-2 mt-1"></i>
+                <div>
+                    <strong>Session Successfully Recovered! 🎉</strong><br>
+                    <small class="text-muted">
+                        Your previous progress has been restored. You're back at question ${this.currentQuestion} with ${Object.keys(this.answers).length} answers saved.
+                        <br><strong>Continue your assessment from where you left off!</strong>
+                    </small>
+                </div>
+            </div>
+            <button type="button" class="btn-close" onclick="this.parentElement.parentElement.remove()"></button>
         `;
         
         document.body.appendChild(notification);
         
-        // Auto-remove after 5 seconds
+        // Auto-dismiss after 8 seconds
         setTimeout(() => {
-            if (notification.parentNode) {
+            if (notification.parentElement) {
                 notification.remove();
             }
-        }, 5000);
+        }, 8000);
     }
 
     init() {
         console.log('AssessmentPlayer init() called');
         console.log('About to setup event listeners...');
         this.setupEventListeners();
-        console.log('About to generate question navigator...');
+        
+        // Don't initialize assessment content yet - wait for user to click start
+        console.log('AssessmentPlayer init() completed - waiting for user to start');
+    }
+
+    // Start the actual assessment
+    startAssessment() {
+        console.log('Starting assessment...');
+        
+        // Check if user has existing session
+        const hasExistingSession = this.hasUnsavedChanges();
+        
+        if (hasExistingSession) {
+            // Show session recovery popup
+            this.showSessionRecoveryPopup();
+        } else {
+            // Show safety information popup for new assessment
+            this.showAssessmentSafetyInfo();
+        }
+        
+        // Hide start screen and show assessment content
+        document.getElementById('start-screen').style.display = 'none';
+        document.getElementById('assessment-content').style.display = 'block';
+        
+        // Initialize assessment components
         this.generateQuestionNavigator();
-        console.log('About to load first question...');
         this.loadQuestion(this.currentQuestion);
-        console.log('About to start timer...');
         this.startTimer();
-        console.log('About to update progress...');
         this.updateProgress();
         
         // Start periodic sync and connection monitoring
         this.startPeriodicSync();
         this.monitorConnection();
         
-        console.log('AssessmentPlayer init() completed');
+        console.log('Assessment started successfully');
+    }
+
+    // Show session recovery popup
+    showSessionRecoveryPopup() {
+        const modalHtml = `
+            <div class="modal fade" id="sessionRecoveryModal" tabindex="-1" aria-labelledby="sessionRecoveryModalLabel" aria-hidden="true">
+                <div class="modal-dialog modal-lg">
+                    <div class="modal-content">
+                        <div class="modal-header bg-success text-white">
+                            <h5 class="modal-title" id="sessionRecoveryModalLabel">
+                                <i class="fas fa-undo me-2"></i>Resume Your Assessment
+                            </h5>
+                            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                        </div>
+                        <div class="modal-body">
+                            <div class="alert alert-success">
+                                <i class="fas fa-check-circle me-2"></i>
+                                <strong>Great news! We found your previous session.</strong>
+                            </div>
+                            
+                            <div class="row mb-4">
+                                <div class="col-md-6">
+                                    <div class="card border-success">
+                                        <div class="card-body text-center">
+                                            <i class="fas fa-question-circle fa-2x text-success mb-2"></i>
+                                            <div class="card-title">Progress</div>
+                                            <div class="card-text">${Object.keys(this.answers).length} questions answered</div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="card border-info">
+                                        <div class="card-body text-center">
+                                            <i class="fas fa-clock fa-2x text-info mb-2"></i>
+                                            <div class="card-title">Current Question</div>
+                                            <div class="card-text">Question ${this.currentQuestion}</div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <h6 class="text-primary mb-3">
+                                <i class="fas fa-info-circle me-2"></i>What happens next?
+                            </h6>
+                            <ul class="list-unstyled mb-4">
+                                <li><i class="fas fa-check text-success me-2"></i>You'll resume exactly where you left off</li>
+                                <li><i class="fas fa-check text-success me-2"></i>All your previous answers are restored</li>
+                                <li><i class="fas fa-check text-success me-2"></i>Timer continues from where it was</li>
+                                <li><i class="fas fa-check text-success me-2"></i>Your progress is fully protected</li>
+                            </ul>
+
+                            <div class="alert alert-info">
+                                <i class="fas fa-lightbulb me-2"></i>
+                                <strong>Tip:</strong> Your assessment progress is automatically saved every 30 seconds, 
+                                so you can safely close and return anytime within 24 hours.
+                            </div>
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-success" data-bs-dismiss="modal">
+                                <i class="fas fa-play me-2"></i>Resume Assessment
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+
+        // Add modal to body
+        document.body.insertAdjacentHTML('beforeend', modalHtml);
+
+        // Show modal
+        const modal = new bootstrap.Modal(document.getElementById('sessionRecoveryModal'));
+        modal.show();
+
+        // Remove modal from DOM after it's hidden
+        document.getElementById('sessionRecoveryModal').addEventListener('hidden.bs.modal', function() {
+            this.remove();
+        });
     }
 
     setupEventListeners() {
-        // Navigation buttons
-        document.getElementById('prev-btn').addEventListener('click', () => this.previousQuestion());
-        document.getElementById('next-btn').addEventListener('click', () => this.nextQuestion());
-        document.getElementById('submit-btn').addEventListener('click', () => this.showSubmitModal());
+        // Start assessment button
+        const startBtn = document.getElementById('start-assessment-btn');
+        if (startBtn) {
+            startBtn.addEventListener('click', () => this.startAssessment());
+        }
+        
+        // Navigation buttons (only available after assessment starts)
+        const prevBtn = document.getElementById('prev-btn');
+        const nextBtn = document.getElementById('next-btn');
+        const submitBtn = document.getElementById('submit-btn');
+        
+        if (prevBtn) {
+            prevBtn.addEventListener('click', () => this.previousQuestion());
+        }
+        if (nextBtn) {
+            nextBtn.addEventListener('click', () => this.nextQuestion());
+        }
+        if (submitBtn) {
+            submitBtn.addEventListener('click', () => this.showSubmitModal());
+        }
         
         // Submit confirmation
-        document.getElementById('confirm-submit').addEventListener('click', () => this.submitAssessment());
+        const confirmSubmitBtn = document.getElementById('confirm-submit');
+        if (confirmSubmitBtn) {
+            confirmSubmitBtn.addEventListener('click', () => this.submitAssessment());
+        }
         
         // Back to courses
-        document.getElementById('back-to-courses').addEventListener('click', () => {
-            // Use redirect URL from server if available, otherwise default to my-courses
-            const redirectUrl = window.assessmentData.redirect_url || '/unlockyourskills/my-courses';
-            window.location.href = redirectUrl;
-        });
+        const backToCoursesBtn = document.getElementById('back-to-courses');
+        if (backToCoursesBtn) {
+            backToCoursesBtn.addEventListener('click', () => {
+                // Use redirect URL from server if available, otherwise default to my-courses
+                const redirectUrl = window.assessmentData.redirect_url || '/unlockyourskills/my-courses';
+                window.location.href = redirectUrl;
+            });
+        }
 
         // Question navigator clicks
-        document.getElementById('question-grid').addEventListener('click', (e) => {
-            if (e.target.classList.contains('question-number-btn')) {
-                const questionNum = parseInt(e.target.textContent);
-                this.loadQuestion(questionNum);
-            }
-        });
+        const questionGrid = document.getElementById('question-grid');
+        if (questionGrid) {
+            questionGrid.addEventListener('click', (e) => {
+                if (e.target.classList.contains('question-number-btn')) {
+                    const questionNum = parseInt(e.target.textContent);
+                    this.loadQuestion(questionNum);
+                }
+            });
+        }
 
-        // Auto-save answers when options are selected
+        // Auto-save answers when options are selected (only after assessment starts)
         document.addEventListener('change', (e) => {
-            if (e.target.type === 'radio') {
+            if (e.target.type === 'radio' && this.currentQuestion > 0) {
                 this.saveAnswer(e.target.value);
             }
         });
 
         // Enhanced beforeunload with better user experience
         window.addEventListener('beforeunload', (e) => {
-            if (this.hasUnsavedChanges()) {
+            if (this.hasUnsavedChanges() && this.currentQuestion > 0) {
                 // Save session before leaving
                 this.saveSessionToStorage();
                 
-                const message = 'You have unsaved progress. Are you sure you want to leave?';
+                const message = '⚠️ WARNING: You have unsaved assessment progress! \n\n' +
+                              '• Your answers are automatically saved every 30 seconds\n' +
+                              '• You can return within 24 hours to resume\n' +
+                              '• Closing now may interrupt your assessment session\n\n' +
+                              'Are you sure you want to leave?';
                 e.preventDefault();
                 e.returnValue = message;
                 return message;
@@ -176,11 +412,11 @@ class AssessmentPlayer {
 
         // Handle page visibility changes
         document.addEventListener('visibilitychange', () => {
-            if (document.hidden) {
-                // Page is hidden, save session
+            if (document.hidden && this.currentQuestion > 0) {
+                // Page is hidden, save session (only if assessment has started)
                 this.saveSessionToStorage();
-            } else {
-                // Page is visible again, check connection and sync
+            } else if (!document.hidden && this.currentQuestion > 0) {
+                // Page is visible again, check connection and sync (only if assessment has started)
                 this.monitorConnection();
             }
         });
@@ -190,13 +426,17 @@ class AssessmentPlayer {
             console.log('Connection restored');
             this.offlineMode = false;
             this.removeOfflineNotification();
-            this.syncPendingAnswers();
+            if (this.currentQuestion > 0) {
+                this.syncPendingAnswers();
+            }
         });
 
         window.addEventListener('offline', () => {
             console.log('Connection lost');
             this.offlineMode = true;
-            this.showOfflineNotification();
+            if (this.currentQuestion > 0) {
+                this.showOfflineNotification();
+            }
         });
     }
 
@@ -482,10 +722,19 @@ class AssessmentPlayer {
 
         const notification = document.createElement('div');
         notification.className = 'alert alert-warning offline-notification position-fixed';
-        notification.style.cssText = 'top: 20px; right: 20px; z-index: 9999; max-width: 300px;';
+        notification.style.cssText = 'top: 20px; right: 20px; z-index: 9999; max-width: 350px;';
         notification.innerHTML = `
-            <strong>Offline Mode</strong><br>
-            Your answers are being saved locally. They will sync when connection is restored.
+            <div class="d-flex align-items-start">
+                <i class="fas fa-wifi-slash text-warning me-2 mt-1"></i>
+                <div>
+                    <strong>Offline Mode Activated</strong><br>
+                    <small class="text-muted">
+                        Your answers are being saved locally and will sync automatically when connection is restored.
+                        <br><strong>No data will be lost!</strong>
+                    </small>
+                </div>
+            </div>
+            <button type="button" class="btn-close" onclick="this.parentElement.parentElement.remove()"></button>
         `;
         
         document.body.appendChild(notification);

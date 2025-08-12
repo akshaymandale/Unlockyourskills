@@ -425,12 +425,13 @@ class AssessmentPlayerModel
 
         $maxAttempts = intval($assessment['num_attempts']);
         
-        // Count user's attempts
+        // Count only completed user attempts
         $stmt = $db->prepare("
             SELECT COUNT(*) as attempt_count 
             FROM assessment_attempts 
             WHERE assessment_id = ? 
             AND user_id = ? 
+            AND status = 'completed'
             AND is_deleted = 0
         ");
         
@@ -458,6 +459,32 @@ class AssessmentPlayerModel
             FROM assessment_attempts aa
             WHERE aa.assessment_id = :assessment_id 
             AND aa.user_id = :user_id 
+            AND aa.is_deleted = 0
+            ORDER BY aa.attempt_number DESC, aa.created_at DESC
+        ");
+        
+        $stmt->execute([':assessment_id' => $assessmentId, ':user_id' => $userId]);
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
+
+    // Get user's completed assessment attempts for a specific assessment
+    public function getUserCompletedAssessmentAttempts($assessmentId, $userId, $clientId = null)
+    {
+        $db = $this->conn;
+
+        $stmt = $db->prepare("
+            SELECT 
+                aa.id,
+                aa.attempt_number,
+                aa.status,
+                aa.started_at,
+                aa.completed_at,
+                aa.created_at,
+                aa.updated_at
+            FROM assessment_attempts aa
+            WHERE aa.assessment_id = :assessment_id 
+            AND aa.user_id = :user_id 
+            AND aa.status = 'completed'
             AND aa.is_deleted = 0
             ORDER BY aa.attempt_number DESC, aa.created_at DESC
         ");

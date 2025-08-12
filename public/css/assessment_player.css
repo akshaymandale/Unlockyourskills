@@ -572,4 +572,227 @@
 @keyframes spin {
     0% { transform: rotate(0deg); }
     100% { transform: rotate(360deg); }
+}
+
+/* Enhanced Notification Styles */
+.offline-notification,
+.alert.position-fixed {
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+    border: none;
+    border-radius: 12px;
+    backdrop-filter: blur(10px);
+    animation: slideInRight 0.4s ease-out;
+}
+
+.offline-notification {
+    background: linear-gradient(135deg, #fff3cd, #ffeaa7);
+    border-left: 4px solid #ffc107;
+    color: #856404;
+}
+
+.offline-notification .btn-close {
+    opacity: 0.7;
+    transition: opacity 0.2s ease;
+}
+
+.offline-notification .btn-close:hover {
+    opacity: 1;
+}
+
+/* Session Recovery Notification */
+.alert-success.position-fixed {
+    background: linear-gradient(135deg, #d4edda, #c3e6cb);
+    border-left: 4px solid #28a745;
+    color: #155724;
+    box-shadow: 0 8px 25px rgba(40, 167, 69, 0.2);
+}
+
+/* Assessment Safety Modal */
+#assessmentSafetyModal .modal-content {
+    border: none;
+    border-radius: 16px;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.2);
+}
+
+#assessmentSafetyModal .modal-header {
+    border-radius: 16px 16px 0 0;
+    background: linear-gradient(135deg, #007bff, #0056b3);
+}
+
+#assessmentSafetyModal .card {
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+    border-radius: 12px;
+}
+
+#assessmentSafetyModal .card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
+}
+
+#assessmentSafetyModal .list-unstyled li {
+    padding: 0.5rem 0;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+}
+
+#assessmentSafetyModal .list-unstyled li:last-child {
+    border-bottom: none;
+}
+
+#assessmentSafetyModal .list-unstyled li i {
+    width: 20px;
+    text-align: center;
+}
+
+/* Animation for notifications */
+@keyframes slideInRight {
+    from {
+        transform: translateX(100%);
+        opacity: 0;
+    }
+    to {
+        transform: translateX(0);
+        opacity: 1;
+    }
+}
+
+@keyframes slideInLeft {
+    from {
+        transform: translateX(-100%);
+        opacity: 0;
+    }
+    to {
+        transform: translateX(0);
+        opacity: 1;
+    }
+}
+
+/* Responsive adjustments for notifications */
+@media (max-width: 768px) {
+    .offline-notification,
+    .alert.position-fixed {
+        max-width: calc(100vw - 40px) !important;
+        left: 20px !important;
+        right: 20px !important;
+    }
+    
+    #assessmentSafetyModal .modal-dialog {
+        margin: 1rem;
+    }
+}
+
+/* Start Assessment Screen Styles */
+.start-assessment-container {
+    background: white;
+    border-radius: 20px;
+    padding: 3rem 2rem;
+    box-shadow: 0 15px 50px rgba(0, 0, 0, 0.1);
+    border: 1px solid rgba(0, 0, 0, 0.05);
+}
+
+.start-icon {
+    color: #007bff;
+    text-shadow: 0 4px 15px rgba(0, 123, 255, 0.3);
+}
+
+.start-assessment-container h2 {
+    color: #2c3e50;
+    font-weight: 700;
+}
+
+.start-assessment-container .lead {
+    color: #6c757d;
+    font-size: 1.2rem;
+}
+
+.detail-card {
+    background: linear-gradient(135deg, #f8f9fa, #e9ecef);
+    border-radius: 15px;
+    padding: 1.5rem 1rem;
+    border: 1px solid rgba(0, 0, 0, 0.05);
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.detail-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15);
+}
+
+.detail-card h5 {
+    color: #495057;
+    font-weight: 600;
+    margin: 0;
+}
+
+.safety-features {
+    background: linear-gradient(135deg, #f8f9ff, #ffffff);
+    border-radius: 15px;
+    padding: 2rem;
+    border: 1px solid #e5d6ff;
+}
+
+.safety-features h5 {
+    color: #6a0dad;
+    font-weight: 600;
+}
+
+.safety-item {
+    text-align: center;
+    padding: 1rem;
+    background: white;
+    border-radius: 10px;
+    border: 1px solid rgba(0, 0, 0, 0.05);
+    transition: transform 0.2s ease;
+}
+
+.safety-item:hover {
+    transform: translateY(-2px);
+}
+
+.safety-item i {
+    display: block;
+    margin-bottom: 0.5rem;
+    font-size: 1.5rem;
+}
+
+.safety-item small {
+    color: #6c757d;
+    font-weight: 500;
+}
+
+#start-assessment-btn {
+    background: linear-gradient(135deg, #007bff, #0056b3);
+    border: none;
+    padding: 1rem 3rem;
+    font-size: 1.2rem;
+    font-weight: 600;
+    border-radius: 50px;
+    box-shadow: 0 8px 25px rgba(0, 123, 255, 0.3);
+    transition: all 0.3s ease;
+}
+
+#start-assessment-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 12px 35px rgba(0, 123, 255, 0.4);
+    background: linear-gradient(135deg, #0056b3, #004085);
+}
+
+/* Responsive adjustments for start screen */
+@media (max-width: 768px) {
+    .start-assessment-container {
+        padding: 2rem 1rem;
+        margin: 1rem;
+    }
+    
+    .detail-card {
+        margin-bottom: 1rem;
+    }
+    
+    .safety-item {
+        margin-bottom: 1rem;
+    }
+    
+    #start-assessment-btn {
+        padding: 0.8rem 2rem;
+        font-size: 1.1rem;
+    }
 } 
