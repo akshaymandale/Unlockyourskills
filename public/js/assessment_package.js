@@ -203,9 +203,13 @@ document.addEventListener("DOMContentLoaded", function () {
         fetch(`/unlockyourskills/vlr/assessment-packages/${assessmentId}`)
             .then(response => response.json())
             .then(assessmentData => {
+<<<<<<< HEAD
                 console.log('Assessment data received:', assessmentData);
                 console.log('Selected questions:', assessmentData.selected_questions);
                 console.log('Questions count:', assessmentData.selected_questions?.length || 0);
+=======
+                console.log(assessmentData);
+>>>>>>> af75b4fbe579979a6b31bc9dbf713ea5cddebe83
 
                 // Add hidden input for assessment ID (crucial for update vs insert logic)
                 let assessmentIdInput = document.getElementById('assessmentId');

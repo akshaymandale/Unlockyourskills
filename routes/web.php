@@ -86,6 +86,7 @@ Router::middleware(['Auth'])->group(function() {
     Router::get('/my-courses/start', 'MyCoursesController@start');
 
     // ===================================
+<<<<<<< HEAD
     // ASSESSMENT PLAYER
     // ===================================
     Router::get('/assessment-player', 'AssessmentPlayerController@start');
@@ -97,6 +98,8 @@ Router::middleware(['Auth'])->group(function() {
     Router::get('/assessment-player/health-check', 'AssessmentPlayerController@healthCheck');
 
     // ===================================
+=======
+>>>>>>> af75b4fbe579979a6b31bc9dbf713ea5cddebe83
     // COURSE CATEGORIES
     // ===================================
     
