@@ -1338,7 +1338,7 @@
         "duration_minutes_invalid": "अवधि मिनट 0 और 59 के बीच होना चाहिए",
         "passing_score_invalid": "उत्तीर्ण अंक 0 और 100 के बीच होना चाहिए",
         "max_attempts_invalid": "अधिकतम प्रयास 1 और 999 के बीच होना चाहिए",
-        "loading_subcategories": "उप-श्रेणियां लोड हो रही हैं...",
+        "loading_subcategories": "उप-श्रेणियां लोड हो रही हैं..",
         "no_subcategories_found": "इस श्रेणी के लिए कोई उप-श्रेणी नहीं मिली",
         "loading_content": "सामग्री लोड हो रही है...",
         "no_content_found": "इस प्रकार के लिए कोई सामग्री नहीं मिली",
