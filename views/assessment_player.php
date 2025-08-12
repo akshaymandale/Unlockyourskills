@@ -51,15 +51,15 @@ $timeRemaining = $attempt['time_remaining'] ?? ($timeLimit * 60);
                     <div class="col-md-6 text-end">
                         <div class="assessment-info">
                             <div class="info-item">
-                                <span class="info-label">Question:</span>
+                                <span class="info-label"><?php echo Localization::translate('assessment_player.question'); ?>:</span>
                                 <span class="info-value" id="question-counter">1 / <?php echo $totalQuestions; ?></span>
                             </div>
                             <div class="info-item">
-                                <span class="info-label">Time Remaining:</span>
+                                <span class="info-label"><?php echo Localization::translate('assessment_player.time_remaining'); ?>:</span>
                                 <span class="info-value" id="time-remaining"><?php echo gmdate('H:i:s', $timeRemaining); ?></span>
                             </div>
                             <div class="info-item">
-                                <span class="info-label"><?php echo Localization::translate('passing_score') ?? 'Passing Score'; ?>:</span>
+                                <span class="info-label"><?php echo Localization::translate('assessment_player.passing_score'); ?>:</span>
                                 <span class="info-value"><?php echo ($assessment['passing_percentage'] ?? 70); ?>%</span>
                             </div>
                         </div>
@@ -86,27 +86,27 @@ $timeRemaining = $attempt['time_remaining'] ?? ($timeLimit * 60);
                             <div class="start-icon mb-4">
                                 <i class="fas fa-clipboard-check fa-5x text-primary"></i>
                             </div>
-                            <h2 class="mb-4">Ready to Start Your Assessment?</h2>
-                            <p class="lead mb-4">You're about to begin: <strong><?php echo htmlspecialchars($assessment['title'] ?? ''); ?></strong></p>
+                            <h2 class="mb-4"><?php echo Localization::translate('assessment_player.ready_to_start'); ?></h2>
+                            <p class="lead mb-4"><?php echo Localization::translate('assessment_player.about_to_begin'); ?> <strong><?php echo htmlspecialchars($assessment['title'] ?? ''); ?></strong></p>
                             
                             <div class="assessment-details mb-4">
                                 <div class="row">
                                     <div class="col-md-4">
                                         <div class="detail-card">
                                             <i class="fas fa-question-circle fa-2x text-info mb-2"></i>
-                                            <h5><?php echo $totalQuestions; ?> Questions</h5>
+                                            <h5><?php echo $totalQuestions; ?> <?php echo Localization::translate('assessment_player.questions'); ?></h5>
                                         </div>
                                     </div>
                                     <div class="col-md-4">
                                         <div class="detail-card">
                                             <i class="fas fa-clock fa-2x text-warning mb-2"></i>
-                                            <h5><?php echo gmdate('H:i:s', $timeLimit * 60); ?> Time Limit</h5>
+                                            <h5><?php echo gmdate('H:i:s', $timeLimit * 60); ?> <?php echo Localization::translate('assessment_player.time_limit'); ?></h5>
                                         </div>
                                     </div>
                                     <div class="col-md-4">
                                         <div class="detail-card">
                                             <i class="fas fa-percentage fa-2x text-success mb-2"></i>
-                                            <h5><?php echo ($assessment['passing_percentage'] ?? 70); ?>% to Pass</h5>
+                                            <h5><?php echo ($assessment['passing_percentage'] ?? 70); ?>% <?php echo Localization::translate('assessment_player.to_pass'); ?></h5>
                                         </div>
                                     </div>
                                 </div>
@@ -114,32 +114,32 @@ $timeRemaining = $attempt['time_remaining'] ?? ($timeLimit * 60);
 
                             <div class="safety-features mb-4">
                                 <h5 class="text-primary mb-3">
-                                    <i class="fas fa-shield-alt me-2"></i>Your Progress is Protected
+                                    <i class="fas fa-shield-alt me-2"></i><?php echo Localization::translate('assessment_player.your_progress_protected'); ?>
                                 </h5>
                                 <div class="row">
                                     <div class="col-md-4">
                                         <div class="safety-item">
                                             <i class="fas fa-wifi text-success"></i>
-                                            <small>Auto-save every 30 seconds</small>
+                                            <small><?php echo Localization::translate('assessment_player.auto_save_every_30'); ?></small>
                                         </div>
                                     </div>
                                     <div class="col-md-4">
                                         <div class="safety-item">
                                             <i class="fas fa-undo text-info"></i>
-                                            <small>Session recovery up to 24h</small>
+                                            <small><?php echo Localization::translate('assessment_player.session_recovery_24h'); ?></small>
                                         </div>
                                     </div>
                                     <div class="col-md-4">
                                         <div class="safety-item">
                                             <i class="fas fa-bolt text-warning"></i>
-                                            <small>Offline mode protection</small>
+                                            <small><?php echo Localization::translate('assessment_player.offline_mode_protection'); ?></small>
                                         </div>
                                     </div>
                                 </div>
                             </div>
 
                             <button type="button" class="btn btn-primary btn-lg" id="start-assessment-btn">
-                                <i class="fas fa-play me-2"></i>Start Assessment
+                                <i class="fas fa-play me-2"></i><?php echo Localization::translate('assessment_player.start_assessment'); ?>
                             </button>
                         </div>
                     </div>
@@ -162,15 +162,15 @@ $timeRemaining = $attempt['time_remaining'] ?? ($timeLimit * 60);
                             <div class="row">
                                 <div class="col-6">
                                     <button type="button" class="btn btn-secondary" id="prev-btn" disabled>
-                                        <i class="fas fa-arrow-left"></i> Previous
+                                        <i class="fas fa-arrow-left"></i> <?php echo Localization::translate('assessment_player.previous_question'); ?>
                                     </button>
                                 </div>
                                 <div class="col-6 text-end">
                                     <button type="button" class="btn btn-primary" id="next-btn">
-                                        Next <i class="fas fa-arrow-right"></i>
+                                        <?php echo Localization::translate('assessment_player.next_question'); ?> <i class="fas fa-arrow-right"></i>
                                     </button>
                                     <button type="button" class="btn btn-success" id="submit-btn" style="display: none;">
-                                        Submit Assessment
+                                        <?php echo Localization::translate('assessment_player.submit_assessment'); ?>
                                     </button>
                                 </div>
                             </div>
@@ -180,7 +180,7 @@ $timeRemaining = $attempt['time_remaining'] ?? ($timeLimit * 60);
                     <!-- Question Navigator -->
                     <div class="col-lg-4">
                         <div class="question-navigator">
-                            <h5>Question Navigator</h5>
+                            <h5><?php echo Localization::translate('assessment_player.question_navigator'); ?></h5>
                             <div class="question-grid" id="question-grid">
                                 <!-- Question numbers will be generated here -->
                             </div>
@@ -188,15 +188,15 @@ $timeRemaining = $attempt['time_remaining'] ?? ($timeLimit * 60);
                             <div class="navigator-legend">
                                 <div class="legend-item">
                                     <span class="legend-color answered"></span>
-                                    <span>Answered</span>
+                                    <span><?php echo Localization::translate('assessment_player.answered_questions'); ?></span>
                                 </div>
                                 <div class="legend-item">
                                     <span class="legend-color current"></span>
-                                    <span>Current</span>
+                                    <span><?php echo Localization::translate('assessment_player.current_question'); ?></span>
                                 </div>
                                 <div class="legend-item">
                                     <span class="legend-color unanswered"></span>
-                                    <span>Unanswered</span>
+                                    <span><?php echo Localization::translate('assessment_player.unanswered_questions'); ?></span>
                                 </div>
                             </div>
                         </div>
@@ -211,22 +211,22 @@ $timeRemaining = $attempt['time_remaining'] ?? ($timeLimit * 60);
         <div class="modal-dialog">
             <div class="modal-content">
                 <div class="modal-header">
-                    <h5 class="modal-title">Confirm Submission</h5>
+                    <h5 class="modal-title"><?php echo Localization::translate('assessment_player.confirm_submit'); ?></h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                 </div>
                 <div class="modal-body">
-                    <p>Are you sure you want to submit your assessment? You cannot change your answers after submission.</p>
+                    <p><?php echo Localization::translate('assessment_player.confirm_submit'); ?></p>
                     <div class="alert alert-info">
-                        <strong>Questions Answered:</strong> 
+                        <strong><?php echo Localization::translate('assessment_player.answered_questions'); ?>:</strong> 
                         <span id="modal-answered-count">0</span> / <?php echo $totalQuestions; ?>
                     </div>
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
-                        Cancel
+                        <?php echo Localization::translate('common.cancel'); ?>
                     </button>
                     <button type="button" class="btn btn-success" id="confirm-submit">
-                        Submit Assessment
+                        <?php echo Localization::translate('assessment_player.submit_assessment'); ?>
                     </button>
                 </div>
             </div>
@@ -238,28 +238,28 @@ $timeRemaining = $attempt['time_remaining'] ?? ($timeLimit * 60);
         <div class="modal-dialog modal-lg">
             <div class="modal-content">
                 <div class="modal-header">
-                    <h5 class="modal-title">Assessment Results</h5>
+                    <h5 class="modal-title"><?php echo Localization::translate('assessment_player.assessment_complete'); ?></h5>
                 </div>
                 <div class="modal-body">
                     <div class="results-summary">
                         <div class="row">
                             <div class="col-md-6">
                                 <div class="result-item">
-                                    <span class="result-label">Score:</span>
+                                    <span class="result-label"><?php echo Localization::translate('assessment_player.your_score'); ?>:</span>
                                     <span class="result-value" id="result-score">0</span>
                                 </div>
                                 <div class="result-item">
-                                    <span class="result-label">Percentage:</span>
+                                    <span class="result-label"><?php echo Localization::translate('assessment_player.percentage'); ?>:</span>
                                     <span class="result-value" id="result-percentage">0%</span>
                                 </div>
                             </div>
                             <div class="col-md-6">
                                 <div class="result-item">
-                                    <span class="result-label">Status:</span>
+                                    <span class="result-label"><?php echo Localization::translate('assessment_player.result'); ?>:</span>
                                     <span class="result-value" id="result-status">-</span>
                                 </div>
                                 <div class="result-item">
-                                    <span class="result-label">Correct Answers:</span>
+                                    <span class="result-label"><?php echo Localization::translate('assessment_player.max_score'); ?>:</span>
                                     <span class="result-value" id="result-correct">0</span>
                                 </div>
                             </div>
@@ -268,7 +268,7 @@ $timeRemaining = $attempt['time_remaining'] ?? ($timeLimit * 60);
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-primary" id="back-to-courses">
-                        Back to Courses
+                        <?php echo Localization::translate('assessment_player.back_to_courses'); ?>
                     </button>
                 </div>
             </div>
@@ -286,7 +286,38 @@ $timeRemaining = $attempt['time_remaining'] ?? ($timeLimit * 60);
             attemptId: <?php echo json_encode($attemptId); ?>,
             totalQuestions: <?php echo $totalQuestions; ?>,
             timeLimit: <?php echo $timeLimit; ?>,
-            timeRemaining: <?php echo $timeRemaining; ?>
+            timeRemaining: <?php echo $timeRemaining; ?>,
+            translations: {
+                assessment_safety_features: "<?php echo Localization::translate('assessment_player.assessment_safety_features'); ?>",
+                progress_automatically_protected: "<?php echo Localization::translate('assessment_player.progress_automatically_protected'); ?>",
+                internet_connection_issues: "<?php echo Localization::translate('assessment_player.internet_connection_issues'); ?>",
+                answers_saved_locally: "<?php echo Localization::translate('assessment_player.answers_saved_locally'); ?>",
+                offline_mode_activates: "<?php echo Localization::translate('assessment_player.offline_mode_activates'); ?>",
+                answers_sync_automatically: "<?php echo Localization::translate('assessment_player.answers_sync_automatically'); ?>",
+                no_data_loss: "<?php echo Localization::translate('assessment_player.no_data_loss'); ?>",
+                power_outages_system_crashes: "<?php echo Localization::translate('assessment_player.power_outages_system_crashes'); ?>",
+                progress_saved_browser: "<?php echo Localization::translate('assessment_player.progress_saved_browser'); ?>",
+                session_recovery_available: "<?php echo Localization::translate('assessment_player.session_recovery_available'); ?>",
+                resume_exactly_where: "<?php echo Localization::translate('assessment_player.resume_exactly_where'); ?>",
+                all_answers_preserved: "<?php echo Localization::translate('assessment_player.all_answers_preserved'); ?>",
+                accidentally_closing_tabs: "<?php echo Localization::translate('assessment_player.accidentally_closing_tabs'); ?>",
+                warning_popup_prevents: "<?php echo Localization::translate('assessment_player.warning_popup_prevents'); ?>",
+                progress_auto_saves_tabs: "<?php echo Localization::translate('assessment_player.progress_auto_saves_tabs'); ?>",
+                return_same_question: "<?php echo Localization::translate('assessment_player.return_same_question'); ?>",
+                timer_continues: "<?php echo Localization::translate('assessment_player.timer_continues'); ?>",
+                important_stable_connection: "<?php echo Localization::translate('assessment_player.important_stable_connection'); ?>",
+                auto_save: "<?php echo Localization::translate('assessment_player.auto_save'); ?>",
+                every_30_seconds: "<?php echo Localization::translate('assessment_player.every_30_seconds'); ?>",
+                session_recovery: "<?php echo Localization::translate('assessment_player.session_recovery'); ?>",
+                up_to_24_hours: "<?php echo Localization::translate('assessment_player.up_to_24_hours'); ?>",
+                i_understand: "<?php echo Localization::translate('assessment_player.i_understand'); ?>",
+                marks: "<?php echo Localization::translate('assessment_player.marks'); ?>",
+                difficulty: "<?php echo Localization::translate('assessment_player.difficulty'); ?>",
+                skills: "<?php echo Localization::translate('assessment_player.skills'); ?>",
+                question: "<?php echo Localization::translate('assessment_player.question'); ?>",
+                enter_answer_placeholder: "<?php echo Localization::translate('assessment_player.enter_answer_placeholder'); ?>",
+                characters: "<?php echo Localization::translate('assessment_player.characters'); ?>"
+            }
         };
     </script>
 </body>

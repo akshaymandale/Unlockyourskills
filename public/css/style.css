@@ -6104,6 +6104,62 @@ body select:focus,
     z-index: 1; /* Ensure button is above other content */
 }
 
+/* Button color variants for different content types - Prerequisites */
+.prerequisite-action-btn.btn-info {
+    background: linear-gradient(135deg, #17a2b8, #138496);
+    box-shadow: 0 4px 15px rgba(23, 162, 184, 0.3);
+}
+
+.prerequisite-action-btn.btn-info:hover {
+    box-shadow: 0 6px 20px rgba(23, 162, 184, 0.4);
+}
+
+.prerequisite-action-btn.btn-warning {
+    background: linear-gradient(135deg, #ffc107, #e0a800);
+    box-shadow: 0 4px 15px rgba(255, 193, 7, 0.3);
+    color: #212529;
+}
+
+.prerequisite-action-btn.btn-warning:hover {
+    box-shadow: 0 6px 20px rgba(255, 193, 7, 0.4);
+}
+
+.prerequisite-action-btn.btn-primary {
+    background: linear-gradient(135deg, #007bff, #0056b3);
+    box-shadow: 0 4px 15px rgba(0, 123, 255, 0.3);
+}
+
+.prerequisite-action-btn.btn-primary:hover {
+    box-shadow: 0 6px 20px rgba(0, 123, 255, 0.4);
+}
+
+.prerequisite-action-btn.btn-success {
+    background: linear-gradient(135deg, #28a745, #1e7e34);
+    box-shadow: 0 4px 15px rgba(40, 167, 69, 0.3);
+}
+
+.prerequisite-action-btn.btn-success:hover {
+    box-shadow: 0 6px 20px rgba(40, 167, 69, 0.4);
+}
+
+.prerequisite-action-btn.btn-secondary {
+    background: linear-gradient(135deg, #6c757d, #545b62);
+    box-shadow: 0 4px 15px rgba(108, 117, 125, 0.3);
+}
+
+.prerequisite-action-btn.btn-secondary:hover {
+    box-shadow: 0 6px 20px rgba(108, 117, 125, 0.4);
+}
+
+.prerequisite-action-btn.btn-danger {
+    background: linear-gradient(135deg, #dc3545, #c82333);
+    box-shadow: 0 4px 15px rgba(220, 53, 69, 0.3);
+}
+
+.prerequisite-action-btn.btn-danger:hover {
+    box-shadow: 0 6px 20px rgba(220, 53, 69, 0.4);
+}
+
 .postrequisite-action-btn {
     background: linear-gradient(135deg, #6a0dad, #8e44ad);
     box-shadow: 0 4px 15px rgba(106, 13, 173, 0.3);
@@ -6119,6 +6175,62 @@ body select:focus,
 
 .postrequisite-action-btn:hover {
     box-shadow: 0 6px 20px rgba(106, 13, 173, 0.4);
+}
+
+/* Button color variants for different content types */
+.postrequisite-action-btn.btn-info {
+    background: linear-gradient(135deg, #17a2b8, #138496);
+    box-shadow: 0 4px 15px rgba(23, 162, 184, 0.3);
+}
+
+.postrequisite-action-btn.btn-info:hover {
+    box-shadow: 0 6px 20px rgba(23, 162, 184, 0.4);
+}
+
+.postrequisite-action-btn.btn-warning {
+    background: linear-gradient(135deg, #ffc107, #e0a800);
+    box-shadow: 0 4px 15px rgba(255, 193, 7, 0.3);
+    color: #212529;
+}
+
+.postrequisite-action-btn.btn-warning:hover {
+    box-shadow: 0 6px 20px rgba(255, 193, 7, 0.4);
+}
+
+.postrequisite-action-btn.btn-primary {
+    background: linear-gradient(135deg, #007bff, #0056b3);
+    box-shadow: 0 4px 15px rgba(0, 123, 255, 0.3);
+}
+
+.postrequisite-action-btn.btn-primary:hover {
+    box-shadow: 0 6px 20px rgba(0, 123, 255, 0.4);
+}
+
+.postrequisite-action-btn.btn-success {
+    background: linear-gradient(135deg, #28a745, #1e7e34);
+    box-shadow: 0 4px 15px rgba(40, 167, 69, 0.3);
+}
+
+.postrequisite-action-btn.btn-success:hover {
+    box-shadow: 0 6px 20px rgba(40, 167, 69, 0.4);
+}
+
+.postrequisite-action-btn.btn-secondary {
+    background: linear-gradient(135deg, #6c757d, #545b62);
+    box-shadow: 0 4px 15px rgba(108, 117, 125, 0.3);
+}
+
+.postrequisite-action-btn.btn-secondary:hover {
+    box-shadow: 0 6px 20px rgba(108, 117, 125, 0.4);
+}
+
+.postrequisite-action-btn.btn-danger {
+    background: linear-gradient(135deg, #dc3545, #c82333);
+    box-shadow: 0 4px 15px rgba(220, 53, 69, 0.3);
+}
+
+.postrequisite-action-btn.btn-danger:hover {
+    box-shadow: 0 6px 20px rgba(220, 53, 69, 0.4);
 }
 
 .prerequisite-status {
@@ -6623,6 +6735,8 @@ body select:focus,
     height: 100%;
 }
 
+/* OLD CSS - No longer used, replaced with postrequisite-action-btn styling */
+/*
 .content-controls .content-actions .content-action-btn {
     display: inline-flex;
     align-items: center;
@@ -6641,6 +6755,7 @@ body select:focus,
     height: 36px;
     line-height: 1;
 }
+*/
 
 .content-progress {
     display: flex;
@@ -6725,6 +6840,8 @@ body select:focus,
     width: auto;
 }
 
+/* OLD CSS - No longer used, replaced with postrequisite-action-btn styling */
+/*
 .content-controls .content-actions .content-action-btn {
     display: inline-flex;
     align-items: center;
@@ -6740,7 +6857,10 @@ body select:focus,
     min-width: 80px;
     justify-content: center;
 }
+*/
 
+/* OLD CSS - No longer used, replaced with postrequisite-action-btn styling */
+/*
 .content-controls .content-actions .content-action-primary {
     background: linear-gradient(135deg, #007bff 0%, #0056b3 100%);
     color: white;
@@ -6799,6 +6919,7 @@ body select:focus,
     cursor: not-allowed;
     box-shadow: none;
 }
+*/
 
 .content-error {
     color: #dc3545;
@@ -6963,10 +7084,13 @@ body select:focus,
         flex-shrink: 0;
     }
     
+    /* OLD CSS - No longer used, replaced with postrequisite-action-btn styling */
+    /*
     .content-controls .content-actions .content-action-btn {
         min-width: auto;
         justify-content: center;
     }
+    */
     
     .content-details-collapse {
         margin: 0 -16px -16px -16px;
@@ -7029,6 +7153,8 @@ body select:focus,
     flex-shrink: 0;
 }
 
+/* OLD CSS - No longer used, replaced with postrequisite-action-btn styling */
+/*
 .content-action-disabled {
     background: #6c757d !important;
     color: #ffffff !important;
@@ -7044,6 +7170,7 @@ body select:focus,
     transform: none !important;
     box-shadow: none !important;
 }
+*/
 
 .prerequisite-action-disabled,
 .postrequisite-action-disabled {
@@ -7061,4 +7188,41 @@ body select:focus,
     color: #ffffff !important;
     transform: none !important;
     box-shadow: none !important;
+}
+
+/* Custom Tooltip Styling */
+.custom-tooltip .tooltip-inner {
+    background: linear-gradient(135deg, #2c3e50, #34495e);
+    color: white;
+    font-size: 0.85rem;
+    font-weight: 500;
+    padding: 8px 12px;
+    border-radius: 8px;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+    max-width: 300px;
+    text-align: center;
+    line-height: 1.3;
+}
+
+.custom-tooltip .tooltip-arrow::before {
+    border-top-color: #2c3e50;
+}
+
+/* Tooltip hover effects */
+.custom-tooltip .tooltip-inner {
+    transition: all 0.3s ease;
+}
+
+/* Ensure tooltips appear above other elements */
+.tooltip {
+    z-index: 9999;
+}
+
+/* Responsive tooltip adjustments */
+@media (max-width: 768px) {
+    .custom-tooltip .tooltip-inner {
+        max-width: 250px;
+        font-size: 0.8rem;
+        padding: 6px 10px;
+    }
 }

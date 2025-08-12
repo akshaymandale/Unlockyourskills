@@ -160,7 +160,12 @@
                                     <i class="fas <?= $icon ?>" style="color: <?= $color ?>;"></i>
                                 </div>
                                 <div class="prerequisite-details">
-                                    <h6 class="prerequisite-title mb-1"><?= htmlspecialchars($pre['title']) ?></h6>
+                                    <h6 class="prerequisite-title mb-1" 
+                                        data-bs-toggle="tooltip" 
+                                        data-bs-placement="top" 
+                                        title="<?= htmlspecialchars($pre['title']) ?>">
+                                        <?= htmlspecialchars($pre['title']) ?>
+                                    </h6>
                                     <span class="prerequisite-type"><?= htmlspecialchars(ucfirst($type)) ?></span>
                                 </div>
                             </div>
@@ -189,10 +194,76 @@
                                         echo "</a>";
                                     }
                                 } else {
-                                    // Non-assessment content types
+                                    // Non-assessment content types with appropriate labels
                                     $encryptedPrereqId = IdEncryption::encrypt($pre['prerequisite_id']);
-                                    echo "<a class='prerequisite-action-btn' target='_blank' href='" . UrlHelper::url('my-courses/start') . '?type=' . urlencode($pre['prerequisite_type']) . '&id=' . urlencode($encryptedPrereqId) . "'>";
-                                    echo "<i class='fas fa-play me-1'></i>Start";
+                                    
+                                    // Define button labels and icons based on content type
+                                    $buttonConfig = [
+                                        'survey' => [
+                                            'label' => 'Take Survey',
+                                            'icon' => 'fa-clipboard-list',
+                                            'class' => 'btn-info'
+                                        ],
+                                        'feedback' => [
+                                            'label' => 'Give Feedback',
+                                            'icon' => 'fa-comment-dots',
+                                            'class' => 'btn-warning'
+                                        ],
+                                        'assignment' => [
+                                            'label' => 'Start Assignment',
+                                            'icon' => 'fa-file-pen',
+                                            'class' => 'btn-primary'
+                                        ],
+                                        'course' => [
+                                            'label' => 'Start Course',
+                                            'icon' => 'fa-play',
+                                            'class' => 'btn-success'
+                                        ],
+                                        'module' => [
+                                            'label' => 'Start Module',
+                                            'icon' => 'fa-play',
+                                            'class' => 'btn-success'
+                                        ],
+                                        'scorm' => [
+                                            'label' => 'Launch SCORM',
+                                            'icon' => 'fa-cube',
+                                            'class' => 'btn-secondary'
+                                        ],
+                                        'video' => [
+                                            'label' => 'Watch Video',
+                                            'icon' => 'fa-play',
+                                            'class' => 'btn-danger'
+                                        ],
+                                        'audio' => [
+                                            'label' => 'Listen Audio',
+                                            'icon' => 'fa-play',
+                                            'class' => 'btn-warning'
+                                        ],
+                                        'document' => [
+                                            'label' => 'View Document',
+                                            'icon' => 'fa-file-lines',
+                                            'class' => 'btn-secondary'
+                                        ],
+                                        'image' => [
+                                            'label' => 'View Image',
+                                            'icon' => 'fa-image',
+                                            'class' => 'btn-info'
+                                        ],
+                                        'interactive' => [
+                                            'label' => 'Launch Interactive',
+                                            'icon' => 'fa-wand-magic-sparkles',
+                                            'class' => 'btn-primary'
+                                        ]
+                                    ];
+                                    
+                                    $config = $buttonConfig[$pre['prerequisite_type']] ?? [
+                                        'label' => 'Start',
+                                        'icon' => 'fa-play',
+                                        'class' => 'btn-secondary'
+                                    ];
+                                    
+                                    echo "<a class='prerequisite-action-btn {$config['class']}' target='_blank' href='" . UrlHelper::url('my-courses/start') . '?type=' . urlencode($pre['prerequisite_type']) . '&id=' . urlencode($encryptedPrereqId) . "'>";
+                                    echo "<i class='fas {$config['icon']} me-1'></i>{$config['label']}";
                                     echo "</a>";
                                 }
                                 ?>
@@ -275,7 +346,12 @@
                                         </div>
                                         <div class="module-details">
                                             <div class="module-number">Module <?= ($idx + 1) ?></div>
-                                            <h6 class="module-title mb-1"><?= htmlspecialchars($module['title']) ?></h6>
+                                            <h6 class="module-title mb-1" 
+                                                data-bs-toggle="tooltip" 
+                                                data-bs-placement="top" 
+                                                title="<?= htmlspecialchars($module['title']) ?>">
+                                                <?= htmlspecialchars($module['title']) ?>
+                                            </h6>
                                         </div>
                                     </div>
                                     <div class="module-progress-section">
@@ -345,7 +421,12 @@
                                                             <i class="fas <?= $icon ?> text-white"></i>
                                                         </div>
                                                         <div class="content-details">
-                                                            <h6 class="content-title mb-1"><?= htmlspecialchars($content['title']) ?></h6>
+                                                            <h6 class="content-title mb-1" 
+                                                                data-bs-toggle="tooltip" 
+                                                                data-bs-placement="top" 
+                                                                title="<?= htmlspecialchars($content['title']) ?>">
+                                                                <?= htmlspecialchars($content['title']) ?>
+                                                            </h6>
                                                             <span class="content-type-badge"><?= htmlspecialchars(ucfirst($type)) ?></span>
                                                         </div>
                                                     </div>
@@ -370,8 +451,8 @@
                                                                     if ($launchUrl) {
                                                                         $resolved = resolveContentUrl($launchUrl);
                                                                         $viewer = UrlHelper::url('my-courses/view-content') . '?type=scorm&title=' . urlencode($content['title']) . '&src=' . urlencode($resolved);
-                                                                        echo "<a href='" . htmlspecialchars($viewer) . "' target='_blank' class='content-action-btn content-action-primary'>";
-                                                                        echo "<i class='fas fa-rocket me-1'></i>Launch";
+                                                                        echo "<a href='" . htmlspecialchars($viewer) . "' target='_blank' class='postrequisite-action-btn btn-secondary'>";
+                                                                        echo "<i class='fas fa-cube me-1'></i>Launch SCORM";
                                                                         echo "</a>";
                                                                     } else {
                                                                         echo "<span class='content-error'><i class='fas fa-exclamation-triangle me-1'></i>No SCORM launch path</span>";
@@ -383,8 +464,8 @@
                                                                     if ($launchUrl) {
                                                                         $resolved = resolveContentUrl($launchUrl);
                                                                         $viewer = UrlHelper::url('my-courses/view-content') . '?type=iframe&title=' . urlencode($content['title']) . '&src=' . urlencode($resolved);
-                                                                        echo "<a href='" . htmlspecialchars($viewer) . "' target='_blank' class='content-action-btn content-action-primary'>";
-                                                                        echo "<i class='fas fa-rocket me-1'></i>Launch";
+                                                                        echo "<a href='" . htmlspecialchars($viewer) . "' target='_blank' class='postrequisite-action-btn btn-primary'>";
+                                                                        echo "<i class='fas fa-wand-magic-sparkles me-1'></i>Launch Interactive";
                                                                         echo "</a>";
                                                                     } else {
                                                                         echo "<span class='content-error'><i class='fas fa-exclamation-triangle me-1'></i>No launch path</span>";
@@ -395,8 +476,8 @@
                                                                     if ($videoUrl) {
                                                                         $resolved = resolveContentUrl($videoUrl);
                                                                         $viewer = UrlHelper::url('my-courses/view-content') . '?type=video&title=' . urlencode($content['title']) . '&src=' . urlencode($resolved);
-                                                                        echo "<a href='" . htmlspecialchars($viewer) . "' target='_blank' class='content-action-btn content-action-primary'>";
-                                                                        echo "<i class='fas fa-play me-1'></i>Play";
+                                                                        echo "<a href='" . htmlspecialchars($viewer) . "' target='_blank' class='postrequisite-action-btn btn-danger'>";
+                                                                        echo "<i class='fas fa-play me-1'></i>Watch Video";
                                                                         echo "</a>";
                                                                     } else {
                                                                         echo "<span class='content-error'><i class='fas fa-exclamation-triangle me-1'></i>No video file</span>";
@@ -418,8 +499,8 @@
                                                                     if ($docUrl) {
                                                                         $resolved = resolveContentUrl($docUrl);
                                                                         $viewer = UrlHelper::url('my-courses/view-content') . '?type=document&title=' . urlencode($content['title']) . '&src=' . urlencode($resolved);
-                                                                        echo "<a href='" . htmlspecialchars($viewer) . "' target='_blank' class='content-action-btn content-action-secondary'>";
-                                                                        echo "<i class='fas fa-eye me-1'></i>View";
+                                                                        echo "<a href='" . htmlspecialchars($viewer) . "' target='_blank' class='postrequisite-action-btn btn-secondary'>";
+                                                                        echo "<i class='fas fa-file-lines me-1'></i>View Document";
                                                                         echo "</a>";
                                                                     } else {
                                                                         echo "<span class='content-error'><i class='fas fa-exclamation-triangle me-1'></i>No document file</span>";
@@ -430,8 +511,8 @@
                                                                     if ($imgUrl) {
                                                                         $resolved = resolveContentUrl($imgUrl);
                                                                         $viewer = UrlHelper::url('my-courses/view-content') . '?type=image&title=' . urlencode($content['title']) . '&src=' . urlencode($resolved);
-                                                                        echo "<a href='" . htmlspecialchars($viewer) . "' target='_blank' class='content-action-btn content-action-secondary'>";
-                                                                        echo "<i class='fas fa-eye me-1'></i>View";
+                                                                        echo "<a href='" . htmlspecialchars($viewer) . "' target='_blank' class='postrequisite-action-btn btn-info'>";
+                                                                        echo "<i class='fas fa-image me-1'></i>View Image";
                                                                         echo "</a>";
                                                                     } else {
                                                                         echo "<span class='content-error'><i class='fas fa-exclamation-triangle me-1'></i>No image file</span>";
@@ -442,7 +523,7 @@
                                                                     if ($extUrl) {
                                                                         $resolved = resolveContentUrl($extUrl);
                                                                         $viewer = UrlHelper::url('my-courses/view-content') . '?type=external&title=' . urlencode($content['title']) . '&src=' . urlencode($resolved);
-                                                                        echo "<a href='" . htmlspecialchars($viewer) . "' target='_blank' class='content-action-btn content-action-info'>";
+                                                                        echo "<a href='" . htmlspecialchars($viewer) . "' target='_blank' class='postrequisite-action-btn btn-info'>";
                                                                         echo "<i class='fas fa-external-link-alt me-1'></i>Open Link";
                                                                         echo "</a>";
                                                                     } else {
@@ -485,7 +566,7 @@
                                                                     echo "</a>";
                                                                     break;
                                                                 default:
-                                                                    echo "<span class='content-action-btn content-action-disabled' disabled>";
+                                                                    echo "<span class='postrequisite-action-btn btn-secondary' style='opacity: 0.6; cursor: not-allowed;' disabled>";
                                                                     echo "<i class='fas fa-ban me-1'></i>Not available";
                                                                     echo "</span>";
                                                                     break;
@@ -628,7 +709,12 @@
                                     <i class="fas <?= $icon ?>" style="color: <?= $color ?>;"></i>
                                 </div>
                                 <div class="postrequisite-details">
-                                    <h6 class="postrequisite-title mb-1"><?= htmlspecialchars($post['content_title'] ?? $post['title'] ?? 'N/A') ?></h6>
+                                    <h6 class="postrequisite-title mb-1" 
+                                        data-bs-toggle="tooltip" 
+                                        data-bs-placement="top" 
+                                        title="<?= htmlspecialchars($post['content_title'] ?? $post['title'] ?? 'N/A') ?>">
+                                        <?= htmlspecialchars($post['content_title'] ?? $post['title'] ?? 'N/A') ?>
+                                    </h6>
                                     <span class="postrequisite-type"><?= htmlspecialchars(ucfirst($type)) ?></span>
                                 </div>
                             </div>
@@ -652,14 +738,80 @@
                                     // Show start button with attempt count
                                     $encryptedPostreqId = IdEncryption::encrypt($post['content_id']);
                                     echo "<a class='postrequisite-action-btn' target='_blank' href='" . UrlHelper::url('my-courses/start') . '?type=' . urlencode($post['content_type']) . '&id=' . urlencode($encryptedPostreqId) . "'>";
-                                    echo "<i class='fas fa-rocket me-1'></i>Launch";
+                                    echo "<i class='fas fa-play me-1'></i>Start";
                                     echo "</a>";
                                 }
                             } else {
-                                // Non-assessment content types
+                                // Non-assessment content types with appropriate labels
                                 $encryptedPostreqId = IdEncryption::encrypt($post['content_id']);
-                                echo "<a class='postrequisite-action-btn' target='_blank' href='" . UrlHelper::url('my-courses/start') . '?type=' . urlencode($post['content_type']) . '&id=' . urlencode($encryptedPostreqId) . "'>";
-                                echo "<i class='fas fa-rocket me-1'></i>Launch";
+                                
+                                // Define button labels and icons based on content type
+                                $buttonConfig = [
+                                    'survey' => [
+                                        'label' => 'Take Survey',
+                                        'icon' => 'fa-clipboard-list',
+                                        'class' => 'btn-info'
+                                    ],
+                                    'feedback' => [
+                                        'label' => 'Give Feedback',
+                                        'icon' => 'fa-comment-dots',
+                                        'class' => 'btn-warning'
+                                    ],
+                                    'assignment' => [
+                                        'label' => 'Start Assignment',
+                                        'icon' => 'fa-file-pen',
+                                        'class' => 'btn-primary'
+                                    ],
+                                    'course' => [
+                                        'label' => 'Start Course',
+                                        'icon' => 'fa-play',
+                                        'class' => 'btn-success'
+                                    ],
+                                    'module' => [
+                                        'label' => 'Start Module',
+                                        'icon' => 'fa-play',
+                                        'class' => 'btn-success'
+                                    ],
+                                    'scorm' => [
+                                        'label' => 'Launch SCORM',
+                                        'icon' => 'fa-cube',
+                                        'class' => 'btn-secondary'
+                                    ],
+                                    'video' => [
+                                        'label' => 'Watch Video',
+                                        'icon' => 'fa-play',
+                                        'class' => 'btn-danger'
+                                    ],
+                                    'audio' => [
+                                        'label' => 'Listen Audio',
+                                        'icon' => 'fa-play',
+                                        'class' => 'btn-warning'
+                                    ],
+                                    'document' => [
+                                        'label' => 'View Document',
+                                        'icon' => 'fa-file-lines',
+                                        'class' => 'btn-secondary'
+                                    ],
+                                    'image' => [
+                                        'label' => 'View Image',
+                                        'icon' => 'fa-image',
+                                        'class' => 'btn-info'
+                                    ],
+                                    'interactive' => [
+                                        'label' => 'Launch Interactive',
+                                        'icon' => 'fa-wand-magic-sparkles',
+                                        'class' => 'btn-primary'
+                                    ]
+                                ];
+                                
+                                $config = $buttonConfig[$post['content_type']] ?? [
+                                    'label' => 'Launch',
+                                    'icon' => 'fa-rocket',
+                                    'class' => 'btn-secondary'
+                                ];
+                                
+                                echo "<a class='postrequisite-action-btn {$config['class']}' target='_blank' href='" . UrlHelper::url('my-courses/start') . '?type=' . urlencode($post['content_type']) . '&id=' . urlencode($encryptedPostreqId) . "'>";
+                                echo "<i class='fas {$config['icon']} me-1'></i>{$config['label']}";
                                 echo "</a>";
                             }
                             ?>
@@ -731,5 +883,36 @@
 </div>
 
 <script src="/Unlockyourskills/public/js/course_player.js"></script>
+
+<script>
+// Initialize Bootstrap tooltips for all title elements
+document.addEventListener('DOMContentLoaded', function() {
+    // Initialize tooltips for all elements with data-bs-toggle="tooltip"
+    var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+    var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+        return new bootstrap.Tooltip(tooltipTriggerEl, {
+            trigger: 'hover',
+            placement: 'top',
+            html: true,
+            customClass: 'custom-tooltip'
+        });
+    });
+    
+    // Re-initialize tooltips after dynamic content is loaded (for collapsible modules)
+    document.addEventListener('shown.bs.collapse', function (event) {
+        var newTooltipElements = event.target.querySelectorAll('[data-bs-toggle="tooltip"]');
+        newTooltipElements.forEach(function(element) {
+            if (!element.hasAttribute('data-bs-original-title')) {
+                new bootstrap.Tooltip(element, {
+                    trigger: 'hover',
+                    placement: 'top',
+                    html: true,
+                    customClass: 'custom-tooltip'
+                });
+            }
+        });
+    });
+});
+</script>
 
 <?php include 'includes/footer.php'; ?> 
