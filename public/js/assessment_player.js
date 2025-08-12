@@ -55,50 +55,49 @@ class AssessmentPlayer {
                     <div class="modal-content">
                         <div class="modal-header bg-primary text-white">
                             <h5 class="modal-title" id="assessmentSafetyModalLabel">
-                                <i class="fas fa-shield-alt me-2"></i>Assessment Safety Features
+                                <i class="fas fa-shield-alt me-2"></i>${window.assessmentData.translations.assessment_safety_features}
                             </h5>
                             <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
                         </div>
                         <div class="modal-body">
                             <div class="alert alert-info">
                                 <i class="fas fa-info-circle me-2"></i>
-                                <strong>Your assessment progress is automatically protected!</strong>
+                                <strong>${window.assessmentData.translations.progress_automatically_protected}</strong>
                             </div>
                             
                             <h6 class="text-primary mb-3">
-                                <i class="fas fa-wifi me-2"></i>Internet Connection Issues
+                                <i class="fas fa-wifi me-2"></i>${window.assessmentData.translations.internet_connection_issues}
                             </h6>
                             <ul class="list-unstyled mb-4">
-                                <li><i class="fas fa-check text-success me-2"></i>Your answers are saved locally every 30 seconds</li>
-                                <li><i class="fas fa-check text-success me-2"></i>Offline mode automatically activates when connection is lost</li>
-                                <li><i class="fas fa-check text-success me-2"></i>Answers sync automatically when connection is restored</li>
-                                <li><i class="fas fa-check text-success me-2"></i>No data loss during temporary disconnections</li>
+                                <li><i class="fas fa-check text-success me-2"></i>${window.assessmentData.translations.answers_saved_locally}</li>
+                                <li><i class="fas fa-check text-success me-2"></i>${window.assessmentData.translations.offline_mode_activates}</li>
+                                <li><i class="fas fa-check text-success me-2"></i>${window.assessmentData.translations.answers_sync_automatically}</li>
+                                <li><i class="fas fa-check text-success me-2"></i>${window.assessmentData.translations.no_data_loss}</li>
                             </ul>
 
                             <h6 class="text-primary mb-3">
-                                <i class="fas fa-bolt me-2"></i>Power Outages & System Crashes
+                                <i class="fas fa-bolt me-2"></i>${window.assessmentData.translations.power_outages_system_crashes}
                             </h6>
                             <ul class="list-unstyled mb-4">
-                                <li><i class="fas fa-check text-success me-2"></i>Progress is saved to your browser's secure storage</li>
-                                <li><i class="fas fa-check text-success me-2"></i>Session recovery available for up to 24 hours</li>
-                                <li><i class="fas fa-check text-success me-2"></i>Resume exactly where you left off</li>
-                                <li><i class="fas fa-check text-success me-2"></i>All answers and progress are preserved</li>
+                                <li><i class="fas fa-check text-success me-2"></i>${window.assessmentData.translations.progress_saved_browser}</li>
+                                <li><i class="fas fa-check text-success me-2"></i>${window.assessmentData.translations.session_recovery_available}</li>
+                                <li><i class="fas fa-check text-success me-2"></i>${window.assessmentData.translations.resume_exactly_where}</li>
+                                <li><i class="fas fa-check text-success me-2"></i>${window.assessmentData.translations.all_answers_preserved}</li>
                             </ul>
 
                             <h6 class="text-primary mb-3">
-                                <i class="fas fa-window-close me-2"></i>Accidentally Closing Tabs/Browser
+                                <i class="fas fa-window-close me-2"></i>${window.assessmentData.translations.accidentally_closing_tabs}
                             </h6>
                             <ul class="list-unstyled mb-4">
-                                <li><i class="fas fa-check text-success me-2"></i>Warning popup prevents accidental closure</li>
-                                <li><i class="fas fa-check text-success me-2"></i>Progress automatically saves when switching tabs</li>
-                                <li><i class="fas fa-check text-success me-2"></i>Return to the same question when you come back</li>
-                                <li><i class="fas fa-check text-success me-2"></i>Timer continues from where it left off</li>
+                                <li><i class="fas fa-check text-success me-2"></i>${window.assessmentData.translations.warning_popup_prevents}</li>
+                                <li><i class="fas fa-check text-success me-2"></i>${window.assessmentData.translations.progress_auto_saves_tabs}</li>
+                                <li><i class="fas fa-check text-success me-2"></i>${window.assessmentData.translations.return_same_question}</li>
+                                <li><i class="fas fa-check text-success me-2"></i>${window.assessmentData.translations.timer_continues}</li>
                             </ul>
 
                             <div class="alert alert-warning">
                                 <i class="fas fa-exclamation-triangle me-2"></i>
-                                <strong>Important:</strong> Always ensure you have a stable internet connection before starting the assessment. 
-                                While your progress is protected, it's best to complete the assessment in one session.
+                                <strong>Important:</strong> ${window.assessmentData.translations.important_stable_connection}
                             </div>
 
                             <div class="row mt-4">
@@ -106,8 +105,8 @@ class AssessmentPlayer {
                                     <div class="card border-success">
                                         <div class="card-body text-center">
                                             <i class="fas fa-save fa-2x text-success mb-2"></i>
-                                            <h6 class="card-title">Auto-Save</h6>
-                                            <small class="text-muted">Every 30 seconds</small>
+                                            <h6 class="card-title">${window.assessmentData.translations.auto_save}</h6>
+                                            <small class="text-muted">${window.assessmentData.translations.every_30_seconds}</small>
                                         </div>
                                     </div>
                                 </div>
@@ -115,8 +114,8 @@ class AssessmentPlayer {
                                     <div class="card border-info">
                                         <div class="card-body text-center">
                                             <i class="fas fa-undo fa-2x text-info mb-2"></i>
-                                            <h6 class="card-title">Session Recovery</h6>
-                                            <small class="text-muted">Up to 24 hours</small>
+                                            <h6 class="card-title">${window.assessmentData.translations.session_recovery}</h6>
+                                            <small class="text-muted">${window.assessmentData.translations.up_to_24_hours}</small>
                                         </div>
                                     </div>
                                 </div>
@@ -124,7 +123,7 @@ class AssessmentPlayer {
                         </div>
                         <div class="modal-footer">
                             <button type="button" class="btn btn-primary" data-bs-dismiss="modal">
-                                <i class="fas fa-check me-2"></i>I Understand
+                                <i class="fas fa-check me-2"></i>${window.assessmentData.translations.i_understand}
                             </button>
                         </div>
                     </div>
@@ -524,12 +523,12 @@ class AssessmentPlayer {
             const charCount = savedAnswer.length;
             optionsHtml = `
                 <div class="form-group">
-                    <textarea class="form-control" rows="4" placeholder="Enter your answer here..."
+                    <textarea class="form-control" rows="4" placeholder="${window.assessmentData.translations.enter_answer_placeholder}"
                               oninput="window.assessmentPlayer.updateCharCount(this, '${question.id}')"
                               onblur="window.assessmentPlayer.saveAnswer('${question.id}', this.value)">${savedAnswer}</textarea>
                     <div class="char-counter mt-2">
                         <small class="text-muted">
-                            Characters: <span class="char-count">${charCount}</span>
+                            ${window.assessmentData.translations.characters}: <span class="char-count">${charCount}</span>
                         </small>
                     </div>
                 </div>
@@ -540,12 +539,12 @@ class AssessmentPlayer {
             const charCount = savedAnswer.length;
             optionsHtml = `
                 <div class="form-group">
-                    <textarea class="form-control" rows="4" placeholder="Enter your answer here..."
+                    <textarea class="form-control" rows="4" placeholder="${window.assessmentData.translations.enter_answer_placeholder}"
                               oninput="window.assessmentPlayer.updateCharCount(this, '${question.id}')"
                               onblur="window.assessmentPlayer.saveAnswer('${question.id}', this.value)">${savedAnswer}</textarea>
                     <div class="char-counter mt-2">
                         <small class="text-muted">
-                            Characters: <span class="char-count">${charCount}</span>
+                            ${window.assessmentData.translations.characters}: <span class="char-count">${charCount}</span>
                         </small>
                     </div>
                 </div>
@@ -553,13 +552,13 @@ class AssessmentPlayer {
         }
 
         const metaItems = [];
-        if (question.marks) metaItems.push(`<span class="meta-item">Marks: ${question.marks}</span>`);
-        if (question.difficulty_level) metaItems.push(`<span class="meta-item">Difficulty: ${question.difficulty_level}</span>`);
-        if (question.skills) metaItems.push(`<span class="meta-item">Skills: ${question.skills}</span>`);
+        if (question.marks) metaItems.push(`<span class="meta-item">${window.assessmentData.translations.marks}: ${question.marks}</span>`);
+        if (question.difficulty_level) metaItems.push(`<span class="meta-item">${window.assessmentData.translations.difficulty}: ${question.difficulty_level}</span>`);
+        if (question.skills) metaItems.push(`<span class="meta-item">${window.assessmentData.translations.skills}: ${question.skills}</span>`);
 
         container.innerHTML = `
             <div class="question-header fade-in">
-                <div class="question-number">Question ${this.currentQuestion}</div>
+                <div class="question-number">${window.assessmentData.translations.question} ${this.currentQuestion}</div>
                 <div class="question-text">${this.escapeHtml(question.title)}</div>
                 ${metaItems.length > 0 ? `<div class="question-meta">${metaItems.join('')}</div>` : ''}
             </div>
