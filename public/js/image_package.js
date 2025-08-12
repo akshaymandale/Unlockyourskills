@@ -153,6 +153,55 @@ document.addEventListener("DOMContentLoaded", function () {
         previewContainer.innerHTML = previewHTML;
     }
 
+    // ✅ Add file change listener for new uploads
+    imageFile.addEventListener('change', function() {
+        if (this.files && this.files[0]) {
+            const file = this.files[0];
+            showNewImageFilePreview(file);
+        }
+    });
+
+    // ✅ Show preview for new image file uploads
+    function showNewImageFilePreview(file) {
+        const fileName = file.name;
+        const fileExtension = fileName.split('.').pop().toLowerCase();
+        let previewHTML = '';
+
+        if (['jpg', 'jpeg', 'png', 'gif', 'webp', 'bmp', 'svg'].includes(fileExtension)) {
+            // Image preview with thumbnail and remove button
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                previewHTML = `
+                    <div class="preview-wrapper" style="position: relative; display: inline-block; margin-top: 10px;">
+                        <img src="${e.target.result}" alt="Preview" style="max-width: 150px; max-height: 100px; object-fit: cover; border: 1px solid #ddd; border-radius: 5px;">
+                        <button type="button" class="remove-preview" onclick="clearNewImageFileInput()" style="position: absolute; top: -5px; right: -5px; background: #dc3545; color: white; border: none; border-radius: 50%; width: 20px; height: 20px; font-size: 12px; cursor: pointer;">×</button>
+                    </div>
+                    <p style="margin-top: 5px; font-size: 12px; color: #6c757d;">New file: ${fileName} (${(file.size / 1024 / 1024).toFixed(2)} MB)</p>
+                `;
+                imageDisplay.innerHTML = previewHTML;
+            };
+            reader.readAsDataURL(file);
+        } else {
+            // Generic file preview
+            previewHTML = `
+                <div class="preview-wrapper" style="position: relative; display: inline-block; margin-top: 10px;">
+                    <div style="padding: 10px; border: 1px solid #ddd; border-radius: 5px; background: #e8f5e8;">
+                        <i class="fas fa-file-image" style="font-size: 24px; color: #6a0dad;"></i>
+                        <button type="button" class="remove-preview" onclick="clearNewImageFileInput()" style="position: absolute; top: -5px; right: -5px; background: #dc3545; color: white; border: none; border-radius: 50%; width: 20px; height: 20px; font-size: 12px; cursor: pointer;">×</button>
+                    </div>
+                    <p style="margin-top: 5px; font-size: 12px; color: #6c757d;">New file: ${fileName} (${(file.size / 1024 / 1024).toFixed(2)} MB)</p>
+                </div>
+            `;
+            imageDisplay.innerHTML = previewHTML;
+        }
+    }
+
+    // ✅ Global function to clear new image file input
+    window.clearNewImageFileInput = function() {
+        imageFile.value = '';
+        imageDisplay.innerHTML = '';
+    };
+
     // Global function to remove file preview
     window.removeImageFilePreview = function(containerId) {
         const container = document.getElementById(containerId);

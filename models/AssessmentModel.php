@@ -11,7 +11,7 @@ class AssessmentModel
         $this->conn = $database->connect();
     }
 
-    public function getFilteredQuestions($search, $marks, $type, $limit, $offset)
+    public function getFilteredQuestions($search, $marks, $type, $limit, $offset, $clientId = null)
     {
         $where = [];
         $params = [];
@@ -31,10 +31,16 @@ class AssessmentModel
             $params[':type'] = $type;
         }
 
-        $sql = "SELECT * FROM assessment_questions";
-        if (!empty($where)) {
-            $sql .= " WHERE " . implode(" AND ", $where);
+        // Always exclude deleted questions
+        $where[] = "is_deleted = 0";
+        
+        // Add client filtering if client_id is provided
+        if ($clientId !== null) {
+            $where[] = "client_id = :client_id";
+            $params[':client_id'] = $clientId;
         }
+
+        $sql = "SELECT id, question_text, tags, marks, question_type, competency_skills, level, status FROM assessment_questions WHERE " . implode(" AND ", $where);
 
         $sql .= " LIMIT :limit OFFSET :offset";
 
@@ -50,7 +56,7 @@ class AssessmentModel
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
 
-    public function getFilteredQuestionCount($search, $marks, $type)
+    public function getFilteredQuestionCount($search, $marks, $type, $clientId = null)
     {
         $where = [];
         $params = [];
@@ -70,10 +76,16 @@ class AssessmentModel
             $params[':type'] = $type;
         }
 
-        $sql = "SELECT COUNT(*) FROM assessment_questions";
-        if (!empty($where)) {
-            $sql .= " WHERE " . implode(" AND ", $where);
+        // Always exclude deleted questions
+        $where[] = "is_deleted = 0";
+        
+        // Add client filtering if client_id is provided
+        if ($clientId !== null) {
+            $where[] = "client_id = :client_id";
+            $params[':client_id'] = $clientId;
         }
+
+        $sql = "SELECT COUNT(*) FROM assessment_questions WHERE " . implode(" AND ", $where);
 
         $stmt = $this->conn->prepare($sql);
         $stmt->execute($params);
@@ -81,32 +93,58 @@ class AssessmentModel
         return $stmt->fetchColumn();
     }
 
-    public function getQuestionsByIds($ids)
+    public function getQuestionsByIds($ids, $clientId = null)
     {
         if (empty($ids))
             return [];
 
         $placeholders = implode(',', array_fill(0, count($ids), '?'));
-        $sql = "SELECT * FROM assessment_questions WHERE id IN ($placeholders)";
+        $sql = "SELECT id, question_text, tags, marks, question_type, competency_skills, level, status FROM assessment_questions WHERE id IN ($placeholders) AND is_deleted = 0";
+        
+        // Add client filtering if client_id is provided
+        if ($clientId !== null) {
+            $sql .= " AND client_id = ?";
+            $ids[] = $clientId;
+        }
 
         $stmt = $this->conn->prepare($sql);
         $stmt->execute($ids);
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
 
-    public function getDistinctMarks()
+    public function getDistinctMarks($clientId = null)
     {
-        $sql = "SELECT DISTINCT marks FROM assessment_questions ORDER BY marks ASC";
+        $sql = "SELECT DISTINCT marks FROM assessment_questions WHERE is_deleted = 0";
+        $params = [];
+        
+        // Add client filtering if client_id is provided
+        if ($clientId !== null) {
+            $sql .= " AND client_id = ?";
+            $params[] = $clientId;
+        }
+        
+        $sql .= " ORDER BY marks ASC";
+        
         $stmt = $this->conn->prepare($sql);
-        $stmt->execute();
+        $stmt->execute($params);
         return $stmt->fetchAll(PDO::FETCH_COLUMN);
     }
 
-    public function getDistinctTypes()
+    public function getDistinctTypes($clientId = null)
     {
-        $sql = "SELECT DISTINCT question_type FROM assessment_questions ORDER BY question_type ASC";
+        $sql = "SELECT DISTINCT question_type FROM assessment_questions WHERE is_deleted = 0";
+        $params = [];
+        
+        // Add client filtering if client_id is provided
+        if ($clientId !== null) {
+            $sql .= " AND client_id = ?";
+            $params[] = $clientId;
+        }
+        
+        $sql .= " ORDER BY question_type ASC";
+        
         $stmt = $this->conn->prepare($sql);
-        $stmt->execute();
+        $stmt->execute($params);
         return $stmt->fetchAll(PDO::FETCH_COLUMN);
     }
 

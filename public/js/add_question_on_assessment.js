@@ -5,8 +5,14 @@ document.addEventListener("DOMContentLoaded", function () {
 
     let questionModal;
     try {
-        questionModal = new bootstrap.Modal(questionModalEl, { backdrop: 'static' });
-    } catch (e) {}
+        questionModal = new bootstrap.Modal(questionModalEl, { 
+            backdrop: 'static',
+            keyboard: false,
+            focus: false
+        });
+    } catch (e) {
+        console.error("Failed to create question modal:", e);
+    }
 
     const questionTableBody = document.getElementById("assessment_questionTableBody");
     const loopSelectedBtn = document.getElementById("assessment_loopQuestionsBtn");
@@ -23,26 +29,100 @@ document.addEventListener("DOMContentLoaded", function () {
         return String(id);
     }
 
+    // Function to update the select all checkbox state
+    function updateSelectAllCheckbox() {
+        const selectAllCheckbox = document.getElementById("assessment_selectAllQuestions");
+        if (!selectAllCheckbox) return;
+
+        // If any question is selected, keep the header checkbox checked
+        if (temporarySelections.size > 0) {
+            selectAllCheckbox.checked = true;
+            selectAllCheckbox.indeterminate = false;
+        } else {
+            selectAllCheckbox.checked = false;
+            selectAllCheckbox.indeterminate = false;
+        }
+    }
+
+    // Function to handle select all checkbox
+    function handleSelectAll(checked) {
+        const currentPageQuestionIds = questionsData.map(q => normalizeId(q.id));
+
+        if (checked) {
+            // Add all current page questions to selection
+            currentPageQuestionIds.forEach(id => temporarySelections.add(id));
+        } else {
+            // Remove all current page questions from selection
+            currentPageQuestionIds.forEach(id => temporarySelections.delete(id));
+        }
+
+        // Re-render the table to update checkboxes
+        renderQuestionsTable();
+    }
+
+    // Function to reset all filters
+    function resetFilters() {
+        document.getElementById("assessment_questionSearch").value = "";
+        document.getElementById("assessment_filterMarks").value = "";
+        document.getElementById("assessment_filterType").value = "";
+        document.getElementById("assessment_showEntries").value = "10";
+
+        // Reset select all checkbox
+        const selectAllCheckbox = document.getElementById("assessment_selectAllQuestions");
+        if (selectAllCheckbox) {
+            selectAllCheckbox.checked = false;
+            selectAllCheckbox.indeterminate = false;
+        }
+
+        // Reset to first page
+        currentPage = 1;
+    }
+
     async function fetchQuestions(page = 1) {
+        currentPage = page;
         const search = document.getElementById("assessment_questionSearch").value;
         const marks = document.getElementById("assessment_filterMarks").value;
         const type = document.getElementById("assessment_filterType").value;
         const limit = document.getElementById("assessment_showEntries").value;
 
-        currentPage = page;
+        const params = new URLSearchParams({
+            search: search,
+            marks: marks,
+            type: type,
+            limit: limit,
+            page: page
+        });
 
-        const params = new URLSearchParams({ search, marks, type, limit, page });
-        const response = await fetch(`index.php?controller=AssessmentController&action=getQuestions&${params.toString()}`);
-        const data = await response.json();
-
-        questionsData = data.questions;
-        renderQuestionsTable();
-        renderPagination(data.totalPages);
+        try {
+            const response = await fetch(`/unlockyourskills/vlr/assessment-packages/questions?${params}`, {
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest'
+                }
+            });
+            const data = await response.json();
+            renderQuestionsTable(data.questions);
+            renderPagination(data.totalPages);
+        } catch (error) {
+            console.error("Error fetching questions:", error);
+            questionTableBody.innerHTML = '<tr><td colspan="5" class="text-center text-danger">Error loading questions</td></tr>';
+        }
     }
 
-    function renderQuestionsTable() {
+    function renderQuestionsTable(questions) {
+        if (!questionTableBody) {
+            console.error("questionTableBody element not found!");
+            return;
+        }
+
         questionTableBody.innerHTML = "";
-        questionsData.forEach((q) => {
+
+        if (questions.length === 0) {
+            questionTableBody.innerHTML = '<tr><td colspan="5" class="text-center">No questions found</td></tr>';
+            updateSelectAllCheckbox();
+            return;
+        }
+
+        questions.forEach((q) => {
             const qid = normalizeId(q.id);
             const checked = temporarySelections.has(qid) ? "checked" : "";
             const row = `
@@ -56,6 +136,9 @@ document.addEventListener("DOMContentLoaded", function () {
             `;
             questionTableBody.insertAdjacentHTML("beforeend", row);
         });
+
+        // Update the select all checkbox state after rendering
+        updateSelectAllCheckbox();
     }
 
     function renderPagination(totalPages) {
@@ -70,7 +153,11 @@ document.addEventListener("DOMContentLoaded", function () {
     }
 
     async function loadFilterOptions() {
-        const response = await fetch(`index.php?controller=AssessmentController&action=getFilterOptions`);
+        const response = await fetch(`/unlockyourskills/vlr/assessment-packages/filter-options`, {
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest'
+            }
+        });
         const data = await response.json();
 
         const marksSelect = document.getElementById("assessment_filterMarks");
@@ -93,9 +180,12 @@ document.addEventListener("DOMContentLoaded", function () {
         }
 
         try {
-            const response = await fetch(`index.php?controller=AssessmentController&action=getSelectedQuestions`, {
+            const response = await fetch(`/unlockyourskills/vlr/assessment-packages/selected-questions`, {
                 method: "POST",
-                headers: { "Content-Type": "application/json" },
+                headers: { 
+                    "Content-Type": "application/json",
+                    "X-Requested-With": "XMLHttpRequest"
+                },
                 body: JSON.stringify({ ids: Array.from(temporarySelections) })
             });
 
@@ -146,19 +236,51 @@ document.addEventListener("DOMContentLoaded", function () {
         }
     });
 
-    addQuestionBtn.addEventListener("click", function () {
-        temporarySelections = new Set(persistentSelectedQuestions);
-        questionModal.show();
-        loadFilterOptions();
-        fetchQuestions();
-    });
+    // Fix: Prevent infinite recursion by ensuring only one modal is open
+    if (addQuestionBtn && questionModal && parentModalEl) {
+        addQuestionBtn.addEventListener('click', function() {
+            // Don't hide parent modal - just show question modal with different configuration
+            questionModal.show();
+            
+            // Reset filters when opening modal
+            resetFilters();
 
+            // Load existing selected questions from the assessment form (for edit mode)
+            const existingSelectedIds = document.getElementById("assessment_selectedQuestionIds").value;
+            if (existingSelectedIds && existingSelectedIds.trim() !== "") {
+                const selectedIds = existingSelectedIds.split(',').map(id => normalizeId(id.trim())).filter(id => id);
+                persistentSelectedQuestions = new Set(selectedIds);
+                console.log("Loaded existing selected questions for edit:", selectedIds);
+            }
+
+            // Load persistent selections (previously looped questions + existing assessment questions)
+            temporarySelections = new Set(persistentSelectedQuestions);
+            
+            // Reset filters and load data after modal is shown
+            loadFilterOptions();
+            fetchQuestions(1);
+        });
+
+        // Remove the hidden.bs.modal event listener that was re-showing parent modal
+    }
+
+    // Handle individual question checkbox changes
     questionTableBody.addEventListener("change", function (e) {
         if (e.target.classList.contains("question-checkbox")) {
             const id = normalizeId(e.target.value);
-            if (e.target.checked) temporarySelections.add(id);
-            else temporarySelections.delete(id);
+            if (e.target.checked) {
+                temporarySelections.add(id);
+            } else {
+                temporarySelections.delete(id);
+            }
+            // Update select all checkbox state
+            updateSelectAllCheckbox();
         }
+    });
+
+    // Handle select all checkbox
+    document.getElementById("assessment_selectAllQuestions").addEventListener("change", function (e) {
+        handleSelectAll(e.target.checked);
     });
 
     document.getElementById("assessment_refreshBtn").addEventListener("click", () => fetchQuestions(currentPage));
@@ -168,15 +290,16 @@ document.addEventListener("DOMContentLoaded", function () {
     document.getElementById("assessment_showEntries").addEventListener("change", () => fetchQuestions(1));
 
     document.getElementById("assessment_clearFiltersBtn").addEventListener("click", () => {
-        document.getElementById("assessment_questionSearch").value = "";
-        document.getElementById("assessment_filterMarks").value = "";
-        document.getElementById("assessment_filterType").value = "";
-        document.getElementById("assessment_showEntries").value = "10";
+        resetFilters();
         temporarySelections.clear();
         fetchQuestions(1);
     });
 
     questionModalEl.addEventListener("hidden.bs.modal", () => {
+        // Reset filters when modal is closed
+        resetFilters();
+
+        // Reset temporary selections to persistent ones (discard unsaved changes)
         temporarySelections = new Set(persistentSelectedQuestions);
 
         const backdrops = document.querySelectorAll('.modal-backdrop');

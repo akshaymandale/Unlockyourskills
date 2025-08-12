@@ -100,6 +100,12 @@ document.addEventListener("DOMContentLoaded", function () {
         tagContainer.innerHTML = "";
         updateHiddenInput();
 
+        // Clear assessment ID for new assessment
+        let assessmentIdInput = document.getElementById('assessmentId');
+        if (assessmentIdInput) {
+            assessmentIdInput.remove();
+        }
+
         selectedQuestionsBody.innerHTML = "";
         selectedQuestionIdsInput.value = "";
         selectedQuestionCountInput.value = "";
@@ -194,10 +200,24 @@ document.addEventListener("DOMContentLoaded", function () {
 
         const assessmentId = assessmentData.id;
     
-        fetch(`index.php?controller=VLRController&action=getAssessmentById&id=${assessmentId}`)
+        fetch(`/unlockyourskills/vlr/assessment-packages/${assessmentId}`)
             .then(response => response.json())
             .then(assessmentData => {
-                console.log(assessmentData);
+                console.log('Assessment data received:', assessmentData);
+                console.log('Selected questions:', assessmentData.selected_questions);
+                console.log('Questions count:', assessmentData.selected_questions?.length || 0);
+
+                // Add hidden input for assessment ID (crucial for update vs insert logic)
+                let assessmentIdInput = document.getElementById('assessmentId');
+                if (!assessmentIdInput) {
+                    assessmentIdInput = document.createElement('input');
+                    assessmentIdInput.type = 'hidden';
+                    assessmentIdInput.name = 'assessmentId';
+                    assessmentIdInput.id = 'assessmentId';
+                    assessmentForm.appendChild(assessmentIdInput);
+                }
+                assessmentIdInput.value = assessmentData.id;
+
                 assessmentTitle.value = assessmentData.title;
                 numAttempts.value = assessmentData.num_attempts;
                 passingPercentage.value = assessmentData.passing_percentage;
@@ -232,10 +252,16 @@ document.addEventListener("DOMContentLoaded", function () {
                 }
     
                 // Load and display selected questions
+                console.log('About to load questions into table...');
+                console.log('selectedQuestionsBody element:', selectedQuestionsBody);
+                console.log('selectedQuestionsWrapper element:', selectedQuestionsWrapper);
+                
                 selectedQuestionsBody.innerHTML = "";
                 selectedQuestionIdsInput.value = "";
                 if (assessmentData.selected_questions && assessmentData.selected_questions.length > 0) {
-                    assessmentData.selected_questions.forEach(question => {
+                    console.log('Processing', assessmentData.selected_questions.length, 'questions');
+                    assessmentData.selected_questions.forEach((question, index) => {
+                        console.log('Processing question', index + 1, ':', question);
                         const row = document.createElement("tr");
                         row.innerHTML = `
                             <td>${question.title}</td>
@@ -244,13 +270,16 @@ document.addEventListener("DOMContentLoaded", function () {
                             <td>${question.marks}</td>
                         `;
                         selectedQuestionsBody.appendChild(row);
+                        console.log('Added question row:', row.innerHTML);
                     });
     
                     const selectedIds = assessmentData.selected_questions.map(q => q.id);
                     selectedQuestionIdsInput.value = selectedIds.join(",");
                     selectedQuestionCountInput.value = selectedIds.length;
                     selectedQuestionsWrapper.style.display = "block";
+                    console.log('Questions loaded successfully. IDs:', selectedIds);
                 } else {
+                    console.log('No questions found, hiding wrapper');
                     selectedQuestionsWrapper.style.display = "none";
                 }
     
@@ -285,6 +314,12 @@ document.addEventListener("DOMContentLoaded", function () {
         tags = [];
         tagContainer.innerHTML = "";
         updateHiddenInput();
+
+        // Clear assessment ID when modal is closed
+        let assessmentIdInput = document.getElementById('assessmentId');
+        if (assessmentIdInput) {
+            assessmentIdInput.remove();
+        }
 
         selectedQuestionsBody.innerHTML = "";
         selectedQuestionIdsInput.value = "";

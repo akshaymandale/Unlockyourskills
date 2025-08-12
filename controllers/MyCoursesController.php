@@ -1,0 +1,286 @@
+<?php
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+}
+require_once 'models/MyCoursesModel.php';
+require_once 'core/UrlHelper.php';
+require_once 'config/Localization.php';
+require_once 'core/IdEncryption.php';
+
+class MyCoursesController {
+    private $myCoursesModel;
+
+    public function __construct() {
+        $this->myCoursesModel = new MyCoursesModel();
+    }
+
+    // Render My Courses page
+    public function index() {
+        if (!isset($_SESSION['id']) || !isset($_SESSION['user'])) {
+            UrlHelper::redirect('login');
+        }
+        require 'views/my_courses.php';
+    }
+
+    // AJAX: Get user courses (with status, search, pagination)
+    public function getUserCourses() {
+        if (!isset($_SESSION['id']) || !isset($_SESSION['user'])) {
+            header('Content-Type: application/json');
+            echo json_encode(['success' => false, 'message' => 'Unauthorized']);
+            exit;
+        }
+        $userId = $_SESSION['user']['id'];
+        $status = $_GET['status'] ?? '';
+        $search = $_GET['search'] ?? '';
+        $page = max(1, intval($_GET['page'] ?? 1));
+        $perPage = intval($_GET['per_page'] ?? 12);
+        $courses = $this->myCoursesModel->getUserCourses($userId, $status, $search, $page, $perPage);
+        
+        // Add encrypted IDs for secure URLs
+        if (is_array($courses)) {
+            foreach ($courses as &$course) {
+                if (isset($course['id'])) {
+                    $course['encrypted_id'] = IdEncryption::encrypt($course['id']);
+                }
+            }
+        }
+        
+        header('Content-Type: application/json');
+        echo json_encode(['success' => true, 'courses' => $courses]);
+        exit;
+    }
+
+    // Render Course Details page
+    public function details($id) {
+        if (!isset($_SESSION['id']) || !isset($_SESSION['user'])) {
+            UrlHelper::redirect('login');
+        }
+        $courseId = IdEncryption::getId($id);
+        if (!$courseId) {
+            UrlHelper::redirect('my-courses');
+        }
+        require_once 'models/CourseModel.php';
+        $courseModel = new CourseModel();
+        $clientId = $_SESSION['user']['client_id'] ?? null;
+        $userId = $_SESSION['user']['id'] ?? null;
+        $course = $courseModel->getCourseById($courseId, $clientId, $userId);
+        if (!$course) {
+            UrlHelper::redirect('my-courses');
+        }
+
+        // Load assessment attempts data and assessment details for this user
+        $assessmentAttempts = [];
+        $assessmentDetails = [];
+        if (!empty($course['modules']) || !empty($course['prerequisites']) || !empty($course['post_requisites'])) {
+            require_once 'models/AssessmentPlayerModel.php';
+            $assessmentModel = new AssessmentPlayerModel();
+            
+            // Check attempts for each assessment in modules
+            if (!empty($course['modules'])) {
+                foreach ($course['modules'] as $module) {
+                    if (!empty($module['content'])) {
+                        foreach ($module['content'] as $content) {
+                            if ($content['content_type'] === 'assessment') {
+                                $assessmentId = $content['content_id'];
+                                $attempts = $assessmentModel->getUserAssessmentAttempts($assessmentId, $userId, $clientId);
+                                $assessmentAttempts[$assessmentId] = $attempts;
+                                
+                                // Get assessment details including num_attempts
+                                $assessmentDetails[$assessmentId] = $assessmentModel->getAssessmentDetails($assessmentId, $clientId);
+                            }
+                        }
+                    }
+                }
+            }
+            
+            // Check attempts for each assessment in prerequisites
+            if (!empty($course['prerequisites'])) {
+                foreach ($course['prerequisites'] as $pre) {
+                    if ($pre['prerequisite_type'] === 'assessment') {
+                        $assessmentId = $pre['prerequisite_id'];
+                        $attempts = $assessmentModel->getUserAssessmentAttempts($assessmentId, $userId, $clientId);
+                        $assessmentAttempts[$assessmentId] = $attempts;
+                        
+                        // Get assessment details including num_attempts
+                        $assessmentDetails[$assessmentId] = $assessmentModel->getAssessmentDetails($assessmentId, $clientId);
+                    }
+                }
+            }
+            
+            // Check attempts for each assessment in post-requisites
+            if (!empty($course['post_requisites'])) {
+                foreach ($course['post_requisites'] as $post) {
+                    if ($post['content_type'] === 'assessment') {
+                        $assessmentId = $post['content_id'];
+                        $attempts = $assessmentModel->getUserAssessmentAttempts($assessmentId, $userId, $clientId);
+                        $assessmentAttempts[$assessmentId] = $attempts;
+                        
+                        // Get assessment details including num_attempts
+                        $assessmentDetails[$assessmentId] = $assessmentModel->getAssessmentDetails($assessmentId, $clientId);
+                    }
+                }
+            }
+        }
+
+        // Expose assessment attempts data and details to view
+        $GLOBALS['assessmentAttempts'] = $assessmentAttempts;
+        $GLOBALS['assessmentDetails'] = $assessmentDetails;
+        
+        require 'views/my_course_details.php';
+    }
+
+    // Standard content viewer in a new tab (iframe page)
+    public function viewContent() {
+        if (!isset($_SESSION['id']) || !isset($_SESSION['user'])) {
+            UrlHelper::redirect('login');
+        }
+        $type = $_GET['type'] ?? 'iframe';
+        $rawSrc = $_GET['src'] ?? '';
+        $title = $_GET['title'] ?? 'Content';
+        $src = $this->normalizeEmbedUrl($rawSrc, $type);
+        // Expose $type to view
+        $GLOBALS['type'] = $type;
+        require 'views/content_viewer.php';
+    }
+
+    // Start an assessment/survey/feedback/assignment in a new tab
+    public function start() {
+        // ===== DEBUGGING START =====
+        error_log("=== MyCoursesController::start() DEBUG START ===");
+        error_log("Request URI: " . ($_SERVER['REQUEST_URI'] ?? 'unknown'));
+        error_log("Script Name: " . ($_SERVER['SCRIPT_NAME'] ?? 'unknown'));
+        error_log("Session ID: " . session_id());
+        error_log("Session Status: " . session_status());
+        error_log("Session data: " . print_r($_SESSION, true));
+        error_log("GET data: " . print_r($_GET, true));
+        error_log("User ID in session: " . ($_SESSION['user']['id'] ?? 'NOT SET'));
+        error_log("Client ID in session: " . ($_SESSION['user']['client_id'] ?? 'NOT SET'));
+        error_log("Current time: " . time());
+        error_log("Last activity: " . ($_SESSION['last_activity'] ?? 'NOT SET'));
+        
+        if (!isset($_SESSION['id']) || !isset($_SESSION['user'])) {
+            error_log("ERROR: User not authenticated, redirecting to login");
+            error_log("Session ID: " . ($_SESSION['id'] ?? 'NOT SET'));
+            error_log("Session user: " . (isset($_SESSION['user']) ? 'SET' : 'NOT SET'));
+            UrlHelper::redirect('login');
+        }
+        
+        error_log("User authentication check PASSED");
+        // ===== DEBUGGING END =====
+        
+        $type = $_GET['type'] ?? '';
+        $id = isset($_GET['id']) ? IdEncryption::getId($_GET['id']) : 0;
+        
+        if (!$type || !$id) {
+            UrlHelper::redirect('my-courses');
+        }
+        require_once 'models/VLRModel.php';
+        $vlr = new VLRModel();
+        $payload = null;
+        switch ($type) {
+            case 'assessment':
+                error_log("=== Processing Assessment Case ===");
+                error_log("Assessment ID: {$id}");
+                
+                // Load assessment data and use the new assessment player view
+                $payload = $vlr->getAssessmentByIdWithQuestions($id);
+                error_log("Assessment payload: " . print_r($payload, true));
+                
+                if ($payload) {
+                    error_log("Assessment data loaded successfully");
+                    
+                    // For assessments, we need to create an attempt and handle user permissions
+                    // Load the AssessmentPlayerModel to handle this properly
+                    require_once 'models/AssessmentPlayerModel.php';
+                    $assessmentModel = new AssessmentPlayerModel();
+                    error_log("AssessmentPlayerModel loaded successfully");
+                    
+                    $userId = $_SESSION['user']['id'];
+                    $clientId = $_SESSION['user']['client_id'] ?? null;
+                    error_log("User ID: {$userId}, Client ID: {$clientId}");
+                    
+                    // Check if user can take this assessment
+                    error_log("Checking if user can take assessment...");
+                    if (!$assessmentModel->canUserTakeAssessment($id, $userId, $clientId)) {
+                        error_log("ERROR: User cannot take this assessment, redirecting to my-courses");
+                        UrlHelper::redirect('my-courses');
+                        return;
+                    }
+                    error_log("User can take assessment");
+                    
+                    // Create or get existing attempt
+                    error_log("Creating/getting assessment attempt...");
+                    $attemptId = $assessmentModel->createOrGetAttempt($id, $userId, $clientId);
+                    error_log("Attempt ID: {$attemptId}");
+                    
+                    // Get current attempt data
+                    $attempt = $assessmentModel->getAttempt($attemptId);
+                    error_log("Attempt data: " . print_r($attempt, true));
+                    
+                    // Expose data to view (same structure as AssessmentPlayerController)
+                    $GLOBALS['assessment'] = $payload;
+                    $GLOBALS['attempt'] = $attempt;
+                    $GLOBALS['attemptId'] = $attemptId;
+                    error_log("Data exposed to view, loading assessment_player.php");
+                    
+                    require 'views/assessment_player.php';
+                    error_log("Assessment player view loaded successfully");
+                    return; // Exit early to prevent loading activity_player.php
+                } else {
+                    error_log("ERROR: Failed to load assessment data");
+                }
+                break;
+            case 'survey':
+                $payload = $vlr->getSurveyByIdWithQuestions($id, $_SESSION['user']['client_id'] ?? null);
+                break;
+            case 'feedback':
+                $payload = $vlr->getFeedbackByIdWithQuestions($id);
+                break;
+            case 'assignment':
+                // Basic details only for now
+                $payload = $this->myCoursesModel; // placeholder to avoid undefined; real fetch not implemented
+                $payload = ['id' => $id, 'title' => 'Assignment'];
+                break;
+            default:
+                UrlHelper::redirect('my-courses');
+        }
+        
+        // Load activity_player.php for non-assessment types
+        error_log("=== Loading activity_player.php for type: {$type} ===");
+        $activityType = $type;
+        $activity = $payload;
+        require 'views/activity_player.php';
+        error_log("=== activity_player.php loaded successfully ===");
+    }
+
+    private function normalizeEmbedUrl($url, $type) {
+        if (empty($url)) return '';
+        // If absolute http(s), possibly transform for YouTube/Vimeo
+        if (preg_match('#^https?://#i', $url)) {
+            // YouTube
+            if (strpos($url, 'youtube.com/watch') !== false || strpos($url, 'youtu.be/') !== false) {
+                // Extract video id
+                $videoId = null;
+                if (preg_match('#youtu\.be/([^?&/]+)#', $url, $m)) {
+                    $videoId = $m[1];
+                } elseif (preg_match('#v=([^&]+)#', $url, $m)) {
+                    $videoId = $m[1];
+                }
+                if ($videoId) {
+                    return 'https://www.youtube.com/embed/' . $videoId . '?rel=0&modestbranding=1';
+                }
+            }
+            // Vimeo
+            if (preg_match('#vimeo\.com/(\d+)#', $url, $m)) {
+                return 'https://player.vimeo.com/video/' . $m[1];
+            }
+            return $url;
+        }
+        // Site-root absolute path
+        if ($url[0] === '/') {
+            return $url;
+        }
+        // Relative path within project
+        return UrlHelper::url($url);
+    }
+} 

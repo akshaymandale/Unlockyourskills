@@ -12,10 +12,10 @@ document.addEventListener('DOMContentLoaded', function () {
     let tags = [];
 
     function showPreview(input, container, type) {
-        container.innerHTML = '';
         const file = input.files[0];
         if (!file) return;
 
+        container.innerHTML = '';
         const fileType = file.type;
         let element;
 
@@ -193,7 +193,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
     const surveyModal = document.getElementById('addSurveyQuestionModal');
     surveyModal.addEventListener('show.bs.modal', () => {
-        document.getElementById('surveyQuestionForm').reset();
+        document.getElementById('addSurveyQuestionForm').reset();
         questionPreview.innerHTML = '';
         optionsWrapper.innerHTML = '';
         tags = [];
@@ -205,6 +205,20 @@ document.addEventListener('DOMContentLoaded', function () {
         ratingWrapper.classList.add('d-none');
     });
 
+    // Add event listener for when modal is hidden to clean up backdrop
+    surveyModal.addEventListener('hidden.bs.modal', () => {
+        // Remove backdrop manually if it persists
+        const backdrop = document.querySelector('.modal-backdrop');
+        if (backdrop) {
+            backdrop.remove();
+        }
+        
+        // Remove modal-open class from body
+        document.body.classList.remove('modal-open');
+        document.body.style.overflow = '';
+        document.body.style.paddingRight = '';
+    });
+
     document.querySelectorAll('.edit-question-btn').forEach(btn => {
         btn.addEventListener('click', () => {
             const questionData = btn.getAttribute('data-question');
@@ -212,8 +226,6 @@ document.addEventListener('DOMContentLoaded', function () {
                 setTimeout(() => {
                     window.editSurveyQuestion(questionData);
                 }, 300);
-            } else {
-                console.error('Question data not found on button');
             }
         });
     });
@@ -234,8 +246,10 @@ document.addEventListener('DOMContentLoaded', function () {
 
         $('#existingSurveyQuestionMedia').val(media_path || '');
 
-        const form = document.getElementById('surveyQuestionForm');
-        form.querySelector('[name="surveyQuestionId"]').value = id || '';
+        const form = document.getElementById('addSurveyQuestionForm');
+        const surveyQuestionIdField = form.querySelector('[name="surveyQuestionId"]');
+        surveyQuestionIdField.value = id || '';
+        
         form.querySelector('[name="surveyQuestionTitle"]').value = title || '';
         typeSelect.value = type;
         updateOptionsUI();
@@ -449,8 +463,13 @@ document.addEventListener('DOMContentLoaded', function () {
             method: 'POST',
             body: formData
         })
-        .then(response => response.json())
+        .then(response => {
+            console.log('Response status:', response.status);
+            console.log('Response headers:', response.headers);
+            return response.json();
+        })
         .then(data => {
+            console.log('Response data:', data);
             if (data.success) {
                 updateQuestionsTable(data.questions);
                 updatePagination(data.pagination);
@@ -507,10 +526,10 @@ document.addEventListener('DOMContentLoaded', function () {
                       title="Edit">
                       <i class="fas fa-edit"></i>
                     </button>
-                    <a href="index.php?controller=SurveyQuestionController&action=delete&id=${question.id}"
-                      class="btn theme-btn-danger"
-                      title="Delete"
-                      onclick="return confirm('Are you sure you want to delete this question?');">
+                    <a href="#" class="btn theme-btn-danger delete-survey-question"
+                      data-id="${question.id}"
+                      data-title="${escapeHtml(question.title)}"
+                      title="Delete">
                       <i class="fas fa-trash-alt"></i>
                     </a>
                 </td>
@@ -619,4 +638,88 @@ document.addEventListener('DOMContentLoaded', function () {
         div.textContent = text;
         return div.innerHTML;
     }
+
+    // ✅ Survey Question Delete Confirmations now handled by survey_confirmations.js module
+
+    // Form submission
+    document.getElementById('addSurveyQuestionForm').addEventListener('submit', function(e) {
+        e.preventDefault();
+        
+        // Disable submit button to prevent double submission
+        const submitBtn = this.querySelector('button[type="submit"]');
+        const originalText = submitBtn.innerHTML;
+        submitBtn.disabled = true;
+        submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Saving...';
+
+        const formData = new FormData(this);
+
+        fetch('/unlockyourskills/surveys', {
+            method: 'POST',
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest'
+            },
+            body: formData
+        })
+        .then(response => {
+            console.log('Response status:', response.status);
+            console.log('Response headers:', response.headers);
+            return response.json();
+        })
+        .then(data => {
+            console.log('Response data:', data);
+            if (data.success) {
+                // Show success message
+                if (typeof showToast === 'function') {
+                    showToast.success(data.message || 'Survey question saved successfully!');
+                } else {
+                    // Fallback alert if showToast is not available
+                    alert(data.message || 'Survey question saved successfully!');
+                }
+                
+                // Close modal and remove backdrop
+                const modal = bootstrap.Modal.getInstance(document.getElementById('addSurveyQuestionModal'));
+                if (modal) {
+                    modal.hide();
+                }
+                
+                // Remove backdrop manually if it persists
+                const backdrop = document.querySelector('.modal-backdrop');
+                if (backdrop) {
+                    backdrop.remove();
+                }
+                
+                // Remove modal-open class from body
+                document.body.classList.remove('modal-open');
+                document.body.style.overflow = '';
+                document.body.style.paddingRight = '';
+                
+                // Refresh the questions table
+                if (typeof loadQuestions === 'function') {
+                    loadQuestions(1);
+                }
+            } else {
+                // Show error message
+                if (typeof showToast === 'function') {
+                    showToast.error(data.message || 'Failed to save survey question. Please try again.');
+                } else {
+                    // Fallback alert if showToast is not available
+                    alert(data.message || 'Failed to save survey question. Please try again.');
+                }
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            if (typeof showToast === 'function') {
+                showToast.error('An error occurred while saving the survey question.');
+            } else {
+                // Fallback alert if showToast is not available
+                alert('An error occurred while saving the survey question.');
+            }
+        })
+        .finally(() => {
+            // Re-enable submit button
+            submitBtn.disabled = false;
+            submitBtn.innerHTML = originalText;
+        });
+    });
 });

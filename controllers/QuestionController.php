@@ -1,7 +1,8 @@
 <?php
 require_once 'models/QuestionModel.php';
+require_once 'controllers/BaseController.php';
 
-class QuestionController {
+class QuestionController extends BaseController {
     private $questionModel;
 
     public function __construct() {
@@ -9,6 +10,14 @@ class QuestionController {
     }
 
     public function index() {
+        // Check if user is logged in and get client_id
+        if (!isset($_SESSION['user']['client_id'])) {
+            $this->toastError('Unauthorized access. Please log in.', 'index.php?controller=LoginController');
+            return;
+        }
+
+        $clientId = $_SESSION['user']['client_id'];
+
         // ✅ Don't load initial data - let JavaScript handle it via AJAX
         // This prevents duplicate data rendering issues
         $questions = []; // Empty array for initial page load
@@ -16,9 +25,9 @@ class QuestionController {
         $totalPages = 0;
         $page = 1;
 
-        // Get unique values for filter dropdowns
-        $uniqueQuestionTypes = $this->questionModel->getUniqueQuestionTypes();
-        $uniqueDifficultyLevels = $this->questionModel->getUniqueDifficultyLevels();
+        // Get unique values for filter dropdowns (client-specific)
+        $uniqueQuestionTypes = $this->questionModel->getUniqueQuestionTypes($clientId);
+        $uniqueDifficultyLevels = $this->questionModel->getUniqueDifficultyLevels($clientId);
 
         require 'views/add_assessment.php';
     }
@@ -26,10 +35,12 @@ class QuestionController {
     public function add() {
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
-            if (!isset($_SESSION['id'])) {
-                echo "<script>alert('Unauthorized access. Please log in.'); window.location.href='index.php?controller=VLRController';</script>";
-                exit();
+            if (!isset($_SESSION['id']) || !isset($_SESSION['user']['client_id'])) {
+                $this->toastError('Unauthorized access. Please log in.', 'index.php?controller=LoginController');
+                return;
             }
+
+            $clientId = $_SESSION['user']['client_id'];
 
             $errors = [];
 
@@ -58,7 +69,10 @@ class QuestionController {
             // Handle file upload
             if ($mediaType !== 'text' && isset($_FILES['mediaFile']) && $_FILES['mediaFile']['error'] === 0) {
                 $targetDir = "uploads/media/";
-                if (!is_dir($targetDir)) mkdir($targetDir, 0777, true);
+                if (!is_dir($targetDir)) {
+                    mkdir($targetDir, 0777, true);
+                    chmod($targetDir, 0777); // Ensure proper permissions
+                }
                 $fileName = basename($_FILES["mediaFile"]["name"]);
                 $mediaFilePath = $targetDir . time() . "_" . $fileName;
 
@@ -76,6 +90,7 @@ class QuestionController {
 
             if (empty($errors)) {
                 $questionId = $this->questionModel->insertQuestion([
+                    'client_id' => $clientId,
                     'question_text' => $questionText,
                     'tags' => $tags,
                     'competency_skills' => $skills,
@@ -96,6 +111,7 @@ class QuestionController {
 
                         if (!empty($optionText)) {
                             $this->questionModel->insertOption([
+                                'client_id' => $clientId,
                                 'question_id' => $questionId,
                                 'option_index' => $index,
                                 'option_text' => $optionText,
@@ -105,24 +121,29 @@ class QuestionController {
                     }
                 }
 
-                $message = $questionId ? "Question added successfully." : "Failed to insert question.";
-                echo "<script>alert('$message'); window.location.href='index.php?controller=QuestionController';</script>";
-                exit();
+                if ($questionId) {
+                    $this->toastSuccess('Question added successfully!', '/unlockyourskills/vlr/questions');
+                } else {
+                    $this->toastError('Failed to insert question.', '/unlockyourskills/vlr/questions');
+                }
+                return;
             } else {
-                $errorMsg = implode("\\n", $errors);
-                echo "<script>alert('Error(s):\\n$errorMsg'); window.location.href='index.php?controller=QuestionController';</script>";
-                exit();
+                $errorMsg = implode(', ', $errors);
+                $this->toastError("Error(s): $errorMsg", '/unlockyourskills/vlr/questions');
+                return;
             }
         }
 
-        require 'views/add_assessment_question.php';
+        require 'views/add_assessment.php';
     }
 
     public function edit() {
-        if (!isset($_SESSION['id'])) {
-            echo "<script>alert('Unauthorized access. Please log in.'); window.location.href='index.php?controller=VLRController';</script>";
-            exit();
+        if (!isset($_SESSION['id']) || !isset($_SESSION['user']['client_id'])) {
+            $this->toastError('Unauthorized access. Please log in.', 'index.php?controller=LoginController');
+            return;
         }
+
+        $clientId = $_SESSION['user']['client_id'];
     
         // Handle form submission
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
@@ -150,7 +171,10 @@ class QuestionController {
     
             if ($mediaType !== 'text' && isset($_FILES['mediaFile']) && $_FILES['mediaFile']['error'] === 0) {
                 $targetDir = "uploads/media/";
-                if (!is_dir($targetDir)) mkdir($targetDir, 0777, true);
+                if (!is_dir($targetDir)) {
+                    mkdir($targetDir, 0777, true);
+                    chmod($targetDir, 0777); // Ensure proper permissions
+                }
                 $fileName = basename($_FILES["mediaFile"]["name"]);
                 $mediaFilePath = $targetDir . time() . "_" . $fileName;
     
@@ -188,6 +212,7 @@ class QuestionController {
     
                         if (!empty($optionText)) {
                             $this->questionModel->updateOption([
+                                'client_id' => $clientId,
                                 'question_id' => $questionId,
                                 'option_index' => $index,
                                 'option_text' => $optionText,
@@ -197,50 +222,73 @@ class QuestionController {
                     }
                 }
     
-                $msg = $updateResult ? "Question updated successfully." : "Failed to update question.";
-                echo "<script>alert('$msg'); window.location.href='index.php?controller=QuestionController';</script>";
-                exit();
+                if ($updateResult) {
+                    $this->toastSuccess('Question updated successfully!', '/unlockyourskills/vlr/questions');
+                } else {
+                    $this->toastError('Failed to update question.', '/unlockyourskills/vlr/questions');
+                }
+                return;
             } else {
-                $errorMsg = implode("\\n", $errors);
-                echo "<script>alert('Error(s):\\n$errorMsg'); window.location.href='index.php?controller=QuestionController';</script>";
-                exit();
+                $errorMsg = implode(', ', $errors);
+                $this->toastError("Error(s): $errorMsg", '/unlockyourskills/vlr/questions');
+                return;
             }
         }
         // Handle initial page load (GET)
         else if (isset($_GET['id'])) {
             $questionId = intval($_GET['id']);
-            $question = $this->questionModel->getQuestionById($questionId);
-            $options = $this->questionModel->getOptionsByQuestionId($questionId);
+            $question = $this->questionModel->getQuestionById($questionId, $clientId);
+            $options = $this->questionModel->getOptionsByQuestionId($questionId, $clientId);
     
             if ($question) {
-                // Reuse add_assessment_question.php for editing
+                // Reuse add_assessment.php for editing
                 $isEdit = true;
-                require 'views/add_assessment_question.php';
+                require 'views/add_assessment.php';
             } else {
-                echo "<script>alert('Question not found.'); window.location.href='index.php?controller=QuestionController';</script>";
-                exit();
+                $this->toastError('Question not found.', '/unlockyourskills/vlr/questions');
+                return;
             }
         } else {
-            echo "<script>alert('Invalid request.'); window.location.href='index.php?controller=QuestionController';</script>";
-            exit();
+            $this->toastError('Invalid request.', '/unlockyourskills/vlr/questions');
+            return;
         }
     }
     
-    
-    
-    public function delete() {
-        if (isset($_GET['id'])) {
-            $id = intval($_GET['id']);
-            $success = $this->questionModel->softDeleteQuestion($id);
-            $message = $success ? "Question deleted successfully." : "Failed to delete question.";
-            echo "<script>alert('$message'); window.location.href='index.php?controller=QuestionController';</script>";
+    public function delete($id = null) {
+        error_log("[Assessment Delete] Route param id: " . var_export($id, true));
+        error_log("[Assessment Delete] _GET id: " . var_export($_GET['id'] ?? null, true));
+        $questionId = $id ?? ($_GET['id'] ?? null);
+        error_log("[Assessment Delete] Final questionId: " . var_export($questionId, true));
+        if ($questionId) {
+            $questionId = intval($questionId);
+            $success = $this->questionModel->softDeleteQuestion($questionId);
+            error_log("[Assessment Delete] softDeleteQuestion result for ID $questionId: " . var_export($success, true));
+            if ($success) {
+                error_log("[Assessment Delete] Question deleted successfully: $questionId");
+                $this->toastSuccess('Question deleted successfully!', '/unlockyourskills/vlr/questions');
+            } else {
+                error_log("[Assessment Delete] Failed to delete question: $questionId");
+                $this->toastError('Failed to delete question.', '/unlockyourskills/vlr/questions');
+            }
         } else {
-            echo "<script>alert('Invalid request.'); window.location.href='index.php?controller=QuestionController';</script>";
+            error_log("[Assessment Delete] Invalid request triggered.");
+            $this->toastError('Invalid request.', '/unlockyourskills/vlr/questions');
         }
     }
 
     public function ajaxSearch() {
         header('Content-Type: application/json');
+
+        // Check if user is logged in and get client_id
+        if (!isset($_SESSION['user']['client_id'])) {
+            echo json_encode([
+                'success' => false,
+                'message' => 'Unauthorized access. Please log in.'
+            ]);
+            exit();
+        }
+
+        $clientId = $_SESSION['user']['client_id'];
 
         try {
             $limit = 10;
@@ -263,9 +311,9 @@ class QuestionController {
                 $filters['tags'] = $_POST['tags'];
             }
 
-            // Get questions from database
-            $questions = $this->questionModel->getQuestions($limit, $offset, $search, $filters);
-            $totalQuestions = $this->questionModel->getTotalQuestionCount($search, $filters);
+            // Get questions from database (client-specific)
+            $questions = $this->questionModel->getQuestions($limit, $offset, $search, $filters, $clientId);
+            $totalQuestions = $this->questionModel->getTotalQuestionCount($search, $filters, $clientId);
             $totalPages = ceil($totalQuestions / $limit);
 
             $response = [
@@ -291,15 +339,30 @@ class QuestionController {
     }
 
     public function save() {
+        // Check if this is an AJAX request
+        $isAjax = !empty($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) == 'xmlhttprequest';
+
         if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
-            echo "<script>alert('Invalid request method.'); window.location.href='index.php?controller=QuestionController';</script>";
+            if ($isAjax) {
+                header('Content-Type: application/json');
+                echo json_encode(['success' => false, 'message' => 'Invalid request method.']);
+                return;
+            }
+            $this->toastError('Invalid request method.', '/unlockyourskills/vlr/questions');
             return;
         }
 
-        if (!isset($_SESSION['id'])) {
-            echo "<script>alert('Unauthorized access. Please log in.'); window.location.href='index.php?controller=VLRController';</script>";
+        if (!isset($_SESSION['id']) || !isset($_SESSION['user']['client_id'])) {
+            if ($isAjax) {
+                header('Content-Type: application/json');
+                echo json_encode(['success' => false, 'message' => 'Unauthorized access. Please log in.']);
+                return;
+            }
+            $this->toastError('Unauthorized access. Please log in.', '/unlockyourskills/login');
             return;
         }
+
+        $clientId = $_SESSION['user']['client_id'];
 
         $errors = [];
         $questionId = $_POST['questionId'] ?? null;
@@ -357,7 +420,10 @@ class QuestionController {
 
             if (empty($errors)) {
                 $targetDir = "uploads/media/";
-                if (!is_dir($targetDir)) mkdir($targetDir, 0777, true);
+                if (!is_dir($targetDir)) {
+                    mkdir($targetDir, 0777, true);
+                    chmod($targetDir, 0777); // Ensure proper permissions
+                }
                 $fileName = basename($file["name"]);
                 $mediaFilePath = $targetDir . time() . "_" . $fileName;
 
@@ -376,6 +442,7 @@ class QuestionController {
 
         if (empty($errors)) {
             $data = [
+                'client_id' => $clientId,
                 'question_text' => $questionText,
                 'tags' => $tags,
                 'competency_skills' => $skills,
@@ -411,6 +478,7 @@ class QuestionController {
 
                     if (!empty($optionText)) {
                         $this->questionModel->insertOption([
+                            'client_id' => $clientId,
                             'question_id' => $finalQuestionId,
                             'option_index' => $index,
                             'option_text' => $optionText,
@@ -420,30 +488,68 @@ class QuestionController {
                 }
             }
 
-            $message = $result ? ($questionId ? "Question updated successfully." : "Question added successfully.") : "Failed to save question.";
-            echo "<script>alert('$message'); window.location.href='index.php?controller=QuestionController';</script>";
-            exit();
+            if ($result) {
+                if ($isAjax) {
+                    header('Content-Type: application/json');
+                    $message = $questionId ? 'Question updated successfully!' : 'Question added successfully!';
+                    echo json_encode(['success' => true, 'message' => $message]);
+                    return;
+                } else {
+                    if ($questionId) {
+                        $this->toastSuccess('Question updated successfully!', '/unlockyourskills/vlr/questions');
+                    } else {
+                        $this->toastSuccess('Question added successfully!', '/unlockyourskills/vlr/questions');
+                    }
+                }
+            } else {
+                if ($isAjax) {
+                    header('Content-Type: application/json');
+                    echo json_encode(['success' => false, 'message' => 'Failed to save question.']);
+                    return;
+                } else {
+                    $this->toastError('Failed to save question.', '/unlockyourskills/vlr/questions');
+                }
+            }
+            return;
         } else {
-            $errorMsg = implode("\\n", $errors);
-            echo "<script>alert('Error(s):\\n$errorMsg'); window.location.href='index.php?controller=QuestionController';</script>";
-            exit();
+            $errorMsg = implode(', ', $errors);
+            if ($isAjax) {
+                header('Content-Type: application/json');
+                echo json_encode(['success' => false, 'message' => "Error(s): $errorMsg"]);
+                return;
+            } else {
+                $this->toastError("Error(s): $errorMsg", '/unlockyourskills/vlr/questions');
+            }
+            return;
         }
     }
 
-    public function getQuestionById() {
-        // Simple test first - just return a basic response
+    public function getQuestionById($id = null) {
         header('Content-Type: application/json');
 
-        if (!isset($_GET['id']) || !is_numeric($_GET['id'])) {
+        // Check if user is logged in and get client_id
+        if (!isset($_SESSION['user']['client_id'])) {
+            echo json_encode(['error' => 'Unauthorized access. Please log in.']);
+            exit;
+        }
+
+        $clientId = $_SESSION['user']['client_id'];
+
+        // Use the route parameter $id, fallback to $_GET['id']
+        if (!$id && isset($_GET['id'])) {
+            $id = $_GET['id'];
+        }
+
+        if (!$id || !is_numeric($id)) {
             echo json_encode(['error' => 'Invalid question ID']);
             exit;
         }
 
-        $id = (int)$_GET['id'];
+        $id = (int)$id;
 
         try {
-            $question = $this->questionModel->getQuestionById($id);
-            $options = $this->questionModel->getOptionsByQuestionId($id);
+            $question = $this->questionModel->getQuestionById($id, $clientId);
+            $options = $this->questionModel->getOptionsByQuestionId($id, $clientId);
 
             if (!$question) {
                 echo json_encode(['error' => 'Question not found']);
@@ -464,30 +570,36 @@ class QuestionController {
 
     public function downloadTemplate() {
         $type = $_GET['type'] ?? 'objective';
-        $format = $_GET['format'] ?? 'excel'; // excel or csv
+        $format = $_GET['format'] ?? 'csv'; // csv or excel
 
         if (!in_array($type, ['objective', 'subjective'])) {
-            echo "<script>alert('Invalid template type.'); window.location.href='index.php?controller=QuestionController';</script>";
+            $this->toastError('Invalid template type.', '/unlockyourskills/vlr/questions');
             return;
         }
 
         if ($format === 'excel') {
-            // Generate Excel-compatible HTML table
+            // Generate proper Excel file using HTML table format
             $filename = "assessment_questions_template_{$type}.xls";
 
+            // Set proper headers for Excel - force download
             header('Content-Type: application/vnd.ms-excel');
             header('Content-Disposition: attachment; filename="' . $filename . '"');
-            header('Cache-Control: max-age=0');
-            header('Pragma: public');
+            header('Cache-Control: no-cache, no-store, must-revalidate');
+            header('Pragma: no-cache');
+            header('Expires: 0');
 
+            // Generate proper Excel HTML format
             $this->generateExcelHTMLTemplate($type);
         } else {
             // Generate CSV file
             $filename = "assessment_questions_template_{$type}.csv";
 
-            header('Content-Type: text/csv; charset=utf-8');
+            // Set proper CSV headers - force download, prevent Numbers from opening
+            header('Content-Type: application/octet-stream');
             header('Content-Disposition: attachment; filename="' . $filename . '"');
-            header('Cache-Control: max-age=0');
+            header('Cache-Control: no-cache, no-store, must-revalidate');
+            header('Pragma: no-cache');
+            header('Expires: 0');
 
             if ($type === 'objective') {
                 $this->generateObjectiveTemplate();
@@ -590,15 +702,24 @@ class QuestionController {
     }
 
     private function generateExcelHTMLTemplate($type) {
-        // Generate simple HTML table that Excel can open without warnings
-        echo '<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns="http://www.w3.org/TR/REC-html40">';
-        echo '<head>';
-        echo '<meta charset="utf-8">';
-        echo '<meta name="ProgId" content="Excel.Sheet">';
-        echo '<meta name="Generator" content="Assessment Question Template Generator">';
-        echo '</head>';
-        echo '<body>';
-        echo '<table border="1">';
+        // Generate proper Excel-compatible HTML with XML namespace
+        echo '<?xml version="1.0"?>' . "\n";
+        echo '<Workbook xmlns="urn:schemas-microsoft-com:office:spreadsheet"' . "\n";
+        echo ' xmlns:o="urn:schemas-microsoft-com:office:office"' . "\n";
+        echo ' xmlns:x="urn:schemas-microsoft-com:office:excel"' . "\n";
+        echo ' xmlns:ss="urn:schemas-microsoft-com:office:spreadsheet"' . "\n";
+        echo ' xmlns:html="http://www.w3.org/TR/REC-html40">' . "\n";
+
+        // Add styles for better formatting
+        echo '<Styles>' . "\n";
+        echo '<Style ss:ID="Header">' . "\n";
+        echo '<Font ss:Bold="1" ss:Color="#FFFFFF"/>' . "\n";
+        echo '<Interior ss:Color="#6a0dad" ss:Pattern="Solid"/>' . "\n";
+        echo '</Style>' . "\n";
+        echo '</Styles>' . "\n";
+
+        echo '<Worksheet ss:Name="Assessment Questions">' . "\n";
+        echo '<Table>' . "\n";
 
         if ($type === 'objective') {
             $headers = [
@@ -682,67 +803,178 @@ class QuestionController {
             ];
         }
 
-        // Output headers with styling
-        echo '<tr style="background-color: #6a0dad; color: white; font-weight: bold;">';
+        // Output headers with proper Excel formatting
+        echo '<Row ss:StyleID="Header">' . "\n";
         foreach ($headers as $header) {
-            echo '<td>' . htmlspecialchars($header) . '</td>';
+            echo '<Cell><Data ss:Type="String">' . htmlspecialchars($header) . '</Data></Cell>' . "\n";
         }
-        echo '</tr>';
+        echo '</Row>' . "\n";
 
-        // Output sample data
-        foreach ($sampleData as $rowIndex => $row) {
-            $bgColor = $rowIndex % 2 === 0 ? '#f8f9fa' : '#ffffff';
-            echo '<tr style="background-color: ' . $bgColor . ';">';
+        // Output sample data with proper Excel formatting
+        foreach ($sampleData as $row) {
+            echo '<Row>' . "\n";
             foreach ($row as $cell) {
-                echo '<td>' . htmlspecialchars($cell) . '</td>';
+                $cellType = is_numeric($cell) ? 'Number' : 'String';
+                echo '<Cell><Data ss:Type="' . $cellType . '">' . htmlspecialchars($cell) . '</Data></Cell>' . "\n";
             }
-            echo '</tr>';
+            echo '</Row>' . "\n";
         }
 
-        echo '</table>';
-        echo '</body>';
-        echo '</html>';
+        echo '</Table>' . "\n";
+        echo '</Worksheet>' . "\n";
+        echo '</Workbook>' . "\n";
         exit();
     }
 
     private function outputCSV($headers, $data) {
         $output = fopen('php://output', 'w');
 
-        // Add BOM for UTF-8
+        // Add BOM for UTF-8 to ensure proper encoding
         fprintf($output, chr(0xEF).chr(0xBB).chr(0xBF));
 
-        // Write headers
-        fputcsv($output, $headers);
+        // Write headers with explicit comma separation
+        fputcsv($output, $headers, ',', '"');
 
-        // Write sample data
+        // Write sample data with explicit comma separation
         foreach ($data as $row) {
-            fputcsv($output, $row);
+            fputcsv($output, $row, ',', '"');
         }
 
         fclose($output);
         exit();
     }
 
+    // New method for Excel-compatible CSV output
+    private function outputExcelCSV($headers, $data) {
+        $output = fopen('php://output', 'w');
+
+        // Add BOM for UTF-8 to ensure proper encoding in Excel
+        fprintf($output, chr(0xEF).chr(0xBB).chr(0xBF));
+
+        // Write headers with tab separation for better Excel compatibility
+        fputcsv($output, $headers, "\t");
+
+        // Write sample data with tab separation
+        foreach ($data as $row) {
+            fputcsv($output, $row, "\t");
+        }
+
+        fclose($output);
+        exit();
+    }
+
+    private function generateObjectiveTemplateForExcel() {
+        // CSV headers for objective questions
+        $headers = [
+            'Question Text*',
+            'Tags/Keywords*',
+            'Competency Skills',
+            'Difficulty Level* (Low/Medium/Hard)',
+            'Marks*',
+            'Option 1*',
+            'Option 2*',
+            'Option 3',
+            'Option 4',
+            'Option 5',
+            'Correct Answer* (1,2,3,4,5)',
+            'Media Type (text/image/audio/video)',
+            'Media File Path'
+        ];
+
+        // Sample data
+        $sampleData = [
+            [
+                'What is the capital of France?',
+                'geography, capitals, france',
+                'General Knowledge',
+                'Low',
+                '1',
+                'Paris',
+                'London',
+                'Berlin',
+                'Madrid',
+                '',
+                '1',
+                'text',
+                ''
+            ],
+            [
+                'Which programming language is used for web development?',
+                'programming, web development, languages',
+                'Technical Skills',
+                'Medium',
+                '2',
+                'Python',
+                'JavaScript',
+                'C++',
+                'Java',
+                'PHP',
+                '2',
+                'text',
+                ''
+            ]
+        ];
+
+        $this->outputExcelCSV($headers, $sampleData);
+    }
+
+    private function generateSubjectiveTemplateForExcel() {
+        // CSV headers for subjective questions
+        $headers = [
+            'Question Text*',
+            'Tags/Keywords*',
+            'Competency Skills',
+            'Difficulty Level* (Low/Medium/Hard)',
+            'Marks*',
+            'Media Type (text/image/audio/video)',
+            'Media File Path'
+        ];
+
+        // Sample data
+        $sampleData = [
+            [
+                'Explain the concept of object-oriented programming and its benefits.',
+                'programming, oop, concepts',
+                'Technical Skills',
+                'Hard',
+                '5',
+                'text',
+                ''
+            ],
+            [
+                'Describe the importance of data security in modern applications.',
+                'security, data protection, applications',
+                'Security Awareness',
+                'Medium',
+                '3',
+                'text',
+                ''
+            ]
+        ];
+
+        $this->outputExcelCSV($headers, $sampleData);
+    }
+
     public function importQuestions() {
         if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
-            echo "<script>alert('Invalid request method.'); window.location.href='index.php?controller=QuestionController';</script>";
+            $this->toastError('Invalid request method.', '/unlockyourskills/vlr/questions');
             return;
         }
 
         if (!isset($_SESSION['id'])) {
-            echo "<script>alert('Unauthorized access. Please log in.'); window.location.href='index.php?controller=VLRController';</script>";
+            $this->toastError('Unauthorized access. Please log in.', '/unlockyourskills/login');
             return;
         }
 
         $questionType = $_POST['questionType'] ?? '';
 
         if (!in_array($questionType, ['objective', 'subjective'])) {
-            echo "<script>alert('Invalid question type selected.'); window.location.href='index.php?controller=QuestionController';</script>";
+            $this->toastError('Invalid question type selected.', '/unlockyourskills/vlr/questions');
             return;
         }
 
         if (!isset($_FILES['importFile']) || $_FILES['importFile']['error'] !== UPLOAD_ERR_OK) {
-            echo "<script>alert('Please select a valid Excel file.'); window.location.href='index.php?controller=QuestionController';</script>";
+            $this->toastError('Please select a valid Excel file.', '/unlockyourskills/vlr/questions');
             return;
         }
 
@@ -760,7 +992,7 @@ class QuestionController {
         $allowedExtensions = ['xls', 'xlsx', 'csv'];
 
         if (!in_array($file['type'], $allowedTypes) && !in_array($fileExtension, $allowedExtensions)) {
-            echo "<script>alert('Invalid file type. Please upload Excel (.xlsx, .xls) or CSV (.csv) file.'); window.location.href='index.php?controller=QuestionController';</script>";
+            $this->toastError('Invalid file type. Please upload Excel (.xlsx, .xls) or CSV (.csv) file.', '/unlockyourskills/vlr/questions');
             return;
         }
 
@@ -772,36 +1004,80 @@ class QuestionController {
             if (!empty($result['errors'])) {
                 $message .= " Note: " . count($result['errors']) . " rows had errors and were skipped.";
             }
+            $this->toastSuccess($message, '/unlockyourskills/vlr/questions');
         } else {
-            $message = "Import failed: " . $result['message'];
+            $this->toastError("Import failed: " . $result['message'], '/unlockyourskills/vlr/questions');
         }
-
-        echo "<script>alert('$message'); window.location.href='index.php?controller=QuestionController';</script>";
     }
 
     private function processImportFile($file, $questionType) {
         $uploadDir = "uploads/temp/";
         if (!is_dir($uploadDir)) {
             mkdir($uploadDir, 0777, true);
+            chmod($uploadDir, 0777); // Ensure proper permissions
         }
 
         $tempFile = $uploadDir . time() . '_' . $file['name'];
 
-        if (!move_uploaded_file($file['tmp_name'], $tempFile)) {
-            return ['success' => false, 'message' => 'Failed to upload file.'];
+        // Handle both uploaded files and regular files (for testing)
+        if (is_uploaded_file($file['tmp_name'])) {
+            if (!move_uploaded_file($file['tmp_name'], $tempFile)) {
+                return ['success' => false, 'message' => 'Failed to upload file.'];
+            }
+        } else {
+            // For testing purposes, copy the file
+            if (!copy($file['tmp_name'], $tempFile)) {
+                return ['success' => false, 'message' => 'Failed to copy file.'];
+            }
         }
 
-        // Read CSV file (simple implementation)
         $data = [];
-        if (($handle = fopen($tempFile, "r")) !== FALSE) {
-            $headers = fgetcsv($handle); // Skip headers
-            while (($row = fgetcsv($handle)) !== FALSE) {
-                $data[] = $row;
+        $fileExtension = strtolower(pathinfo($file['name'], PATHINFO_EXTENSION));
+
+        try {
+            if ($fileExtension === 'csv' || $fileExtension === 'xls') {
+                // Handle CSV and Excel files saved as CSV format
+                if (($handle = fopen($tempFile, "r")) !== FALSE) {
+                    // Try different delimiters for better compatibility
+                    $delimiters = [',', ';', "\t"];
+                    $bestDelimiter = ',';
+                    $maxColumns = 0;
+
+                    // Detect the best delimiter
+                    foreach ($delimiters as $delimiter) {
+                        rewind($handle);
+                        $firstRow = fgetcsv($handle, 0, $delimiter);
+                        if ($firstRow && count($firstRow) > $maxColumns) {
+                            $maxColumns = count($firstRow);
+                            $bestDelimiter = $delimiter;
+                        }
+                    }
+
+                    // Read the file with the best delimiter
+                    rewind($handle);
+                    $headers = fgetcsv($handle, 0, $bestDelimiter); // Skip headers
+
+                    while (($row = fgetcsv($handle, 0, $bestDelimiter)) !== FALSE) {
+                        // Skip empty rows
+                        if (!empty(array_filter($row))) {
+                            $data[] = $row;
+                        }
+                    }
+                    fclose($handle);
+                }
+            } else {
+                throw new Exception("Unsupported file format: $fileExtension");
             }
-            fclose($handle);
+        } catch (Exception $e) {
+            unlink($tempFile); // Clean up temp file
+            return ['success' => false, 'message' => 'Error reading file: ' . $e->getMessage()];
         }
 
         unlink($tempFile); // Clean up temp file
+
+        if (empty($data)) {
+            return ['success' => false, 'message' => 'No valid data found in the file.'];
+        }
 
         return $this->importQuestionsFromData($data, $questionType);
     }
@@ -809,12 +1085,22 @@ class QuestionController {
     private function importQuestionsFromData($data, $questionType) {
         $successCount = 0;
         $errors = [];
+
+        // Better session handling
+        if (!isset($_SESSION['id']) || empty($_SESSION['id'])) {
+            throw new Exception("User session not found. Please login again.");
+        }
         $createdBy = $_SESSION['id'];
 
         foreach ($data as $index => $row) {
             $rowNumber = $index + 2; // +2 because index starts at 0 and we skip header row
 
             try {
+                // Skip empty rows
+                if (empty(array_filter($row))) {
+                    continue;
+                }
+
                 if ($questionType === 'objective') {
                     $result = $this->importObjectiveQuestion($row, $createdBy);
                 } else {
@@ -828,6 +1114,8 @@ class QuestionController {
                 }
             } catch (Exception $e) {
                 $errors[] = "Row $rowNumber: " . $e->getMessage();
+                // Log the error for debugging
+                error_log("CSV Import Error - Row $rowNumber: " . $e->getMessage());
             }
         }
 
@@ -851,11 +1139,11 @@ class QuestionController {
             'competency_skills' => trim($row[2] ?? ''),
             'level' => $this->validateLevel(trim($row[3])),
             'marks' => intval($row[4]),
-            'status' => 'active',
-            'question_type' => 'multi_choice',
+            'status' => 'Active',  // Fixed: Database expects 'Active' not 'active'
+            'question_type' => 'Objective',  // Fixed: Database expects 'Objective' not 'multi_choice'
             'media_type' => trim($row[11] ?? 'text'),
-            'media_file' => trim($row[12] ?? null),
-            'created_by' => $createdBy
+            'media_file' => isset($row[12]) && $row[12] !== null ? trim($row[12]) : null,
+            'created_by' => (string)$createdBy  // Ensure it's a string as expected by database
         ];
 
         // Count non-empty options
@@ -906,12 +1194,12 @@ class QuestionController {
             'competency_skills' => trim($row[2] ?? ''),
             'level' => $this->validateLevel(trim($row[3])),
             'marks' => intval($row[4]),
-            'status' => 'active',
-            'question_type' => 'long_answer',
+            'status' => 'Active',  // Fixed: Database expects 'Active' not 'active'
+            'question_type' => 'Subjective',  // Fixed: Database expects 'Subjective' not 'long_answer'
             'answer_count' => 0,
             'media_type' => trim($row[5] ?? 'text'),
-            'media_file' => trim($row[6] ?? null),
-            'created_by' => $createdBy
+            'media_file' => isset($row[6]) && $row[6] !== null ? trim($row[6]) : null,
+            'created_by' => (string)$createdBy  // Ensure it's a string as expected by database
         ];
 
         return $this->questionModel->insertQuestion($questionData);

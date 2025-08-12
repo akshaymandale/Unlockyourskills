@@ -15,15 +15,16 @@ class VLRModel
     public function insertScormPackage($data)
     {
         // Backend Validation: Ensure required fields are filled
-        if (empty($data['title']) || empty($data['zip_file']) || empty($data['version']) || empty($data['scorm_category']) || empty($data['mobile_support']) || empty($data['assessment'])) {
+        if (empty($data['title']) || empty($data['zip_file']) || empty($data['version']) || empty($data['scorm_category']) || empty($data['mobile_support']) || empty($data['assessment']) || empty($data['client_id'])) {
             return false;
         }
 
         $stmt = $this->conn->prepare("INSERT INTO scorm_packages
-        (title, zip_file, description, tags, version, language, scorm_category, time_limit, mobile_support, assessment, created_by, is_deleted, created_at)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, NOW())");
+        (client_id, title, zip_file, description, tags, version, language, scorm_category, time_limit, mobile_support, assessment, launch_path, created_by, is_deleted, created_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, NOW())");
 
         return $stmt->execute([
+            $data['client_id'],
             $data['title'],
             $data['zip_file'],
             $data['description'],
@@ -34,23 +35,24 @@ class VLRModel
             $data['time_limit'],
             $data['mobile_support'],
             $data['assessment'],
+            $data['launch_path'] ?? null,
             $data['created_by']
         ]);
     }
 
     // ✅ Update SCORM Package
-    public function updateScormPackage($id, $data)
+    public function updateScormPackage($id, $data, $clientId = null)
     {
         // Ensure SCORM ID exists
         if (empty($id)) {
             return false;
         }
 
-        $stmt = $this->conn->prepare("UPDATE scorm_packages
-        SET title = ?, zip_file = ?, description = ?, tags = ?, version = ?, language = ?, scorm_category = ?, time_limit = ?, mobile_support = ?, assessment = ?, updated_at = NOW()
-        WHERE id = ?");
+        $sql = "UPDATE scorm_packages
+        SET title = ?, zip_file = ?, description = ?, tags = ?, version = ?, language = ?, scorm_category = ?, time_limit = ?, mobile_support = ?, assessment = ?, launch_path = ?, updated_at = NOW()
+        WHERE id = ?";
 
-        return $stmt->execute([
+        $params = [
             $data['title'],
             $data['zip_file'],
             $data['description'],
@@ -61,28 +63,69 @@ class VLRModel
             $data['time_limit'],
             $data['mobile_support'],
             $data['assessment'],
+            $data['launch_path'] ?? null,
             $id
-        ]);
+        ];
+
+        if ($clientId !== null) {
+            $sql .= " AND client_id = ?";
+            $params[] = $clientId;
+        }
+
+        $stmt = $this->conn->prepare($sql);
+        return $stmt->execute($params);
     }
 
     // Get data for display on VLR
-    public function getScormPackages()
+    public function getScormPackages($clientId = null)
     {
-        $stmt = $this->conn->prepare("SELECT * FROM scorm_packages WHERE is_deleted = 0");
-        $stmt->execute();
+        $sql = "SELECT * FROM scorm_packages WHERE is_deleted = 0";
+        $params = [];
+
+        if ($clientId !== null) {
+            $sql .= " AND client_id = ?";
+            $params[] = $clientId;
+        }
+
+        $stmt = $this->conn->prepare($sql);
+        $stmt->execute($params);
         $data = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
         // Debugging - Check if data is fetched
         error_log(print_r($data, true)); // Logs to XAMPP/PHP logs
 
+        // Add can_edit and can_delete flags
+        $currentUser = $_SESSION['user'] ?? null;
+        if (!$currentUser) {
+            foreach ($data as &$package) {
+                $package['can_edit'] = 0;
+                $package['can_delete'] = 0;
+            }
+            unset($package);
+            return $data;
+        }
+        foreach ($data as &$package) {
+            $package['can_edit'] = (canEdit('vlr') && ($currentUser['system_role'] === 'super_admin' || $package['created_by'] == $currentUser['id'])) ? 1 : 0;
+            $package['can_delete'] = (canDelete('vlr') && ($currentUser['system_role'] === 'super_admin' || $package['created_by'] == $currentUser['id'])) ? 1 : 0;
+        }
+        unset($package);
+
         return $data;
     }
 
     // Delete respective SCROM
-    public function deleteScormPackage($id)
+    public function deleteScormPackage($id, $clientId = null)
     {
-        $stmt = $this->conn->prepare("UPDATE scorm_packages SET is_deleted = 1 WHERE id = ?");
-        return $stmt->execute([$id]);
+        $sql = "UPDATE scorm_packages SET is_deleted = 1 WHERE id = ?";
+        $params = [$id];
+
+        if ($clientId !== null) {
+            $sql .= " AND client_id = ?";
+            $params[] = $clientId;
+        }
+
+        $stmt = $this->conn->prepare($sql);
+        return $stmt->execute($params);
     }
 
     // Add external content package
@@ -100,11 +143,11 @@ class VLRModel
             $audioFile = isset($data['audio_file']) ? $data['audio_file'] : null;
 
             $sql = "INSERT INTO external_content (
-                title, content_type, version_number, mobile_support, language_support, time_limit,
+                client_id, title, content_type, version_number, mobile_support, language_support, time_limit,
                 description, tags, video_url, thumbnail, course_url, platform_name, article_url,
                 author, audio_source, audio_url, audio_file, speaker, created_by
             ) VALUES (
-                :title, :content_type, :version_number, :mobile_support, :language_support, :time_limit,
+                :client_id, :title, :content_type, :version_number, :mobile_support, :language_support, :time_limit,
                 :description, :tags, :video_url, :thumbnail, :course_url, :platform_name, :article_url,
                 :author, :audio_source, :audio_url, :audio_file, :speaker, :created_by
             )";
@@ -113,6 +156,7 @@ class VLRModel
 
             // Bind parameters
             $stmt->execute([
+                ':client_id' => $data['client_id'],
                 ':title' => $data['title'],
                 ':content_type' => $data['content_type'],
                 ':version_number' => $data['version_number'],
@@ -144,7 +188,7 @@ class VLRModel
 
     // Update for External Content
 
-    public function updateExternalContent($id, $data)
+    public function updateExternalContent($id, $data, $clientId = null)
     {
         try {
             // Ensure audio_file exists in data
@@ -172,10 +216,7 @@ class VLRModel
                 updated_at = NOW()
             WHERE id = :id";
 
-            $stmt = $this->conn->prepare($sql);
-
-            // Bind parameters
-            $stmt->execute([
+            $params = [
                 ':id' => $id,
                 ':title' => $data['title'],
                 ':content_type' => $data['content_type'],
@@ -195,7 +236,15 @@ class VLRModel
                 ':audio_url' => $data['audio_url'],
                 ':audio_file' => $audioFile, // Ensuring it is always set
                 ':speaker' => $data['speaker']
-            ]);
+            ];
+
+            if ($clientId !== null) {
+                $sql .= " AND client_id = :client_id";
+                $params[':client_id'] = $clientId;
+            }
+
+            $stmt = $this->conn->prepare($sql);
+            $stmt->execute($params);
 
             return true;
         } catch (PDOException $e) {
@@ -204,24 +253,61 @@ class VLRModel
         }
     }
 
-    // Get data for External Content
-    public function getExternalContent()
+    // Get data for External Content with Language Names
+    public function getExternalContent($clientId = null)
     {
-        $stmt = $this->conn->prepare("SELECT * FROM external_content WHERE is_deleted = 0");
-        $stmt->execute();
+        $sql = "
+            SELECT e.*, l.language_name
+            FROM external_content e
+            LEFT JOIN languages l ON e.language_support = l.id
+            WHERE e.is_deleted = 0
+        ";
+        $params = [];
+
+        if ($clientId !== null) {
+            $sql .= " AND e.client_id = ?";
+            $params[] = $clientId;
+        }
+
+        $stmt = $this->conn->prepare($sql);
+        $stmt->execute($params);
         $data = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
         // Debugging - Check if data is fetched
         error_log(print_r($data, true)); // Logs to XAMPP/PHP logs
 
+        // Add can_edit and can_delete flags
+        $currentUser = $_SESSION['user'] ?? null;
+        if (!$currentUser) {
+            foreach ($data as &$package) {
+                $package['can_edit'] = 0;
+                $package['can_delete'] = 0;
+            }
+            unset($package);
+            return $data;
+        }
+        foreach ($data as &$package) {
+            $package['can_edit'] = (canEdit('vlr') && ($currentUser['system_role'] === 'super_admin' || $package['created_by'] == $currentUser['id'])) ? 1 : 0;
+            $package['can_delete'] = (canDelete('vlr') && ($currentUser['system_role'] === 'super_admin' || $package['created_by'] == $currentUser['id'])) ? 1 : 0;
+        }
+        unset($package);
+
         return $data;
     }
 
     // Delete respective External Content
-    public function deleteExternalContent($id)
+    public function deleteExternalContent($id, $clientId = null)
     {
-        $stmt = $this->conn->prepare("UPDATE external_content SET is_deleted = 1 WHERE id = ?");
-        return $stmt->execute([$id]);
+        $sql = "UPDATE external_content SET is_deleted = 1 WHERE id = ?";
+        $params = [$id];
+
+        if ($clientId !== null) {
+            $sql .= " AND client_id = ?";
+            $params[] = $clientId;
+        }
+
+        $stmt = $this->conn->prepare($sql);
+        return $stmt->execute($params);
     }
 
 
@@ -229,26 +315,58 @@ class VLRModel
     // Fetch all documents with language names
 
     // Get data for display on VLR
-    public function getAllDocuments()
+    public function getAllDocuments($clientId = null)
     {
-        $stmt = $this->conn->prepare("SELECT d.*, l.language_name FROM documents d
+        $sql = "SELECT d.*, l.language_name FROM documents d
                   LEFT JOIN languages l ON d.language_id = l.id
-                  WHERE d.is_deleted = 0");
-        $stmt->execute();
+                  WHERE d.is_deleted = 0";
+        $params = [];
+
+        if ($clientId !== null) {
+            $sql .= " AND d.client_id = ?";
+            $params[] = $clientId;
+        }
+
+        $stmt = $this->conn->prepare($sql);
+        $stmt->execute($params);
         $data = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
         // Debugging - Check if data is fetched
         error_log(print_r($data, true)); // Logs to XAMPP/PHP logs
+
+        // Add can_edit and can_delete flags
+        $currentUser = $_SESSION['user'] ?? null;
+        if (!$currentUser) {
+            foreach ($data as &$package) {
+                $package['can_edit'] = 0;
+                $package['can_delete'] = 0;
+            }
+            unset($package);
+            return $data;
+        }
+        foreach ($data as &$package) {
+            $package['can_edit'] = (canEdit('vlr') && ($currentUser['system_role'] === 'super_admin' || $package['created_by'] == $currentUser['id'])) ? 1 : 0;
+            $package['can_delete'] = (canDelete('vlr') && ($currentUser['system_role'] === 'super_admin' || $package['created_by'] == $currentUser['id'])) ? 1 : 0;
+        }
+        unset($package);
 
         return $data;
     }
 
 
     // Fetch a single document by ID
-    public function getDocumentById($id)
+    public function getDocumentById($id, $clientId = null)
     {
-        $stmt = $this->conn->prepare("SELECT * FROM documents WHERE id = ? AND is_deleted = 0");
-        $stmt->execute([$id]);
+        $sql = "SELECT * FROM documents WHERE id = ? AND is_deleted = 0";
+        $params = [$id];
+
+        if ($clientId !== null) {
+            $sql .= " AND client_id = ?";
+            $params[] = $clientId;
+        }
+
+        $stmt = $this->conn->prepare($sql);
+        $stmt->execute($params);
         return $stmt->fetch(PDO::FETCH_ASSOC);
     }
 
@@ -299,14 +417,15 @@ class VLRModel
             return ['success' => false, 'errors' => $errors];
         }
 
-        $query = "INSERT INTO documents (title, category, description, tags, language_id, mobile_support, version_number, time_limit,
+        $query = "INSERT INTO documents (client_id, title, category, description, tags, language_id, mobile_support, version_number, time_limit,
               authors, publication_date, reference_links, created_by, created_at, is_deleted, word_excel_ppt_file, ebook_manual_file, research_file)
-              VALUES (:title, :category, :description, :tags, :language_id, :mobile_support, :version_number, :time_limit,
+              VALUES (:client_id, :title, :category, :description, :tags, :language_id, :mobile_support, :version_number, :time_limit,
               :authors, :publication_date, :reference_links, :created_by, NOW(), 0, :word_excel_ppt_file, :ebook_manual_file, :research_file)";
 
         $stmt = $this->conn->prepare($query);
 
         $stmt->execute([
+            ':client_id' => $data['client_id'],
             ':title' => $data['document_title'],
             ':category' => $data['documentCategory'],
             ':description' => $data['description'],
@@ -328,7 +447,7 @@ class VLRModel
     }
 
     // Update document
-    public function updateDocument($data, $id)
+    public function updateDocument($data, $id, $clientId = null)
     {
         $errors = $this->validateDocument($data, true);
         if (!empty($errors)) {
@@ -343,8 +462,7 @@ class VLRModel
               research_file = COALESCE(:research_file, research_file)
               WHERE id = :id";
 
-        $stmt = $this->conn->prepare($query);
-        $stmt->execute([
+        $params = [
             ':title' => $data['document_title'],
             ':category' => $data['documentCategory'],
             ':description' => $data['description'],
@@ -360,16 +478,32 @@ class VLRModel
             ':ebook_manual_file' => $data['ebook_manual_file'] ?? null,
             ':research_file' => $data['research_file'] ?? null,
             ':id' => $id
-        ]);
+        ];
+
+        if ($clientId !== null) {
+            $query .= " AND client_id = :client_id";
+            $params[':client_id'] = $clientId;
+        }
+
+        $stmt = $this->conn->prepare($query);
+        $stmt->execute($params);
 
         return ['success' => true, 'message' => "Document updated successfully."];
     }
 
     // Soft delete a document
-    public function deleteDocument($id)
+    public function deleteDocument($id, $clientId = null)
     {
-        $stmt = $this->conn->prepare("UPDATE documents SET is_deleted = 1 WHERE id = ?");
-        return $stmt->execute([$id]);
+        $sql = "UPDATE documents SET is_deleted = 1 WHERE id = ?";
+        $params = [$id];
+
+        if ($clientId !== null) {
+            $sql .= " AND client_id = ?";
+            $params[] = $clientId;
+        }
+
+        $stmt = $this->conn->prepare($sql);
+        return $stmt->execute($params);
     }
 
     // Fetch all languages
@@ -392,12 +526,12 @@ class VLRModel
 
             // Insert into assessment_package
             $sql = "INSERT INTO assessment_package (
-            title, tags, num_attempts, passing_percentage, time_limit,
+            client_id, title, tags, num_attempts, passing_percentage, time_limit,
             negative_marking, negative_marking_percentage,
             assessment_type, num_questions_to_display,
             selected_question_count, created_by, created_at
         ) VALUES (
-            :title, :tags, :num_attempts, :passing_percentage, :time_limit,
+            :client_id, :title, :tags, :num_attempts, :passing_percentage, :time_limit,
             :negative_marking, :negative_marking_percentage,
             :assessment_type, :num_questions_to_display,
             :selected_question_count, :created_by, NOW()
@@ -405,6 +539,7 @@ class VLRModel
 
             $stmt = $this->conn->prepare($sql);
             $stmt->execute([
+                ':client_id' => $data['client_id'],
                 ':title' => $data['title'],
                 ':tags' => $data['tags'],
                 ':num_attempts' => $data['num_attempts'],
@@ -449,7 +584,7 @@ class VLRModel
             }
 
             $this->conn->commit();
-            return true;
+            return $assessmentPackageId;
 
         } catch (Exception $e) {
             $this->conn->rollBack();
@@ -545,11 +680,36 @@ class VLRModel
 
     // Assessment get data for display
 
-    public function getAllAssessments()
+    public function getAllAssessments($clientId = null)
     {
-        $stmt = $this->conn->prepare("SELECT * FROM assessment_package WHERE is_deleted = 0 ORDER BY created_at DESC");
-        $stmt->execute();
-        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+        $sql = "SELECT * FROM assessment_package WHERE is_deleted = 0";
+        $params = [];
+        if ($clientId !== null) {
+            $sql .= " AND client_id = ?";
+            $params[] = $clientId;
+        }
+        $sql .= " ORDER BY created_at DESC";
+        $stmt = $this->conn->prepare($sql);
+        $stmt->execute($params);
+        $data = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+        // Add can_edit and can_delete flags
+        $currentUser = $_SESSION['user'] ?? null;
+        if (!$currentUser) {
+            foreach ($data as &$package) {
+                $package['can_edit'] = 0;
+                $package['can_delete'] = 0;
+            }
+            unset($package);
+            return $data;
+        }
+        foreach ($data as &$package) {
+            $package['can_edit'] = (canEdit('vlr') && ($currentUser['system_role'] === 'super_admin' || $package['created_by'] == $currentUser['id'])) ? 1 : 0;
+            $package['can_delete'] = (canDelete('vlr') && ($currentUser['system_role'] === 'super_admin' || $package['created_by'] == $currentUser['id'])) ? 1 : 0;
+        }
+        unset($package);
+
+        return $data;
     }
 
     public function getAssessmentByIdWithQuestions($assessmentId)
@@ -569,15 +729,54 @@ class VLRModel
             return null;
         }
 
-        // Fetch mapped questions
+        // Get question IDs from the mapping table
         $stmt = $db->prepare("
-            SELECT q.id, q.question_text AS title, q.tags, q.marks, q.question_type AS type
-            FROM assessment_question_mapping m
-            JOIN assessment_questions q ON m.question_id = q.id
-            WHERE m.assessment_package_id = :id AND q.is_deleted = 0
+            SELECT question_id 
+            FROM assessment_question_mapping 
+            WHERE assessment_package_id = :assessment_id
         ");
-        $stmt->execute([':id' => $assessmentId]);
+        $stmt->execute([':assessment_id' => $assessmentId]);
+        $questionMappings = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        
+        $questionIds = array_column($questionMappings, 'question_id');
+
+        if (empty($questionIds)) {
+            $assessment['selected_questions'] = [];
+            return $assessment;
+        }
+
+        // Fetch questions with their options
+        $placeholders = str_repeat('?,', count($questionIds) - 1) . '?';
+        $stmt = $db->prepare("
+            SELECT 
+                q.id, 
+                q.question_text AS title, 
+                q.tags, 
+                q.marks, 
+                q.question_type AS type,
+                q.level AS difficulty_level,
+                q.competency_skills AS skills
+            FROM assessment_questions q
+            WHERE q.id IN ($placeholders) AND q.is_deleted = 0
+            ORDER BY FIELD(q.id, $placeholders)
+        ");
+        
+        // Execute with question IDs twice (once for IN clause, once for ORDER BY)
+        $params = array_merge($questionIds, $questionIds);
+        $stmt->execute($params);
         $questions = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+        // Fetch options for each question
+        foreach ($questions as &$question) {
+            $stmt = $db->prepare("
+                SELECT id, option_text, is_correct, option_index
+                FROM assessment_options
+                WHERE question_id = ? AND is_deleted = 0
+                ORDER BY option_index ASC
+            ");
+            $stmt->execute([$question['id']]);
+            $question['options'] = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        }
 
         // Add questions to assessment array
         $assessment['selected_questions'] = $questions;
@@ -612,7 +811,7 @@ class VLRModel
 public function insertAudioPackage($data)
 {
     // Validate required fields
-    $requiredFields = ['title', 'audio_file', 'version', 'mobile_support', 'tags', 'created_by'];
+    $requiredFields = ['client_id', 'title', 'audio_file', 'version', 'mobile_support', 'tags', 'created_by'];
     foreach ($requiredFields as $field) {
         if (empty($data[$field])) {
             return false;
@@ -621,11 +820,12 @@ public function insertAudioPackage($data)
 
     $stmt = $this->conn->prepare("
         INSERT INTO audio_package
-        (title, audio_file, version, language, time_limit, description, tags, mobile_support, created_by, is_deleted, created_at)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 0, NOW())
+        (client_id, title, audio_file, version, language, time_limit, description, tags, mobile_support, created_by, is_deleted, created_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, NOW())
     ");
 
     return $stmt->execute([
+        $data['client_id'],
         $data['title'],
         $data['audio_file'],
         $data['version'],
@@ -674,12 +874,36 @@ public function updateAudioPackage($id, $data)
     ]);
 }
 
-// ✅ Get Audio Packages (non-deleted)
+// ✅ Get Audio Packages (non-deleted) with Language Names
 public function getAudioPackages()
 {
-    $stmt = $this->conn->prepare("SELECT * FROM audio_package WHERE is_deleted = 0 ORDER BY created_at DESC");
+    $stmt = $this->conn->prepare("
+        SELECT a.*, l.language_name
+        FROM audio_package a
+        LEFT JOIN languages l ON a.language = l.id
+        WHERE a.is_deleted = 0
+        ORDER BY a.created_at DESC
+    ");
     $stmt->execute();
-    return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    $data = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+    // Add can_edit and can_delete flags
+    $currentUser = $_SESSION['user'] ?? null;
+    if (!$currentUser) {
+        foreach ($data as &$package) {
+            $package['can_edit'] = 0;
+            $package['can_delete'] = 0;
+        }
+        unset($package);
+        return $data;
+    }
+    foreach ($data as &$package) {
+        $package['can_edit'] = (canEdit('vlr') && ($currentUser['system_role'] === 'super_admin' || $package['created_by'] == $currentUser['id'])) ? 1 : 0;
+        $package['can_delete'] = (canDelete('vlr') && ($currentUser['system_role'] === 'super_admin' || $package['created_by'] == $currentUser['id'])) ? 1 : 0;
+    }
+    unset($package);
+
+    return $data;
 }
 
 // ✅ Soft Delete Audio Package
@@ -693,7 +917,7 @@ public function deleteAudioPackage($id)
 public function insertVideoPackage($data)
 {
     // Validate required fields
-    $requiredFields = ['title', 'video_file', 'version', 'mobile_support', 'tags', 'created_by'];
+    $requiredFields = ['client_id', 'title', 'video_file', 'version', 'mobile_support', 'tags', 'created_by'];
     foreach ($requiredFields as $field) {
         if (empty($data[$field])) {
             return false;
@@ -702,11 +926,12 @@ public function insertVideoPackage($data)
 
     $stmt = $this->conn->prepare("
         INSERT INTO video_package
-        (title, video_file, version, language, time_limit, description, tags, mobile_support, created_by, is_deleted, created_at)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 0, NOW())
+        (client_id, title, video_file, version, language, time_limit, description, tags, mobile_support, created_by, is_deleted, created_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, NOW())
     ");
 
     return $stmt->execute([
+        $data['client_id'],
         $data['title'],
         $data['video_file'],
         $data['version'],
@@ -755,12 +980,36 @@ public function updateVideoPackage($id, $data)
     ]);
 }
 
-// ✅ Get Video Packages (non-deleted)
+// ✅ Get Video Packages (non-deleted) with Language Names
 public function getVideoPackages()
 {
-    $stmt = $this->conn->prepare("SELECT * FROM video_package WHERE is_deleted = 0 ORDER BY created_at DESC");
+    $stmt = $this->conn->prepare("
+        SELECT v.*, l.language_name
+        FROM video_package v
+        LEFT JOIN languages l ON v.language = l.id
+        WHERE v.is_deleted = 0
+        ORDER BY v.created_at DESC
+    ");
     $stmt->execute();
-    return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    $data = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+    // Add can_edit and can_delete flags
+    $currentUser = $_SESSION['user'] ?? null;
+    if (!$currentUser) {
+        foreach ($data as &$package) {
+            $package['can_edit'] = 0;
+            $package['can_delete'] = 0;
+        }
+        unset($package);
+        return $data;
+    }
+    foreach ($data as &$package) {
+        $package['can_edit'] = (canEdit('vlr') && ($currentUser['system_role'] === 'super_admin' || $package['created_by'] == $currentUser['id'])) ? 1 : 0;
+        $package['can_delete'] = (canDelete('vlr') && ($currentUser['system_role'] === 'super_admin' || $package['created_by'] == $currentUser['id'])) ? 1 : 0;
+    }
+    unset($package);
+
+    return $data;
 }
 
 // ✅ Soft Delete Video Package
@@ -774,7 +1023,7 @@ public function deleteVideoPackage($id)
 public function insertImagePackage($data)
 {
     // Validate required fields
-    $requiredFields = ['title', 'image_file', 'version', 'mobile_support', 'tags', 'created_by'];
+    $requiredFields = ['client_id', 'title', 'image_file', 'version', 'mobile_support', 'tags', 'created_by'];
     foreach ($requiredFields as $field) {
         if (empty($data[$field])) {
             return false;
@@ -783,11 +1032,12 @@ public function insertImagePackage($data)
 
     $stmt = $this->conn->prepare("
         INSERT INTO image_package
-        (title, image_file, version, language, description, tags, mobile_support, created_by, is_deleted, created_at)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, 0, NOW())
+        (client_id, title, image_file, version, language, description, tags, mobile_support, created_by, is_deleted, created_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 0, NOW())
     ");
 
     return $stmt->execute([
+        $data['client_id'],
         $data['title'],
         $data['image_file'],
         $data['version'],
@@ -833,12 +1083,36 @@ public function updateImagePackage($id, $data)
     ]);
 }
 
-// ✅ Get Image Packages (non-deleted)
+// ✅ Get Image Packages (non-deleted) with Language Names
 public function getImagePackages()
 {
-    $stmt = $this->conn->prepare("SELECT * FROM image_package WHERE is_deleted = 0 ORDER BY created_at DESC");
+    $stmt = $this->conn->prepare("
+        SELECT i.*, l.language_name
+        FROM image_package i
+        LEFT JOIN languages l ON i.language = l.id
+        WHERE i.is_deleted = 0
+        ORDER BY i.created_at DESC
+    ");
     $stmt->execute();
-    return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    $data = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+    // Add can_edit and can_delete flags
+    $currentUser = $_SESSION['user'] ?? null;
+    if (!$currentUser) {
+        foreach ($data as &$package) {
+            $package['can_edit'] = 0;
+            $package['can_delete'] = 0;
+        }
+        unset($package);
+        return $data;
+    }
+    foreach ($data as &$package) {
+        $package['can_edit'] = (canEdit('vlr') && ($currentUser['system_role'] === 'super_admin' || $package['created_by'] == $currentUser['id'])) ? 1 : 0;
+        $package['can_delete'] = (canDelete('vlr') && ($currentUser['system_role'] === 'super_admin' || $package['created_by'] == $currentUser['id'])) ? 1 : 0;
+    }
+    unset($package);
+
+    return $data;
 }
 
 // ✅ Soft Delete Image Package
@@ -855,8 +1129,9 @@ public function deleteImagePackage($id)
             $this->conn->beginTransaction();
 
             // Insert into survey_package
-            $stmt = $this->conn->prepare("INSERT INTO survey_package (title, tags, created_by, created_at, is_deleted) VALUES (?, ?, ?, NOW(), 0)");
+            $stmt = $this->conn->prepare("INSERT INTO survey_package (client_id, title, tags, created_by, created_at, is_deleted) VALUES (?, ?, ?, ?, NOW(), 0)");
             $stmt->execute([
+                $data['client_id'],
                 $data['title'],
                 $data['tags'],
                 $data['created_by']
@@ -888,8 +1163,9 @@ public function deleteImagePackage($id)
             $this->conn->beginTransaction();
 
             // Update survey_package table
-            $stmt = $this->conn->prepare("UPDATE survey_package SET title = ?, tags = ?, updated_by = ?, updated_at = NOW() WHERE id = ?");
+            $stmt = $this->conn->prepare("UPDATE survey_package SET client_id = ?, title = ?, tags = ?, updated_by = ?, updated_at = NOW() WHERE id = ?");
             $stmt->execute([
+                $data['client_id'],
                 $data['title'],
                 $data['tags'],
                 $data['created_by'],
@@ -917,19 +1193,47 @@ public function deleteImagePackage($id)
 
 
     //Get All Surveys (excluding deleted)
-    public function getAllSurvey()
+    public function getAllSurvey($clientId = null)
     {
-        $stmt = $this->conn->prepare("SELECT * FROM survey_package WHERE is_deleted = 0 ORDER BY created_at DESC");
-        $stmt->execute();
-        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+        if ($clientId) {
+            $stmt = $this->conn->prepare("SELECT * FROM survey_package WHERE client_id = ? AND is_deleted = 0 ORDER BY created_at DESC");
+            $stmt->execute([$clientId]);
+        } else {
+            $stmt = $this->conn->prepare("SELECT * FROM survey_package WHERE is_deleted = 0 ORDER BY created_at DESC");
+            $stmt->execute();
+        }
+        $data = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+        // Add can_edit and can_delete flags
+        $currentUser = $_SESSION['user'] ?? null;
+        if (!$currentUser) {
+            foreach ($data as &$package) {
+                $package['can_edit'] = 0;
+                $package['can_delete'] = 0;
+            }
+            unset($package);
+            return $data;
+        }
+        foreach ($data as &$package) {
+            $package['can_edit'] = (canEdit('vlr') && ($currentUser['system_role'] === 'super_admin' || $package['created_by'] == $currentUser['id'])) ? 1 : 0;
+            $package['can_delete'] = (canDelete('vlr') && ($currentUser['system_role'] === 'super_admin' || $package['created_by'] == $currentUser['id'])) ? 1 : 0;
+        }
+        unset($package);
+
+        return $data;
     }
 
     //Get Survey by ID with Questions
-    public function getSurveyByIdWithQuestions($surveyId)
+    public function getSurveyByIdWithQuestions($surveyId, $clientId = null)
     {
         // Get survey basic info
-        $stmt = $this->conn->prepare("SELECT * FROM survey_package WHERE id = ? AND is_deleted = 0");
-        $stmt->execute([$surveyId]);
+        if ($clientId) {
+            $stmt = $this->conn->prepare("SELECT * FROM survey_package WHERE id = ? AND client_id = ? AND is_deleted = 0");
+            $stmt->execute([$surveyId, $clientId]);
+        } else {
+            $stmt = $this->conn->prepare("SELECT * FROM survey_package WHERE id = ? AND is_deleted = 0");
+            $stmt->execute([$surveyId]);
+        }
         $survey = $stmt->fetch(PDO::FETCH_ASSOC);
 
         if (!$survey) {
@@ -962,11 +1266,34 @@ public function deleteImagePackage($id)
     // Feedback Package Methods (following survey pattern)
 
     //Get All Feedback Packages (excluding deleted)
-    public function getAllFeedback()
+    public function getAllFeedback($clientId = null)
     {
-        $stmt = $this->conn->prepare("SELECT * FROM feedback_package WHERE is_deleted = 0 ORDER BY created_at DESC");
-        $stmt->execute();
-        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+        if ($clientId) {
+            $stmt = $this->conn->prepare("SELECT * FROM feedback_package WHERE client_id = ? AND is_deleted = 0 ORDER BY created_at DESC");
+            $stmt->execute([$clientId]);
+        } else {
+            $stmt = $this->conn->prepare("SELECT * FROM feedback_package WHERE is_deleted = 0 ORDER BY created_at DESC");
+            $stmt->execute();
+        }
+        $data = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+        // Add can_edit and can_delete flags
+        $currentUser = $_SESSION['user'] ?? null;
+        if (!$currentUser) {
+            foreach ($data as &$package) {
+                $package['can_edit'] = 0;
+                $package['can_delete'] = 0;
+            }
+            unset($package);
+            return $data;
+        }
+        foreach ($data as &$package) {
+            $package['can_edit'] = (canEdit('vlr') && ($currentUser['system_role'] === 'super_admin' || $package['created_by'] == $currentUser['id'])) ? 1 : 0;
+            $package['can_delete'] = (canDelete('vlr') && ($currentUser['system_role'] === 'super_admin' || $package['created_by'] == $currentUser['id'])) ? 1 : 0;
+        }
+        unset($package);
+
+        return $data;
     }
 
     //Get Feedback by ID with Questions
@@ -1004,8 +1331,9 @@ public function deleteImagePackage($id)
             $this->conn->beginTransaction();
 
             // Insert into feedback_package
-            $stmt = $this->conn->prepare("INSERT INTO feedback_package (title, tags, created_by, created_at, is_deleted) VALUES (?, ?, ?, NOW(), 0)");
+            $stmt = $this->conn->prepare("INSERT INTO feedback_package (client_id, title, tags, created_by, created_at, is_deleted) VALUES (?, ?, ?, ?, NOW(), 0)");
             $stmt->execute([
+                $data['client_id'],
                 $data['title'],
                 $data['tags'],
                 $data['created_by']
@@ -1036,8 +1364,9 @@ public function deleteImagePackage($id)
             $this->conn->beginTransaction();
 
             // Update feedback_package table
-            $stmt = $this->conn->prepare("UPDATE feedback_package SET title = ?, tags = ?, updated_by = ?, updated_at = NOW() WHERE id = ?");
+            $stmt = $this->conn->prepare("UPDATE feedback_package SET client_id = ?, title = ?, tags = ?, updated_by = ?, updated_at = NOW() WHERE id = ?");
             $stmt->execute([
+                $data['client_id'],
                 $data['title'],
                 $data['tags'],
                 $data['created_by'],
@@ -1075,54 +1404,76 @@ public function deleteImagePackage($id)
     // Insert Interactive & AI Powered Content Package
     public function insertInteractiveContent($data)
     {
+        error_log("VLRModel: insertInteractiveContent called with data: " . print_r($data, true));
+        
         // Validate required fields
-        $requiredFields = ['title', 'content_type', 'version', 'mobile_support', 'tags', 'created_by'];
+        $requiredFields = ['title', 'content_type', 'version', 'mobile_support', 'tags', 'created_by', 'client_id'];
         foreach ($requiredFields as $field) {
             if (empty($data[$field])) {
+                error_log("VLRModel: Required field missing: " . $field);
                 return false;
             }
         }
+        
+        error_log("VLRModel: All required fields present");
 
-        $stmt = $this->conn->prepare("
-            INSERT INTO interactive_ai_content_package
-            (title, content_type, description, tags, version, language, time_limit, mobile_support,
-             content_url, embed_code, ai_model, interaction_type, difficulty_level, learning_objectives,
-             prerequisites, content_file, thumbnail_image, metadata_file, vr_platform, ar_platform,
-             device_requirements, tutor_personality, response_style, knowledge_domain, adaptation_algorithm,
-             assessment_integration, progress_tracking, created_by, is_deleted, created_at)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, NOW())
-        ");
+        try {
+            $stmt = $this->conn->prepare("
+                INSERT INTO interactive_ai_content_package
+                (client_id, title, content_type, description, tags, version, language, time_limit, mobile_support,
+                 content_url, embed_code, ai_model, interaction_type, difficulty_level, learning_objectives,
+                 prerequisites, content_file, thumbnail_image, metadata_file, vr_platform, ar_platform,
+                 device_requirements, tutor_personality, response_style, knowledge_domain, adaptation_algorithm,
+                 assessment_integration, progress_tracking, created_by, is_deleted, created_at)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, NOW())
+            ");
 
-        return $stmt->execute([
-            $data['title'],
-            $data['content_type'],
-            $data['description'] ?? null,
-            $data['tags'],
-            $data['version'],
-            $data['language'] ?? null,
-            $data['time_limit'] ?? null,
-            $data['mobile_support'],
-            $data['content_url'] ?? null,
-            $data['embed_code'] ?? null,
-            $data['ai_model'] ?? null,
-            $data['interaction_type'] ?? null,
-            $data['difficulty_level'] ?? null,
-            $data['learning_objectives'] ?? null,
-            $data['prerequisites'] ?? null,
-            $data['content_file'] ?? null,
-            $data['thumbnail_image'] ?? null,
-            $data['metadata_file'] ?? null,
-            $data['vr_platform'] ?? null,
-            $data['ar_platform'] ?? null,
-            $data['device_requirements'] ?? null,
-            $data['tutor_personality'] ?? null,
-            $data['response_style'] ?? null,
-            $data['knowledge_domain'] ?? null,
-            $data['adaptation_algorithm'] ?? null,
-            $data['assessment_integration'] ?? null,
-            $data['progress_tracking'] ?? null,
-            $data['created_by']
-        ]);
+            $result = $stmt->execute([
+                $data['client_id'],
+                $data['title'],
+                $data['content_type'],
+                $data['description'] ?? null,
+                $data['tags'],
+                $data['version'],
+                $data['language'] ?? null,
+                $data['time_limit'] ?? null,
+                $data['mobile_support'],
+                $data['content_url'] ?? null,
+                $data['embed_code'] ?? null,
+                $data['ai_model'] ?? null,
+                $data['interaction_type'] ?? null,
+                $data['difficulty_level'] ?? null,
+                $data['learning_objectives'] ?? null,
+                $data['prerequisites'] ?? null,
+                $data['content_file'] ?? null,
+                $data['thumbnail_image'] ?? null,
+                $data['metadata_file'] ?? null,
+                $data['vr_platform'] ?? null,
+                $data['ar_platform'] ?? null,
+                $data['device_requirements'] ?? null,
+                $data['tutor_personality'] ?? null,
+                $data['response_style'] ?? null,
+                $data['knowledge_domain'] ?? null,
+                $data['adaptation_algorithm'] ?? null,
+                $data['assessment_integration'] ?? null,
+                $data['progress_tracking'] ?? null,
+                $data['created_by']
+            ]);
+            
+            if ($result) {
+                error_log("VLRModel: Insert successful, last insert ID: " . $this->conn->lastInsertId());
+                return $this->conn->lastInsertId();
+            } else {
+                error_log("VLRModel: Insert failed, error info: " . print_r($stmt->errorInfo(), true));
+                return false;
+            }
+        } catch (PDOException $e) {
+            error_log("VLRModel: PDO Exception in insertInteractiveContent: " . $e->getMessage());
+            return false;
+        } catch (Exception $e) {
+            error_log("VLRModel: General Exception in insertInteractiveContent: " . $e->getMessage());
+            return false;
+        }
     }
 
     // Update Interactive & AI Powered Content Package
@@ -1204,14 +1555,40 @@ public function deleteImagePackage($id)
     {
         $stmt = $this->conn->prepare("SELECT * FROM interactive_ai_content_package WHERE is_deleted = 0 ORDER BY created_at DESC");
         $stmt->execute();
-        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+        $data = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+        // Add can_edit and can_delete flags
+        $currentUser = $_SESSION['user'] ?? null;
+        if (!$currentUser) {
+            foreach ($data as &$package) {
+                $package['can_edit'] = 0;
+                $package['can_delete'] = 0;
+            }
+            unset($package);
+            return $data;
+        }
+        foreach ($data as &$package) {
+            $package['can_edit'] = (canEdit('vlr') && ($currentUser['system_role'] === 'super_admin' || $package['created_by'] == $currentUser['id'])) ? 1 : 0;
+            $package['can_delete'] = (canDelete('vlr') && ($currentUser['system_role'] === 'super_admin' || $package['created_by'] == $currentUser['id'])) ? 1 : 0;
+        }
+        unset($package);
+
+        return $data;
     }
 
     // Soft Delete Interactive & AI Powered Content Package
-    public function deleteInteractiveContent($id)
+    public function deleteInteractiveContent($id, $clientId = null)
     {
-        $stmt = $this->conn->prepare("UPDATE interactive_ai_content_package SET is_deleted = 1 WHERE id = ?");
-        return $stmt->execute([$id]);
+        $sql = "UPDATE interactive_ai_content_package SET is_deleted = 1 WHERE id = ?";
+        $params = [$id];
+
+        if ($clientId !== null) {
+            $sql .= " AND client_id = ?";
+            $params[] = $clientId;
+        }
+
+        $stmt = $this->conn->prepare($sql);
+        return $stmt->execute($params);
     }
 
     // ✅ Non-SCORM Package Methods
@@ -1220,7 +1597,7 @@ public function deleteImagePackage($id)
     public function insertNonScormPackage($data)
     {
         // Validate required fields
-        $requiredFields = ['title', 'content_type', 'version', 'mobile_support', 'tags', 'created_by'];
+        $requiredFields = ['title', 'content_type', 'version', 'mobile_support', 'tags', 'created_by', 'client_id'];
         foreach ($requiredFields as $field) {
             if (empty($data[$field])) {
                 return false;
@@ -1229,17 +1606,18 @@ public function deleteImagePackage($id)
 
         $stmt = $this->conn->prepare("
             INSERT INTO non_scorm_package
-            (title, content_type, description, tags, version, language, time_limit, mobile_support,
+            (client_id, title, content_type, description, tags, version, language, time_limit, mobile_support,
              content_url, launch_file, content_package, thumbnail_image, manifest_file,
              html5_framework, responsive_design, offline_support, flash_version, flash_security,
              unity_version, unity_platform, unity_compression, web_technologies, browser_requirements,
              external_dependencies, mobile_platform, app_store_url, minimum_os_version,
              progress_tracking, assessment_integration, completion_criteria, scoring_method,
              file_size, bandwidth_requirement, screen_resolution, created_by, is_deleted, created_at)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, NOW())
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, NOW())
         ");
 
         return $stmt->execute([
+            $data['client_id'],
             $data['title'],
             $data['content_type'],
             $data['description'] ?? null,
@@ -1373,6 +1751,23 @@ public function deleteImagePackage($id)
             $stmt = $this->conn->prepare("SELECT * FROM non_scorm_package WHERE is_deleted = 0 ORDER BY created_at DESC");
             $stmt->execute();
             $data = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+            // Add can_edit and can_delete flags
+            $currentUser = $_SESSION['user'] ?? null;
+            if (!$currentUser) {
+                foreach ($data as &$package) {
+                    $package['can_edit'] = 0;
+                    $package['can_delete'] = 0;
+                }
+                unset($package);
+                return $data;
+            }
+            foreach ($data as &$package) {
+                $package['can_edit'] = (canEdit('vlr') && ($currentUser['system_role'] === 'super_admin' || $package['created_by'] == $currentUser['id'])) ? 1 : 0;
+                $package['can_delete'] = (canDelete('vlr') && ($currentUser['system_role'] === 'super_admin' || $package['created_by'] == $currentUser['id'])) ? 1 : 0;
+            }
+            unset($package);
+
             return $data;
         } catch (Exception $e) {
             error_log("Error fetching Non-SCORM packages: " . $e->getMessage());
@@ -1384,6 +1779,180 @@ public function deleteImagePackage($id)
     public function deleteNonScormPackage($id)
     {
         $stmt = $this->conn->prepare("UPDATE non_scorm_package SET is_deleted = 1 WHERE id = ?");
+        return $stmt->execute([$id]);
+    }
+
+    // ✅ Insert Assignment Package
+    public function insertAssignmentPackage($data)
+    {
+        // Validate required fields
+        $requiredFields = ['client_id', 'title', 'assignment_file', 'version', 'mobile_support', 'tags', 'created_by'];
+        foreach ($requiredFields as $field) {
+            if (empty($data[$field])) {
+                return false;
+            }
+        }
+
+        $stmt = $this->conn->prepare("
+            INSERT INTO assignment_package
+            (client_id, title, assignment_file, version, language, time_limit, description, tags, mobile_support, 
+             assignment_type, difficulty_level, estimated_duration, max_attempts, passing_score, submission_format,
+             allow_late_submission, late_submission_penalty, instructions, requirements, rubric, learning_objectives,
+             prerequisites, thumbnail_image, sample_solution, supporting_materials, created_by, is_deleted, created_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, NOW())
+        ");
+
+        return $stmt->execute([
+            $data['client_id'],
+            $data['title'],
+            $data['assignment_file'],
+            $data['version'],
+            $data['language'] ?? null,
+            $data['time_limit'] ?? null,
+            $data['description'] ?? null,
+            $data['tags'],
+            $data['mobile_support'],
+            $data['assignment_type'] ?? 'individual',
+            $data['difficulty_level'] ?? 'Beginner',
+            $data['estimated_duration'] ?? null,
+            $data['max_attempts'] ?? 1,
+            $data['passing_score'] ?? null,
+            $data['submission_format'] ?? 'file_upload',
+            $data['allow_late_submission'] ?? 'No',
+            $data['late_submission_penalty'] ?? 0,
+            $data['instructions'] ?? null,
+            $data['requirements'] ?? null,
+            $data['rubric'] ?? null,
+            $data['learning_objectives'] ?? null,
+            $data['prerequisites'] ?? null,
+            $data['thumbnail_image'] ?? null,
+            $data['sample_solution'] ?? null,
+            $data['supporting_materials'] ?? null,
+            $data['created_by']
+        ]);
+    }
+
+    // ✅ Update Assignment Package
+    public function updateAssignmentPackage($id, $data)
+    {
+        if (empty($id)) {
+            return false;
+        }
+
+        $stmt = $this->conn->prepare("
+            UPDATE assignment_package SET
+                title = ?,
+                assignment_file = ?,
+                version = ?,
+                language = ?,
+                time_limit = ?,
+                description = ?,
+                tags = ?,
+                mobile_support = ?,
+                assignment_type = ?,
+                difficulty_level = ?,
+                estimated_duration = ?,
+                max_attempts = ?,
+                passing_score = ?,
+                submission_format = ?,
+                allow_late_submission = ?,
+                late_submission_penalty = ?,
+                instructions = ?,
+                requirements = ?,
+                rubric = ?,
+                learning_objectives = ?,
+                prerequisites = ?,
+                thumbnail_image = ?,
+                sample_solution = ?,
+                supporting_materials = ?,
+                updated_by = ?,
+                updated_at = NOW()
+            WHERE id = ?
+        ");
+
+        return $stmt->execute([
+            $data['title'],
+            $data['assignment_file'],
+            $data['version'],
+            $data['language'] ?? null,
+            $data['time_limit'] ?? null,
+            $data['description'] ?? null,
+            $data['tags'],
+            $data['mobile_support'],
+            $data['assignment_type'] ?? 'individual',
+            $data['difficulty_level'] ?? 'Beginner',
+            $data['estimated_duration'] ?? null,
+            $data['max_attempts'] ?? 1,
+            $data['passing_score'] ?? null,
+            $data['submission_format'] ?? 'file_upload',
+            $data['allow_late_submission'] ?? 'No',
+            $data['late_submission_penalty'] ?? 0,
+            $data['instructions'] ?? null,
+            $data['requirements'] ?? null,
+            $data['rubric'] ?? null,
+            $data['learning_objectives'] ?? null,
+            $data['prerequisites'] ?? null,
+            $data['thumbnail_image'] ?? null,
+            $data['sample_solution'] ?? null,
+            $data['supporting_materials'] ?? null,
+            $data['updated_by'] ?? $data['created_by'], // fallback to creator if editor not set
+            $id
+        ]);
+    }
+
+    // ✅ Get Assignment Packages (non-deleted) with Language Names
+    public function getAssignmentPackages($clientId = null)
+    {
+        try {
+            if ($clientId) {
+                $stmt = $this->conn->prepare("
+                    SELECT a.*, l.language_name
+                    FROM assignment_package a
+                    LEFT JOIN languages l ON a.language = l.id
+                    WHERE a.client_id = ? AND a.is_deleted = 0
+                    ORDER BY a.created_at DESC
+                ");
+                $stmt->execute([$clientId]);
+            } else {
+                $stmt = $this->conn->prepare("
+                    SELECT a.*, l.language_name
+                    FROM assignment_package a
+                    LEFT JOIN languages l ON a.language = l.id
+                    WHERE a.is_deleted = 0
+                    ORDER BY a.created_at DESC
+                ");
+                $stmt->execute();
+            }
+            $data = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+            // Add can_edit and can_delete flags
+            $currentUser = $_SESSION['user'] ?? null;
+            if (!$currentUser) {
+                foreach ($data as &$package) {
+                    $package['can_edit'] = 0;
+                    $package['can_delete'] = 0;
+                }
+                unset($package);
+                return $data;
+            }
+            foreach ($data as &$package) {
+                $package['can_edit'] = (canEdit('vlr') && ($currentUser['system_role'] === 'super_admin' || $package['created_by'] == $currentUser['id'])) ? 1 : 0;
+                $package['can_delete'] = (canDelete('vlr') && ($currentUser['system_role'] === 'super_admin' || $package['created_by'] == $currentUser['id'])) ? 1 : 0;
+            }
+            unset($package);
+
+            error_log("VLRModel getAssignmentPackages - Client ID: " . ($clientId ?? 'null') . ", Count: " . count($data));
+            return $data;
+        } catch (Exception $e) {
+            error_log("Error fetching Assignment packages: " . $e->getMessage());
+            return [];
+        }
+    }
+
+    // ✅ Soft Delete Assignment Package
+    public function deleteAssignmentPackage($id)
+    {
+        $stmt = $this->conn->prepare("UPDATE assignment_package SET is_deleted = 1 WHERE id = ?");
         return $stmt->execute([$id]);
     }
 

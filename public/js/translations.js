@@ -27,7 +27,9 @@ function translate(key, replacements = {}) {
 /**
  * Alias for translate function for shorter usage
  */
-const t = translate;
+if (typeof window.t === 'undefined') {
+    window.t = translate;
+}
 
 /**
  * Load translations from server

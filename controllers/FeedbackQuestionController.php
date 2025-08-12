@@ -1,7 +1,8 @@
 <?php
 require_once 'models/FeedbackQuestionModel.php';
+require_once 'controllers/BaseController.php';
 
-class FeedbackQuestionController
+class FeedbackQuestionController extends BaseController
 {
     private $feedbackQuestionModel;
 
@@ -13,6 +14,14 @@ class FeedbackQuestionController
     // List with pagination & filters
     public function index()
     {
+        // Check if user is logged in and get client_id
+        if (!isset($_SESSION['user']['client_id'])) {
+            $this->toastError('Unauthorized access. Please log in.', '/unlockyourskills/login');
+            return;
+        }
+
+        $clientId = $_SESSION['user']['client_id'];
+
         // ✅ Don't load initial data - let JavaScript handle it via AJAX
         // This prevents duplicate data rendering issues
         $questions = []; // Empty array for initial page load
@@ -20,8 +29,8 @@ class FeedbackQuestionController
         $totalPages = 0;
         $page = 1;
 
-        // Get unique values for filter dropdowns
-        $uniqueQuestionTypes = $this->feedbackQuestionModel->getDistinctTypes();
+        // Get unique values for filter dropdowns (client-specific)
+        $uniqueQuestionTypes = $this->feedbackQuestionModel->getDistinctTypes($clientId);
 
         require 'views/add_feedback_question.php';
     }
@@ -30,14 +39,16 @@ class FeedbackQuestionController
     public function save()
     {
         if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
-            $this->redirectWithAlert('Invalid request method.', 'FeedbackQuestionController');
+            $this->toastError('Invalid request method.', '/unlockyourskills/feedback');
             return;
         }
 
-        if (!isset($_SESSION['id'])) {
-            $this->redirectWithAlert('Unauthorized access. Please log in.', 'VLRController');
+        if (!isset($_SESSION['id']) || !isset($_SESSION['user']['client_id'])) {
+            $this->toastError('Unauthorized access. Please log in.', '/unlockyourskills/login');
             return;
         }
+
+        $clientId = $_SESSION['user']['client_id'];
 
         $id = $_POST['feedbackQuestionId'] ?? null;  // for update
 
@@ -68,10 +79,13 @@ class FeedbackQuestionController
 
         if ($id) {
             // For update: optionally keep old media if no new upload
-            $existingQuestion = $this->feedbackQuestionModel->getQuestionById($id);
+            $currentUser = $_SESSION['user'] ?? null;
+            $filterClientId = ($currentUser && $currentUser['system_role'] === 'admin') ? $clientId : null;
+
+            $existingQuestion = $this->feedbackQuestionModel->getQuestionById($id, $filterClientId);
 
             if (!$existingQuestion) {
-                $this->redirectWithAlert('Feedback question not found.', 'FeedbackQuestionController');
+                $this->toastError('Feedback question not found or access denied.', '/unlockyourskills/feedback');
                 return;
             }
             if (!$mediaFileName) {
@@ -81,14 +95,16 @@ class FeedbackQuestionController
             }
         }
 
-        if ($errors) {
-            $this->redirectWithAlert(implode('\n', $errors), 'FeedbackQuestionController');
+        if (!empty($errors)) {
+            $errorMessage = implode(', ', $errors);
+            $this->toastError($errorMessage, '/unlockyourskills/feedback');
             return;
         }
 
         $mediaNameOnly = $mediaFileName ? basename($mediaFileName) : null;
 
         $data = [
+            'client_id' => $clientId,
             'title' => $title,
             'type' => $type,
             'media_path' => $mediaNameOnly,
@@ -99,10 +115,21 @@ class FeedbackQuestionController
         ];
 
         if ($id) {
-            $this->feedbackQuestionModel->updateQuestion($id, $data);
+            $currentUser = $_SESSION['user'] ?? null;
+            $filterClientId = ($currentUser && $currentUser['system_role'] === 'admin') ? $clientId : null;
+
+            $result = $this->feedbackQuestionModel->updateQuestion($id, $data, $filterClientId);
+            if (!$result) {
+                $this->toastError('Failed to update feedback question or access denied.', '/unlockyourskills/feedback');
+                return;
+            }
             $questionId = $id;
         } else {
             $questionId = $this->feedbackQuestionModel->saveQuestion($data);
+            if (!$questionId) {
+                $this->toastError('Failed to save feedback question.', '/unlockyourskills/feedback');
+                return;
+            }
         }
 
         // Save/Update options for types that have them
@@ -151,17 +178,15 @@ class FeedbackQuestionController
                 // For new questions, use saveOptions method
                 $options = $_POST['optionText'] ?? [];
                 $optionMedias = $_FILES['optionMedia'] ?? null;
-                $this->feedbackQuestionModel->saveOptions($questionId, $options, $optionMedias, $createdBy);
+                $this->feedbackQuestionModel->saveOptions($questionId, $options, $optionMedias, $createdBy, $clientId);
             }
         }
 
-        $msg = $id ? 'Feedback question updated successfully.' : 'Feedback question saved successfully.';
-        $this->redirectWithAlert($msg, 'FeedbackQuestionController');
-    }
-
-    private function redirectWithAlert($message, $controller)
-    {
-        echo "<script>alert('$message'); window.location.href='index.php?controller=$controller';</script>";
+        if ($id) {
+            $this->toastSuccess('Feedback question updated successfully!', '/unlockyourskills/feedback');
+        } else {
+            $this->toastSuccess('Feedback question saved successfully!', '/unlockyourskills/feedback');
+        }
     }
 
     // File upload helper
@@ -179,8 +204,10 @@ class FeedbackQuestionController
         $randomName = bin2hex(random_bytes(10)) . '.' . $ext;
         $uploadDir = "uploads/$folder/";
 
+        // ✅ Create directory if it doesn't exist with proper permissions
         if (!is_dir($uploadDir)) {
             mkdir($uploadDir, 0777, true);
+            chmod($uploadDir, 0777); // Ensure proper permissions
         }
 
         $targetPath = $uploadDir . $randomName;
@@ -189,18 +216,39 @@ class FeedbackQuestionController
     }
 
     // Delete question by id
-    public function delete()
+    public function delete($id = null)
     {
-        if (!isset($_GET['id']) || !is_numeric($_GET['id'])) {
-            $this->redirectWithAlert('Invalid request parameters.', 'FeedbackQuestionController');
+        // Check if user is logged in and get client_id
+        if (!isset($_SESSION['user']['client_id'])) {
+            $this->toastError('Unauthorized access. Please log in.', '/unlockyourskills/login');
             return;
         }
 
-        $id = (int)$_GET['id'];
-        $success = $this->feedbackQuestionModel->deleteQuestion($id);
+        $clientId = $_SESSION['user']['client_id'];
+        $currentUser = $_SESSION['user'] ?? null;
 
-        $message = $success ? 'Feedback question deleted successfully.' : 'Failed to delete feedback question.';
-        $this->redirectWithAlert($message, 'FeedbackQuestionController');
+        // Use the route parameter $id, fallback to $_GET['id']
+        if (!$id && isset($_GET['id'])) {
+            $id = $_GET['id'];
+        }
+
+        if (!$id || !is_numeric($id)) {
+            $this->toastError('Invalid request parameters.', '/unlockyourskills/feedback');
+            return;
+        }
+
+        $id = (int)$id;
+
+        // Determine client filtering based on user role
+        $filterClientId = ($currentUser && $currentUser['system_role'] === 'admin') ? $clientId : null;
+
+        $success = $this->feedbackQuestionModel->deleteQuestion($id, $filterClientId);
+
+        if ($success) {
+            $this->toastSuccess('Feedback question deleted successfully!', '/unlockyourskills/feedback');
+        } else {
+            $this->toastError('Failed to delete feedback question or access denied.', '/unlockyourskills/feedback');
+        }
     }
 
     // AJAX: get filtered paginated questions as JSON
@@ -235,6 +283,17 @@ class FeedbackQuestionController
     public function ajaxSearch() {
         header('Content-Type: application/json');
 
+        // Check if user is logged in and get client_id
+        if (!isset($_SESSION['user']['client_id'])) {
+            echo json_encode([
+                'success' => false,
+                'message' => 'Unauthorized access. Please log in.'
+            ]);
+            exit();
+        }
+
+        $clientId = $_SESSION['user']['client_id'];
+
         try {
             $limit = 10;
             $page = isset($_POST['page']) ? (int) $_POST['page'] : 1;
@@ -245,9 +304,9 @@ class FeedbackQuestionController
             $type = trim($_POST['type'] ?? '');
             $tags = trim($_POST['tags'] ?? '');
 
-            // Get questions from database
-            $questions = $this->feedbackQuestionModel->getQuestions($search, $type, $limit, $offset, $tags);
-            $totalQuestions = $this->feedbackQuestionModel->getTotalQuestionCount($search, $type, $tags);
+            // Get questions from database (client-specific)
+            $questions = $this->feedbackQuestionModel->getQuestions($search, $type, $limit, $offset, $tags, $clientId);
+            $totalQuestions = $this->feedbackQuestionModel->getTotalQuestionCount($search, $type, $tags, $clientId);
             $totalPages = ceil($totalQuestions / $limit);
 
             $response = [
@@ -286,15 +345,20 @@ class FeedbackQuestionController
     }
 
     // AJAX: get single question details for editing
-    public function getQuestionById()
+    public function getQuestionById($id = null)
     {
-        if (!isset($_GET['id']) || !is_numeric($_GET['id'])) {
+        // Use the route parameter $id, fallback to $_GET['id']
+        if (!$id && isset($_GET['id'])) {
+            $id = $_GET['id'];
+        }
+        
+        if (!$id || !is_numeric($id)) {
             http_response_code(400);
             echo json_encode(['error' => 'Invalid question ID']);
             return;
         }
 
-        $id = (int)$_GET['id'];
+        $id = (int)$id;
         $question = $this->feedbackQuestionModel->getQuestionById($id);
 
         if (!$question) {
@@ -302,8 +366,6 @@ class FeedbackQuestionController
             echo json_encode(['error' => 'Question not found']);
             return;
         }
-
-
 
         header('Content-Type: application/json');
         echo json_encode([

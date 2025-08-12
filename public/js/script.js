@@ -1,3 +1,31 @@
+// Helper function to get project-relative URLs
+function getProjectUrl(path) {
+    const protocol = window.location.protocol;
+    const host = window.location.host;
+    const pathname = window.location.pathname;
+
+    // Extract the project base path - for Unlockyourskills, it's always /Unlockyourskills
+    let basePath = '';
+
+    // Find the project root by looking for the first path segment
+    const pathParts = pathname.split('/').filter(part => part !== '');
+    if (pathParts.length > 0) {
+        basePath = '/' + pathParts[0]; // /Unlockyourskills
+    }
+
+    // Clean up input path
+    path = path.replace(/^\/+/, '');
+
+    const fullUrl = `${protocol}//${host}${basePath}/${path}`;
+
+    return fullUrl;
+}
+
+// Helper function to get API URLs
+function getApiUrl(path) {
+    return getProjectUrl('api/' + path.replace(/^\/+/, ''));
+}
+
 document.addEventListener("DOMContentLoaded", function () {
     let profileToggle = document.getElementById("profileToggle");
     const profileMenu = document.querySelector(".profile-menu");
@@ -15,19 +43,19 @@ document.addEventListener("DOMContentLoaded", function () {
     adjustContainerWidth();
 
     function adjustContainerWidth() {
-        if (sidebar.classList.contains("collapsed")) {
+        if (container && sidebar.classList.contains("collapsed")) {
             container.style.marginLeft = "80px";
             container.style.maxWidth = "calc(100% - 80px)";
-        } else {
+        } else if (container) {
             container.style.marginLeft = "250px";
             container.style.maxWidth = "calc(100% - 250px)";
         }
     }
 
     // ✅ Ensure correct container margin based on sidebar state
-    if (sidebar.classList.contains("collapsed")) {
+    if (container && sidebar.classList.contains("collapsed")) {
         container.style.marginLeft = "80px"; // Sidebar is collapsed
-    } else {
+    } else if (container) {
         container.style.marginLeft = "250px"; // Sidebar is expanded
     }
 
@@ -37,9 +65,9 @@ document.addEventListener("DOMContentLoaded", function () {
         sidebarToggle.addEventListener("click", function () {
             sidebar.classList.toggle("collapsed");
 
-            if (sidebar.classList.contains("collapsed")) {
+            if (container && sidebar.classList.contains("collapsed")) {
                 container.style.marginLeft = "80px"; // Adjust for collapsed sidebar
-            } else {
+            } else if (container) {
                 container.style.marginLeft = "250px"; // Adjust for expanded sidebar
             }
 
@@ -48,85 +76,103 @@ document.addEventListener("DOMContentLoaded", function () {
     }
 
     // ✅ Toggle Profile Dropdown
-    profileToggle.addEventListener("click", function (event) {
-        event.stopPropagation();
-        profileMenu.classList.toggle("active");
-        languageMenu.classList.remove("active");
-    });
+    if (profileToggle && profileMenu) {
+        profileToggle.addEventListener("click", function (event) {
+            event.stopPropagation();
+            profileMenu.classList.toggle("active");
+            if (languageMenu) languageMenu.classList.remove("active");
+        });
+    }
 
     // ✅ Toggle Language Dropdown
-    languageToggle.addEventListener("click", function (event) {
-        event.stopPropagation();
-        languageMenu.classList.toggle("active");
-        profileMenu.classList.remove("active");
-        languageDropdown.classList.toggle("active");
+    if (languageToggle && languageMenu && languageDropdown && languageSearch) {
+        languageToggle.addEventListener("click", function (event) {
+            event.stopPropagation();
+            languageMenu.classList.toggle("active");
+            if (profileMenu) profileMenu.classList.remove("active");
+            languageDropdown.classList.toggle("active");
 
-        // ✅ Clear search box and show all languages again
-        languageSearch.value = "";
-        languageItems.forEach(item => item.style.display = "block");
+            // ✅ Clear search box and show all languages again
+            languageSearch.value = "";
+            languageItems.forEach(item => item.style.display = "block");
 
-        // ✅ Ensure the currently selected language is highlighted
-        highlightSelectedLanguage();
-    });
+            // ✅ Ensure the currently selected language is highlighted
+            highlightSelectedLanguage();
+        });
+    }
 
     // ✅ Prevent dropdown from closing when clicking inside
-    languageDropdown.addEventListener("click", function (event) {
-        event.stopPropagation();
-    });
+    if (languageDropdown) {
+        languageDropdown.addEventListener("click", function (event) {
+            event.stopPropagation();
+        });
+    }
 
     // ✅ Keep dropdown open when clicking inside the search box
-    languageSearch.addEventListener("click", function (event) {
-        event.stopPropagation();
-    });
+    if (languageSearch) {
+        languageSearch.addEventListener("click", function (event) {
+            event.stopPropagation();
+        });
+    }
 
     // ✅ Close dropdown when clicking outside
     document.addEventListener("click", function () {
-        profileMenu.classList.remove("active");
-        languageMenu.classList.remove("active");
+        if (profileMenu) profileMenu.classList.remove("active");
+        if (languageMenu) languageMenu.classList.remove("active");
     });
 
     // ✅ Filter languages in real-time
-    languageSearch.addEventListener("input", function () {
-        const searchValue = this.value.toLowerCase();
+    if (languageSearch && languageItems.length > 0) {
+        languageSearch.addEventListener("input", function () {
+            const searchValue = this.value.toLowerCase();
 
-        languageItems.forEach(function (item) {
-            const text = item.textContent.toLowerCase();
-            item.style.display = text.includes(searchValue) ? "block" : "none";
+            languageItems.forEach(function (item) {
+                const text = item.textContent.toLowerCase();
+                item.style.display = text.includes(searchValue) ? "block" : "none";
+            });
         });
-    });
+    }
 
     // ✅ Language selection without full-page reload
-    languageItems.forEach(item => {
-        item.addEventListener("click", function (event) {
-            event.preventDefault();
-            let selectedLang = this.getAttribute("data-lang");
+    if (languageItems.length > 0) {
+        languageItems.forEach(item => {
+            item.addEventListener("click", function (event) {
+                event.preventDefault();
+                let selectedLang = this.getAttribute("data-lang");
 
-            // ✅ Update URL without reloading the page
-            let url = new URL(window.location.href);
-            url.searchParams.set("lang", selectedLang);
+                // ✅ Update URL without reloading the page
+                let url = new URL(window.location.href);
+                url.searchParams.set("lang", selectedLang);
 
-            fetch(url.href)
-                .then(() => {
-                    // ✅ Update Navbar Language
-                    document.getElementById("selectedLanguage").textContent = selectedLang.toUpperCase();
-                    document.querySelector(".language-btn i").className = "fas fa-language";
+                fetch(url.href)
+                    .then(() => {
+                        // ✅ Update Navbar Language
+                        const selectedLanguageEl = document.getElementById("selectedLanguage");
+                        const languageBtnIcon = document.querySelector(".language-btn i");
 
-                    // ✅ Mark selected language in the dropdown
-                    highlightSelectedLanguage(selectedLang);
+                        if (selectedLanguageEl) selectedLanguageEl.textContent = selectedLang.toUpperCase();
+                        if (languageBtnIcon) languageBtnIcon.className = "fas fa-language";
 
-                    // ✅ Close the dropdown
-                    languageDropdown.classList.remove("active");
-                    languageMenu.classList.remove("active");
-                    // ✅ FORCE PAGE RELOAD TO APPLY LOCALIZATION
-                    location.reload();
-                })
-                .catch(err => console.error("Language switch error:", err));
+                        // ✅ Mark selected language in the dropdown
+                        highlightSelectedLanguage(selectedLang);
+
+                        // ✅ Close the dropdown
+                        if (languageDropdown) languageDropdown.classList.remove("active");
+                        if (languageMenu) languageMenu.classList.remove("active");
+                        // ✅ FORCE PAGE RELOAD TO APPLY LOCALIZATION
+                        location.reload();
+                    })
+                    .catch(err => console.error("Language switch error:", err));
+            });
         });
-    });
+    }
 
     // ✅ Function to highlight the selected language in the dropdown
     function highlightSelectedLanguage(selectedLang = null) {
-        let currentLang = selectedLang || document.getElementById("selectedLanguage").textContent.toLowerCase();
+        const selectedLanguageEl = document.getElementById("selectedLanguage");
+        if (!selectedLanguageEl || languageItems.length === 0) return;
+
+        let currentLang = selectedLang || selectedLanguageEl.textContent.toLowerCase();
 
         languageItems.forEach(langItem => {
             langItem.classList.remove("selected");
@@ -137,7 +183,9 @@ document.addEventListener("DOMContentLoaded", function () {
     }
 
     // ✅ Ensure selected language is highlighted on page load
-    highlightSelectedLanguage();
+    if (languageItems.length > 0) {
+        highlightSelectedLanguage();
+    }
 
 
     document.querySelectorAll(".tab-pane").forEach(pane => {
@@ -154,83 +202,147 @@ document.addEventListener("DOMContentLoaded", function () {
     }
 
     // Manage Portal tab change hide and show
-
-
     let managePortalTabs = document.querySelectorAll("#managePortalTabs a");
+
+    // Function to activate a specific tab
+    function activateManagePortalTab(tabId) {
+        // Hide all tab panes
+        document.querySelectorAll(".tab-pane").forEach(pane => {
+            pane.classList.remove("show", "active");
+            pane.style.display = "none"; // Explicitly hide all
+        });
+
+        // Remove active class from all tabs
+        document.querySelectorAll("#managePortalTabs a").forEach(tab => {
+            tab.classList.remove("active");
+        });
+
+        // Show the selected tab pane
+        let targetPane = document.getElementById(tabId);
+        if (targetPane) {
+            targetPane.classList.add("show", "active");
+            targetPane.style.display = "block"; // Ensure it is visible
+        }
+
+        // Add active class to the corresponding tab
+        let targetTab = document.querySelector(`#managePortalTabs a[href="#${tabId}"]`);
+        if (targetTab) {
+            targetTab.classList.add("active");
+        }
+    }
+
+    // Check URL hash on page load and activate corresponding tab
+    function checkUrlHashForTabs() {
+        const hash = window.location.hash.substring(1); // Remove the # symbol
+        if (hash && ['user-details', 'course-details', 'social', 'settings'].includes(hash)) {
+            activateManagePortalTab(hash);
+        }
+    }
+
+    // Run on page load
+    checkUrlHashForTabs();
+
+    // Listen for hash changes
+    window.addEventListener('hashchange', checkUrlHashForTabs);
 
     managePortalTabs.forEach(tab => {
         tab.addEventListener("click", function (event) {
             event.preventDefault();
             const targetId = this.getAttribute("href").substring(1);
 
-            // Hide all tab panes
-            document.querySelectorAll(".tab-pane").forEach(pane => {
-                pane.classList.remove("show", "active");
-                pane.style.display = "none"; // Explicitly hide all
-            });
+            // Update URL hash
+            window.location.hash = targetId;
 
-            // Remove active class from all tabs
-            document.querySelectorAll("#managePortalTabs a").forEach(tab => {
-                tab.classList.remove("active");
-            });
-
-            // Show the selected tab pane
-            let targetPane = document.getElementById(targetId);
-            if (targetPane) {
-                targetPane.classList.add("show", "active");
-                targetPane.style.display = "block"; // Ensure it is visible
-            }
-
-            // Add active class to the clicked tab
-            this.classList.add("active");
+            // Activate the tab
+            activateManagePortalTab(targetId);
         });
     });
 
     let userManagementBtn = document.querySelector(".user-box[onclick]");
     if (userManagementBtn) {
         userManagementBtn.addEventListener("click", function () {
-            window.location.href = "index.php?controller=UserManagementController";
+            window.location.href = getProjectUrl("users");
         });
     }
 
+    // Add user button functionality - check if it's a modal button or regular link
     let addUserBtn = document.querySelector(".add-user-btn");
     if (addUserBtn) {
-        addUserBtn.addEventListener("click", function () {
-            window.location.href = "index.php?controller=UserManagementController&action=addUser";
-        });
+        // Only add redirect behavior if it's NOT a modal button
+        if (!addUserBtn.hasAttribute('data-bs-toggle')) {
+            addUserBtn.addEventListener("click", function () {
+                window.location.href = getProjectUrl("users/create");
+            });
+        }
+        // If it has data-bs-toggle="modal", let Bootstrap handle it
     }
 
 
 
 
-    // Add user page script for hide and show tab
-    let addUserTabs = document.querySelectorAll("#addUserTabs a");
+    // Add user page script for hide and show tab (Bootstrap 5 compatible)
+    let addUserTabs = document.querySelectorAll("#addUserTabs button[data-bs-toggle='tab']");
+    let editUserTabs = document.querySelectorAll("#editUserTabs button[data-bs-toggle='tab']");
 
+    // Handle Add User tabs
     addUserTabs.forEach(tab => {
         tab.addEventListener("click", function (event) {
             event.preventDefault();
-            const targetId = this.getAttribute("href").substring(1);
+            const targetId = this.getAttribute("data-bs-target");
 
-            // Hide all tab panes
-            document.querySelectorAll(".tab-pane").forEach(pane => {
+            // Hide all tab panes in the add user form
+            document.querySelectorAll("#addUserTabsContent .tab-pane").forEach(pane => {
                 pane.classList.remove("show", "active");
-                pane.style.display = "none"; // Explicitly hide all
+                pane.style.display = "none";
             });
 
-            // Remove active class from all tabs
-            document.querySelectorAll("#addUserTabs a").forEach(tab => {
-                tab.classList.remove("active");
+            // Remove active class from all add user tabs
+            addUserTabs.forEach(tabEl => {
+                tabEl.classList.remove("active");
+                tabEl.setAttribute("aria-selected", "false");
             });
 
             // Show the selected tab pane
-            let targetPane = document.getElementById(targetId);
+            let targetPane = document.querySelector(targetId);
             if (targetPane) {
                 targetPane.classList.add("show", "active");
-                targetPane.style.display = "block"; // Ensure it is visible
+                targetPane.style.display = "block";
             }
 
             // Add active class to the clicked tab
             this.classList.add("active");
+            this.setAttribute("aria-selected", "true");
+        });
+    });
+
+    // Handle Edit User tabs
+    editUserTabs.forEach(tab => {
+        tab.addEventListener("click", function (event) {
+            event.preventDefault();
+            const targetId = this.getAttribute("data-bs-target");
+
+            // Hide all tab panes in the edit user form
+            document.querySelectorAll("#editUserTabsContent .tab-pane").forEach(pane => {
+                pane.classList.remove("show", "active");
+                pane.style.display = "none";
+            });
+
+            // Remove active class from all edit user tabs
+            editUserTabs.forEach(tabEl => {
+                tabEl.classList.remove("active");
+                tabEl.setAttribute("aria-selected", "false");
+            });
+
+            // Show the selected tab pane
+            let targetPane = document.querySelector(targetId);
+            if (targetPane) {
+                targetPane.classList.add("show", "active");
+                targetPane.style.display = "block";
+            }
+
+            // Add active class to the clicked tab
+            this.classList.add("active");
+            this.setAttribute("aria-selected", "true");
         });
     });
 
@@ -513,8 +625,9 @@ document.addEventListener("DOMContentLoaded", function () {
     const citySelect = document.getElementById("citySelect");
     const timezoneSelect = document.getElementById("timezoneSelect");
 
-    // ✅ Fetch States on Country Select
-    countrySelect.addEventListener("change", function () {
+    // ✅ Fetch States on Country Select (only if elements exist)
+    if (countrySelect && stateSelect && citySelect && timezoneSelect) {
+        countrySelect.addEventListener("change", function () {
         const countryId = this.value;
         stateSelect.innerHTML = '<option value="">Select State</option>';
         citySelect.innerHTML = '<option value="">Select City</option>';
@@ -524,7 +637,7 @@ document.addEventListener("DOMContentLoaded", function () {
 
         if (countryId) {
             // ✅ Fetch States
-            fetch(`index.php?controller=LocationController&action=getStatesByCountry`, {
+            fetch(getApiUrl('locations/states'), {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
                 body: `country_id=${countryId}`,
@@ -569,33 +682,34 @@ document.addEventListener("DOMContentLoaded", function () {
         }
     });
 
-    // ✅ Fetch Cities on State Select
-    stateSelect.addEventListener("change", function () {
-        const stateId = this.value;
-        citySelect.innerHTML = '<option value="">Select City</option>';
-        if (stateId) {
-            fetch(`index.php?controller=LocationController&action=getCitiesByState`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-                body: `state_id=${stateId}`,
-            })
-                .then(response => response.json())
-                .then(data => {
-                    if (data.length > 0) {
-                        data.forEach(city => {
-                            const option = document.createElement('option');
-                            option.value = city.id;
-                            option.textContent = city.name;
-                            citySelect.appendChild(option);
-                        });
-                        citySelect.disabled = false;
-                    } else {
-                        citySelect.disabled = true;
-                    }
+        // ✅ Fetch Cities on State Select
+        stateSelect.addEventListener("change", function () {
+            const stateId = this.value;
+            citySelect.innerHTML = '<option value="">Select City</option>';
+            if (stateId) {
+                fetch(getApiUrl('locations/cities'), {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                    body: `state_id=${stateId}`,
                 })
-                .catch(error => console.error('Error fetching cities:', error));
-        }
-    });
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.length > 0) {
+                            data.forEach(city => {
+                                const option = document.createElement('option');
+                                option.value = city.id;
+                                option.textContent = city.name;
+                                citySelect.appendChild(option);
+                            });
+                            citySelect.disabled = false;
+                        } else {
+                            citySelect.disabled = true;
+                        }
+                    })
+                    .catch(error => console.error('Error fetching cities:', error));
+            }
+        });
+    } // End of country-state-city script
     
     // Disable date on datepicker
     const dobInput = document.getElementById("dob");
@@ -616,25 +730,88 @@ document.addEventListener("DOMContentLoaded", function () {
     let profileIdInput = document.getElementById("profile_id");
 
     // ✅ Fetch Client Name from Session (Injected via PHP)
-    let clientName = document.getElementById("clientName").value; // Hidden input in add_user.php
+    let clientNameElement = document.getElementById("clientName");
 
-    if (clientName) {
-        // ✅ Extract First 3 Letters of Client Name
-        let clientPrefix = clientName.substring(0, 3).toUpperCase();
+    if (clientNameElement && profileIdInput) {
+        let clientName = clientNameElement.value; // Hidden input in add_user.php
 
-        // ✅ Generate a Unique 7-Digit Number
-        let randomNumber = Math.floor(1000000 + Math.random() * 9000000);
+        if (clientName) {
+            // ✅ Extract First 3 Letters of Client Name
+            let clientPrefix = clientName.substring(0, 3).toUpperCase();
 
-        // ✅ Final Profile ID (Example: "DEE1234567")
-        let generatedProfileId = clientPrefix + randomNumber;
+            // ✅ Generate a Unique 7-Digit Number
+            let randomNumber = Math.floor(1000000 + Math.random() * 9000000);
 
-        // ✅ Auto-Fill Profile ID Field (Read-Only)
-        profileIdInput.value = generatedProfileId;
+            // ✅ Final Profile ID (Example: "DEE1234567")
+            let generatedProfileId = clientPrefix + randomNumber;
+
+            // ✅ Auto-Fill Profile ID Field (Read-Only)
+            profileIdInput.value = generatedProfileId;
+        }
     }
 
 });
 
+// ✅ Professional Delete Confirmations (moved from vlr.php)
+document.addEventListener('click', function(e) {
+    // SCORM Package Delete
+    if (e.target.closest('.delete-scorm')) {
+        e.preventDefault();
+        const link = e.target.closest('.delete-scorm');
+        const id = link.dataset.id;
+        const title = link.dataset.title;
 
+        confirmDelete('SCORM package "' + title + '"', function() {
+            window.location.href = getProjectUrl('vlr/scorm/' + id);
+        });
+    }
 
+    // Document Delete
+    if (e.target.closest('.delete-document')) {
+        e.preventDefault();
+        const link = e.target.closest('.delete-document');
+        const id = link.dataset.id;
+        const title = link.dataset.title;
 
+        confirmDelete('document "' + title + '"', function() {
+            window.location.href = getProjectUrl('vlr/documents/' + id);
+        });
+    }
+
+    // External Content Delete
+    if (e.target.closest('.delete-external')) {
+        e.preventDefault();
+        const link = e.target.closest('.delete-external');
+        const id = link.dataset.id;
+        const title = link.dataset.title;
+
+        confirmDelete('external content "' + title + '"', function() {
+            window.location.href = getProjectUrl('vlr/external/' + id);
+        });
+    }
+
+    // Survey Delete
+    if (e.target.closest('.delete-survey')) {
+        e.preventDefault();
+        const link = e.target.closest('.delete-survey');
+        const id = link.dataset.id;
+        const title = link.dataset.title;
+
+        confirmDelete('survey "' + title + '"', function() {
+            window.location.href = getProjectUrl('surveys/' + id);
+        });
+    }
+
+    // Interactive Content Delete
+    if (e.target.closest('.delete-interactive')) {
+        e.preventDefault();
+        const link = e.target.closest('.delete-interactive');
+        const id = link.dataset.id;
+        const title = link.dataset.title;
+
+        confirmDelete('interactive content "' + title + '"', function() {
+            window.location.href = getProjectUrl('vlr/interactive/' + id);
+        });
+    }
+});
 

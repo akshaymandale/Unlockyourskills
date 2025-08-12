@@ -1,11 +1,15 @@
 <?php
-// views/vlr.php
+// views/vlr.php 
 //echo '<pre>'; print_r($_SESSION);
 
 $clientName = $_SESSION['username'] ?? 'DEFAULT';
 
 $vlrController = new VLRController();
 $languageList = $vlrController->getLanguages();
+
+require_once 'includes/permission_helper.php';
+$canCreateVLR = canCreate('vlr');
+$canAccessVLR = canAccess('vlr');
 ?>
 
 <?php include 'includes/header.php'; ?>
@@ -82,6 +86,11 @@ $languageList = $vlrController->getLanguages();
                     <?= Localization::translate('interactive_ai_content'); ?>
                 </a>
             </li>
+            <li class="nav-item">
+                <a class="nav-link <?= $activeTab === 'assignment' ? 'active' : ''; ?>" data-bs-toggle="tab" href="#assignment">
+                    <?= Localization::translate('assignment'); ?>
+                </a>
+            </li>
         </ul>
 
         <!-- ✅ Tab Content Section -->
@@ -94,10 +103,12 @@ $languageList = $vlrController->getLanguages();
                     <h3><?= Localization::translate('scorm'); ?></h3>
 
                     <!-- ✅ SCORM "Add" Button - Opens Modal -->
+                    <?php if ($canCreateVLR): ?>
                     <button class="btn btn-primary mb-3" data-bs-toggle="modal" id="addScormBtn"
                         data-bs-target="#scormModal">
                         + <?= Localization::translate('add_scorm'); ?>
                     </button>
+                    <?php endif; ?>
 
                     <!-- ✅ SCORM ADD MODAL -->
                     <div class="modal fade" id="scormModal" tabindex="-1" role="dialog"
@@ -116,7 +127,7 @@ $languageList = $vlrController->getLanguages();
                                 </div>
                                 <div class="modal-body">
                                     <form id="scormForm"
-                                        action="index.php?controller=VLRController&action=addOrEditScormPackage"
+                                        action="/unlockyourskills/vlr/scorm"
                                         method="POST" enctype="multipart/form-data">
                                         <input type="hidden" id="scorm_id" name="scorm_id">
                                         <input type="hidden" id="existing_zip" name="existing_zip">
@@ -134,11 +145,14 @@ $languageList = $vlrController->getLanguages();
                                             </div>
                                             <div class="col-md-6">
                                                 <div class="form-group">
-                                                    <label for="zipFile" class="form-label"><?= Localization::translate('upload_scorm_zip'); ?> <span class="text-danger">*</span></label>
-                                                    <input type="file" class="form-control" id="zipFile" name="zipFile" accept=".zip">
-                                                    <small class="text-muted">Max size: 100MB. Formats: ZIP files only.</small>
-                                                    <input type="hidden" id="existing_zip" name="existing_zip">
-                                                    <div id="existingZipDisplay" class="mt-2"></div>
+                                                    <label for="zipFile" class="form-label">
+                                                        <?= Localization::translate('upload_scorm_zip'); ?>
+                                                        <span class="text-danger" id="zipRequired">*</span>
+                                                        <span class="text-muted" id="zipOptional" style="display: none;">(Optional - leave empty to keep existing file)</span>
+                                                    </label>
+                                                    <input type="file" class="form-control" id="zipFile" name="zipFile" accept=".zip,.rar,.7z">
+                                                    <small class="text-muted">Max size: 50MB. Formats: ZIP, RAR, 7Z files</small>
+                                                    <div id="scormZipPreview" class="mt-2"></div>
                                                 </div>
                                             </div>
                                         </div>
@@ -374,14 +388,17 @@ $languageList = $vlrController->getLanguages();
                                                         <?= htmlspecialchars($displayTitle) ?>
                                                     </h5>
                                                     <div class="scorm-actions">
+                                                        <?php if (!empty($scorm['can_edit'])): ?>
                                                         <a href="#" class="edit-scorm" data-scorm='<?= json_encode($scorm); ?>'>
                                                             <i class="fas fa-edit edit-icon"
                                                                 title="<?= Localization::translate('edit'); ?>"></i>
                                                         </a>
-                                                        <a href="index.php?controller=VLRController&action=delete&id=<?= $scorm['id'] ?>"
-                                                            onclick="return confirm('<?= Localization::translate('delete_confirmation_scrom'); ?>');">
+                                                        <?php endif; ?>
+                                                        <?php if (!empty($scorm['can_delete'])): ?>
+                                                        <a href="#" class="delete-scorm" data-id="<?= $scorm['id'] ?>" data-title="<?= htmlspecialchars($scorm['title']) ?>">
                                                             <i class="fas fa-trash-alt delete-icon"
                                                                 title="<?= Localization::translate('delete'); ?>"></i></a>
+                                                        <?php endif; ?>
                                                     </div>
                                                 </div>
                                             </div>
@@ -408,10 +425,12 @@ $languageList = $vlrController->getLanguages();
                     <h3><?= Localization::translate('non_scorm'); ?></h3>
 
                     <!-- ✅ Non-SCORM "Add" Button - Opens Modal -->
+                    <?php if ($canCreateVLR): ?>
                     <button class="btn btn-primary mb-3" data-bs-toggle="modal" id="addNonScormBtn"
                         data-bs-target="#nonScormModal">
                         + <?= Localization::translate('add_non_scorm'); ?>
                     </button>
+                    <?php endif; ?>
 
                     <!-- ✅ NON-SCORM ADD MODAL -->
                     <div class="modal fade" id="nonScormModal" tabindex="-1" role="dialog"
@@ -427,7 +446,7 @@ $languageList = $vlrController->getLanguages();
                                 </div>
                                 <div class="modal-body">
                                     <form id="nonScormForm"
-                                        action="index.php?controller=VLRController&action=addOrEditNonScormPackage"
+                                        action="/unlockyourskills/vlr/non-scorm"
                                         method="POST" enctype="multipart/form-data">
                                         <input type="hidden" id="non_scorm_id" name="non_scorm_id">
                                         <input type="hidden" id="existing_content_package" name="existing_content_package">
@@ -917,13 +936,16 @@ $languageList = $vlrController->getLanguages();
                                                         <?= htmlspecialchars($displayTitle) ?>
                                                     </h5>
                                                     <div class="nonscorm-actions">
+                                                        <?php if (!empty($package['can_edit'])): ?>
                                                         <a href="#" class="edit-non-scorm" data-package='<?= json_encode($package); ?>'>
                                                             <i class="fas fa-edit edit-icon" title="<?= Localization::translate('edit'); ?>"></i>
                                                         </a>
-                                                        <a href="index.php?controller=VLRController&action=deleteNonScormPackage&id=<?= $package['id'] ?>"
-                                                           onclick="return confirm('<?= Localization::translate('delete_confirmation'); ?>');">
+                                                        <?php endif; ?>
+                                                        <?php if (!empty($package['can_delete'])): ?>
+                                                        <a href="#" class="delete-non-scorm" data-id="<?= $package['id'] ?>" data-title="<?= htmlspecialchars($package['title']) ?>">
                                                             <i class="fas fa-trash-alt delete-icon" title="<?= Localization::translate('delete'); ?>"></i>
                                                         </a>
+                                                        <?php endif; ?>
                                                     </div>
                                                 </div>
                                             </div>
@@ -946,10 +968,12 @@ $languageList = $vlrController->getLanguages();
                     <h3><?= Localization::translate('assessment'); ?></h3>
                     <div class="d-flex gap-2">
                         <!-- Add Assessment Button -->
+                        <?php if ($canCreateVLR): ?>
                         <button class="btn btn-sm btn-primary" id="addAssessmentBtn" data-bs-toggle="modal"
                             data-bs-target="#assessment_assessmentModal">
                             + <?= Localization::translate('add_assessment'); ?>
                         </button>
+                        <?php endif; ?>
 
                         <!-- ✅ Assessment Modal -->
                         <div class="modal fade" id="assessment_assessmentModal" tabindex="-1"
@@ -965,7 +989,7 @@ $languageList = $vlrController->getLanguages();
                                     </div>
                                     <div class="modal-body">
                                         <form id="assessment_assessmentForm"
-                                            action="index.php?controller=VLRController&action=addOrEditAssessment"
+                                            action="/unlockyourskills/vlr/assessment-packages"
                                             method="POST" enctype="multipart/form-data">
                                             <input type="hidden" name="selected_question_ids"
                                                 id="assessment_selectedQuestionIds">
@@ -1263,7 +1287,7 @@ $languageList = $vlrController->getLanguages();
 
 
 
-                        <a href="index.php?controller=QuestionController&action=index" class="btn btn-sm btn-primary">
+                        <a href="/unlockyourskills/vlr/questions" class="btn btn-sm btn-primary">
                             + <?= Localization::translate('add_questions'); ?>
                         </a>
                     </div>
@@ -1293,16 +1317,19 @@ $languageList = $vlrController->getLanguages();
                                                     <?= htmlspecialchars(strlen($assessment['title']) > 20 ? substr($assessment['title'], 0, 17) . '...' : $assessment['title']) ?>
                                                 </h5>
                                                 <div class="assessment-actions">
+                                                    <?php if (!empty($assessment['can_edit'])): ?>
                                                     <a href="#" class="edit-assessment"
                                                         data-assessment='<?= json_encode($assessment); ?>'>
                                                         <i class="fas fa-edit edit-icon"
                                                             title="<?= Localization::translate('edit'); ?>"></i>
                                                     </a>
-                                                    <a href="index.php?controller=VLRController&action=deleteAssessment&id=<?= $assessment['id'] ?>"
-                                                        onclick="return confirm('<?= Localization::translate('delete_confirmation'); ?>');">
+                                                    <?php endif; ?>
+                                                    <?php if (!empty($assessment['can_delete'])): ?>
+                                                    <a href="#" class="delete-assessment" data-id="<?= $assessment['id'] ?>" data-title="<?= htmlspecialchars($assessment['title']) ?>">
                                                         <i class="fas fa-trash-alt delete-icon"
                                                             title="<?= Localization::translate('delete'); ?>"></i>
                                                     </a>
+                                                    <?php endif; ?>
                                                 </div>
                                             </div>
                                         </div>
@@ -1328,30 +1355,32 @@ $languageList = $vlrController->getLanguages();
                     <h3><?= Localization::translate('audio'); ?></h3>
 
                     <!-- ✅ Audio "Add" Button -->
+                    <?php if ($canCreateVLR): ?>
                     <button class="btn btn-primary mb-3" data-bs-toggle="modal" id="addAudioBtn"
                         data-bs-target="#audioModal">
                         + <?= Localization::translate('add_audio'); ?>
                     </button>
+                    <?php endif; ?>
                 </div>
 
                 <!-- ✅ Audio Modal -->
                 <div class="modal fade" id="audioModal" tabindex="-1" aria-labelledby="audioModalLabel"
                     aria-hidden="true">
                     <div class="modal-dialog modal-lg">
-                        <form id="audioForm" action="index.php?controller=VLRController&action=addOrEditAudioPackage"
-                            method="POST" enctype="multipart/form-data">
-                            <input type="hidden" id="audio_idaudio" name="audio_idaudio">
+                        <div class="modal-content">
+                            <div class="modal-header">
+                                <h5 class="modal-title" id="audioModalLabel">
+                                    <?= Localization::translate('add_audio_package'); ?>
+                                </h5>
+                                <button type="button" class="btn-close" data-bs-dismiss="modal"
+                                    aria-label="Close"></button>
+                            </div>
 
-                            <div class="modal-content">
-                                <div class="modal-header">
-                                    <h5 class="modal-title" id="audioModalLabel">
-                                        <?= Localization::translate('add_audio_package'); ?>
-                                    </h5>
-                                    <button type="button" class="btn-close" data-bs-dismiss="modal"
-                                        aria-label="Close"></button>
-                                </div>
+                            <div class="modal-body">
+                                <form id="audioForm" action="/unlockyourskills/vlr/audio"
+                                    method="POST" enctype="multipart/form-data">
+                                    <input type="hidden" id="audio_idaudio" name="audio_idaudio">
 
-                                <div class="modal-body">
                                     <div class="row g-3">
                                         <!-- Title -->
                                         <div class="col-md-6">
@@ -1449,17 +1478,17 @@ $languageList = $vlrController->getLanguages();
                                             </div>
                                         </div>
                                     </div>
-                                </div>
-
-                                <!-- Modal Footer -->
-                                <div class="modal-footer">
-                                    <button type="submit"
-                                        class="btn btn-primary"><?= Localization::translate('submit'); ?></button>
-                                    <button type="button" class="btn btn-danger"
-                                        id="clearFormaudio"><?= Localization::translate('cancel'); ?></button>
-                                </div>
+                                </form>
                             </div>
-                        </form>
+
+                            <!-- Modal Footer -->
+                            <div class="modal-footer">
+                                <button type="submit" form="audioForm"
+                                    class="btn btn-primary"><?= Localization::translate('submit'); ?></button>
+                                <button type="button" class="btn btn-danger"
+                                    id="clearFormaudio"><?= Localization::translate('cancel'); ?></button>
+                            </div>
+                        </div>
                     </div>
                 </div>
 
@@ -1479,15 +1508,22 @@ $languageList = $vlrController->getLanguages();
                                                     <?= htmlspecialchars(strlen($audio['title']) > 20 ? substr($audio['title'], 0, 17) . '...' : $audio['title']) ?>
                                                 </h5>
                                                 <div class="audio-actions">
+                                                    <a href="#" class="preview-audio" data-audio='<?= json_encode($audio); ?>'>
+                                                        <i class="fas fa-eye preview-icon"
+                                                            title="<?= Localization::translate('preview'); ?>"></i>
+                                                    </a>
+                                                    <?php if (!empty($audio['can_edit'])): ?>
                                                     <a href="#" class="edit-audio" data-audio='<?= json_encode($audio); ?>'>
                                                         <i class="fas fa-edit edit-icon"
                                                             title="<?= Localization::translate('edit'); ?>"></i>
                                                     </a>
-                                                    <a href="index.php?controller=VLRController&action=deleteAudioPackage&id=<?= $audio['id'] ?>"
-                                                        onclick="return confirm('<?= Localization::translate('delete_confirmation'); ?>');">
+                                                    <?php endif; ?>
+                                                    <?php if (!empty($audio['can_delete'])): ?>
+                                                    <a href="#" class="delete-audio" data-id="<?= $audio['id'] ?>" data-title="<?= htmlspecialchars($audio['title']) ?>">
                                                         <i class="fas fa-trash-alt delete-icon"
                                                             title="<?= Localization::translate('delete'); ?>"></i>
                                                     </a>
+                                                    <?php endif; ?>
                                                 </div>
                                             </div>
                                         </div>
@@ -1507,16 +1543,18 @@ $languageList = $vlrController->getLanguages();
                 <div class="d-flex justify-content-between align-items-center">
                     <h3><?= Localization::translate('video'); ?></h3>
                     <!-- ✅ Video "Add" Button -->
+                    <?php if ($canCreateVLR): ?>
                     <button class="btn btn-primary mb-3" data-bs-toggle="modal" id="addVideoBtn"
                         data-bs-target="#videoModal">
                         + <?= Localization::translate('add_video'); ?>
                     </button>
+                    <?php endif; ?>
                 </div>
                 <!-- ✅ Video Modal -->
                 <div class="modal fade" id="videoModal" tabindex="-1" aria-labelledby="videoModalLabel"
                     aria-hidden="true">
                     <div class="modal-dialog modal-lg">
-                        <form id="videoForm" action="index.php?controller=VLRController&action=addOrEditVideoPackage"
+                        <form id="videoForm" action="/unlockyourskills/vlr/video"
                             method="POST" enctype="multipart/form-data">
                             <input type="hidden" id="video_idvideo" name="video_idvideo">
 
@@ -1658,15 +1696,22 @@ $languageList = $vlrController->getLanguages();
                                                     <?= htmlspecialchars(strlen($video['title']) > 20 ? substr($video['title'], 0, 17) . '...' : $video['title']) ?>
                                                 </h5>
                                                 <div class="video-actions">
+                                                    <a href="#" class="preview-video" data-video='<?= json_encode($video); ?>'>
+                                                        <i class="fas fa-eye preview-icon"
+                                                            title="<?= Localization::translate('preview'); ?>"></i>
+                                                    </a>
+                                                    <?php if (!empty($video['can_edit'])): ?>
                                                     <a href="#" class="edit-video" data-video='<?= json_encode($video); ?>'>
                                                         <i class="fas fa-edit edit-icon"
                                                             title="<?= Localization::translate('edit'); ?>"></i>
                                                     </a>
-                                                    <a href="index.php?controller=VLRController&action=deleteVideoPackage&id=<?= $video['id'] ?>"
-                                                        onclick="return confirm('<?= Localization::translate('delete_confirmation'); ?>');">
+                                                    <?php endif; ?>
+                                                    <?php if (!empty($video['can_delete'])): ?>
+                                                    <a href="#" class="delete-video" data-id="<?= $video['id'] ?>" data-title="<?= htmlspecialchars($video['title']) ?>">
                                                         <i class="fas fa-trash-alt delete-icon"
                                                             title="<?= Localization::translate('delete'); ?>"></i>
                                                     </a>
+                                                    <?php endif; ?>
                                                 </div>
                                             </div>
                                         </div>
@@ -1689,10 +1734,12 @@ $languageList = $vlrController->getLanguages();
                 <!-- Document Header Section -->
                 <div class="d-flex justify-content-between align-items-center mb-3">
                     <h3><?= Localization::translate('documents'); ?></h3>
+                    <?php if ($canCreateVLR): ?>
                     <button class="btn btn-sm btn-primary" data-bs-toggle="modal" data-bs-target="#documentModal"
                         id="addDocumentBtn">
                         + <?= Localization::translate('add_document'); ?>
                     </button>
+                    <?php endif; ?>
 
                     <div class="modal fade" id="documentModal" tabindex="-1" aria-labelledby="documentModalLabel"
                         aria-hidden="true">
@@ -1708,7 +1755,7 @@ $languageList = $vlrController->getLanguages();
                                 </div>
                                 <div class="modal-body">
                                     <form id="documentForm" method="POST"
-                                        action="index.php?controller=VLRController&action=addOrEditDocument"
+                                        action="/unlockyourskills/vlr/documents"
                                         enctype="multipart/form-data">
                                         <input type="hidden" id="documentId" name="documentId">
                                         <input type="hidden" id="existingDocumentWordExcelPpt"
@@ -1986,16 +2033,24 @@ $languageList = $vlrController->getLanguages();
                                                     </h5>
 
                                                     <div class="content-actions">
+                                                        <a href="#" class="preview-document"
+                                                            data-document='<?= json_encode($document); ?>'>
+                                                            <i class="fas fa-eye preview-icon"
+                                                                title="<?= Localization::translate('preview'); ?>"></i>
+                                                        </a>
+                                                        <?php if (!empty($document['can_edit'])): ?>
                                                         <a href="#" class="edit-document"
                                                             data-document='<?= json_encode($document); ?>'>
                                                             <i class="fas fa-edit edit-icon"
                                                                 title="<?= Localization::translate('edit'); ?>"></i>
                                                         </a>
-                                                        <a href="index.php?controller=VLRController&action=deleteDocument&id=<?= $document['id'] ?>"
-                                                            onclick="return confirm('<?= Localization::translate('confirm_delete_document'); ?>');">
+                                                        <?php endif; ?>
+                                                        <?php if (!empty($document['can_delete'])): ?>
+                                                        <a href="#" class="delete-document" data-id="<?= $document['id'] ?>" data-title="<?= htmlspecialchars($document['title']) ?>">
                                                             <i class="fas fa-trash-alt delete-icon"
                                                                 title="<?= Localization::translate('delete'); ?>"></i>
                                                         </a>
+                                                        <?php endif; ?>
                                                     </div>
                                                 </div>
                                             </div>
@@ -2017,16 +2072,18 @@ $languageList = $vlrController->getLanguages();
                 <div class="d-flex justify-content-between align-items-center">
                     <h3><?= Localization::translate('image'); ?></h3>
                     <!-- ✅ Image "Add" Button -->
+                    <?php if ($canCreateVLR): ?>
                     <button class="btn btn-primary mb-3" data-bs-toggle="modal" id="addImageBtn"
                         data-bs-target="#imageModal">
                         + <?= Localization::translate('add_image'); ?>
                     </button>
+                    <?php endif; ?>
                 </div>
                 <!-- ✅ Image Modal -->
                 <div class="modal fade" id="imageModal" tabindex="-1" aria-labelledby="imageModalLabel"
                     aria-hidden="true">
                     <div class="modal-dialog modal-lg">
-                        <form id="imageForm" action="index.php?controller=VLRController&action=addOrEditImagePackage"
+                        <form id="imageForm" action="/unlockyourskills/vlr/images"
                             method="POST" enctype="multipart/form-data">
                             <input type="hidden" id="image_idimage" name="image_idimage">
 
@@ -2162,15 +2219,22 @@ $languageList = $vlrController->getLanguages();
                                                     <?= htmlspecialchars(strlen($image['title']) > 20 ? substr($image['title'], 0, 17) . '...' : $image['title']) ?>
                                                 </h5>
                                                 <div class="image-actions">
+                                                    <a href="#" class="preview-image" data-image='<?= json_encode($image); ?>'>
+                                                        <i class="fas fa-eye preview-icon"
+                                                            title="<?= Localization::translate('preview'); ?>"></i>
+                                                    </a>
+                                                    <?php if (!empty($image['can_edit'])): ?>
                                                     <a href="#" class="edit-image" data-image='<?= json_encode($image); ?>'>
                                                         <i class="fas fa-edit edit-icon"
                                                             title="<?= Localization::translate('edit'); ?>"></i>
                                                     </a>
-                                                    <a href="index.php?controller=VLRController&action=deleteImagePackage&id=<?= $image['id'] ?>"
-                                                        onclick="return confirm('<?= Localization::translate('delete_confirmation'); ?>');">
+                                                    <?php endif; ?>
+                                                    <?php if (!empty($image['can_delete'])): ?>
+                                                    <a href="#" class="delete-image" data-id="<?= $image['id'] ?>" data-title="<?= htmlspecialchars($image['title']) ?>">
                                                         <i class="fas fa-trash-alt delete-icon"
                                                             title="<?= Localization::translate('delete'); ?>"></i>
                                                     </a>
+                                                    <?php endif; ?>
                                                 </div>
                                             </div>
                                         </div>
@@ -2192,10 +2256,12 @@ $languageList = $vlrController->getLanguages();
                 <!-- External Content Header Section -->
                 <div class="d-flex justify-content-between align-items-center mb-3">
                     <h3><?= Localization::translate('external_content'); ?></h3>
+                    <?php if ($canCreateVLR): ?>
                     <button class="btn btn-sm btn-primary" data-bs-toggle="modal"
                         data-bs-target="#externalContentModal">
                         + <?= Localization::translate('add_external_content'); ?>
                     </button>
+                    <?php endif; ?>
 
                     <!-- ✅ Modal for Adding External Content -->
                     <!-- Modal Popup -->
@@ -2207,13 +2273,11 @@ $languageList = $vlrController->getLanguages();
                                     <h5 class="modal-title" id="externalModalLabel">
                                         <?= Localization::translate('add_external_content'); ?>
                                     </h5>
-                                    <button type="button" class="close" data-bs-dismiss="modal" aria-label="Close">
-                                        <span aria-hidden="true">&times;</span>
-                                    </button>
+                                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                                 </div>
                                 <div class="modal-body">
                                     <form id="externalContentForm"
-                                        action="index.php?controller=VLRController&action=addOrEditExternalContent"
+                                        action="/unlockyourskills/vlr/external"
                                         method="POST" enctype="multipart/form-data">
                                         <input type="hidden" id="external_id" name="id">
 
@@ -2355,6 +2419,7 @@ $languageList = $vlrController->getLanguages();
                                                         for="thumbnail"><?= Localization::translate('thumbnail_preview'); ?></label>
                                                     <input type="file" class="form-control" id="thumbnail"
                                                         name="thumbnail" accept="image/*">
+                                                    <input type="hidden" id="existing_thumbnail" name="existing_thumbnail">
                                                     <img id="thumbnailPreview" src=""
                                                         alt="<?= Localization::translate('thumbnail_preview'); ?>"
                                                         style="display:none; max-width: 100px; margin-top: 10px;">
@@ -2563,16 +2628,24 @@ $languageList = $vlrController->getLanguages();
                                                         <?= htmlspecialchars($displayTitle) ?>
                                                     </h5>
                                                     <div class="content-actions">
+                                                        <a href="#" class="preview-external"
+                                                            data-content='<?= json_encode($content); ?>'>
+                                                            <i class="fas fa-eye preview-icon"
+                                                                title="<?= Localization::translate('preview'); ?>"></i>
+                                                        </a>
+                                                        <?php if (!empty($content['can_edit'])): ?>
                                                         <a href="#" class="edit-content"
                                                             data-content='<?= json_encode($content); ?>'>
                                                             <i class="fas fa-edit edit-icon"
                                                                 title="<?= Localization::translate('edit'); ?>"></i>
                                                         </a>
-                                                        <a href="index.php?controller=VLRController&action=deleteExternal&id=<?= $content['id'] ?>"
-                                                            onclick="return confirm('<?= Localization::translate('confirm_delete'); ?>');">
+                                                        <?php endif; ?>
+                                                        <?php if (!empty($content['can_delete'])): ?>
+                                                        <a href="#" class="delete-external" data-id="<?= $content['id'] ?>" data-title="<?= htmlspecialchars($content['title']) ?>">
                                                             <i class="fas fa-trash-alt delete-icon"
                                                                 title="<?= Localization::translate('delete'); ?>"></i>
                                                         </a>
+                                                        <?php endif; ?>
                                                     </div>
                                                 </div>
                                             </div>
@@ -2595,10 +2668,12 @@ $languageList = $vlrController->getLanguages();
                 <div class="d-flex justify-content-between align-items-center">
                     <h3><?= Localization::translate('survey'); ?></h3>
                     <div class="d-flex gap-2">
+                        <?php if ($canCreateVLR): ?>
                         <button class="btn btn-sm btn-primary" id="addSurveyBtn" data-bs-toggle="modal"
                             data-bs-target="#survey_surveyModal">
                             + <?= Localization::translate('add_survey'); ?>
                         </button>
+                        <?php endif; ?>
 
                         <!-- ✅ Survey Modal -->
                         <div class="modal fade" id="survey_surveyModal" tabindex="-1"
@@ -2614,7 +2689,7 @@ $languageList = $vlrController->getLanguages();
                                     </div>
                                     <div class="modal-body">
                                         <form id="survey_surveyForm"
-                                            action="index.php?controller=VLRController&action=addOrEditSurvey"
+                                            action="/unlockyourskills/vlr/surveys"
                                             method="POST" enctype="multipart/form-data">
                                             <input type="hidden" name="selected_survey_question_ids"
                                                 id="survey_selectedSurveyQuestionIds">
@@ -2785,8 +2860,7 @@ $languageList = $vlrController->getLanguages();
                         </div>
 
 
-                        <a href="index.php?controller=SurveyQuestionController&action=index"
-                            class="btn btn-sm btn-primary">
+                        <a href="/unlockyourskills/surveys" class="btn btn-sm btn-primary">
                             + <?= Localization::translate('add_survey_questions'); ?>
                         </a>
                     </div>
@@ -2809,16 +2883,19 @@ $languageList = $vlrController->getLanguages();
                                                     <?= htmlspecialchars(strlen($survey['title']) > 20 ? substr($survey['title'], 0, 17) . '...' : $survey['title']) ?>
                                                 </h5>
                                                 <div class="survey-actions">
+                                                    <?php if (!empty($survey['can_edit'])): ?>
                                                     <a href="#" class="edit-survey"
                                                         data-survey='<?= json_encode($survey); ?>'>
                                                         <i class="fas fa-edit edit-icon"
                                                             title="<?= Localization::translate('edit'); ?>"></i>
                                                     </a>
-                                                    <a href="index.php?controller=VLRController&action=deleteSurvey&id=<?= $survey['id'] ?>"
-                                                        onclick="return confirm('<?= Localization::translate('confirm_delete'); ?>');">
+                                                    <?php endif; ?>
+                                                    <?php if (!empty($survey['can_delete'])): ?>
+                                                    <a href="#" class="delete-survey" data-id="<?= $survey['id'] ?>" data-title="<?= htmlspecialchars($survey['title']) ?>">
                                                         <i class="fas fa-trash-alt delete-icon"
                                                             title="<?= Localization::translate('delete'); ?>"></i>
                                                     </a>
+                                                    <?php endif; ?>
                                                 </div>
                                             </div>
                                         </div>
@@ -2839,10 +2916,12 @@ $languageList = $vlrController->getLanguages();
                 <div class="d-flex justify-content-between align-items-center">
                     <h3><?= Localization::translate('feedback'); ?></h3>
                     <div class="d-flex gap-2">
+                        <?php if ($canCreateVLR): ?>
                         <button class="btn btn-sm btn-primary" id="addFeedbackBtn" data-bs-toggle="modal"
                             data-bs-target="#feedback_feedbackModal">
                             + <?= Localization::translate('add_feedback'); ?>
                         </button>
+                        <?php endif; ?>
 
                         <!-- ✅ Feedback Modal -->
                         <div class="modal fade" id="feedback_feedbackModal" tabindex="-1"
@@ -2858,7 +2937,7 @@ $languageList = $vlrController->getLanguages();
                                     </div>
                                     <div class="modal-body">
                                         <form id="feedback_feedbackForm"
-                                            action="index.php?controller=VLRController&action=addOrEditFeedback"
+                                            action="/unlockyourskills/vlr/feedback"
                                             method="POST" enctype="multipart/form-data">
                                             <input type="hidden" name="selected_feedback_question_ids"
                                                 id="feedback_selectedFeedbackQuestionIds">
@@ -3024,8 +3103,7 @@ $languageList = $vlrController->getLanguages();
                             </div>
                         </div>
 
-                        <a href="index.php?controller=FeedbackQuestionController&action=index"
-                            class="btn btn-sm btn-primary">
+                        <a href="/unlockyourskills/feedback" class="btn btn-sm btn-primary">
                             + <?= Localization::translate('add_feedback_questions'); ?>
                         </a>
                     </div>
@@ -3048,16 +3126,19 @@ $languageList = $vlrController->getLanguages();
                                                     <?= htmlspecialchars(strlen($feedback['title']) > 20 ? substr($feedback['title'], 0, 17) . '...' : $feedback['title']) ?>
                                                 </h5>
                                                 <div class="feedback-actions">
+                                                    <?php if (!empty($feedback['can_edit'])): ?>
                                                     <a href="#" class="edit-feedback"
                                                         data-feedback='<?= json_encode($feedback); ?>'>
                                                         <i class="fas fa-edit edit-icon"
                                                             title="<?= Localization::translate('edit'); ?>"></i>
                                                     </a>
-                                                    <a href="index.php?controller=VLRController&action=deleteFeedback&id=<?= $feedback['id'] ?>"
-                                                        onclick="return confirm('<?= Localization::translate('confirm_delete'); ?>');">
+                                                    <?php endif; ?>
+                                                    <?php if (!empty($feedback['can_delete'])): ?>
+                                                    <a href="#" class="delete-feedback" data-id="<?= $feedback['id'] ?>" data-title="<?= htmlspecialchars($feedback['title']) ?>">
                                                         <i class="fas fa-trash-alt delete-icon"
                                                             title="<?= Localization::translate('delete'); ?>"></i>
                                                     </a>
+                                                    <?php endif; ?>
                                                 </div>
                                             </div>
                                         </div>
@@ -3081,10 +3162,12 @@ $languageList = $vlrController->getLanguages();
                     <h3><?= Localization::translate('interactive_ai_content'); ?></h3>
 
                     <!-- ✅ Interactive "Add" Button - Opens Modal -->
+                    <?php if ($canCreateVLR): ?>
                     <button class="btn btn-primary mb-3" data-bs-toggle="modal" id="addInteractiveBtn"
                         data-bs-target="#interactiveModal">
                         + <?= Localization::translate('add_interactive_package'); ?>
                     </button>
+                    <?php endif; ?>
 
                     <!-- ✅ INTERACTIVE ADD MODAL -->
                     <div class="modal fade" id="interactiveModal" tabindex="-1" role="dialog"
@@ -3100,11 +3183,11 @@ $languageList = $vlrController->getLanguages();
                                 </div>
                                 <div class="modal-body">
                                     <form id="interactiveForm"
-                                        action="index.php?controller=VLRController&action=addOrEditInteractiveContent"
+                                        action="/unlockyourskills/vlr/interactive"
                                         method="POST" enctype="multipart/form-data">
                                         <input type="hidden" id="interactive_id" name="interactive_id">
                                         <input type="hidden" id="existing_content_file" name="existing_content_file">
-                                        <input type="hidden" id="existing_thumbnail_image" name="existing_thumbnail_image">
+                                        <input type="hidden" id="existing_interactive_thumbnail_image" name="existing_thumbnail_image">
                                         <input type="hidden" id="existing_metadata_file" name="existing_metadata_file">
 
                                         <!-- ✅ Title & Content Type -->
@@ -3225,10 +3308,10 @@ $languageList = $vlrController->getLanguages();
                                             </div>
                                             <div class="col-md-4">
                                                 <div class="form-group">
-                                                    <label for="thumbnail_image" class="form-label"><?= Localization::translate('interactive.field.thumbnail_image'); ?></label>
-                                                    <input type="file" class="form-control" id="thumbnail_image" name="thumbnail_image" accept="image/*">
+                                                    <label for="interactive_thumbnail_image" class="form-label"><?= Localization::translate('interactive.field.thumbnail_image'); ?></label>
+                                                    <input type="file" class="form-control" id="interactive_thumbnail_image" name="thumbnail_image" accept="image/*">
                                                     <small class="text-muted">Max size: 10MB. Formats: JPG, PNG, GIF.</small>
-                                                    <div id="thumbnailImagePreview" class="mt-2"></div>
+                                                    <div id="interactiveThumbnailImagePreview" class="mt-2"></div>
                                                 </div>
                                             </div>
                                             <div class="col-md-4">
@@ -3505,13 +3588,16 @@ $languageList = $vlrController->getLanguages();
                                                         <?= htmlspecialchars($displayTitle) ?>
                                                     </h5>
                                                     <div class="interactive-actions">
+                                                        <?php if (!empty($interactive['can_edit'])): ?>
                                                         <a href="#" class="edit-interactive" data-interactive='<?= json_encode($interactive); ?>'>
                                                             <i class="fas fa-edit edit-icon" title="<?= Localization::translate('edit'); ?>"></i>
                                                         </a>
-                                                        <a href="index.php?controller=VLRController&action=deleteInteractiveContent&id=<?= $interactive['id'] ?>"
-                                                            onclick="return confirm('<?= Localization::translate('delete_confirmation'); ?>');">
+                                                        <?php endif; ?>
+                                                        <?php if (!empty($interactive['can_delete'])): ?>
+                                                        <a href="#" class="delete-interactive" data-id="<?= $interactive['id'] ?>" data-title="<?= htmlspecialchars($interactive['title']) ?>">
                                                             <i class="fas fa-trash-alt delete-icon" title="<?= Localization::translate('delete'); ?>"></i>
                                                         </a>
+                                                        <?php endif; ?>
                                                     </div>
                                                 </div>
                                             </div>
@@ -3527,343 +3613,355 @@ $languageList = $vlrController->getLanguages();
             </div>
 
 
+               <!-- ✅ Assignment -->
+               <div class="tab-pane <?= $activeTab === 'assignment' ? 'show active' : ''; ?>" id="assignment">
+                <div class="d-flex justify-content-between align-items-center">
+                    <h3><?= Localization::translate('assignment'); ?></h3>
+
+                    <!-- ✅ Assignment "Add" Button -->
+                    <?php if ($canCreateVLR): ?>
+                    <button class="btn btn-primary mb-3" data-bs-toggle="modal" id="addAssignmentBtn"
+                        data-bs-target="#assignmentModal">
+                        + <?= Localization::translate('add_assignment'); ?>
+                    </button>
+                    <?php endif; ?>
+                </div>
+
+                <!-- ✅ Assignment Modal -->
+                <div class="modal fade" id="assignmentModal" tabindex="-1" aria-labelledby="assignmentModalLabel"
+                    aria-hidden="true">
+                    <div class="modal-dialog modal-xl">
+                        <div class="modal-content">
+                            <div class="modal-header">
+                                <h5 class="modal-title" id="assignmentModalLabel">
+                                    <?= Localization::translate('add_assignment_package'); ?>
+                                </h5>
+                                <button type="button" class="btn-close" data-bs-dismiss="modal"
+                                    aria-label="Close"></button>
+                            </div>
+
+                            <div class="modal-body">
+                                <form id="assignmentForm" action="/unlockyourskills/vlr/assignment"
+                                    method="POST" enctype="multipart/form-data">
+                                    <input type="hidden" id="assignment_idassignment" name="assignment_idassignment">
+
+                                    <div class="row g-3">
+                                        <!-- Title -->
+                                        <div class="col-md-6">
+                                            <label for="assignment_titleassignment" class="form-label"><?= Localization::translate('assignment.field.title'); ?> <span
+                                                    class="text-danger">*</span></label>
+                                            <input type="text" class="form-control" id="assignment_titleassignment"
+                                                name="assignment_titleassignment">
+                                        </div>
+
+                                        <!-- Upload Assignment -->
+                                        <div class="col-md-6">
+                                            <label for="assignmentFileassignment" class="form-label"><?= Localization::translate('assignment.upload_assignment_file'); ?> <span
+                                                    class="text-danger">*</span></label>
+                                            <input type="file" class="form-control" id="assignmentFileassignment"
+                                                name="assignmentFileassignment" accept=".pdf,.doc,.docx,.txt,.rtf">
+                                            <small class="text-muted">Max size: 50MB. Formats: PDF, DOC, DOCX, TXT, RTF.</small>
+                                            <input type="hidden" id="existing_assignmentassignment" name="existing_assignment">
+                                            <div id="existingAssignmentDisplayassignment" class="mt-2"></div>
+                                        </div>
+
+                                        <!-- Assignment Type -->
+                                        <div class="col-md-4">
+                                            <label for="assignmentTypeassignment" class="form-label"><?= Localization::translate('assignment_type'); ?></label>
+                                            <select class="form-select" id="assignmentTypeassignment" name="assignmentTypeassignment">
+                                                <option value="individual"><?= Localization::translate('individual'); ?></option>
+                                                <option value="group"><?= Localization::translate('group'); ?></option>
+                                                <option value="project"><?= Localization::translate('project'); ?></option>
+                                                <option value="case_study"><?= Localization::translate('case_study'); ?></option>
+                                                <option value="research"><?= Localization::translate('research'); ?></option>
+                                            </select>
+                                        </div>
+
+                                        <!-- Difficulty Level -->
+                                        <div class="col-md-4">
+                                            <label for="difficultyLevelassignment" class="form-label"><?= Localization::translate('difficulty_level'); ?></label>
+                                            <select class="form-select" id="difficultyLevelassignment" name="difficultyLevelassignment">
+                                                <option value="Beginner"><?= Localization::translate('beginner'); ?></option>
+                                                <option value="Intermediate"><?= Localization::translate('intermediate'); ?></option>
+                                                <option value="Advanced"><?= Localization::translate('advanced'); ?></option>
+                                            </select>
+                                        </div>
+
+                                        <!-- Submission Format -->
+                                        <div class="col-md-4">
+                                            <label for="submissionFormatassignment" class="form-label"><?= Localization::translate('submission_format'); ?></label>
+                                            <select class="form-select" id="submissionFormatassignment" name="submissionFormatassignment">
+                                                <option value="file_upload"><?= Localization::translate('file_upload'); ?></option>
+                                                <option value="text_entry"><?= Localization::translate('text_entry'); ?></option>
+                                                <option value="url_submission"><?= Localization::translate('url_submission'); ?></option>
+                                                <option value="mixed"><?= Localization::translate('mixed'); ?></option>
+                                            </select>
+                                        </div>
+
+                                        <!-- Tags -->
+                                        <div class="row">
+                                            <div class="col-md-12">
+                                                <div class="form-group">
+                                                    <label
+                                                        for="tagsassignment"><?= Localization::translate('tags_keywords'); ?>
+                                                        <span class="text-danger">*</span></label>
+                                                    <div class="tag-input-container form-control">
+                                                        <span id="tagDisplayassignment"></span>
+                                                        <input type="text" id="tagInputassignment"
+                                                            placeholder="<?= Localization::translate('add_tag_placeholder'); ?>">
+                                                    </div>
+                                                    <input type="hidden" name="tagListassignment" id="tagListassignment">
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <!-- Description -->
+                                        <div class="col-md-12">
+                                            <label for="descriptionassignment" class="form-label"><?= Localization::translate('description'); ?></label>
+                                            <textarea class="form-control" id="descriptionassignment" name="descriptionassignment"
+                                                rows="3"></textarea>
+                                        </div>
+
+                                        <!-- Instructions -->
+                                        <div class="col-md-12">
+                                            <label for="instructionsassignment" class="form-label"><?= Localization::translate('instructions'); ?></label>
+                                            <textarea class="form-control" id="instructionsassignment" name="instructionsassignment"
+                                                rows="4" placeholder="<?= Localization::translate('assignment.instructions_placeholder'); ?>"></textarea>
+                                        </div>
+
+                                        <!-- Requirements -->
+                                        <div class="col-md-12">
+                                            <label for="requirementsassignment" class="form-label"><?= Localization::translate('requirements'); ?></label>
+                                            <textarea class="form-control" id="requirementsassignment" name="requirementsassignment"
+                                                rows="3" placeholder="<?= Localization::translate('assignment.requirements_placeholder'); ?>"></textarea>
+                                        </div>
+
+                                        <!-- Learning Objectives -->
+                                        <div class="col-md-12">
+                                            <label for="learningObjectivesassignment" class="form-label"><?= Localization::translate('learning_objectives'); ?></label>
+                                            <textarea class="form-control" id="learningObjectivesassignment" name="learningObjectivesassignment"
+                                                rows="3" placeholder="<?= Localization::translate('assignment.learning_objectives_placeholder'); ?>"></textarea>
+                                        </div>
+
+                                        <!-- Prerequisites -->
+                                        <div class="col-md-12">
+                                            <label for="prerequisitesassignment" class="form-label"><?= Localization::translate('prerequisites'); ?></label>
+                                            <textarea class="form-control" id="prerequisitesassignment" name="prerequisitesassignment"
+                                                rows="2" placeholder="<?= Localization::translate('assignment.prerequisites_placeholder'); ?>"></textarea>
+                                        </div>
+
+                                        <!-- Version -->
+                                        <div class="col-md-3">
+                                            <label for="versionassignment" class="form-label"><?= Localization::translate('version_number'); ?> <span
+                                                    class="text-danger">*</span></label>
+                                            <input type="number" class="form-control" id="versionassignment"
+                                                name="versionassignment" min="0" step="any" pattern="\d*">
+                                        </div>
+
+                                        <!-- Language Support -->
+                                        <div class="col-md-3">
+                                            <label for="languageassignment" class="form-label"><?= Localization::translate('language'); ?></label>
+                                            <select class="form-select" id="languageassignment" name="languageassignment">
+                                                <option value=""><?= Localization::translate('select_language'); ?></option>
+                                                <?php
+                                                if (!empty($languageList) && is_array($languageList)) {
+                                                    foreach ($languageList as $lang) {
+                                                        if (isset($lang['id']) && isset($lang['language_name'])) {
+                                                            $langId = htmlspecialchars($lang['id'], ENT_QUOTES, 'UTF-8');
+                                                            $langName = htmlspecialchars($lang['language_name'], ENT_QUOTES, 'UTF-8');
+                                                            echo "<option value=\"$langId\">$langName</option>";
+                                                        }
+                                                    }
+                                                } else {
+                                                    echo '<option value="">' . Localization::translate('no_languages_available') . '</option>';
+                                                }
+                                                ?>
+                                            </select>
+                                        </div>
+
+                                        <!-- Time Limit -->
+                                        <div class="col-md-3">
+                                            <label for="timeLimitassignment" class="form-label"><?= Localization::translate('time_limit'); ?></label>
+                                            <input type="number" class="form-control" id="timeLimitassignment"
+                                                name="timeLimitassignment" min="1" pattern="\d*">
+                                        </div>
+
+                                        <!-- Estimated Duration -->
+                                        <div class="col-md-3">
+                                            <label for="estimatedDurationassignment" class="form-label"><?= Localization::translate('estimated_duration'); ?></label>
+                                            <input type="number" class="form-control" id="estimatedDurationassignment"
+                                                name="estimatedDurationassignment" min="1" pattern="\d*">
+                                        </div>
+
+                                        <!-- Max Attempts -->
+                                        <div class="col-md-3">
+                                            <label for="maxAttemptsassignment" class="form-label"><?= Localization::translate('max_attempts'); ?></label>
+                                            <input type="number" class="form-control" id="maxAttemptsassignment"
+                                                name="maxAttemptsassignment" min="1" value="1" pattern="\d*">
+                                        </div>
+
+                                        <!-- Passing Score -->
+                                        <div class="col-md-3">
+                                            <label for="passingScoreassignment" class="form-label"><?= Localization::translate('passing_score'); ?></label>
+                                            <input type="number" class="form-control" id="passingScoreassignment"
+                                                name="passingScoreassignment" min="0" max="100" pattern="\d*">
+                                        </div>
+
+                                        <!-- Allow Late Submission -->
+                                        <div class="col-md-3">
+                                            <label class="form-label"><?= Localization::translate('allow_late_submission'); ?></label>
+                                            <div>
+                                                <div class="form-check form-check-inline">
+                                                    <input class="form-check-input" type="radio"
+                                                        name="allowLateSubmissionassignment" id="allowLateYesassignment" value="Yes">
+                                                    <label class="form-check-label" for="allowLateYesassignment"><?= Localization::translate('yes'); ?></label>
+                                                </div>
+                                                <div class="form-check form-check-inline">
+                                                    <input class="form-check-input" type="radio"
+                                                        name="allowLateSubmissionassignment" id="allowLateNoassignment" value="No" checked>
+                                                    <label class="form-check-label" for="allowLateNoassignment"><?= Localization::translate('no'); ?></label>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <!-- Late Submission Penalty -->
+                                        <div class="col-md-3">
+                                            <label for="lateSubmissionPenaltyassignment" class="form-label"><?= Localization::translate('late_submission_penalty'); ?></label>
+                                            <input type="number" class="form-control" id="lateSubmissionPenaltyassignment"
+                                                name="lateSubmissionPenaltyassignment" min="0" max="100" value="0" pattern="\d*">
+                                        </div>
+
+                                        <!-- Mobile & Tablet Support -->
+                                        <div class="col-md-12">
+                                            <label class="form-label"><?= Localization::translate('mobile_tablet_support'); ?></label>
+                                            <div>
+                                                <div class="form-check form-check-inline">
+                                                    <input class="form-check-input" type="radio"
+                                                        name="mobileSupportassignment" id="mobileYesassignment" value="Yes">
+                                                    <label class="form-check-label" for="mobileYesassignment"><?= Localization::translate('yes'); ?></label>
+                                                </div>
+                                                <div class="form-check form-check-inline">
+                                                    <input class="form-check-input" type="radio"
+                                                        name="mobileSupportassignment" id="mobileNoassignment" value="No" checked>
+                                                    <label class="form-check-label" for="mobileNoassignment"><?= Localization::translate('no'); ?></label>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </form>
+                            </div>
+
+                            <!-- Modal Footer -->
+                            <div class="modal-footer">
+                                <button type="submit" form="assignmentForm"
+                                    class="btn btn-primary"><?= Localization::translate('submit'); ?></button>
+                                <button type="button" class="btn btn-danger"
+                                    id="clearFormassignment"><?= Localization::translate('cancel'); ?></button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ✅ Assignment Display -->
+                <div class="assignment-wrapper mt-4">
+                    <div class="assignment-wrapper-border">
+                        <div class="row">
+                            <?php if (!empty($assignmentPackages)): ?>
+                                <?php foreach ($assignmentPackages as $assignment): ?>
+                                    <div class="col-md-4">
+                                        <div class="assignment-card">
+                                            <div class="card-body">
+                                                <div class="assignment-icon">
+                                                    <i class="fas fa-tasks"></i>
+                                                </div>
+                                                <h5 class="assignment-title" title="<?= htmlspecialchars($assignment['title']) ?>">
+                                                    <?= htmlspecialchars(strlen($assignment['title']) > 20 ? substr($assignment['title'], 0, 17) . '...' : $assignment['title']) ?>
+                                                </h5>
+                                                <div class="assignment-actions">
+                                                    <?php if (!empty($assignment['can_edit'])): ?>
+                                                    <a href="#" class="edit-assignment" data-assignment='<?= json_encode($assignment); ?>'>
+                                                        <i class="fas fa-edit edit-icon"
+                                                            title="<?= Localization::translate('edit'); ?>"></i>
+                                                    </a>
+                                                    <?php endif; ?>
+                                                    <?php if (!empty($assignment['can_delete'])): ?>
+                                                    <a href="#" class="delete-assignment" data-id="<?= $assignment['id'] ?>" data-title="<?= htmlspecialchars($assignment['title']) ?>">
+                                                        <i class="fas fa-trash-alt delete-icon"
+                                                            title="<?= Localization::translate('delete'); ?>"></i>
+                                                    </a>
+                                                    <?php endif; ?>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                <?php endforeach; ?>
+                            <?php else: ?>
+                                <p><?= Localization::translate('no_assignment_found'); ?></p>
+                            <?php endif; ?>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
         </div>
     </div>
 </div>
 
 
 
-<script src="public/js/scorm_validation.js"></script>
-<script src="public/js/scorm_package.js"></script>
-<script src="public/js/assessment_validation.js"></script>
-<script src="public/js/assessment_package.js"></script>
-<script src="public/js/audio_validation.js"></script>
-<script src="public/js/audio_package.js"></script>
-<script src="public/js/video_validation.js"></script>
-<script src="public/js/video_package.js"></script>
-<script src="public/js/add_question_on_assessment.js"></script>
-<script src="public/js/document_validation.js"></script>
-<script src="public/js/document_package.js"></script>
-<script src="public/js/image_validation.js"></script>
-<script src="public/js/image_package.js"></script>
-<script src="public/js/external_content_validation.js"></script>
-<script src="public/js/external_package.js"></script>
-<script src="public/js/survey_validation.js"></script>
-<script src="public/js/survey_package.js"></script>
-<script src="public/js/add_survey_question_on_survey.js"></script>
-<script src="public/js/feedback_validation.js"></script>
-<script src="public/js/feedback_package.js"></script>
-<script src="public/js/add_feedback_question_on_feedback.js"></script>
-<script src="public/js/interactive_validation.js"></script>
-<script src="public/js/interactive_package.js"></script>
-<script src="public/js/non_scorm_validation.js"></script>
-<script src="public/js/non_scorm_package.js"></script>
+<?php require_once __DIR__ . '/../core/UrlHelper.php'; ?>
+<script src="<?= UrlHelper::url('public/js/scorm_validation.js') ?>"></script>
+<script src="<?= UrlHelper::url('public/js/scorm_package.js') ?>"></script>
+<script src="<?= UrlHelper::url('public/js/assessment_validation.js') ?>"></script>
+<script src="<?= UrlHelper::url('public/js/assessment_package.js') ?>"></script>
+<script src="<?= UrlHelper::url('public/js/audio_validation.js') ?>"></script>
+<script src="<?= UrlHelper::url('public/js/audio_package.js') ?>"></script>
+<script src="<?= UrlHelper::url('public/js/video_validation.js') ?>"></script>
+<script src="<?= UrlHelper::url('public/js/video_package.js') ?>"></script>
+<script src="<?= UrlHelper::url('public/js/add_question_on_assessment.js') ?>"></script>
+<script src="<?= UrlHelper::url('public/js/document_validation.js') ?>"></script>
+<script src="<?= UrlHelper::url('public/js/document_package.js') ?>"></script>
+<script src="<?= UrlHelper::url('public/js/image_validation.js') ?>"></script>
+<script src="<?= UrlHelper::url('public/js/image_package.js') ?>"></script>
+<script src="<?= UrlHelper::url('public/js/external_content_validation.js') ?>"></script>
+<script src="<?= UrlHelper::url('public/js/external_package.js') ?>"></script>
+<script src="<?= UrlHelper::url('public/js/content_preview.js') ?>"></script>
+<script src="<?= UrlHelper::url('public/js/survey_validation.js') ?>"></script>
+<script src="<?= UrlHelper::url('public/js/survey_package.js') ?>"></script>
+<script src="<?= UrlHelper::url('public/js/add_survey_question_on_survey.js') ?>"></script>
+<script src="<?= UrlHelper::url('public/js/feedback_validation.js') ?>"></script>
+<script src="<?= UrlHelper::url('public/js/feedback_package.js') ?>"></script>
+<script src="<?= UrlHelper::url('public/js/add_feedback_question_on_feedback.js') ?>"></script>
+<script src="<?= UrlHelper::url('public/js/interactive_validation.js') ?>"></script>
+<script src="<?= UrlHelper::url('public/js/interactive_package.js') ?>"></script>
+<script src="<?= UrlHelper::url('public/js/non_scorm_validation.js') ?>"></script>
+<script src="<?= UrlHelper::url('public/js/non_scorm_package.js') ?>"></script>
+<script src="<?= UrlHelper::url('public/js/assignment_validation.js') ?>"></script>
+<script src="<?= UrlHelper::url('public/js/assignment_package.js') ?>"></script>
 
-<!-- ✅ Tab Management Script -->
-<script>
-document.addEventListener('DOMContentLoaded', function() {
-    // Get the active tab from URL parameter
-    const urlParams = new URLSearchParams(window.location.search);
-    const activeTab = urlParams.get('tab') || 'scorm';
+<!-- ✅ VLR Tab Management System -->
+<script src="<?= UrlHelper::url('public/js/vlr_tabs.js') ?>"></script>
+<!-- ✅ VLR Delete Confirmations -->
+<!-- Removed: vlr_confirmations.js is loaded dynamically by confirmation_loader.js -->
 
-    // Ensure the correct tab is active and shown
-    const tabLink = document.querySelector(`a[href="#${activeTab}"]`);
-    const tabPane = document.querySelector(`#${activeTab}`);
+<!-- ✅ Universal Preview Modal -->
+<div class="modal fade" id="previewModal" tabindex="-1" aria-labelledby="previewModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-xl">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="previewModalLabel">Content Preview</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body" id="previewModalBody">
+                <!-- Dynamic content will be loaded here -->
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
 
-    if (tabLink && tabPane) {
-        // Remove active classes from all tabs and panes
-        document.querySelectorAll('#vlrTabs .nav-link').forEach(link => {
-            link.classList.remove('active');
-        });
-        document.querySelectorAll('.tab-content > .tab-pane').forEach(pane => {
-            pane.classList.remove('show', 'active');
-        });
-
-        // Add active classes to the correct tab and pane
-        tabLink.classList.add('active');
-        tabPane.classList.add('show', 'active');
-
-        // Trigger Bootstrap tab shown event to ensure proper initialization
-        const tabTrigger = new bootstrap.Tab(tabLink);
-        tabTrigger.show();
-
-        // ✅ Initialize sub-tabs after a delay
-        setTimeout(() => {
-            initializeSubTabsForActiveTab(activeTab);
-        }, 300);
-    }
-
-    // Add event listeners to all tab links to remove tab parameter from URL when manually clicked
-    document.querySelectorAll('#vlrTabs .nav-link').forEach(tabLink => {
-        tabLink.addEventListener('shown.bs.tab', function(e) {
-            // Remove tab parameter from URL when user manually clicks tabs
-            const url = new URL(window.location);
-            if (url.searchParams.has('tab')) {
-                url.searchParams.delete('tab');
-                window.history.replaceState({}, '', url);
-            }
-        });
-    });
-
-    // ✅ Initialize sub-tabs for modules that have them
-    initializeSubTabs();
-
-    // ✅ Initialize sub-tab click handlers for Document, External, and Interactive modules
-    initializeSubTabClickHandlers();
-});
-
-// ✅ Function to initialize sub-tabs for Document, External Content, and Interactive modules
-function initializeSubTabs() {
-    // Document Sub-tabs
-    const documentTabLinks = document.querySelectorAll('#documentSubTabs .nav-link');
-    documentTabLinks.forEach(tabLink => {
-        tabLink.addEventListener('click', function(e) {
-            e.preventDefault();
-
-            // Remove active class from all document sub-tabs
-            documentTabLinks.forEach(link => link.classList.remove('active'));
-
-            // Remove active class from all document sub-tab panes
-            const documentTabContent = document.querySelector('#document .tab-content');
-            if (documentTabContent) {
-                documentTabContent.querySelectorAll('.tab-pane').forEach(tabPane => {
-                    tabPane.classList.remove('show', 'active');
-                });
-            }
-
-            // Add active class to clicked tab
-            this.classList.add('active');
-
-            // Show corresponding tab pane
-            const targetId = this.getAttribute('href');
-            const targetPane = document.querySelector(targetId);
-            if (targetPane) {
-                targetPane.classList.add('show', 'active');
-            }
-        });
-    });
-
-    // External Content Sub-tabs
-    const externalTabLinks = document.querySelectorAll('#externalSubTabs .nav-link');
-    externalTabLinks.forEach(tabLink => {
-        tabLink.addEventListener('click', function(e) {
-            e.preventDefault();
-
-            // Remove active class from all external sub-tabs
-            externalTabLinks.forEach(link => link.classList.remove('active'));
-
-            // Remove active class from all external sub-tab panes
-            const externalTabContent = document.querySelector('#external .tab-content');
-            if (externalTabContent) {
-                externalTabContent.querySelectorAll('.tab-pane').forEach(tabPane => {
-                    tabPane.classList.remove('show', 'active');
-                });
-            }
-
-            // Add active class to clicked tab
-            this.classList.add('active');
-
-            // Show corresponding tab pane
-            const targetId = this.getAttribute('href');
-            const targetPane = document.querySelector(targetId);
-            if (targetPane) {
-                targetPane.classList.add('show', 'active');
-            }
-        });
-    });
-
-    // Interactive Content Sub-tabs
-    const interactiveTabLinks = document.querySelectorAll('#interactiveSubTabs .nav-link');
-    interactiveTabLinks.forEach(tabLink => {
-        tabLink.addEventListener('click', function(e) {
-            e.preventDefault();
-
-            // Remove active class from all interactive sub-tabs
-            interactiveTabLinks.forEach(link => link.classList.remove('active'));
-
-            // Remove active class from all interactive sub-tab panes
-            const interactiveTabContent = document.querySelector('#interactive .tab-content');
-            if (interactiveTabContent) {
-                interactiveTabContent.querySelectorAll('.tab-pane').forEach(tabPane => {
-                    tabPane.classList.remove('show', 'active');
-                });
-            }
-
-            // Add active class to clicked tab
-            this.classList.add('active');
-
-            // Show corresponding tab pane
-            const targetId = this.getAttribute('href');
-            const targetPane = document.querySelector(targetId);
-            if (targetPane) {
-                targetPane.classList.add('show', 'active');
-            }
-        });
-    });
-}
-
-// ✅ Function to initialize sub-tabs for the active main tab
-function initializeSubTabsForActiveTab(activeTab) {
-    // Only handle tabs that have sub-tabs
-    if (!['document', 'external', 'interactive'].includes(activeTab)) {
-        return;
-    }
-
-    let subTabsContainer, firstSubTabId;
-
-    switch(activeTab) {
-        case 'document':
-            subTabsContainer = '#documentSubTabs';
-            firstSubTabId = '#word-excel-ppt';
-            break;
-        case 'external':
-            subTabsContainer = '#externalSubTabs';
-            firstSubTabId = '#youtube-vimeo';
-            break;
-        case 'interactive':
-            subTabsContainer = '#interactiveSubTabs';
-            firstSubTabId = '#adaptive-learning';
-            break;
-    }
-
-    // Get sub-tab elements
-    const subTabLinks = document.querySelectorAll(`${subTabsContainer} .nav-link`);
-    const firstSubTabLink = document.querySelector(`${subTabsContainer} .nav-link[href="${firstSubTabId}"]`);
-    const firstSubTabPane = document.querySelector(firstSubTabId);
-
-    if (subTabLinks.length > 0 && firstSubTabLink && firstSubTabPane) {
-        // Remove active from all sub-tabs
-        subTabLinks.forEach(link => link.classList.remove('active'));
-
-        // Remove active from all sub-tab panes in this section
-        const mainTabPane = document.querySelector(`#${activeTab}`);
-        if (mainTabPane) {
-            const subTabPanes = mainTabPane.querySelectorAll('.tab-content .tab-pane');
-            subTabPanes.forEach(pane => pane.classList.remove('show', 'active'));
-        }
-
-        // Activate first sub-tab and its pane
-        firstSubTabLink.classList.add('active');
-        firstSubTabPane.classList.add('show', 'active');
-
-        // ✅ Force display and trigger reflow to ensure content is visible
-        firstSubTabPane.style.display = 'block';
-        firstSubTabPane.offsetHeight; // Force reflow
-
-        // Trigger Bootstrap tab to ensure proper initialization
-        if (typeof bootstrap !== 'undefined' && bootstrap.Tab) {
-            const subTabTrigger = new bootstrap.Tab(firstSubTabLink);
-            subTabTrigger.show();
-        }
-
-        // ✅ Additional check to ensure content is visible
-        setTimeout(() => {
-            if (firstSubTabPane && !firstSubTabPane.classList.contains('show')) {
-                firstSubTabPane.classList.add('show', 'active');
-            }
-
-            // ✅ Force visibility with inline styles as backup
-            if (firstSubTabPane) {
-                firstSubTabPane.style.display = 'block';
-                firstSubTabPane.style.opacity = '1';
-                firstSubTabPane.style.visibility = 'visible';
-            }
-        }, 100);
-    }
-}
-
-// ✅ Function to initialize sub-tab click handlers for Document, External, and Interactive modules
-function initializeSubTabClickHandlers() {
-    // Document Sub-tab Click Handlers
-    const documentTabLinks = document.querySelectorAll('#documentSubTabs .nav-link');
-    documentTabLinks.forEach(tabLink => {
-        tabLink.addEventListener('click', function(e) {
-            e.preventDefault();
-
-            // Remove active class from all document sub-tabs
-            documentTabLinks.forEach(link => link.classList.remove('active'));
-
-            // Remove active class from all document sub-tab panes
-            const documentTabContent = document.querySelector('#document .tab-content');
-            if (documentTabContent) {
-                documentTabContent.querySelectorAll('.tab-pane').forEach(tabPane => {
-                    tabPane.classList.remove('show', 'active');
-                });
-            }
-
-            // Add active class to clicked tab
-            this.classList.add('active');
-
-            // Show corresponding tab pane
-            const targetId = this.getAttribute('href');
-            const targetPane = document.querySelector(targetId);
-            if (targetPane) {
-                targetPane.classList.add('show', 'active');
-                targetPane.style.display = 'block';
-            }
-        });
-    });
-
-    // External Content Sub-tab Click Handlers
-    const externalTabLinks = document.querySelectorAll('#externalSubTabs .nav-link');
-    externalTabLinks.forEach(tabLink => {
-        tabLink.addEventListener('click', function(e) {
-            e.preventDefault();
-
-            // Remove active class from all external sub-tabs
-            externalTabLinks.forEach(link => link.classList.remove('active'));
-
-            // Remove active class from all external sub-tab panes
-            const externalTabContent = document.querySelector('#external .tab-content');
-            if (externalTabContent) {
-                externalTabContent.querySelectorAll('.tab-pane').forEach(tabPane => {
-                    tabPane.classList.remove('show', 'active');
-                });
-            }
-
-            // Add active class to clicked tab
-            this.classList.add('active');
-
-            // Show corresponding tab pane
-            const targetId = this.getAttribute('href');
-            const targetPane = document.querySelector(targetId);
-            if (targetPane) {
-                targetPane.classList.add('show', 'active');
-                targetPane.style.display = 'block';
-            }
-        });
-    });
-
-    // Interactive Content Sub-tab Click Handlers
-    const interactiveTabLinks = document.querySelectorAll('#interactiveSubTabs .nav-link');
-    interactiveTabLinks.forEach(tabLink => {
-        tabLink.addEventListener('click', function(e) {
-            e.preventDefault();
-
-            // Remove active class from all interactive sub-tabs
-            interactiveTabLinks.forEach(link => link.classList.remove('active'));
-
-            // Remove active class from all interactive sub-tab panes
-            const interactiveTabContent = document.querySelector('#interactive .tab-content');
-            if (interactiveTabContent) {
-                interactiveTabContent.querySelectorAll('.tab-pane').forEach(tabPane => {
-                    tabPane.classList.remove('show', 'active');
-                });
-            }
-
-            // Add active class to clicked tab
-            this.classList.add('active');
-
-            // Show corresponding tab pane
-            const targetId = this.getAttribute('href');
-            const targetPane = document.querySelector(targetId);
-            if (targetPane) {
-                targetPane.classList.add('show', 'active');
-                targetPane.style.display = 'block';
-            }
-        });
-    });
-}
-</script>
-
+<script src="<?= UrlHelper::url('public/js/modules/assessment_confirmations.js') ?>"></script>
+<script src="<?= UrlHelper::url('public/js/modules/vlr_confirmations.js') ?>"></script>
 <?php include 'includes/footer.php'; ?>

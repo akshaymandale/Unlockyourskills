@@ -29,6 +29,53 @@ document.addEventListener("DOMContentLoaded", function () {
         return String(id);
     }
 
+    // Function to update the select all checkbox state
+    function updateSelectAllCheckbox() {
+        const selectAllCheckbox = document.getElementById("feedback_selectAllQuestions");
+        if (!selectAllCheckbox) return;
+
+        const currentPageQuestionIds = questionsData.map(q => normalizeId(q.id));
+        const allCurrentPageSelected = currentPageQuestionIds.length > 0 &&
+            currentPageQuestionIds.every(id => temporarySelections.has(id));
+        const someCurrentPageSelected = currentPageQuestionIds.some(id => temporarySelections.has(id));
+
+        selectAllCheckbox.checked = allCurrentPageSelected;
+        selectAllCheckbox.indeterminate = someCurrentPageSelected && !allCurrentPageSelected;
+    }
+
+    // Function to handle select all checkbox
+    function handleSelectAll(checked) {
+        const currentPageQuestionIds = questionsData.map(q => normalizeId(q.id));
+
+        if (checked) {
+            // Add all current page questions to selection
+            currentPageQuestionIds.forEach(id => temporarySelections.add(id));
+        } else {
+            // Remove all current page questions from selection
+            currentPageQuestionIds.forEach(id => temporarySelections.delete(id));
+        }
+
+        // Re-render the table to update checkboxes
+        renderQuestionsTable();
+    }
+
+    // Function to reset all filters
+    function resetFilters() {
+        searchInput.value = "";
+        filterType.value = "";
+        showEntries.value = "10";
+
+        // Reset select all checkbox
+        const selectAllCheckbox = document.getElementById("feedback_selectAllQuestions");
+        if (selectAllCheckbox) {
+            selectAllCheckbox.checked = false;
+            selectAllCheckbox.indeterminate = false;
+        }
+
+        // Reset to first page
+        currentPage = 1;
+    }
+
     async function fetchQuestions(page = 1) {
         const params = new URLSearchParams({
             search: searchInput.value,
@@ -40,7 +87,8 @@ document.addEventListener("DOMContentLoaded", function () {
         currentPage = page;
 
         try {
-            const response = await fetch(`index.php?controller=FeedbackQuestionController&action=getQuestions&${params.toString()}`);
+            const url = `/unlockyourskills/vlr/feedback/questions?${params.toString()}`;
+            const response = await fetch(url);
             const data = await response.json();
             questionsData = data.questions || [];
             renderQuestionsTable();
@@ -51,7 +99,19 @@ document.addEventListener("DOMContentLoaded", function () {
     }
 
     function renderQuestionsTable() {
+        if (!questionTableBody) {
+            console.error("questionTableBody element not found!");
+            return;
+        }
+
         questionTableBody.innerHTML = "";
+
+        if (questionsData.length === 0) {
+            questionTableBody.innerHTML = '<tr><td colspan="4" class="text-center">No questions found</td></tr>';
+            updateSelectAllCheckbox();
+            return;
+        }
+
         questionsData.forEach(q => {
             const qid = normalizeId(q.id);
             const checked = temporarySelections.has(qid) ? "checked" : "";
@@ -65,6 +125,9 @@ document.addEventListener("DOMContentLoaded", function () {
             `;
             questionTableBody.insertAdjacentHTML("beforeend", row);
         });
+
+        // Update the select all checkbox state after rendering
+        updateSelectAllCheckbox();
     }
 
     function renderPagination(totalPages) {
@@ -80,7 +143,7 @@ document.addEventListener("DOMContentLoaded", function () {
 
     async function loadFilterOptions() {
         try {
-            const response = await fetch(`index.php?controller=FeedbackQuestionController&action=getFilterOptions`);
+            const response = await fetch(`/unlockyourskills/vlr/feedback/filter-options`);
             const data = await response.json();
             filterType.innerHTML = `<option value="">All Types</option>`;
             (data.types || []).forEach(type => {
@@ -98,7 +161,7 @@ document.addEventListener("DOMContentLoaded", function () {
         }
 
         try {
-            const response = await fetch(`index.php?controller=FeedbackQuestionController&action=getSelectedQuestions`, {
+            const response = await fetch(`/unlockyourskills/vlr/feedback/selected-questions`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ ids: Array.from(temporarySelections) })
@@ -144,12 +207,31 @@ document.addEventListener("DOMContentLoaded", function () {
     });
 
     addQuestionBtn.addEventListener("click", () => {
+        if (!questionModal) {
+            console.error("Question modal not initialized!");
+            return;
+        }
+
+        // Reset filters when opening modal
+        resetFilters();
+
+        // Load existing selected questions from the feedback form (for edit mode)
+        const existingSelectedIds = document.getElementById("feedback_selectedQuestionIds").value;
+        if (existingSelectedIds && existingSelectedIds.trim() !== "") {
+            const selectedIds = existingSelectedIds.split(',').map(id => normalizeId(id.trim())).filter(id => id);
+            persistentSelectedQuestions = new Set(selectedIds);
+            console.log("Loaded existing selected questions for edit:", selectedIds);
+        }
+
+        // Load persistent selections (previously looped questions + existing feedback questions)
         temporarySelections = new Set(persistentSelectedQuestions);
-        loadFilterOptions();
-        fetchQuestions();
+
         questionModal.show();
+        loadFilterOptions();
+        fetchQuestions(1); // Start from page 1
     });
 
+    // Handle individual question checkbox changes
     questionTableBody.addEventListener("change", function (e) {
         if (e.target.classList.contains("question-checkbox")) {
             const id = normalizeId(e.target.value);
@@ -158,7 +240,14 @@ document.addEventListener("DOMContentLoaded", function () {
             } else {
                 temporarySelections.delete(id);
             }
+            // Update select all checkbox state
+            updateSelectAllCheckbox();
         }
+    });
+
+    // Handle select all checkbox
+    document.getElementById("feedback_selectAllQuestions").addEventListener("change", function (e) {
+        handleSelectAll(e.target.checked);
     });
 
     refreshBtn.addEventListener("click", () => fetchQuestions(currentPage));
@@ -167,14 +256,16 @@ document.addEventListener("DOMContentLoaded", function () {
     showEntries.addEventListener("change", () => fetchQuestions(1));
 
     clearFiltersBtn.addEventListener("click", () => {
-        searchInput.value = "";
-        filterType.value = "";
-        showEntries.value = "10";
+        resetFilters();
         temporarySelections.clear();
         fetchQuestions(1);
     });
 
     questionModalEl.addEventListener("hidden.bs.modal", () => {
+        // Reset filters when modal is closed
+        resetFilters();
+
+        // Reset temporary selections to persistent ones (discard unsaved changes)
         temporarySelections = new Set(persistentSelectedQuestions);
 
         const backdrops = document.querySelectorAll('.modal-backdrop');

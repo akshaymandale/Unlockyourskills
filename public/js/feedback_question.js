@@ -222,16 +222,53 @@ document.addEventListener('DOMContentLoaded', function () {
     // Reset modal fields and previews on open
     const feedbackModal = document.getElementById('addFeedbackQuestionModal');
     feedbackModal.addEventListener('show.bs.modal', () => {
+        // Clear all validation errors first
+        const form = document.getElementById('addFeedbackQuestionForm');
+        if (form) {
+            // Remove all invalid classes
+            const invalidInputs = form.querySelectorAll('.is-invalid');
+            invalidInputs.forEach(input => {
+                input.classList.remove('is-invalid');
+            });
+            
+            // Remove all invalid-feedback messages
+            const feedbackMessages = form.querySelectorAll('.invalid-feedback');
+            feedbackMessages.forEach(feedback => {
+                feedback.remove();
+            });
+        }
+
         // Only reset if not in edit mode
         if (!isEditMode) {
-            document.getElementById('feedbackQuestionForm').reset();
-            questionPreview.innerHTML = '';
-            questionMediaInput.value = '';
+            if (form) {
+                form.reset();
+            }
+            
+            if (questionPreview) {
+                questionPreview.innerHTML = '';
+            }
+            
+            if (questionMediaInput) {
+                questionMediaInput.value = '';
+            }
+            
             $('#existingFeedbackQuestionMedia').val('');
-            typeSelect.value = 'multi_choice';
-            updateOptionsUI();
-            ratingWrapper.classList.add('d-none');
-            feedbackModal.querySelector('.modal-body').scrollTop = 0;
+            
+            if (typeSelect) {
+                typeSelect.value = 'multi_choice';
+                updateOptionsUI();
+            }
+            
+            if (ratingWrapper) {
+                ratingWrapper.classList.add('d-none');
+            }
+            
+            if (feedbackModal) {
+                const modalBody = feedbackModal.querySelector('.modal-body');
+                if (modalBody) {
+                    modalBody.scrollTop = 0;
+                }
+            }
 
             // Reset tags
             tags = [];
@@ -248,7 +285,54 @@ document.addEventListener('DOMContentLoaded', function () {
         isEditMode = false;
     });
 
+    // Clean up modal when it's closed
+    feedbackModal.addEventListener('hidden.bs.modal', () => {
+        // Clear all fields and previews when modal is closed
+        const form = document.getElementById('addFeedbackQuestionForm');
+        if (form) {
+            form.reset();
+        }
+        
+        if (questionPreview) {
+            questionPreview.innerHTML = '';
+        }
+        
+        if (questionMediaInput) {
+            questionMediaInput.value = '';
+        }
+        
+        $('#existingFeedbackQuestionMedia').val('');
+        
+        if (typeSelect) {
+            typeSelect.value = 'multi_choice';
+            updateOptionsUI();
+        }
+        
+        if (ratingWrapper) {
+            ratingWrapper.classList.add('d-none');
+        }
+        
+        if (feedbackModal) {
+            const modalBody = feedbackModal.querySelector('.modal-body');
+            if (modalBody) {
+                modalBody.scrollTop = 0;
+            }
+        }
 
+        // Reset tags
+        tags = [];
+        renderTags();
+        updateTagListInput();
+
+        // Reset modal title
+        const modalTitle = document.getElementById('addFeedbackQuestionModalLabel');
+        if (modalTitle) {
+            modalTitle.textContent = 'Add Feedback Question';
+        }
+
+        // Reset edit mode flag
+        isEditMode = false;
+    });
 
     // Attach edit button events dynamically (in case buttons are dynamically loaded)
     document.body.addEventListener('click', function (e) {
@@ -256,17 +340,22 @@ document.addEventListener('DOMContentLoaded', function () {
             const btn = e.target.closest('.edit-question-btn');
             const questionId = btn.getAttribute('data-question-id');
             if (questionId) {
-                // Set edit mode flag
                 isEditMode = true;
 
                 // Show modal first, then fetch and populate data
                 const modal = bootstrap.Modal.getOrCreateInstance(document.getElementById('addFeedbackQuestionModal'));
-                modal.show();
-
-                // Fetch complete question data via AJAX after modal is shown
-                setTimeout(() => {
+                
+                // Listen for modal to be fully shown before populating data
+                const modalElement = document.getElementById('addFeedbackQuestionModal');
+                const handleModalShown = () => {
+                    // Fetch complete question data via AJAX after modal is fully shown
                     fetchAndEditQuestion(questionId);
-                }, 100); // Small delay to ensure modal is fully shown
+                    // Remove the event listener to prevent multiple calls
+                    modalElement.removeEventListener('shown.bs.modal', handleModalShown);
+                };
+                
+                modalElement.addEventListener('shown.bs.modal', handleModalShown);
+                modal.show();
             } else {
                 console.error('Question ID not found on button');
             }
@@ -275,7 +364,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
     // Function to fetch question data and populate edit form
     function fetchAndEditQuestion(questionId) {
-        fetch(`index.php?controller=FeedbackQuestionController&action=getQuestionById&id=${questionId}`)
+        fetch(`/unlockyourskills/feedback/${questionId}`)
             .then(response => response.json())
             .then(data => {
                 if (data.error) {
@@ -286,8 +375,6 @@ document.addEventListener('DOMContentLoaded', function () {
 
                 // Use the question data directly (options are already included)
                 const questionData = data.question;
-
-
 
                 // Call the edit function with complete data
                 window.editFeedbackQuestion(questionData);
@@ -301,6 +388,8 @@ document.addEventListener('DOMContentLoaded', function () {
     window.editFeedbackQuestion = function (data) {
         const parsedData = typeof data === 'string' ? JSON.parse(data) : data;
 
+        console.log('🔍 Edit Feedback Question - Received data:', parsedData);
+
         const {
             id,
             title,
@@ -312,13 +401,40 @@ document.addEventListener('DOMContentLoaded', function () {
             rating_symbol
         } = parsedData;
 
+        console.log('🔍 Extracted title:', title);
+        console.log('🔍 Extracted id:', id);
+        console.log('🔍 Extracted type:', type);
+
         // Set existing media hidden input
         $('#existingFeedbackQuestionMedia').val(media_path || '');
 
-        const form = document.getElementById('feedbackQuestionForm');
-        form.querySelector('[name="feedbackQuestionId"]').value = id || '';
-        form.querySelector('[name="feedbackQuestionTitle"]').value = title || '';
-        form.querySelector('[name="feedbackQuestionType"]').value = type || '';
+        const form = document.getElementById('addFeedbackQuestionForm');
+        console.log('🔍 Form found:', !!form);
+        
+        if (form) {
+            const idInput = form.querySelector('[name="feedbackQuestionId"]');
+            const titleInput = form.querySelector('[name="feedbackQuestionTitle"]');
+            const typeInput = form.querySelector('[name="feedbackQuestionType"]');
+            
+            console.log('🔍 Form inputs found:', {
+                idInput: !!idInput,
+                titleInput: !!titleInput,
+                typeInput: !!typeInput
+            });
+            
+            if (idInput) {
+                idInput.value = id || '';
+                console.log('🔍 Set ID input value:', idInput.value);
+            }
+            if (titleInput) {
+                titleInput.value = title || '';
+                console.log('🔍 Set title input value:', titleInput.value);
+            }
+            if (typeInput) {
+                typeInput.value = type || '';
+                console.log('🔍 Set type input value:', typeInput.value);
+            }
+        }
 
         // Update modal title
         const modalTitle = document.getElementById('addFeedbackQuestionModalLabel');
@@ -413,8 +529,6 @@ document.addEventListener('DOMContentLoaded', function () {
             ratingWrapper.classList.add('d-none');
         }
     };
-
-
 
     // Initialize on load
     updateOptionsUI();
@@ -614,10 +728,10 @@ document.addEventListener('DOMContentLoaded', function () {
                         title="Edit">
                         <i class="fas fa-edit"></i>
                     </button>
-                    <a href="index.php?controller=FeedbackQuestionController&action=delete&id=${question.id}"
-                        class="btn theme-btn-danger"
-                        title="Delete"
-                        onclick="return confirm('Are you sure you want to delete this question?');">
+                    <a href="#" class="btn theme-btn-danger delete-feedback-question"
+                        data-id="${question.id}"
+                        data-title="${escapeHtml(question.title)}"
+                        title="Delete">
                         <i class="fas fa-trash-alt"></i>
                     </a>
                 </td>

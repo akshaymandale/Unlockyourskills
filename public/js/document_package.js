@@ -63,18 +63,23 @@ document.addEventListener("DOMContentLoaded", function () {
 
     document.querySelector('input[name="mobileSupport"][value="No"]').checked = true;
 
-    // ✅ Clear Existing File Display on New Upload
-    function clearExistingFile(fieldId, hiddenInput, displayElement) {
+    // ✅ Add file change listeners for new uploads with preview
+    function addFilePreviewListener(fieldId, hiddenInput, displayElement) {
         document.getElementById(fieldId).addEventListener("change", function () {
             hiddenInput.value = "";
-            displayElement.innerHTML = "";
-            displayElement.style.display = "none"; // Hide empty file display
+            if (this.files && this.files[0]) {
+                const file = this.files[0];
+                showNewDocumentFilePreview(file, displayElement);
+            } else {
+                displayElement.innerHTML = "";
+                displayElement.style.display = "none";
+            }
         });
     }
 
-    clearExistingFile("documentFileWordExcelPpt", existingWordExcelPpt, wordExcelPptDisplay);
-    clearExistingFile("documentFileEbookManual", existingEbookManual, ebookManualDisplay);
-    clearExistingFile("documentFileResearch", existingResearch, researchDisplay);
+    addFilePreviewListener("documentFileWordExcelPpt", existingWordExcelPpt, wordExcelPptDisplay);
+    addFilePreviewListener("documentFileEbookManual", existingEbookManual, ebookManualDisplay);
+    addFilePreviewListener("documentFileResearch", existingResearch, researchDisplay);
 
     documentModal.show();
 });
@@ -253,6 +258,94 @@ document.addEventListener("DOMContentLoaded", function () {
 
         toggleCategoryFields();
     });
+
+    // ✅ Show preview for new document file uploads
+    function showNewDocumentFilePreview(file, displayElement) {
+        const fileName = file.name;
+        const fileExtension = fileName.split('.').pop().toLowerCase();
+        let previewHTML = '';
+
+        if (['pdf'].includes(fileExtension)) {
+            // PDF preview with remove button
+            previewHTML = `
+                <div class="preview-wrapper" style="position: relative; display: inline-block; margin-top: 10px;">
+                    <div style="padding: 10px; border: 1px solid #ddd; border-radius: 5px; background: #e8f5e8;">
+                        <i class="fas fa-file-pdf" style="font-size: 24px; color: #dc3545;"></i>
+                        <button type="button" class="remove-preview" onclick="clearNewDocumentFileInput('${displayElement.id}')" style="position: absolute; top: -5px; right: -5px; background: #dc3545; color: white; border: none; border-radius: 50%; width: 20px; height: 20px; font-size: 12px; cursor: pointer;">×</button>
+                    </div>
+                    <p style="margin-top: 5px; font-size: 12px; color: #6c757d;">New file: ${fileName} (${(file.size / 1024 / 1024).toFixed(2)} MB)</p>
+                </div>
+            `;
+        } else if (['doc', 'docx'].includes(fileExtension)) {
+            // Word document preview
+            previewHTML = `
+                <div class="preview-wrapper" style="position: relative; display: inline-block; margin-top: 10px;">
+                    <div style="padding: 10px; border: 1px solid #ddd; border-radius: 5px; background: #e8f5e8;">
+                        <i class="fas fa-file-word" style="font-size: 24px; color: #2b579a;"></i>
+                        <button type="button" class="remove-preview" onclick="clearNewDocumentFileInput('${displayElement.id}')" style="position: absolute; top: -5px; right: -5px; background: #dc3545; color: white; border: none; border-radius: 50%; width: 20px; height: 20px; font-size: 12px; cursor: pointer;">×</button>
+                    </div>
+                    <p style="margin-top: 5px; font-size: 12px; color: #6c757d;">New file: ${fileName} (${(file.size / 1024 / 1024).toFixed(2)} MB)</p>
+                </div>
+            `;
+        } else if (['xls', 'xlsx'].includes(fileExtension)) {
+            // Excel document preview
+            previewHTML = `
+                <div class="preview-wrapper" style="position: relative; display: inline-block; margin-top: 10px;">
+                    <div style="padding: 10px; border: 1px solid #ddd; border-radius: 5px; background: #e8f5e8;">
+                        <i class="fas fa-file-excel" style="font-size: 24px; color: #217346;"></i>
+                        <button type="button" class="remove-preview" onclick="clearNewDocumentFileInput('${displayElement.id}')" style="position: absolute; top: -5px; right: -5px; background: #dc3545; color: white; border: none; border-radius: 50%; width: 20px; height: 20px; font-size: 12px; cursor: pointer;">×</button>
+                    </div>
+                    <p style="margin-top: 5px; font-size: 12px; color: #6c757d;">New file: ${fileName} (${(file.size / 1024 / 1024).toFixed(2)} MB)</p>
+                </div>
+            `;
+        } else if (['ppt', 'pptx'].includes(fileExtension)) {
+            // PowerPoint document preview
+            previewHTML = `
+                <div class="preview-wrapper" style="position: relative; display: inline-block; margin-top: 10px;">
+                    <div style="padding: 10px; border: 1px solid #ddd; border-radius: 5px; background: #e8f5e8;">
+                        <i class="fas fa-file-powerpoint" style="font-size: 24px; color: #d24726;"></i>
+                        <button type="button" class="remove-preview" onclick="clearNewDocumentFileInput('${displayElement.id}')" style="position: absolute; top: -5px; right: -5px; background: #dc3545; color: white; border: none; border-radius: 50%; width: 20px; height: 20px; font-size: 12px; cursor: pointer;">×</button>
+                    </div>
+                    <p style="margin-top: 5px; font-size: 12px; color: #6c757d;">New file: ${fileName} (${(file.size / 1024 / 1024).toFixed(2)} MB)</p>
+                </div>
+            `;
+        } else {
+            // Generic file preview
+            previewHTML = `
+                <div class="preview-wrapper" style="position: relative; display: inline-block; margin-top: 10px;">
+                    <div style="padding: 10px; border: 1px solid #ddd; border-radius: 5px; background: #e8f5e8;">
+                        <i class="fas fa-file" style="font-size: 24px; color: #6c757d;"></i>
+                        <button type="button" class="remove-preview" onclick="clearNewDocumentFileInput('${displayElement.id}')" style="position: absolute; top: -5px; right: -5px; background: #dc3545; color: white; border: none; border-radius: 50%; width: 20px; height: 20px; font-size: 12px; cursor: pointer;">×</button>
+                    </div>
+                    <p style="margin-top: 5px; font-size: 12px; color: #6c757d;">New file: ${fileName} (${(file.size / 1024 / 1024).toFixed(2)} MB)</p>
+                </div>
+            `;
+        }
+
+        displayElement.innerHTML = previewHTML;
+        displayElement.style.display = 'block';
+    }
+
+    // ✅ Global function to clear new document file input
+    window.clearNewDocumentFileInput = function(displayElementId) {
+        const displayElement = document.getElementById(displayElementId);
+        if (displayElement) {
+            displayElement.innerHTML = '';
+            displayElement.style.display = 'none';
+        }
+
+        // Clear the corresponding file input
+        if (displayElementId === 'wordExcelPptDisplay') {
+            const fileInput = document.getElementById('documentFileWordExcelPpt');
+            if (fileInput) fileInput.value = '';
+        } else if (displayElementId === 'ebookManualDisplay') {
+            const fileInput = document.getElementById('documentFileEbookManual');
+            if (fileInput) fileInput.value = '';
+        } else if (displayElementId === 'researchDisplay') {
+            const fileInput = document.getElementById('documentFileResearch');
+            if (fileInput) fileInput.value = '';
+        }
+    };
 
     // ✅ File Preview Functions (following Non-SCORM pattern)
     function createExistingFilePreview(fileName, previewContainer, uploadPath = 'uploads/documents/', containerId) {

@@ -165,6 +165,56 @@ document.addEventListener("DOMContentLoaded", function () {
         previewContainer.innerHTML = previewHTML;
     }
 
+    // ✅ Add file change listener for new uploads
+    videoFile.addEventListener('change', function() {
+        if (this.files && this.files[0]) {
+            const file = this.files[0];
+            showNewVideoFilePreview(file);
+        }
+    });
+
+    // ✅ Show preview for new video file uploads
+    function showNewVideoFilePreview(file) {
+        const fileName = file.name;
+        const fileExtension = fileName.split('.').pop().toLowerCase();
+        let previewHTML = '';
+
+        if (['mp4', 'avi', 'mov', 'wmv', 'flv', 'webm', 'mkv'].includes(fileExtension)) {
+            // Video preview with player and remove button
+            previewHTML = `
+                <div class="preview-wrapper" style="position: relative; display: inline-block; margin-top: 10px;">
+                    <div style="padding: 10px; border: 1px solid #ddd; border-radius: 5px; background: #e8f5e8;">
+                        <video controls style="width: 200px; height: 150px;">
+                            <source src="${URL.createObjectURL(file)}" type="video/${fileExtension}">
+                            Your browser does not support the video element.
+                        </video>
+                        <button type="button" class="remove-preview" onclick="clearNewVideoFileInput()" style="position: absolute; top: -5px; right: -5px; background: #dc3545; color: white; border: none; border-radius: 50%; width: 20px; height: 20px; font-size: 12px; cursor: pointer;">×</button>
+                    </div>
+                    <p style="margin-top: 5px; font-size: 12px; color: #6c757d;">New file: ${fileName} (${(file.size / 1024 / 1024).toFixed(2)} MB)</p>
+                </div>
+            `;
+        } else {
+            // Generic file preview
+            previewHTML = `
+                <div class="preview-wrapper" style="position: relative; display: inline-block; margin-top: 10px;">
+                    <div style="padding: 10px; border: 1px solid #ddd; border-radius: 5px; background: #e8f5e8;">
+                        <i class="fas fa-file-video" style="font-size: 24px; color: #6a0dad;"></i>
+                        <button type="button" class="remove-preview" onclick="clearNewVideoFileInput()" style="position: absolute; top: -5px; right: -5px; background: #dc3545; color: white; border: none; border-radius: 50%; width: 20px; height: 20px; font-size: 12px; cursor: pointer;">×</button>
+                    </div>
+                    <p style="margin-top: 5px; font-size: 12px; color: #6c757d;">New file: ${fileName} (${(file.size / 1024 / 1024).toFixed(2)} MB)</p>
+                </div>
+            `;
+        }
+
+        videoDisplay.innerHTML = previewHTML;
+    }
+
+    // ✅ Global function to clear new video file input
+    window.clearNewVideoFileInput = function() {
+        videoFile.value = '';
+        videoDisplay.innerHTML = '';
+    };
+
     // Global function to remove file preview
     window.removeVideoFilePreview = function(containerId) {
         const container = document.getElementById(containerId);

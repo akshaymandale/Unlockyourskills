@@ -8,6 +8,9 @@
  * @subpackage UnlockYourSkills
  * @since 1.0.0
  */
+
+// Load UrlHelper for generating correct asset paths
+require_once __DIR__ . '/../../core/UrlHelper.php';
 ?>
 
     </div><!-- #content -->
@@ -20,13 +23,12 @@
 
 </div><!-- #page -->
 
-    
-<script src="public/bootstrap/js/jquery.min.js"></script>
-    <script src="public/bootstrap/js/bootstrap.bundle.min.js"></script>
 
+<script src="<?= UrlHelper::url('public/bootstrap/js/jquery.min.js') ?>"></script>
+    <!-- Removed duplicate Bootstrap bundle - already loaded in header -->
+    <!-- <script src="<?= UrlHelper::url('public/bootstrap/js/bootstrap.bundle.min.js') ?>"></script> -->
 
-
-    <script src="public/js/script.js"></script>
+    <script src="<?= UrlHelper::url('public/js/script.js') ?>"></script>
 
 
 </body>

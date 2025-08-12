@@ -11,13 +11,14 @@ class FeedbackQuestionModel {
 
     // Save a new feedback question
     public function saveQuestion($data) {
-        $sql = "INSERT INTO feedback_questions 
-                (title, type, media_path, rating_scale, rating_symbol, tags, created_by, created_at, updated_by, updated_at, is_deleted)
-                VALUES 
-                (:title, :type, :media_path, :rating_scale, :rating_symbol, :tags, :created_by, NOW(), :created_by, NOW(), 0)";
-        
+        $sql = "INSERT INTO feedback_questions
+                (client_id, title, type, media_path, rating_scale, rating_symbol, tags, created_by, created_at, updated_by, updated_at, is_deleted)
+                VALUES
+                (:client_id, :title, :type, :media_path, :rating_scale, :rating_symbol, :tags, :created_by, NOW(), :created_by, NOW(), 0)";
+
         $stmt = $this->conn->prepare($sql);
         $stmt->execute([
+            'client_id' => $data['client_id'],
             'title' => $data['title'],
             'type' => $data['type'],
             'media_path' => $data['media_path'] ?? null,
@@ -31,8 +32,8 @@ class FeedbackQuestionModel {
     }
 
     // Update existing question by ID
-    public function updateQuestion($id, $data) {
-        $sql = "UPDATE feedback_questions SET 
+    public function updateQuestion($id, $data, $clientId = null) {
+        $sql = "UPDATE feedback_questions SET
                     title = :title,
                     type = :type,
                     media_path = :media_path,
@@ -43,21 +44,28 @@ class FeedbackQuestionModel {
                     updated_at = NOW()
                 WHERE id = :id AND is_deleted = 0";
 
-        $stmt = $this->conn->prepare($sql);
-        return $stmt->execute([
+        $params = [
             'title' => $data['title'],
             'type' => $data['type'],
             'media_path' => $data['media_path'] ?? null,
             'rating_scale' => $data['rating_scale'] ?? null,
             'rating_symbol' => $data['rating_symbol'] ?? null,
             'tags' => $data['tags'] ?? null,
-            'updated_by' => $data['updated_by'],
+            'updated_by' => $data['created_by'], // Use created_by as updated_by
             'id' => $id,
-        ]);
+        ];
+
+        if ($clientId !== null) {
+            $sql .= " AND client_id = :client_id";
+            $params['client_id'] = $clientId;
+        }
+
+        $stmt = $this->conn->prepare($sql);
+        return $stmt->execute($params);
     }
 
     // Save options for a given question (with media uploads)
-    public function saveOptions($questionId, $options, $optionMedias, $createdBy) {
+    public function saveOptions($questionId, $options, $optionMedias, $createdBy, $clientId) {
         $count = count($options);
         for ($i = 0; $i < $count; $i++) {
             $text = trim($options[$i]);
@@ -77,13 +85,14 @@ class FeedbackQuestionModel {
                 $mediaName = $this->handleMediaUpload($file, 'feedback');
             }
 
-            $sql = "INSERT INTO feedback_question_options 
-                    (question_id, option_text, media_path, created_by, created_at, updated_by, updated_at, is_deleted)
-                    VALUES 
-                    (:question_id, :option_text, :media_path, :created_by, NOW(), :created_by, NOW(), 0)";
+            $sql = "INSERT INTO feedback_question_options
+                    (client_id, question_id, option_text, media_path, created_by, created_at, updated_by, updated_at, is_deleted)
+                    VALUES
+                    (:client_id, :question_id, :option_text, :media_path, :created_by, NOW(), :created_by, NOW(), 0)";
 
             $stmt = $this->conn->prepare($sql);
             $stmt->execute([
+                'client_id' => $clientId,
                 'question_id' => $questionId,
                 'option_text' => $text,
                 'media_path' => $mediaName,
@@ -160,38 +169,58 @@ class FeedbackQuestionModel {
     }
 
     // Get all options for a question
-    public function getOptionsByQuestionId($questionId) {
-        $sql = "SELECT id, option_text, media_path 
-                FROM feedback_question_options 
-                WHERE question_id = :question_id AND is_deleted = 0 
-                ORDER BY created_at ASC";
+    public function getOptionsByQuestionId($questionId, $clientId = null) {
+        $sql = "SELECT id, option_text, media_path
+                FROM feedback_question_options
+                WHERE question_id = :question_id AND is_deleted = 0";
+
+        $params = ['question_id' => $questionId];
+
+        if ($clientId !== null) {
+            $sql .= " AND client_id = :client_id";
+            $params['client_id'] = $clientId;
+        }
+
+        $sql .= " ORDER BY created_at ASC";
 
         $stmt = $this->conn->prepare($sql);
-        $stmt->execute(['question_id' => $questionId]);
+        $stmt->execute($params);
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
 
     // Get question details including options
-    public function getQuestionById($id) {
+    public function getQuestionById($id, $clientId = null) {
         $sql = "SELECT * FROM feedback_questions WHERE id = :id AND is_deleted = 0";
+        $params = ['id' => $id];
+
+        if ($clientId !== null) {
+            $sql .= " AND client_id = :client_id";
+            $params['client_id'] = $clientId;
+        }
+
         $stmt = $this->conn->prepare($sql);
-        $stmt->execute(['id' => $id]);
+        $stmt->execute($params);
         $question = $stmt->fetch(PDO::FETCH_ASSOC);
 
         if (!$question) return null;
 
-        $question['options'] = $this->getOptionsByQuestionId($id);
+        $question['options'] = $this->getOptionsByQuestionId($id, $clientId);
 
-        
+
         return $question;
     }
 
     // Fetch paginated questions with optional search and type filter
-    public function getQuestions($search = '', $type = '', $limit = 10, $offset = 0, $tags = '') {
+    public function getQuestions($search = '', $type = '', $limit = 10, $offset = 0, $tags = '', $clientId = null) {
         $params = [];
         $sql = "SELECT id, title, type, tags
                 FROM feedback_questions
                 WHERE is_deleted = 0 ";
+
+        if ($clientId !== null) {
+            $sql .= " AND client_id = ? ";
+            $params[] = $clientId;
+        }
 
         if ($search !== '') {
             $sql .= " AND (title LIKE ? OR tags LIKE ?) ";
@@ -223,9 +252,14 @@ class FeedbackQuestionModel {
     }
 
     // Get total number of questions for pagination
-    public function getTotalQuestionCount($search = '', $type = '', $tags = '') {
+    public function getTotalQuestionCount($search = '', $type = '', $tags = '', $clientId = null) {
         $params = [];
         $sql = "SELECT COUNT(*) FROM feedback_questions WHERE is_deleted = 0 ";
+
+        if ($clientId !== null) {
+            $sql .= " AND client_id = ? ";
+            $params[] = $clientId;
+        }
 
         if ($search !== '') {
             $sql .= " AND (title LIKE ? OR tags LIKE ?) ";
@@ -253,10 +287,18 @@ class FeedbackQuestionModel {
     }
 
     // Get distinct question types
-    public function getDistinctTypes() {
-        $sql = "SELECT DISTINCT type FROM feedback_questions WHERE is_deleted = 0 ORDER BY type ASC";
+    public function getDistinctTypes($clientId = null) {
+        $sql = "SELECT DISTINCT type FROM feedback_questions WHERE is_deleted = 0";
+        $params = [];
+
+        if ($clientId !== null) {
+            $sql .= " AND client_id = ?";
+            $params[] = $clientId;
+        }
+
+        $sql .= " ORDER BY type ASC";
         $stmt = $this->conn->prepare($sql);
-        $stmt->execute();
+        $stmt->execute($params);
         return $stmt->fetchAll(PDO::FETCH_COLUMN);
     }
 
@@ -304,18 +346,34 @@ class FeedbackQuestionModel {
     }
 
     // Soft delete a question
-    public function deleteQuestion($id) {
+    public function deleteQuestion($id, $clientId = null) {
         $sql = "UPDATE feedback_questions SET is_deleted = 1 WHERE id = :id";
+        $params = [':id' => $id];
+
+        if ($clientId !== null) {
+            $sql .= " AND client_id = :client_id";
+            $params[':client_id'] = $clientId;
+        }
+
         $stmt = $this->conn->prepare($sql);
-        $stmt->bindParam(':id', $id, PDO::PARAM_INT);
-        $stmt->execute();
+        $result = $stmt->execute($params);
 
-        // Also soft delete options
-        $sqlOpt = "UPDATE feedback_question_options SET is_deleted = 1 WHERE question_id = :question_id";
-        $stmtOpt = $this->conn->prepare($sqlOpt);
-        $stmtOpt->execute(['question_id' => $id]);
+        if ($result && $stmt->rowCount() > 0) {
+            // Also soft delete options (with client validation)
+            $sqlOpt = "UPDATE feedback_question_options SET is_deleted = 1 WHERE question_id = :question_id";
+            $paramsOpt = ['question_id' => $id];
 
-        return true;
+            if ($clientId !== null) {
+                $sqlOpt .= " AND client_id = :client_id";
+                $paramsOpt['client_id'] = $clientId;
+            }
+
+            $stmtOpt = $this->conn->prepare($sqlOpt);
+            $stmtOpt->execute($paramsOpt);
+            return true;
+        }
+
+        return false;
     }
 
     // Helper: handle media upload, returns stored filename or null
@@ -326,7 +384,11 @@ class FeedbackQuestionModel {
             $ext = pathinfo($file['name'], PATHINFO_EXTENSION);
             $randomName = bin2hex(random_bytes(10)) . '.' . $ext;
             $uploadDir = "uploads/$folder/";
-            if (!is_dir($uploadDir)) mkdir($uploadDir, 0777, true);
+            // ✅ Create directory if it doesn't exist with proper permissions
+            if (!is_dir($uploadDir)) {
+                mkdir($uploadDir, 0777, true);
+                chmod($uploadDir, 0777); // Ensure proper permissions
+            }
             $targetPath = $uploadDir . $randomName;
 
             if (move_uploaded_file($file['tmp_name'], $targetPath)) {

@@ -2,9 +2,40 @@
 if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
-//echo '<pre>'; print_r($_SESSION);
-// ✅ Get Client Name from Session
-$clientName = $_SESSION['client_code'] ?? 'DEFAULT';
+
+require_once 'core/UrlHelper.php';
+
+// ✅ Determine target client for user creation
+$currentUser = $_SESSION['user'] ?? null;
+$targetClientId = null;
+$clientName = 'DEFAULT';
+
+// Simplified detection: Check if super admin is adding user for specific client
+$isFromClientManagement = false;
+
+// Check if super admin is adding user for specific client (from URL parameter)
+if (isset($_GET['client_id']) && $currentUser && $currentUser['system_role'] === 'super_admin') {
+    $isFromClientManagement = true;
+    $targetClientId = $_GET['client_id'];
+
+    // Get client name from database
+    require_once 'models/ClientModel.php';
+    $clientModel = new ClientModel();
+    $client = $clientModel->getClientById($targetClientId);
+    $clientName = $client ? $client['client_name'] : 'Unknown Client';
+
+    // Set session context for future requests
+    $_SESSION['client_management_context'] = true;
+    $_SESSION['target_client_id'] = $targetClientId;
+} else {
+    // Use current user's client or clear client management context
+    $targetClientId = $currentUser['client_id'] ?? null;
+    $clientName = $_SESSION['client_code'] ?? 'DEFAULT';
+
+    // Clear client management context
+    unset($_SESSION['client_management_context']);
+    unset($_SESSION['target_client_id']);
+}
 // Fetch all countries for the initial dropdown
 require_once 'config/database.php';
 
@@ -33,50 +64,60 @@ $countries = $stmt->fetchAll(PDO::FETCH_ASSOC);
         <h1 class="page-title text-purple">
             <?= Localization::translate('add_user_title'); ?>
         </h1>
-        <form action="index.php?controller=UserManagementController&action=storeUser" id="addUserForm" method="POST"
+
+        <?php if ($isFromClientManagement): ?>
+            <div class="alert alert-primary mb-3">
+                <i class="fas fa-users-cog"></i>
+                <strong>Client Management Mode:</strong> Adding Admin user for client <strong><?= htmlspecialchars($clientName); ?></strong>
+                <br><small><i class="fas fa-lock"></i> Only Admin role is available when adding users for client management purposes.</small>
+            </div>
+        <?php endif; ?>
+
+        <form action="<?= UrlHelper::url('users') ?>" id="addUserForm" method="POST"
             enctype="multipart/form-data">
             <!-- ✅ Tabs Section -->
             <!-- Tabs Navigation -->
-            <ul class="nav nav-tabs" id="addUserTabs">
-                <li class="nav-item">
-                    <a class="nav-link active" data-toggle="tab" href="#basic-details">
+            <ul class="nav nav-tabs" id="addUserTabs" role="tablist">
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link active" id="basic-details-tab" data-bs-toggle="tab" data-bs-target="#basic-details" type="button" role="tab" aria-controls="basic-details" aria-selected="true">
                         <?= Localization::translate('basic_details'); ?>
-                    </a>
+                    </button>
                 </li>
-                <li class="nav-item">
-                    <a class="nav-link" data-toggle="tab" href="#additional-details">
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link" id="additional-details-tab" data-bs-toggle="tab" data-bs-target="#additional-details" type="button" role="tab" aria-controls="additional-details" aria-selected="false">
                         <?= Localization::translate('additional_details'); ?>
-                    </a>
+                    </button>
                 </li>
-                <li class="nav-item">
-                    <a class="nav-link" data-toggle="tab" href="#extra-details">
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link" id="extra-details-tab" data-bs-toggle="tab" data-bs-target="#extra-details" type="button" role="tab" aria-controls="extra-details" aria-selected="false">
                         <?= Localization::translate('extra_details'); ?>
-                    </a>
+                    </button>
                 </li>
             </ul>
 
             <!-- Tabs Content -->
             <input type="hidden" name="client_id" id="clientName" value="<?php echo htmlspecialchars($clientName); ?>">
-            <div class="tab-content">
-                <div class="tab-pane show active" id="basic-details">
+            <input type="hidden" name="target_client_id" value="<?php echo htmlspecialchars($targetClientId); ?>">
+            <div class="tab-content" id="addUserTabsContent">
+                <div class="tab-pane fade show active" id="basic-details" role="tabpanel" aria-labelledby="basic-details-tab" tabindex="0">
                     <div class="row">
                         <div class="col-lg-6 col-md-6 col-sm-12 form-group">
                             <label><?= Localization::translate('profile_id'); ?></label>
-                            <input type="text" id="profile_id" name="profile_id" class="input-field" readonly>
+                            <input type="text" id="profile_id" name="profile_id" class="input-field" readonly placeholder="Will be auto-generated">
                         </div>
                         <div class="col-lg-6 col-md-6 col-sm-12 form-group">
-                            <label><?= Localization::translate('full_name'); ?> *</label>
-                            <input type="text" id="full_name" name="full_name" required class="input-field">
+                            <label><?= Localization::translate('full_name'); ?> <span class="text-danger">*</span></label>
+                            <input type="text" id="full_name" name="full_name" class="input-field">
                         </div>
                     </div>
                     <div class="row">
                         <div class="col-lg-6 col-md-6 col-sm-12 form-group">
-                            <label><?= Localization::translate('email'); ?> *</label>
-                            <input type="text" id="email" name="email" required class="input-field">
+                            <label><?= Localization::translate('email'); ?> <span class="text-danger">*</span></label>
+                            <input type="text" id="email" name="email" class="input-field">
                         </div>
                         <div class="col-lg-6 col-md-6 col-sm-12 form-group">
-                            <label><?= Localization::translate('contact_number'); ?> *</label>
-                            <input type="text" id="contact_number" name="contact_number" required class="input-field">
+                            <label><?= Localization::translate('contact_number'); ?> <span class="text-danger">*</span></label>
+                            <input type="text" id="contact_number" name="contact_number" class="input-field">
                         </div>
                     </div>
                     <div class="row">
@@ -96,15 +137,62 @@ $countries = $stmt->fetchAll(PDO::FETCH_ASSOC);
                     </div>
                     <div class="row">
                         <div class="col-lg-6 col-md-6 col-sm-12 form-group">
-                            <label><?= Localization::translate('user_role'); ?> *</label>
-                            <select id="user_role" name="user_role" required class="input-field">
-                                <option value=""><?= Localization::translate('select_user_role'); ?></option>
-                                <option value="Admin"><?= Localization::translate('admin'); ?></option>
-                                <option value="End User"><?= Localization::translate('end_user'); ?></option>
-                                <option value="Instructor"><?= Localization::translate('instructor'); ?></option>
-                                <option value="Corporate Manager"><?= Localization::translate('corporate_manager'); ?>
-                                </option>
+                            <label><?= Localization::translate('user_role'); ?> <span class="text-danger">*</span></label>
+                            <select id="user_role" name="user_role" class="input-field" <?= $isSuperAdminForClient ? 'readonly style="background-color: #f8f9fa; cursor: not-allowed;"' : ''; ?>>
+                                <?php
+                                // Check if super admin is adding user for specific client
+                                $isSuperAdminForClient = $isFromClientManagement;
+
+                                if ($isSuperAdminForClient): ?>
+                                    <!-- Super admin adding for specific client - only Admin role -->
+                                    <?php
+                                    // Get admin roles from database
+                                    foreach ($adminRoles as $role) {
+                                        $adminDisabled = '';
+                                        $adminText = $role['role_name'];
+
+                                        if ($adminRoleStatus && !$adminRoleStatus['canAdd']) {
+                                            $adminDisabled = 'disabled';
+                                            $adminText .= ' (Limit Reached)';
+                                        }
+                                        ?>
+                                        <option value="<?= htmlspecialchars($role['role_name']); ?>" <?= $adminDisabled; ?> selected><?= $adminText; ?></option>
+                                        <?php
+                                    }
+                                    ?>
+                                <?php else: ?>
+                                    <!-- Regular admin or super admin not in client context - show all roles -->
+                                    <option value=""><?= Localization::translate('select_user_role'); ?></option>
+                                    <?php
+                                    // Display all client roles from database
+                                    foreach ($userRoles as $role) {
+                                        $roleDisabled = '';
+                                        $roleText = $role['role_name'];
+
+                                        // Check if admin role should be disabled
+                                        if ($role['system_role'] === 'admin' && $adminRoleStatus && !$adminRoleStatus['canAdd']) {
+                                            $roleDisabled = 'disabled';
+                                            $roleText .= ' (Limit Reached)';
+                                        }
+                                        ?>
+                                        <option value="<?= htmlspecialchars($role['role_name']); ?>" <?= $roleDisabled; ?>><?= $roleText; ?></option>
+                                        <?php
+                                    }
+                                    ?>
+                                <?php endif; ?>
                             </select>
+
+                            <?php if ($isSuperAdminForClient): ?>
+                                <small class="text-info">
+                                    <i class="fas fa-lock"></i> <strong>Client Management Mode:</strong> Only Admin role available for client administration.
+                                </small>
+                            <?php endif; ?>
+
+                            <?php if ($adminRoleStatus && !$adminRoleStatus['canAdd']): ?>
+                                <small class="text-warning">
+                                    <i class="fas fa-exclamation-triangle"></i> Admin limit reached: <?= $adminRoleStatus['current']; ?>/<?= $adminRoleStatus['limit']; ?>
+                                </small>
+                            <?php endif; ?>
                         </div>
                         <div class="col-lg-6 col-md-6 col-sm-12 form-group">
                             <label><?= Localization::translate('profile_expiry_date'); ?></label>
@@ -163,7 +251,7 @@ $countries = $stmt->fetchAll(PDO::FETCH_ASSOC);
                     </div>
                 </div>
 
-                <div class="tab-pane" id="additional-details">
+                <div class="tab-pane fade" id="additional-details" role="tabpanel" aria-labelledby="additional-details-tab" tabindex="0">
                     <div class="row">
                         <div class="col-lg-6 col-md-6 col-sm-12 form-group">
                             <label for="country"><?= Localization::translate('country'); ?></label>
@@ -198,7 +286,16 @@ $countries = $stmt->fetchAll(PDO::FETCH_ASSOC);
                     <div class="row">
                         <div class="col-lg-6 col-md-6 col-sm-12 form-group">
                             <label><?= Localization::translate('language'); ?></label>
-                            <input type="text" name="language" class="input-field">
+                            <select name="language" class="input-field">
+                                <option value=""><?= Localization::translate('select_language'); ?></option>
+                                <?php if (!empty($languages)): ?>
+                                    <?php foreach ($languages as $language): ?>
+                                        <option value="<?= htmlspecialchars($language['language_code']); ?>">
+                                            <?= htmlspecialchars($language['language_name']); ?>
+                                        </option>
+                                    <?php endforeach; ?>
+                                <?php endif; ?>
+                            </select>
                         </div>
                         <div class="col-lg-6 col-md-6 col-sm-12 form-group">
                             <label><?= Localization::translate('reports_to'); ?></label>
@@ -217,57 +314,152 @@ $countries = $stmt->fetchAll(PDO::FETCH_ASSOC);
                     </div>
                 </div>
 
-                <div class="tab-pane" id="extra-details">
-                    <div class="row">
-                        <div class="col-lg-6 col-md-6 col-sm-12 form-group">
-                            <label><?= Localization::translate('customised_1'); ?></label>
-                            <input type="text" name="customised_1" class="input-field">
+                <div class="tab-pane fade" id="extra-details" role="tabpanel" aria-labelledby="extra-details-tab" tabindex="0">
+                    <?php
+                    // Get custom fields for the current client
+                    require_once 'models/CustomFieldModel.php';
+                    $customFieldModel = new CustomFieldModel();
+
+                    // Determine which client to use for custom fields
+                    $targetClientId = null;
+                    $currentUser = $_SESSION['user'] ?? null;
+
+                    // If super admin is managing a specific client (from URL parameter)
+                    if (isset($_GET['client_id']) && $currentUser && $currentUser['system_role'] === 'super_admin') {
+                        $targetClientId = $_GET['client_id'];
+                    } else {
+                        // Use current user's client ID
+                        $targetClientId = $currentUser['client_id'] ?? $_SESSION['client_id'] ?? null;
+                    }
+
+                    // Only fetch custom fields if we have a valid client ID
+                    $customFields = [];
+                    if ($targetClientId && is_numeric($targetClientId)) {
+                        $customFields = $customFieldModel->getCustomFieldsByClient((int)$targetClientId);
+                    }
+
+                    if (empty($customFields)): ?>
+                        <div class="text-center py-5">
+                            <i class="fas fa-info-circle text-muted mb-3" style="font-size: 3rem;"></i>
+                            <h5 class="text-muted"><?= Localization::translate('custom_fields_no_fields'); ?></h5>
+                            <p class="text-muted"><?= Localization::translate('custom_fields_no_fields_description'); ?></p>
+                            <a href="<?= UrlHelper::url('users') ?>" class="btn btn-primary">
+                                <i class="fas fa-plus me-1"></i><?= Localization::translate('custom_fields_create_button'); ?>
+                            </a>
                         </div>
-                        <div class="col-lg-6 col-md-6 col-sm-12 form-group">
-                            <label><?= Localization::translate('customised_2'); ?></label>
-                            <input type="text" name="customised_2" class="input-field">
+                    <?php else: ?>
+                        <div class="row">
+                            <?php
+                            $fieldCount = 0;
+                            foreach ($customFields as $field):
+                                if ($fieldCount % 2 === 0 && $fieldCount > 0): ?>
+                                    </div><div class="row">
+                                <?php endif; ?>
+
+                                <div class="col-lg-6 col-md-6 col-sm-12 form-group">
+                                    <label for="custom_field_<?= $field['id']; ?>">
+                                        <?= htmlspecialchars($field['field_label']); ?>
+                                        <?php if ($field['is_required']): ?><span class="text-danger">*</span><?php endif; ?>
+                                    </label>
+
+                                    <?php
+                                    $fieldName = "custom_field_{$field['id']}";
+                                    $fieldId = "custom_field_{$field['id']}";
+
+                                    switch ($field['field_type']):
+                                        case 'text':
+                                        case 'email':
+                                        case 'phone':
+                                        case 'number': ?>
+                                            <input type="<?= $field['field_type']; ?>"
+                                                   id="<?= $fieldId; ?>"
+                                                   name="<?= $fieldName; ?>"
+                                                   class="input-field">
+                                            <?php break;
+
+                                        case 'textarea': ?>
+                                            <textarea id="<?= $fieldId; ?>"
+                                                      name="<?= $fieldName; ?>"
+                                                      class="input-field"
+                                                      rows="3"></textarea>
+                                            <?php break;
+
+                                        case 'select': ?>
+                                            <select id="<?= $fieldId; ?>"
+                                                    name="<?= $fieldName; ?>"
+                                                    class="input-field">
+                                                <option value="">Select an option...</option>
+                                                <?php if ($field['field_options']): ?>
+                                                    <?php foreach ($field['field_options'] as $option): ?>
+                                                        <option value="<?= htmlspecialchars($option); ?>">
+                                                            <?= htmlspecialchars($option); ?>
+                                                        </option>
+                                                    <?php endforeach; ?>
+                                                <?php endif; ?>
+                                            </select>
+                                            <?php break;
+
+                                        case 'radio': ?>
+                                            <?php if ($field['field_options']): ?>
+                                                <?php foreach ($field['field_options'] as $index => $option): ?>
+                                                    <div class="form-check">
+                                                        <input class="form-check-input"
+                                                               type="radio"
+                                                               id="<?= $fieldId; ?>_<?= $index; ?>"
+                                                               name="<?= $fieldName; ?>"
+                                                               value="<?= htmlspecialchars($option); ?>">
+                                                        <label class="form-check-label" for="<?= $fieldId; ?>_<?= $index; ?>">
+                                                            <?= htmlspecialchars($option); ?>
+                                                        </label>
+                                                    </div>
+                                                <?php endforeach; ?>
+                                            <?php endif; ?>
+                                            <?php break;
+
+                                        case 'checkbox': ?>
+                                            <?php if ($field['field_options']): ?>
+                                                <?php foreach ($field['field_options'] as $index => $option): ?>
+                                                    <div class="form-check">
+                                                        <input class="form-check-input"
+                                                               type="checkbox"
+                                                               id="<?= $fieldId; ?>_<?= $index; ?>"
+                                                               name="<?= $fieldName; ?>[]"
+                                                               value="<?= htmlspecialchars($option); ?>">
+                                                        <label class="form-check-label" for="<?= $fieldId; ?>_<?= $index; ?>">
+                                                            <?= htmlspecialchars($option); ?>
+                                                        </label>
+                                                    </div>
+                                                <?php endforeach; ?>
+                                            <?php endif; ?>
+                                            <?php break;
+
+                                        case 'file': ?>
+                                            <input type="file"
+                                                   id="<?= $fieldId; ?>"
+                                                   name="<?= $fieldName; ?>"
+                                                   class="input-field">
+                                            <?php break;
+
+                                        case 'date': ?>
+                                            <input type="date"
+                                                   id="<?= $fieldId; ?>"
+                                                   name="<?= $fieldName; ?>"
+                                                   class="input-field">
+                                            <?php break;
+
+                                        default: ?>
+                                            <input type="text"
+                                                   id="<?= $fieldId; ?>"
+                                                   name="<?= $fieldName; ?>"
+                                                   class="input-field">
+                                            <?php break;
+                                    endswitch; ?>
+                                </div>
+
+                                <?php $fieldCount++; ?>
+                            <?php endforeach; ?>
                         </div>
-                    </div>
-                    <div class="row">
-                        <div class="col-lg-6 col-md-6 col-sm-12 form-group">
-                            <label><?= Localization::translate('customised_3'); ?></label>
-                            <input type="text" name="customised_3" class="input-field">
-                        </div>
-                        <div class="col-lg-6 col-md-6 col-sm-12 form-group">
-                            <label><?= Localization::translate('customised_4'); ?></label>
-                            <input type="text" name="customised_4" class="input-field">
-                        </div>
-                    </div>
-                    <div class="row">
-                        <div class="col-lg-6 col-md-6 col-sm-12 form-group">
-                            <label><?= Localization::translate('customised_5'); ?></label>
-                            <input type="text" name="customised_5" class="input-field">
-                        </div>
-                        <div class="col-lg-6 col-md-6 col-sm-12 form-group">
-                            <label><?= Localization::translate('customised_6'); ?></label>
-                            <input type="text" name="customised_6" class="input-field">
-                        </div>
-                    </div>
-                    <div class="row">
-                        <div class="col-md-6 col-lg-6 col-sm-12 form-group">
-                            <label><?= Localization::translate('customised_7'); ?></label>
-                            <input type="text" name="customised_7" class="input-field">
-                        </div>
-                        <div class="col-md-6 col-lg-6 col-sm-12 form-group">
-                            <label><?= Localization::translate('customised_8'); ?></label>
-                            <input type="text" name="customised_8" class="input-field">
-                        </div>
-                    </div>
-                    <div class="row">
-                        <div class="col-md-6 col-lg-6 col-sm-12 form-group">
-                            <label><?= Localization::translate('customised_9'); ?></label>
-                            <input type="text" name="customised_9" class="input-field">
-                        </div>
-                        <div class="col-md-6 col-lg-6 col-sm-12 form-group">
-                            <label><?= Localization::translate('customised_10'); ?></label>
-                            <input type="text" name="customised_10" class="input-field">
-                        </div>
-                    </div>
+                    <?php endif; ?>
                 </div>
 
 
@@ -296,8 +488,39 @@ $countries = $stmt->fetchAll(PDO::FETCH_ASSOC);
         "validation.image_format" => Localization::translate('validation.image_format'),
         "validation.image_size" => Localization::translate('validation.image_size')
     ]); ?>;
+
+    // Auto-generate Profile ID
+    document.addEventListener('DOMContentLoaded', function() {
+        // Generate profile ID
+        function generateProfileId() {
+            const prefix = '<?= htmlspecialchars($clientName); ?>'.substring(0, 2).toUpperCase();
+            const timestamp = Date.now().toString().slice(-6);
+            const random = Math.floor(Math.random() * 1000).toString().padStart(3, '0');
+            return prefix + timestamp + random;
+        }
+
+        const profileIdField = document.getElementById('profile_id');
+        if (profileIdField) {
+            profileIdField.value = generateProfileId();
+        }
+
+        <?php if ($isSuperAdminForClient): ?>
+        // Super admin client mode - lock user role to Admin
+        const userRoleSelect = document.getElementById('user_role');
+        if (userRoleSelect) {
+            // Prevent any changes to the dropdown
+            userRoleSelect.addEventListener('change', function(e) {
+                e.target.value = 'Admin';
+            });
+
+            // Add visual indicator
+            userRoleSelect.title = 'Role is locked to Admin for client management';
+        }
+        <?php endif; ?>
+    });
 </script>
 
 
-<script src="public/js/add_user_validation.js"></script>
+
+<script src="<?= UrlHelper::url('public/js/add_user_validation.js') ?>"></script>
 <?php include 'includes/footer.php'; ?>

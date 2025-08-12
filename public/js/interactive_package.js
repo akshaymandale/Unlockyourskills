@@ -9,10 +9,10 @@ document.addEventListener("DOMContentLoaded", function () {
     const timeLimit = document.getElementById("interactive_timeLimit");
     const interactiveId = document.getElementById("interactive_id");
     const existingContentFile = document.getElementById("existing_content_file");
-    const existingThumbnailImage = document.getElementById("existing_thumbnail_image");
+    const existingThumbnailImage = document.getElementById("existing_interactive_thumbnail_image");
     const existingMetadataFile = document.getElementById("existing_metadata_file");
     const contentFileDisplay = document.getElementById("contentFilePreview");
-    const thumbnailDisplay = document.getElementById("thumbnailImagePreview");
+    const thumbnailDisplay = document.getElementById("interactiveThumbnailImagePreview");
     const metadataDisplay = document.getElementById("metadataFilePreview");
     const mobileSupport = document.querySelectorAll('input[name="interactive_mobileSupport"]');
     const progressTracking = document.querySelectorAll('input[name="interactive_progress_tracking"]');
@@ -40,13 +40,13 @@ document.addEventListener("DOMContentLoaded", function () {
         updateInteractiveHiddenTagList();
     }
 
-    // ✅ Update Tag Display
+    // ✅ Update Tag Display - Match SCORM Structure
     function updateInteractiveTagDisplay() {
         interactiveTagContainer.innerHTML = "";
         interactiveTags.forEach(tag => {
             const tagElement = document.createElement("span");
             tagElement.className = "tag";
-            tagElement.innerHTML = `${tag} <span class="remove-tag" onclick="removeInteractiveTag('${tag}')">&times;</span>`;
+            tagElement.innerHTML = `${tag} <button type="button" class="remove-tag" onclick="removeInteractiveTag('${tag}')">&times;</button>`;
             interactiveTagContainer.appendChild(tagElement);
         });
     }
@@ -129,10 +129,10 @@ document.addEventListener("DOMContentLoaded", function () {
             }
 
             if (interactiveData.thumbnail_image) {
-                showFilePreview('thumbnailImagePreview', interactiveData.thumbnail_image, 'thumbnail_image');
+                showFilePreview('interactiveThumbnailImagePreview', interactiveData.thumbnail_image, 'thumbnail_image');
                 existingThumbnailImage.value = interactiveData.thumbnail_image;
             } else {
-                document.getElementById('thumbnailImagePreview').innerHTML = "";
+                document.getElementById('interactiveThumbnailImagePreview').innerHTML = "";
             }
 
             if (interactiveData.metadata_file) {
@@ -212,7 +212,7 @@ document.addEventListener("DOMContentLoaded", function () {
             existingThumbnailImage.value = "";
             existingMetadataFile.value = "";
             document.getElementById('contentFilePreview').innerHTML = "";
-            document.getElementById('thumbnailImagePreview').innerHTML = "";
+            document.getElementById('interactiveThumbnailImagePreview').innerHTML = "";
             document.getElementById('metadataFilePreview').innerHTML = "";
 
             // Reset Radio Buttons to Default
@@ -227,6 +227,9 @@ document.addEventListener("DOMContentLoaded", function () {
 
             // Set Modal Title to "Add Interactive Content"
             document.getElementById("interactiveModalLabel").textContent = "Add Interactive Content";
+
+            // ✅ Attach file input event listeners when modal opens
+            attachFileInputListeners();
 
             interactiveModal.show();
         });
@@ -306,68 +309,191 @@ document.addEventListener("DOMContentLoaded", function () {
         if (fieldType === 'content_file') {
             document.getElementById('existing_content_file').value = '';
         } else if (fieldType === 'thumbnail_image') {
-            document.getElementById('existing_thumbnail_image').value = '';
+            document.getElementById('existing_interactive_thumbnail_image').value = '';
         } else if (fieldType === 'metadata_file') {
             document.getElementById('existing_metadata_file').value = '';
         }
     };
 
-    // ✅ File Input Change Handlers
-    document.getElementById('content_file').addEventListener('change', function() {
+    // ✅ Function to Attach File Input Event Listeners
+    function attachFileInputListeners() {
+        console.log('🔍 Attaching file input listeners...');
+
+        const contentFileInput = document.getElementById('content_file');
+        const thumbnailImageInput = document.getElementById('interactive_thumbnail_image');
+        const metadataFileInput = document.getElementById('metadata_file');
+
+        console.log('🔍 Interactive Content Elements Check:');
+        console.log('- Content File Input:', contentFileInput ? '✅ Found' : '❌ Missing');
+        console.log('- Thumbnail Image Input:', thumbnailImageInput ? '✅ Found' : '❌ Missing');
+        console.log('- Metadata File Input:', metadataFileInput ? '✅ Found' : '❌ Missing');
+
+        // Remove existing event listeners to prevent duplicates
+        if (contentFileInput) {
+            contentFileInput.removeEventListener('change', contentFileChangeHandler);
+            contentFileInput.addEventListener('change', contentFileChangeHandler);
+        }
+
+        if (thumbnailImageInput) {
+            console.log('✅ Thumbnail image input found, adding event listener');
+            thumbnailImageInput.removeEventListener('change', thumbnailImageChangeHandler);
+            thumbnailImageInput.addEventListener('change', thumbnailImageChangeHandler);
+        } else {
+            console.error('❌ Thumbnail image input not found!');
+        }
+
+        if (metadataFileInput) {
+            metadataFileInput.removeEventListener('change', metadataFileChangeHandler);
+            metadataFileInput.addEventListener('change', metadataFileChangeHandler);
+        }
+    }
+
+    // ✅ Event Handler Functions
+    function contentFileChangeHandler() {
+        console.log('🎯 Content file changed:', this.files[0]?.name);
         if (this.files && this.files[0]) {
             const file = this.files[0];
             showNewFilePreview('contentFilePreview', file);
+        } else {
+            clearPreviewContainer('contentFilePreview');
         }
-    });
+    }
 
-    document.getElementById('thumbnail_image').addEventListener('change', function() {
+    function thumbnailImageChangeHandler() {
+        console.log('🎯 Thumbnail image changed:', this.files[0]?.name);
         if (this.files && this.files[0]) {
             const file = this.files[0];
-            showNewFilePreview('thumbnailImagePreview', file);
+            console.log('🎯 Calling showNewFilePreview for interactiveThumbnailImagePreview');
+            showNewFilePreview('interactiveThumbnailImagePreview', file);
+        } else {
+            console.log('🎯 No file selected, clearing preview');
+            clearPreviewContainer('interactiveThumbnailImagePreview');
         }
-    });
+    }
 
-    document.getElementById('metadata_file').addEventListener('change', function() {
+    function metadataFileChangeHandler() {
+        console.log('🎯 Metadata file changed:', this.files[0]?.name);
         if (this.files && this.files[0]) {
             const file = this.files[0];
             showNewFilePreview('metadataFilePreview', file);
+        } else {
+            clearPreviewContainer('metadataFilePreview');
         }
-    });
+    }
 
-    // ✅ Show New File Preview Function
-    function showNewFilePreview(containerId, file) {
+    // ✅ Initial attachment of event listeners
+    attachFileInputListeners();
+
+    // ✅ Helper function to clear preview containers
+    function clearPreviewContainer(containerId) {
         const container = document.getElementById(containerId);
-        const fileExtension = file.name.split('.').pop().toLowerCase();
+        if (container) {
+            container.innerHTML = '';
+            container.style.display = 'none';
+        }
+    }
 
+    // ✅ Enhanced Show New File Preview Function
+    function showNewFilePreview(containerId, file) {
+        console.log('🎯 Showing preview for:', containerId, file.name);
+        const container = document.getElementById(containerId);
+
+        if (!container) {
+            console.error('❌ Preview container not found:', containerId);
+            return;
+        }
+
+        const fileExtension = file.name.split('.').pop().toLowerCase();
         let previewHTML = '';
 
-        if (['jpg', 'jpeg', 'png', 'gif', 'webp'].includes(fileExtension)) {
-            // Image preview
+        if (['jpg', 'jpeg', 'png', 'gif', 'webp', 'bmp', 'svg'].includes(fileExtension)) {
+            // Image preview with enhanced styling
+            console.log('🎯 Creating image preview for:', file.name);
             const reader = new FileReader();
             reader.onload = function(e) {
+                console.log('🎯 FileReader loaded, creating preview HTML');
                 previewHTML = `
-                    <div class="preview-wrapper">
-                        <img src="${e.target.result}" alt="Preview" style="max-width: 150px; max-height: 100px; object-fit: cover;">
-                        <button type="button" class="remove-preview" onclick="clearFileInput('${containerId}')">×</button>
+                    <div class="preview-wrapper" style="position: relative; display: inline-block; margin-top: 10px;">
+                        <img src="${e.target.result}" alt="Preview" style="max-width: 150px; max-height: 100px; object-fit: cover; border: 1px solid #ddd; border-radius: 5px;">
+                        <button type="button" class="remove-preview" onclick="clearFileInput('${containerId}')" style="position: absolute; top: -5px; right: -5px; background: #dc3545; color: white; border: none; border-radius: 50%; width: 20px; height: 20px; font-size: 12px; cursor: pointer;">×</button>
                     </div>
-                    <p style="margin-top: 5px; font-size: 12px;">New file: ${file.name}</p>
+                    <p style="margin-top: 5px; font-size: 12px; color: #6c757d;">New file: ${file.name} (${(file.size / 1024 / 1024).toFixed(2)} MB)</p>
                 `;
                 container.innerHTML = previewHTML;
+                container.style.display = 'block';
+                console.log('✅ Image preview created and container shown');
+            };
+            reader.onerror = function(e) {
+                console.error('❌ FileReader error:', e);
             };
             reader.readAsDataURL(file);
-        } else {
-            // File preview
+        } else if (['mp4', 'avi', 'mov', 'wmv', 'flv', 'webm', 'mkv'].includes(fileExtension)) {
+            // Video preview with player
             previewHTML = `
-                <div class="preview-wrapper">
-                    <div style="padding: 10px; border: 1px solid #ddd; border-radius: 5px; background: #f8f9fa; position: relative;">
-                        <i class="fas fa-file" style="font-size: 24px; color: #6c757d;"></i>
-                        <button type="button" class="remove-preview" onclick="clearFileInput('${containerId}')">×</button>
+                <div class="preview-wrapper" style="position: relative; display: inline-block; margin-top: 10px;">
+                    <div style="padding: 10px; border: 1px solid #ddd; border-radius: 5px; background: #e8f5e8;">
+                        <video controls style="width: 200px; height: 150px;">
+                            <source src="${URL.createObjectURL(file)}" type="video/${fileExtension}">
+                            Your browser does not support the video element.
+                        </video>
+                        <button type="button" class="remove-preview" onclick="clearFileInput('${containerId}')" style="position: absolute; top: -5px; right: -5px; background: #dc3545; color: white; border: none; border-radius: 50%; width: 20px; height: 20px; font-size: 12px; cursor: pointer;">×</button>
                     </div>
-                    <p style="margin-top: 5px; font-size: 12px;">New file: ${file.name}</p>
+                    <p style="margin-top: 5px; font-size: 12px; color: #6c757d;">New file: ${file.name} (${(file.size / 1024 / 1024).toFixed(2)} MB)</p>
+                </div>
+            `;
+            container.innerHTML = previewHTML;
+        } else if (['mp3', 'wav', 'ogg', 'aac', 'm4a'].includes(fileExtension)) {
+            // Audio preview with player
+            previewHTML = `
+                <div class="preview-wrapper" style="position: relative; display: inline-block; margin-top: 10px;">
+                    <div style="padding: 10px; border: 1px solid #ddd; border-radius: 5px; background: #e8f5e8;">
+                        <audio controls style="width: 200px;">
+                            <source src="${URL.createObjectURL(file)}" type="audio/${fileExtension}">
+                            Your browser does not support the audio element.
+                        </audio>
+                        <button type="button" class="remove-preview" onclick="clearFileInput('${containerId}')" style="position: absolute; top: -5px; right: -5px; background: #dc3545; color: white; border: none; border-radius: 50%; width: 20px; height: 20px; font-size: 12px; cursor: pointer;">×</button>
+                    </div>
+                    <p style="margin-top: 5px; font-size: 12px; color: #6c757d;">New file: ${file.name} (${(file.size / 1024 / 1024).toFixed(2)} MB)</p>
+                </div>
+            `;
+            container.innerHTML = previewHTML;
+        } else if (['zip', 'rar', '7z', 'tar', 'gz'].includes(fileExtension)) {
+            // Archive file preview
+            previewHTML = `
+                <div class="preview-wrapper" style="position: relative; display: inline-block; margin-top: 10px;">
+                    <div style="padding: 10px; border: 1px solid #ddd; border-radius: 5px; background: #e8f5e8;">
+                        <i class="fas fa-file-archive" style="font-size: 24px; color: #6a0dad;"></i>
+                        <button type="button" class="remove-preview" onclick="clearFileInput('${containerId}')" style="position: absolute; top: -5px; right: -5px; background: #dc3545; color: white; border: none; border-radius: 50%; width: 20px; height: 20px; font-size: 12px; cursor: pointer;">×</button>
+                    </div>
+                    <p style="margin-top: 5px; font-size: 12px; color: #6c757d;">New file: ${file.name} (${(file.size / 1024 / 1024).toFixed(2)} MB)</p>
+                </div>
+            `;
+            container.innerHTML = previewHTML;
+        } else {
+            // Generic file preview with appropriate icon
+            let iconClass = 'fas fa-file';
+            if (['pdf'].includes(fileExtension)) iconClass = 'fas fa-file-pdf';
+            else if (['doc', 'docx'].includes(fileExtension)) iconClass = 'fas fa-file-word';
+            else if (['xls', 'xlsx'].includes(fileExtension)) iconClass = 'fas fa-file-excel';
+            else if (['ppt', 'pptx'].includes(fileExtension)) iconClass = 'fas fa-file-powerpoint';
+            else if (['txt'].includes(fileExtension)) iconClass = 'fas fa-file-alt';
+            else if (['json', 'xml'].includes(fileExtension)) iconClass = 'fas fa-file-code';
+
+            previewHTML = `
+                <div class="preview-wrapper" style="position: relative; display: inline-block; margin-top: 10px;">
+                    <div style="padding: 10px; border: 1px solid #ddd; border-radius: 5px; background: #e8f5e8;">
+                        <i class="${iconClass}" style="font-size: 24px; color: #6a0dad;"></i>
+                        <button type="button" class="remove-preview" onclick="clearFileInput('${containerId}')" style="position: absolute; top: -5px; right: -5px; background: #dc3545; color: white; border: none; border-radius: 50%; width: 20px; height: 20px; font-size: 12px; cursor: pointer;">×</button>
+                    </div>
+                    <p style="margin-top: 5px; font-size: 12px; color: #6c757d;">New file: ${file.name} (${(file.size / 1024 / 1024).toFixed(2)} MB)</p>
                 </div>
             `;
             container.innerHTML = previewHTML;
         }
+
+        // ✅ Ensure container is visible
+        container.style.display = 'block';
+        console.log('✅ Preview created for:', containerId);
     }
 
     // ✅ Clear File Input Function
@@ -377,8 +503,8 @@ document.addEventListener("DOMContentLoaded", function () {
         // Clear the file input
         if (containerId === 'contentFilePreview') {
             document.getElementById('content_file').value = '';
-        } else if (containerId === 'thumbnailImagePreview') {
-            document.getElementById('thumbnail_image').value = '';
+        } else if (containerId === 'interactiveThumbnailImagePreview') {
+            document.getElementById('interactive_thumbnail_image').value = '';
         } else if (containerId === 'metadataFilePreview') {
             document.getElementById('metadata_file').value = '';
         }

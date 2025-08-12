@@ -24,6 +24,7 @@ document.addEventListener("DOMContentLoaded", function () {
     function attachSurveyValidation() {
         if (!surveyForm) return;
 
+        // Remove any existing event listeners to prevent conflicts
         surveyForm.removeEventListener("submit", surveyFormSubmitHandler);
         surveyForm.addEventListener("submit", surveyFormSubmitHandler);
 
@@ -57,7 +58,10 @@ document.addEventListener("DOMContentLoaded", function () {
         let isValid = validateSurveyForm();
         if (isValid) {
             console.log("Survey form valid. Submitting...");
-            surveyForm.submit(); // Or handle via AJAX
+            // Form is valid, submit it
+            surveyForm.submit();
+        } else {
+            console.log("Survey form validation failed.");
         }
     }
 

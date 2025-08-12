@@ -4,20 +4,59 @@ class Localization {
     private static $currentLang = 'en';
 
     public static function loadLanguage($lang = 'en') {
+        // ✅ Sanitize language code and provide fallback
+        $lang = trim($lang);
+        if (empty($lang) || !preg_match('/^[a-z]{2}$/', $lang)) {
+            $lang = 'en'; // Fallback to English
+        }
+
         self::$currentLang = $lang;
         $filePath = __DIR__ . "/../locales/{$lang}.json";
 
         if (file_exists($filePath)) {
             self::$langData = json_decode(file_get_contents($filePath), true);
         } else {
-            die("Localization file not found: $filePath");
+            // ✅ Try fallback to English if requested language file doesn't exist
+            if ($lang !== 'en') {
+                $fallbackPath = __DIR__ . "/../locales/en.json";
+                if (file_exists($fallbackPath)) {
+                    self::$langData = json_decode(file_get_contents($fallbackPath), true);
+                    self::$currentLang = 'en';
+                } else {
+                    die("Localization file not found: $filePath and fallback en.json also missing");
+                }
+            } else {
+                die("Localization file not found: $filePath");
+            }
         }
     }
 
     public static function translate($key, $replacements = []) {
-        $text = self::$langData[$key] ?? $key;
-        foreach ($replacements as $placeholder => $value) {
-            $text = str_replace("{" . $placeholder . "}", $value, $text);
+        // First, try the full key as-is (for flat JSON)
+        if (isset(self::$langData[$key])) {
+            $text = self::$langData[$key];
+        } else {
+            // Handle nested keys with dot notation (for nested JSON)
+            $keys = explode('.', $key);
+            $text = self::$langData;
+            foreach ($keys as $k) {
+                if (is_array($text) && isset($text[$k])) {
+                    $text = $text[$k];
+                } else {
+                    // Key not found, return the original key
+                    $text = $key;
+                    break;
+                }
+            }
+        }
+        // Apply replacements if text is a string
+        if (is_string($text)) {
+            foreach ($replacements as $placeholder => $value) {
+                $text = str_replace("{" . $placeholder . "}", $value, $text);
+            }
+        } else {
+            // If text is not a string (e.g., still an array), return the key
+            $text = $key;
         }
         return $text;
     }
