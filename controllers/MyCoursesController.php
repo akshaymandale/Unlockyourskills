@@ -1,7 +1,10 @@
 <?php
+<<<<<<< HEAD
 if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
+=======
+>>>>>>> af75b4fbe579979a6b31bc9dbf713ea5cddebe83
 require_once 'models/MyCoursesModel.php';
 require_once 'core/UrlHelper.php';
 require_once 'config/Localization.php';
@@ -16,7 +19,11 @@ class MyCoursesController {
 
     // Render My Courses page
     public function index() {
+<<<<<<< HEAD
         if (!isset($_SESSION['id']) || !isset($_SESSION['user'])) {
+=======
+        if (!isset($_SESSION['user']['id'])) {
+>>>>>>> af75b4fbe579979a6b31bc9dbf713ea5cddebe83
             UrlHelper::redirect('login');
         }
         require 'views/my_courses.php';
@@ -24,7 +31,11 @@ class MyCoursesController {
 
     // AJAX: Get user courses (with status, search, pagination)
     public function getUserCourses() {
+<<<<<<< HEAD
         if (!isset($_SESSION['id']) || !isset($_SESSION['user'])) {
+=======
+        if (!isset($_SESSION['user']['id'])) {
+>>>>>>> af75b4fbe579979a6b31bc9dbf713ea5cddebe83
             header('Content-Type: application/json');
             echo json_encode(['success' => false, 'message' => 'Unauthorized']);
             exit;
@@ -52,7 +63,11 @@ class MyCoursesController {
 
     // Render Course Details page
     public function details($id) {
+<<<<<<< HEAD
         if (!isset($_SESSION['id']) || !isset($_SESSION['user'])) {
+=======
+        if (!isset($_SESSION['user']['id'])) {
+>>>>>>> af75b4fbe579979a6b31bc9dbf713ea5cddebe83
             UrlHelper::redirect('login');
         }
         $courseId = IdEncryption::getId($id);
@@ -67,6 +82,7 @@ class MyCoursesController {
         if (!$course) {
             UrlHelper::redirect('my-courses');
         }
+<<<<<<< HEAD
 
         // Load assessment attempts data and assessment details for this user
         $assessmentAttempts = [];
@@ -126,12 +142,18 @@ class MyCoursesController {
         $GLOBALS['assessmentAttempts'] = $assessmentAttempts;
         $GLOBALS['assessmentDetails'] = $assessmentDetails;
         
+=======
+>>>>>>> af75b4fbe579979a6b31bc9dbf713ea5cddebe83
         require 'views/my_course_details.php';
     }
 
     // Standard content viewer in a new tab (iframe page)
     public function viewContent() {
+<<<<<<< HEAD
         if (!isset($_SESSION['id']) || !isset($_SESSION['user'])) {
+=======
+        if (!isset($_SESSION['user']['id'])) {
+>>>>>>> af75b4fbe579979a6b31bc9dbf713ea5cddebe83
             UrlHelper::redirect('login');
         }
         $type = $_GET['type'] ?? 'iframe';
@@ -145,6 +167,7 @@ class MyCoursesController {
 
     // Start an assessment/survey/feedback/assignment in a new tab
     public function start() {
+<<<<<<< HEAD
         // ===== DEBUGGING START =====
         error_log("=== MyCoursesController::start() DEBUG START ===");
         error_log("Request URI: " . ($_SERVER['REQUEST_URI'] ?? 'unknown'));
@@ -171,6 +194,13 @@ class MyCoursesController {
         $type = $_GET['type'] ?? '';
         $id = isset($_GET['id']) ? IdEncryption::getId($_GET['id']) : 0;
         
+=======
+        if (!isset($_SESSION['user']['id'])) {
+            UrlHelper::redirect('login');
+        }
+        $type = $_GET['type'] ?? '';
+        $id = isset($_GET['id']) ? IdEncryption::getId($_GET['id']) : 0;
+>>>>>>> af75b4fbe579979a6b31bc9dbf713ea5cddebe83
         if (!$type || !$id) {
             UrlHelper::redirect('my-courses');
         }
@@ -179,6 +209,7 @@ class MyCoursesController {
         $payload = null;
         switch ($type) {
             case 'assessment':
+<<<<<<< HEAD
                 error_log("=== Processing Assessment Case ===");
                 error_log("Assessment ID: {$id}");
                 
@@ -229,6 +260,9 @@ class MyCoursesController {
                 } else {
                     error_log("ERROR: Failed to load assessment data");
                 }
+=======
+                $payload = $vlr->getAssessmentByIdWithQuestions($id);
+>>>>>>> af75b4fbe579979a6b31bc9dbf713ea5cddebe83
                 break;
             case 'survey':
                 $payload = $vlr->getSurveyByIdWithQuestions($id, $_SESSION['user']['client_id'] ?? null);
@@ -244,6 +278,7 @@ class MyCoursesController {
             default:
                 UrlHelper::redirect('my-courses');
         }
+<<<<<<< HEAD
         
         // Load activity_player.php for non-assessment types
         error_log("=== Loading activity_player.php for type: {$type} ===");
@@ -251,6 +286,11 @@ class MyCoursesController {
         $activity = $payload;
         require 'views/activity_player.php';
         error_log("=== activity_player.php loaded successfully ===");
+=======
+        $activityType = $type;
+        $activity = $payload;
+        require 'views/activity_player.php';
+>>>>>>> af75b4fbe579979a6b31bc9dbf713ea5cddebe83
     }
 
     private function normalizeEmbedUrl($url, $type) {

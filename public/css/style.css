@@ -5733,8 +5733,12 @@ body select:focus,
 }
 .course-details .badge-course-type,
 .course-details .badge-difficulty,
+<<<<<<< HEAD
 .course-details .badge-category,
 .course-details .badge-subcategory {
+=======
+.course-details .badge-category {
+>>>>>>> af75b4fbe579979a6b31bc9dbf713ea5cddebe83
   display: inline-flex; align-items: center; gap: 6px;
   padding: 6px 10px; border-radius: 999px; font-size: 12px;
   background: #f3eaff; color: #6a0dad; border: 1px solid #e5d6ff;
@@ -5773,6 +5777,7 @@ body select:focus,
 .course-details .divider-line { height: 20px; width: 1px; background: #e5d6ff; }
 
 /* Course Details - Modern Prerequisites & Post-requisites Styling */
+<<<<<<< HEAD
 .prerequisites-grid {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); /* Slightly increased minimum width */
@@ -5798,6 +5803,14 @@ body select:focus,
 .postrequisite-item {
     display: flex;
     flex-direction: column;
+=======
+.prerequisites-grid,
+.postrequisites-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 16px;
+    margin-top: 16px;
+>>>>>>> af75b4fbe579979a6b31bc9dbf713ea5cddebe83
 }
 
 .prerequisite-card,
@@ -5807,11 +5820,16 @@ body select:focus,
     border-radius: 12px;
     padding: 20px;
     display: flex;
+<<<<<<< HEAD
     align-items: center; /* Changed back to center for proper row alignment */
+=======
+    align-items: center;
+>>>>>>> af75b4fbe579979a6b31bc9dbf713ea5cddebe83
     justify-content: space-between;
     transition: all 0.3s ease;
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
     position: relative;
+<<<<<<< HEAD
     overflow: visible; /* Changed from hidden to visible to show attempt summaries */
     gap: 16px;
     min-height: 80px; /* Ensure minimum height for consistency */
@@ -5951,6 +5969,9 @@ body select:focus,
 .prerequisite-card.has-attempts,
 .postrequisite-card.has-attempts {
     position: relative;
+=======
+    overflow: hidden;
+>>>>>>> af75b4fbe579979a6b31bc9dbf713ea5cddebe83
 }
 
 .prerequisite-card::before,
@@ -5985,6 +6006,7 @@ body select:focus,
 .prerequisite-content,
 .postrequisite-content {
     display: flex;
+<<<<<<< HEAD
     align-items: center; /* Changed back to center for proper row alignment */
     gap: 16px;
     flex: 1;
@@ -5993,6 +6015,11 @@ body select:focus,
     overflow: visible;
     flex-direction: row; /* Keep content in a row for list view */
     gap: 16px; /* Restored original gap */
+=======
+    align-items: center;
+    gap: 16px;
+    flex: 1;
+>>>>>>> af75b4fbe579979a6b31bc9dbf713ea5cddebe83
 }
 
 .prerequisite-icon,
@@ -6024,12 +6051,17 @@ body select:focus,
 .prerequisite-details,
 .postrequisite-details {
     flex: 1;
+<<<<<<< HEAD
     min-width: 0; /* Allow content to shrink */
     overflow: hidden; /* Prevent content from overflowing */
+=======
+    min-width: 0;
+>>>>>>> af75b4fbe579979a6b31bc9dbf713ea5cddebe83
 }
 
 .prerequisite-title,
 .postrequisite-title {
+<<<<<<< HEAD
     font-weight: 600;
     color: #333;
     margin: 0;
@@ -6054,6 +6086,16 @@ body select:focus,
     flex-shrink: 0; /* Prevent button from shrinking */
     min-width: 100px; /* Ensure consistent button width */
     white-space: nowrap; /* Keep button text on one line */
+=======
+    color: #2d2a34;
+    font-weight: 600;
+    margin: 0;
+    font-size: 16px;
+    line-height: 1.4;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+>>>>>>> af75b4fbe579979a6b31bc9dbf713ea5cddebe83
 }
 
 .prerequisite-type,
@@ -6068,18 +6110,24 @@ body select:focus,
     text-transform: uppercase;
     letter-spacing: 0.5px;
     border: 1px solid #e5d6ff;
+<<<<<<< HEAD
     /* Ensure badges don't get cut off */
     white-space: nowrap;
     overflow: visible;
+=======
+>>>>>>> af75b4fbe579979a6b31bc9dbf713ea5cddebe83
 }
 
 .postrequisite-type {
     background: #e8f8f5;
     color: #20c997;
     border-color: #d1f2eb;
+<<<<<<< HEAD
     /* Ensure badges don't get cut off */
     white-space: nowrap;
     overflow: visible;
+=======
+>>>>>>> af75b4fbe579979a6b31bc9dbf713ea5cddebe83
 }
 
 .prerequisite-action-btn,
@@ -6098,10 +6146,13 @@ body select:focus,
     transition: all 0.3s ease;
     box-shadow: 0 4px 15px rgba(40, 167, 69, 0.3);
     white-space: nowrap;
+<<<<<<< HEAD
     flex-shrink: 0; /* Prevent button from shrinking */
     align-self: center; /* Center button vertically in the row */
     position: relative; /* Ensure proper positioning */
     z-index: 1; /* Ensure button is above other content */
+=======
+>>>>>>> af75b4fbe579979a6b31bc9dbf713ea5cddebe83
 }
 
 /* Button color variants for different content types - Prerequisites */
@@ -6266,6 +6317,7 @@ body select:focus,
 
 /* Responsive Design */
 @media (max-width: 768px) {
+<<<<<<< HEAD
     .prerequisites-grid {
         grid-template-columns: 1fr;
         gap: 12px;
@@ -6273,6 +6325,11 @@ body select:focus,
     
     .postrequisites-grid {
         grid-template-columns: 1fr; /* Single column on mobile */
+=======
+    .prerequisites-grid,
+    .postrequisites-grid {
+        grid-template-columns: 1fr;
+>>>>>>> af75b4fbe579979a6b31bc9dbf713ea5cddebe83
         gap: 12px;
     }
     
@@ -6283,14 +6340,20 @@ body select:focus,
         align-items: stretch;
         gap: 16px;
         text-align: center;
+<<<<<<< HEAD
         min-height: auto; /* Allow natural height on mobile */
+=======
+>>>>>>> af75b4fbe579979a6b31bc9dbf713ea5cddebe83
     }
     
     .prerequisite-content,
     .postrequisite-content {
         flex-direction: column;
         gap: 12px;
+<<<<<<< HEAD
         align-items: center; /* Center content on mobile */
+=======
+>>>>>>> af75b4fbe579979a6b31bc9dbf713ea5cddebe83
     }
     
     .prerequisite-icon,
@@ -6314,6 +6377,7 @@ body select:focus,
         width: 100%;
         justify-content: center;
         padding: 12px 20px;
+<<<<<<< HEAD
         min-width: auto; /* Allow full width on mobile */
         align-self: center; /* Center button on mobile */
         margin-top: 12px; /* Add some space above button */
@@ -6350,6 +6414,8 @@ body select:focus,
     .content-item-card.has-attempts .attempts-summary {
         position: static; /* Stack normally on mobile */
         margin-top: 12px;
+=======
+>>>>>>> af75b4fbe579979a6b31bc9dbf713ea5cddebe83
     }
 }
 
@@ -6447,19 +6513,31 @@ body select:focus,
 }
 
 .module-header-content {
+<<<<<<< HEAD
     display: grid;
     grid-template-columns: 1fr auto auto;
     align-items: center;
     gap: 20px;
     width: 100%;
     position: relative;
+=======
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 20px;
+>>>>>>> af75b4fbe579979a6b31bc9dbf713ea5cddebe83
 }
 
 .module-info {
     display: flex;
     align-items: center;
+<<<<<<< HEAD
     min-width: 0;
     grid-column: 1;
+=======
+    flex: 1;
+    min-width: 0;
+>>>>>>> af75b4fbe579979a6b31bc9dbf713ea5cddebe83
 }
 
 .module-icon-wrapper {
@@ -6500,6 +6578,7 @@ body select:focus,
 
 .module-progress-section {
     display: flex;
+<<<<<<< HEAD
     flex-direction: column;
     align-items: center;
     gap: 10px;
@@ -6510,6 +6589,14 @@ body select:focus,
 
 .progress-info {
     text-align: center;
+=======
+    align-items: center;
+    gap: 20px;
+}
+
+.progress-info {
+    text-align: right;
+>>>>>>> af75b4fbe579979a6b31bc9dbf713ea5cddebe83
     min-width: 120px;
 }
 
@@ -6544,9 +6631,12 @@ body select:focus,
     justify-content: center;
     color: #6c757d;
     transition: all 0.3s ease;
+<<<<<<< HEAD
     grid-column: 3;
     justify-self: end;
     align-self: center;
+=======
+>>>>>>> af75b4fbe579979a6b31bc9dbf713ea5cddebe83
 }
 
 .module-header:hover .module-toggle {
@@ -7007,6 +7097,7 @@ body select:focus,
     }
     
     .module-header-content {
+<<<<<<< HEAD
         grid-template-columns: 1fr;
         gap: 16px;
     }
@@ -7029,6 +7120,16 @@ body select:focus,
         justify-self: center;
         margin-top: 10px;
         align-self: center;
+=======
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 16px;
+    }
+    
+    .module-progress-section {
+        width: 100%;
+        justify-content: space-between;
+>>>>>>> af75b4fbe579979a6b31bc9dbf713ea5cddebe83
     }
     
     .content-item-card {
@@ -7099,6 +7200,7 @@ body select:focus,
     .content-details-body {
         padding: 16px;
     }
+<<<<<<< HEAD
 }
 
 /* Assessment Attempts Management Styles */
@@ -7188,6 +7290,8 @@ body select:focus,
     color: #ffffff !important;
     transform: none !important;
     box-shadow: none !important;
+=======
+>>>>>>> af75b4fbe579979a6b31bc9dbf713ea5cddebe83
 }
 
 /* Custom Tooltip Styling */

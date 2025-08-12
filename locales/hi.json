@@ -1350,6 +1350,7 @@
         "confirm_remove_feedback": "क्या आप वाकई इस प्रतिक्रिया को हटाना चाहते हैं?",
         "confirm_remove_survey": "क्या आप वाकई इस सर्वेक्षण को हटाना चाहते हैं?"
     },
+<<<<<<< HEAD
     "_comment19": "Assessment Player",
     "assessment_player": {
         "characters": "अक्षर",
@@ -1423,6 +1424,8 @@
         "difficulty": "कठिनाई",
         "skills": "कौशल"
     },
+=======
+>>>>>>> af75b4fbe579979a6b31bc9dbf713ea5cddebe83
     "course_applicability": "कोर्स लागूता",
     "define_course_applicability": "किस उपयोगकर्ता या समूह पर कोर्स लागू होता है, इसे परिभाषित करें",
     "select_course": "कोर्स चुनें",

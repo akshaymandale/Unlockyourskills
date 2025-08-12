@@ -45,7 +45,10 @@ class AuthMiddleware extends Middleware
             error_log("AuthMiddleware::handle - User not logged in, redirecting");
             error_log("SESSION['id']: " . ($_SESSION['id'] ?? 'NOT SET'));
             error_log("SESSION['user']: " . (isset($_SESSION['user']) ? 'SET' : 'NOT SET'));
+<<<<<<< HEAD
             error_log("Full session data in AuthMiddleware: " . print_r($_SESSION, true));
+=======
+>>>>>>> af75b4fbe579979a6b31bc9dbf713ea5cddebe83
             
             // If AJAX request, return JSON error
             if ($this->isAjaxRequest()) {

@@ -42,7 +42,11 @@ class AuthenticationModel {
         $client = $clientValidation['client'];
         
         // Find user by email or profile_id
+<<<<<<< HEAD
         $sql = "SELECT up.*, c.client_name, c.client_code, c.max_users, c.current_user_count, c.sso_enabled
+=======
+        $sql = "SELECT up.*, c.client_name, c.max_users, c.current_user_count, c.sso_enabled
+>>>>>>> af75b4fbe579979a6b31bc9dbf713ea5cddebe83
                 FROM user_profiles up
                 LEFT JOIN clients c ON up.client_id = c.id
                 WHERE c.client_code = ? 
