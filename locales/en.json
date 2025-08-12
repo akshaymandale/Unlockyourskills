@@ -44,7 +44,7 @@
         "activate": "Activate",
         "deactivate": "Deactivate",
         "search": "Search",
-        "search_placeholder": "Search categories...",
+        "search_placeholder": "Search categories.",
         "all_statuses": "All Statuses",
         "all_sort_orders": "All Sort Orders",
         "sort_asc": "Sort Order (Asc)",
