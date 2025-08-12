@@ -808,7 +808,6 @@ class CourseModel
                         }
                         break;
                     }
-<<<<<<< HEAD
                     case 'assessment': {
                         $q = $this->conn->prepare("SELECT title, num_attempts, time_limit, passing_percentage FROM assessment_package WHERE id = ? AND (is_deleted = 0 OR is_deleted IS NULL)");
                         $q->execute([$contentId]);
@@ -821,8 +820,6 @@ class CourseModel
                         }
                         break;
                     }
-=======
->>>>>>> af75b4fbe579979a6b31bc9dbf713ea5cddebe83
                     default:
                         // No enrichment needed
                         break;

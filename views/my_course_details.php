@@ -29,21 +29,12 @@
             <div class="banner-content">
                 <div class="d-flex align-items-center gap-2 flex-wrap">
                     <span class="badge badge-course-type"><i class="fas fa-layer-group me-1"></i><?= htmlspecialchars($course['course_type'] ?? 'e-learning') ?></span>
-<<<<<<< HEAD
                     <?php if (!empty($course['category_name'])): ?>
                         <span class="badge badge-category"><i class="fas fa-folder-open me-1"></i><?= htmlspecialchars($course['category_name']) ?></span>
                     <?php endif; ?>
                     <?php if (!empty($course['subcategory_name'])): ?>
                         <span class="badge badge-subcategory"><i class="fas fa-tags me-1"></i><?= htmlspecialchars($course['subcategory_name']) ?></span>
                     <?php endif; ?>
-=======
-                    <?php if (!empty($course['difficulty_level'])): ?>
-                        <span class="badge badge-difficulty"><i class="fas fa-signal me-1"></i><?= htmlspecialchars(ucfirst($course['difficulty_level'])) ?></span>
-                    <?php endif; ?>
-                    <?php if (!empty($course['category_name'])): ?>
-                        <span class="badge badge-category"><i class="fas fa-folder-open me-1"></i><?= htmlspecialchars($course['category_name']) ?></span>
-                    <?php endif; ?>
->>>>>>> af75b4fbe579979a6b31bc9dbf713ea5cddebe83
                 </div>
                 <h2 class="banner-title mt-2 mb-0"><?= htmlspecialchars($course['name']) ?></h2>
             </div>
@@ -129,7 +120,6 @@
             </div>
             <div class="prerequisites-grid">
                 <?php foreach ($course['prerequisites'] as $pre): ?>
-<<<<<<< HEAD
                     <div class="prerequisite-item">
                         <div class="prerequisite-card<?= ($pre['prerequisite_type'] === 'assessment' && !empty($GLOBALS['assessmentAttempts'][$pre['prerequisite_id']])) ? ' has-attempts' : '' ?>">
                             <div class="prerequisite-content">
@@ -325,60 +315,6 @@
                                 }
                             }
                             ?>
-=======
-                    <div class="prerequisite-card">
-                        <div class="prerequisite-content">
-                            <div class="prerequisite-icon">
-                                <?php
-                                    $type = $pre['prerequisite_type'] ?? 'course';
-                                    $iconMap = [
-                                        'assessment' => 'fa-clipboard-check',
-                                        'survey' => 'fa-square-poll-vertical',
-                                        'feedback' => 'fa-comments',
-                                        'assignment' => 'fa-file-signature',
-                                        'course' => 'fa-book-open',
-                                        'module' => 'fa-layer-group',
-                                        'scorm' => 'fa-cubes',
-                                        'video' => 'fa-video',
-                                        'audio' => 'fa-headphones',
-                                        'document' => 'fa-file-lines',
-                                        'image' => 'fa-image',
-                                        'interactive' => 'fa-wand-magic-sparkles'
-                                    ];
-                                    $icon = $iconMap[$type] ?? 'fa-book-open';
-                                    $colorMap = [
-                                        'assessment' => '#28a745',
-                                        'survey' => '#17a2b8',
-                                        'feedback' => '#ffc107',
-                                        'assignment' => '#fd7e14',
-                                        'course' => '#6a0dad',
-                                        'module' => '#6f42c1',
-                                        'scorm' => '#e83e8c',
-                                        'video' => '#dc3545',
-                                        'audio' => '#fd7e14',
-                                        'document' => '#6c757d',
-                                        'image' => '#20c997',
-                                        'interactive' => '#6f42c1'
-                                    ];
-                                    $color = $colorMap[$type] ?? '#6a0dad';
-                                ?>
-                                <i class="fas <?= $icon ?>" style="color: <?= $color ?>;"></i>
-                            </div>
-                            <div class="prerequisite-details">
-                                <h6 class="prerequisite-title mb-1"><?= htmlspecialchars($pre['title']) ?></h6>
-                                <span class="prerequisite-type"><?= htmlspecialchars(ucfirst($type)) ?></span>
-                            </div>
-                        </div>
-                        <?php if (!empty($pre['prerequisite_type']) && in_array($pre['prerequisite_type'], ['assessment','survey','feedback','assignment'])): ?>
-                            <?php $encryptedPrereqId = IdEncryption::encrypt($pre['prerequisite_id']); ?>
-                            <a class="prerequisite-action-btn" target="_blank" href="<?= UrlHelper::url('my-courses/start') . '?type=' . urlencode($pre['prerequisite_type']) . '&id=' . urlencode($encryptedPrereqId) ?>">
-                                <i class="fas fa-play me-1"></i>Start
-                            </a>
-                        <?php else: ?>
-                            <span class="prerequisite-status">
-                                <i class="fas fa-check-circle me-1"></i>Required
-                            </span>
->>>>>>> af75b4fbe579979a6b31bc9dbf713ea5cddebe83
                         <?php endif; ?>
                     </div>
                 <?php endforeach; ?>
@@ -425,15 +361,9 @@
                                                 <div class="progress-bar" style="width: <?= intval($module['module_progress'] ?? 0) ?>%"></div>
                                             </div>
                                         </div>
-<<<<<<< HEAD
                                     </div>
                                     <div class="module-toggle">
                                         <i class="fas fa-chevron-down"></i>
-=======
-                                        <div class="module-toggle">
-                                            <i class="fas fa-chevron-down"></i>
-                                        </div>
->>>>>>> af75b4fbe579979a6b31bc9dbf713ea5cddebe83
                                     </div>
                                 </div>
                             </div>
@@ -442,7 +372,6 @@
                                 <?php if (!empty($module['content'])): ?>
                                     <div class="content-grid">
                                         <?php foreach ($module['content'] as $content): ?>
-<<<<<<< HEAD
                                                                                                     <?php
                                                             $type = $content['type'];
                                                             
@@ -455,11 +384,6 @@
                                                             $attemptCount = 0;
                                                             
                                                             $iconMap = [
-=======
-                                            <?php
-                                                $type = $content['type'];
-                                                $iconMap = [
->>>>>>> af75b4fbe579979a6b31bc9dbf713ea5cddebe83
                                                     'scorm' => 'fa-cubes',
                                                     'non_scorm' => 'fa-cube',
                                                     'interactive' => 'fa-wand-magic-sparkles',
@@ -490,11 +414,7 @@
                                                 ];
                                                 $color = $colorMap[$type] ?? '#6c757d';
                                             ?>
-<<<<<<< HEAD
                                             <div class="content-item-card<?= ($content['type'] === 'assessment' && !empty($GLOBALS['assessmentAttempts'][$content['content_id']])) ? ' has-attempts' : '' ?>">
-=======
-                                            <div class="content-item-card">
->>>>>>> af75b4fbe579979a6b31bc9dbf713ea5cddebe83
                                                 <div class="content-item-left">
                                                     <div class="content-item-header">
                                                         <div class="content-icon-wrapper me-3" style="background: <?= $color ?>;">
@@ -611,7 +531,6 @@
                                                                     }
                                                                     break;
                                                                 case 'assessment':
-<<<<<<< HEAD
                                                                     // Check if user has exceeded maximum attempts
                                                                     $assessmentId = $content['content_id'];
                                                                     $assessmentAttempts = $GLOBALS['assessmentAttempts'][$assessmentId] ?? [];
@@ -643,14 +562,6 @@
                                                                     $encryptedId = IdEncryption::encrypt($content['content_id']);
                                                                     $startUrl = UrlHelper::url('my-courses/start') . '?type=' . urlencode($type) . '&id=' . urlencode($encryptedId);
                                                                     echo "<a href='" . htmlspecialchars($startUrl) . "' target='_blank' class='prerequisite-action-btn'>";
-=======
-                                                                case 'survey':
-                                                                case 'feedback':
-                                                                case 'assignment':
-                                                                    $encryptedId = IdEncryption::encrypt($content['id']);
-                                                                    $startUrl = UrlHelper::url('my-courses/start') . '?type=' . urlencode($type) . '&id=' . urlencode($encryptedId);
-                                                                    echo "<a href='" . htmlspecialchars($startUrl) . "' target='_blank' class='content-action-btn content-action-success'>";
->>>>>>> af75b4fbe579979a6b31bc9dbf713ea5cddebe83
                                                                     echo "<i class='fas fa-play me-1'></i>Start";
                                                                     echo "</a>";
                                                                     break;
@@ -666,7 +577,6 @@
                                                             <i class="fas fa-chevron-down"></i>
                                                         </div>
                                                     </div>
-<<<<<<< HEAD
                                                     
                                                     </div>
                                             </div>
@@ -702,11 +612,6 @@
                                                 <?php endif; ?>
                                             <?php endif; ?>
                                             
-=======
-                                                </div>
-                                            </div>
-                                            
->>>>>>> af75b4fbe579979a6b31bc9dbf713ea5cddebe83
                                             <!-- Content Details Collapsible Section -->
                                             <div id="contentDetails<?= $idx ?>_<?= $content['id'] ?? $loop->index ?>" class="content-details-collapse collapse">
                                                 <div class="content-details-body">
@@ -764,7 +669,6 @@
             </div>
             <div class="postrequisites-grid">
                 <?php foreach ($course['post_requisites'] as $post): ?>
-<<<<<<< HEAD
                     <div class="postrequisite-item">
                         <div class="postrequisite-card<?= ($post['content_type'] === 'assessment' && !empty($GLOBALS['assessmentAttempts'][$post['content_id']])) ? ' has-attempts' : '' ?>">
                             <div class="postrequisite-content">
@@ -955,55 +859,6 @@
                             }
                             ?>
                         <?php endif; ?>
-=======
-                    <div class="postrequisite-card">
-                        <div class="postrequisite-content">
-                            <div class="postrequisite-icon">
-                                <?php
-                                    $type = $post['content_type'] ?? 'assessment';
-                                    $iconMap = [
-                                        'assessment' => 'fa-clipboard-check',
-                                        'survey' => 'fa-square-poll-vertical',
-                                        'feedback' => 'fa-comments',
-                                        'assignment' => 'fa-file-signature',
-                                        'course' => 'fa-book-open',
-                                        'module' => 'fa-layer-group',
-                                        'scorm' => 'fa-cubes',
-                                        'video' => 'fa-video',
-                                        'audio' => 'fa-headphones',
-                                        'document' => 'fa-file-lines',
-                                        'image' => 'fa-image',
-                                        'interactive' => 'fa-wand-magic-sparkles'
-                                    ];
-                                    $icon = $iconMap[$type] ?? 'fa-clipboard-check';
-                                    $colorMap = [
-                                        'assessment' => '#28a745',
-                                        'survey' => '#17a2b8',
-                                        'feedback' => '#ffc107',
-                                        'assignment' => '#fd7e14',
-                                        'course' => '#6a0dad',
-                                        'module' => '#6f42c1',
-                                        'scorm' => '#e83e8c',
-                                        'video' => '#dc3545',
-                                        'audio' => '#fd7e14',
-                                        'document' => '#6c757d',
-                                        'image' => '#20c997',
-                                        'interactive' => '#6f42c1'
-                                    ];
-                                    $color = $colorMap[$type] ?? '#28a745';
-                                ?>
-                                <i class="fas <?= $icon ?>" style="color: <?= $color ?>;"></i>
-                            </div>
-                            <div class="postrequisite-details">
-                                <h6 class="postrequisite-title mb-1"><?= htmlspecialchars($post['content_title'] ?? $post['title'] ?? 'N/A') ?></h6>
-                                <span class="postrequisite-type"><?= htmlspecialchars(ucfirst($type)) ?></span>
-                            </div>
-                        </div>
-                        <?php $encryptedPostreqId = IdEncryption::encrypt($post['content_id']); ?>
-                        <a class="postrequisite-action-btn" target="_blank" href="<?= UrlHelper::url('my-courses/start') . '?type=' . urlencode($post['content_type']) . '&id=' . urlencode($encryptedPostreqId) ?>">
-                            <i class="fas fa-rocket me-1"></i>Launch
-                        </a>
->>>>>>> af75b4fbe579979a6b31bc9dbf713ea5cddebe83
                     </div>
                 <?php endforeach; ?>
             </div>
