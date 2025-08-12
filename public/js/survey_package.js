@@ -108,7 +108,7 @@ document.addEventListener("DOMContentLoaded", function () {
             }
             surveyIdInput.value = surveyId;
 
-            fetch(`/unlockyourskills/vlr/surveys/${surveyId}`)
+            fetch(`vlr/surveys/${surveyId}`)
                 .then(response => response.json())
                 .then(data => {
                     console.log(data);

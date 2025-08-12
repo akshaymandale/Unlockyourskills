@@ -842,6 +842,8 @@ class VLRController extends BaseController
             $errors[] = "Number of attempts must be greater than 0.";
         if ($passingPercentage < 0 || $passingPercentage > 100)
             $errors[] = "Passing percentage must be between 0 and 100.";
+        if (empty($timeLimit) || $timeLimit <= 0)
+            $errors[] = "Time limit is required and must be greater than 0.";
         if ($negativeMarking === 'Yes' && empty($negativeMarkingPercentage))
             $errors[] = "Negative marking percentage required.";
         if ($assessmentType === 'Dynamic') {
