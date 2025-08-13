@@ -6,8 +6,6 @@
 
 class AssessmentPlayer {
     constructor() {
-        console.log('AssessmentPlayer constructor called');
-        
         // Check if we're resuming an existing session
         this.checkForExistingSession();
         
@@ -28,20 +26,6 @@ class AssessmentPlayer {
         this.syncInterval = null;
         this.recoveryAttempts = 0;
         this.maxRecoveryAttempts = 3;
-        
-        console.log('AssessmentPlayer initialized with:', {
-            currentQuestion: this.currentQuestion,
-            totalQuestions: this.totalQuestions,
-            attemptId: this.attemptId,
-            timeRemaining: this.timeRemaining
-        });
-        
-        // Debug assessment data
-        console.log('Full assessment data:', window.assessmentData.assessment);
-        console.log('Questions count:', window.assessmentData.assessment.selected_questions?.length || 0);
-        if (window.assessmentData.assessment.selected_questions) {
-            console.log('First question sample:', window.assessmentData.assessment.selected_questions[0]);
-        }
         
         this.init();
     }
@@ -155,7 +139,7 @@ class AssessmentPlayer {
                 
                 // Session is valid if less than 24 hours old
                 if (sessionAge < 24 * 60 * 60 * 1000) {
-                    console.log('Recovering existing session:', sessionData);
+            
                     this.answers = sessionData.answers || {};
                     this.currentQuestion = sessionData.currentQuestion || 1;
                     this.timeRemaining = sessionData.timeRemaining || this.timeRemaining;
@@ -218,18 +202,13 @@ class AssessmentPlayer {
     }
 
     init() {
-        console.log('AssessmentPlayer init() called');
-        console.log('About to setup event listeners...');
         this.setupEventListeners();
         
         // Don't initialize assessment content yet - wait for user to click start
-        console.log('AssessmentPlayer init() completed - waiting for user to start');
     }
 
     // Start the actual assessment
     startAssessment() {
-        console.log('Starting assessment...');
-        
         // Check if user has existing session
         const hasExistingSession = this.hasUnsavedChanges();
         
@@ -254,8 +233,6 @@ class AssessmentPlayer {
         // Start periodic sync and connection monitoring
         this.startPeriodicSync();
         this.monitorConnection();
-        
-        console.log('Assessment started successfully');
     }
 
     // Show session recovery popup
@@ -422,7 +399,6 @@ class AssessmentPlayer {
 
         // Handle online/offline events
         window.addEventListener('online', () => {
-            console.log('Connection restored');
             this.offlineMode = false;
             this.removeOfflineNotification();
             if (this.currentQuestion > 0) {
@@ -431,7 +407,6 @@ class AssessmentPlayer {
         });
 
         window.addEventListener('offline', () => {
-            console.log('Connection lost');
             this.offlineMode = true;
             if (this.currentQuestion > 0) {
                 this.showOfflineNotification();
@@ -440,17 +415,13 @@ class AssessmentPlayer {
     }
 
     generateQuestionNavigator() {
-        console.log('generateQuestionNavigator called');
         const grid = document.getElementById('question-grid');
-        console.log('Question grid element:', grid);
         
         if (!grid) {
-            console.error('Question grid element not found!');
             return;
         }
         
         grid.innerHTML = '';
-        console.log('Generating navigator for', this.totalQuestions, 'questions');
 
         for (let i = 1; i <= this.totalQuestions; i++) {
             const btn = document.createElement('button');
@@ -458,9 +429,7 @@ class AssessmentPlayer {
             btn.textContent = i;
             btn.setAttribute('data-question', i);
             grid.appendChild(btn);
-            console.log('Added question button', i);
         }
-        console.log('Question navigator generated successfully');
     }
 
     loadQuestion(questionNumber) {
@@ -488,7 +457,7 @@ class AssessmentPlayer {
         console.log('Total questions:', this.totalQuestions);
         
         const question = window.assessmentData.assessment.selected_questions[this.currentQuestion - 1];
-        console.log('Current question data:', question);
+
         
         if (!question) {
             container.innerHTML = '<div class="alert alert-danger">Question not found</div>';
@@ -497,16 +466,16 @@ class AssessmentPlayer {
 
         let optionsHtml = '';
         const questionType = question.type?.toLowerCase() || '';
-        console.log('Question type:', question.type, 'Normalized type:', questionType);
+
         
         if (questionType === 'objective' && question.options) {
-            console.log('Rendering objective question with', question.options.length, 'options');
+
             const savedAnswer = this.answers[question.id];
-            console.log(`Saved answer for question ${question.id}:`, savedAnswer);
+
             
             optionsHtml = question.options.map(option => {
                 const isSelected = savedAnswer && savedAnswer.toString() === option.id.toString();
-                console.log(`Option ${option.id}: isSelected = ${isSelected}, savedAnswer = ${savedAnswer}, option.id = ${option.id}`);
+
                 
                 return `
                     <div class="option-item ${isSelected ? 'selected' : ''}" 
@@ -518,7 +487,7 @@ class AssessmentPlayer {
                 `;
             }).join('');
         } else if (questionType === 'subjective') {
-            console.log('Rendering subjective question with textarea');
+
             const savedAnswer = this.answers[question.id] || '';
             const charCount = savedAnswer.length;
             optionsHtml = `
@@ -534,7 +503,7 @@ class AssessmentPlayer {
                 </div>
             `;
         } else {
-            console.log('Unknown question type:', question.type, 'Defaulting to textarea');
+
             const savedAnswer = this.answers[question.id] || '';
             const charCount = savedAnswer.length;
             optionsHtml = `
@@ -570,18 +539,12 @@ class AssessmentPlayer {
         // Update question counter
         document.getElementById('question-counter').textContent = `${this.currentQuestion} / ${this.totalQuestions}`;
         
-        // Debug: Log the final HTML being set
-        console.log('Final question HTML set:', container.innerHTML);
-        console.log('Current answers object:', this.answers);
-        console.log('Answer for current question:', this.answers[question.id]);
+
     }
 
     selectOption(questionId, optionId) {
-        console.log(`selectOption called for question ${questionId}, option ${optionId}`);
-        
         // Find all option items for this question
         const optionItems = document.querySelectorAll(`.option-item[onclick*="${questionId}"]`);
-        console.log(`Found ${optionItems.length} option items for question ${questionId}`);
         
         // Remove selected class from all options
         optionItems.forEach(item => {
