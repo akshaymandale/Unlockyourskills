@@ -45,21 +45,30 @@ $timeRemaining = $attempt['time_remaining'] ?? ($timeLimit * 60);
             <div class="container-fluid">
                 <div class="row align-items-center">
                     <div class="col-md-6">
-                        <h1 class="assessment-title"><?php echo htmlspecialchars($assessment['title'] ?? ''); ?></h1>
+                        <div class="d-flex align-items-center mb-2">
+                            <i class="fas fa-clipboard-check fa-lg text-primary me-3" style="color: #4b0082 !important;"></i>
+                            <h1 class="assessment-title mb-0"><?php echo htmlspecialchars($assessment['title'] ?? ''); ?></h1>
+                        </div>
                         <p class="assessment-subtitle"><?php echo htmlspecialchars($assessment['description'] ?? ''); ?></p>
                     </div>
                     <div class="col-md-6 text-end">
                         <div class="assessment-info">
                             <div class="info-item">
-                                <span class="info-label"><?php echo Localization::translate('assessment_player.question'); ?>:</span>
+                                <span class="info-label">
+                                    <i class="fas fa-question-circle me-2"></i><?php echo Localization::translate('assessment_player.question'); ?>:
+                                </span>
                                 <span class="info-value" id="question-counter">1 / <?php echo $totalQuestions; ?></span>
                             </div>
                             <div class="info-item">
-                                <span class="info-label"><?php echo Localization::translate('assessment_player.time_remaining'); ?>:</span>
+                                <span class="info-label">
+                                    <i class="fas fa-clock me-2"></i><?php echo Localization::translate('assessment_player.time_remaining'); ?>:
+                                </span>
                                 <span class="info-value" id="time-remaining"><?php echo gmdate('H:i:s', $timeRemaining); ?></span>
                             </div>
                             <div class="info-item">
-                                <span class="info-label"><?php echo Localization::translate('assessment_player.passing_score'); ?>:</span>
+                                <span class="info-label">
+                                    <i class="fas fa-percentage me-2"></i><?php echo Localization::translate('assessment_player.passing_score'); ?>:
+                                </span>
                                 <span class="info-value"><?php echo ($assessment['passing_percentage'] ?? 70); ?>%</span>
                             </div>
                         </div>
@@ -81,66 +90,83 @@ $timeRemaining = $attempt['time_remaining'] ?? ($timeLimit * 60);
         <div class="assessment-content" id="start-screen">
             <div class="container-fluid">
                 <div class="row justify-content-center">
-                    <div class="col-lg-8">
+                    <div class="col-lg-10">
                         <div class="start-assessment-container text-center">
                             <div class="start-icon mb-4">
-                                <i class="fas fa-clipboard-check fa-5x text-primary"></i>
+                                <div class="icon-wrapper">
+                                    <i class="fas fa-clipboard-check fa-4x"></i>
+                                    <div class="icon-glow"></div>
+                                </div>
                             </div>
                             <h2 class="mb-4"><?php echo Localization::translate('assessment_player.ready_to_start'); ?></h2>
-                            <p class="lead mb-4"><?php echo Localization::translate('assessment_player.about_to_begin'); ?> <strong><?php echo htmlspecialchars($assessment['title'] ?? ''); ?></strong></p>
+                            <p class="lead mb-5"><?php echo Localization::translate('assessment_player.about_to_begin'); ?> <strong><?php echo htmlspecialchars($assessment['title'] ?? ''); ?></strong></p>
                             
-                            <div class="assessment-details mb-4">
-                                <div class="row">
+                            <div class="assessment-details mb-5">
+                                <div class="row g-4">
                                     <div class="col-md-4">
                                         <div class="detail-card">
-                                            <i class="fas fa-question-circle fa-2x text-info mb-2"></i>
+                                            <div class="detail-icon">
+                                                <i class="fas fa-question-circle fa-2x"></i>
+                                            </div>
                                             <h5><?php echo $totalQuestions; ?> <?php echo Localization::translate('assessment_player.questions'); ?></h5>
+                                            <small class="text-muted">Total Questions</small>
                                         </div>
                                     </div>
                                     <div class="col-md-4">
                                         <div class="detail-card">
-                                            <i class="fas fa-clock fa-2x text-warning mb-2"></i>
+                                            <div class="detail-icon">
+                                                <i class="fas fa-clock fa-2x"></i>
+                                            </div>
                                             <h5><?php echo gmdate('H:i:s', $timeLimit * 60); ?> <?php echo Localization::translate('assessment_player.time_limit'); ?></h5>
+                                            <small class="text-muted">Time Limit</small>
                                         </div>
                                     </div>
                                     <div class="col-md-4">
                                         <div class="detail-card">
-                                            <i class="fas fa-percentage fa-2x text-success mb-2"></i>
+                                            <div class="detail-icon">
+                                                <i class="fas fa-percentage fa-2x"></i>
+                                            </div>
                                             <h5><?php echo ($assessment['passing_percentage'] ?? 70); ?>% <?php echo Localization::translate('assessment_player.to_pass'); ?></h5>
+                                            <small class="text-muted">Passing Score</small>
                                         </div>
                                     </div>
                                 </div>
                             </div>
 
-                            <div class="safety-features mb-4">
-                                <h5 class="text-primary mb-3">
+                            <div class="safety-features mb-5">
+                                <h5 class="text-primary mb-4">
                                     <i class="fas fa-shield-alt me-2"></i><?php echo Localization::translate('assessment_player.your_progress_protected'); ?>
                                 </h5>
-                                <div class="row">
+                                <div class="row g-4">
                                     <div class="col-md-4">
                                         <div class="safety-item">
-                                            <i class="fas fa-wifi text-success"></i>
+                                            <i class="fas fa-wifi"></i>
                                             <small><?php echo Localization::translate('assessment_player.auto_save_every_30'); ?></small>
                                         </div>
                                     </div>
                                     <div class="col-md-4">
                                         <div class="safety-item">
-                                            <i class="fas fa-undo text-info"></i>
+                                            <i class="fas fa-undo"></i>
                                             <small><?php echo Localization::translate('assessment_player.session_recovery_24h'); ?></small>
                                         </div>
                                     </div>
                                     <div class="col-md-4">
                                         <div class="safety-item">
-                                            <i class="fas fa-bolt text-warning"></i>
+                                            <i class="fas fa-bolt"></i>
                                             <small><?php echo Localization::translate('assessment_player.offline_mode_protection'); ?></small>
                                         </div>
                                     </div>
                                 </div>
                             </div>
 
-                            <button type="button" class="btn btn-primary btn-lg" id="start-assessment-btn">
-                                <i class="fas fa-play me-2"></i><?php echo Localization::translate('assessment_player.start_assessment'); ?>
-                            </button>
+                            <div class="start-button-wrapper">
+                                <button type="button" class="btn btn-primary btn-lg" id="start-assessment-btn">
+                                    <i class="fas fa-play me-3"></i><?php echo Localization::translate('assessment_player.start_assessment'); ?>
+                                </button>
+                                <div class="start-button-glow"></div>
+                            </div>
+                            
+
                         </div>
                     </div>
                 </div>
@@ -159,18 +185,18 @@ $timeRemaining = $attempt['time_remaining'] ?? ($timeLimit * 60);
                         
                         <!-- Navigation Buttons -->
                         <div class="question-navigation">
-                            <div class="row">
+                            <div class="row align-items-center">
                                 <div class="col-6">
                                     <button type="button" class="btn btn-secondary" id="prev-btn" disabled>
-                                        <i class="fas fa-arrow-left"></i> <?php echo Localization::translate('assessment_player.previous_question'); ?>
+                                        <i class="fas fa-arrow-left me-2"></i> <?php echo Localization::translate('assessment_player.previous_question'); ?>
                                     </button>
                                 </div>
                                 <div class="col-6 text-end">
                                     <button type="button" class="btn btn-primary" id="next-btn">
-                                        <?php echo Localization::translate('assessment_player.next_question'); ?> <i class="fas fa-arrow-right"></i>
+                                        <?php echo Localization::translate('assessment_player.next_question'); ?> <i class="fas fa-arrow-right ms-2"></i>
                                     </button>
                                     <button type="button" class="btn btn-success" id="submit-btn" style="display: none;">
-                                        <?php echo Localization::translate('assessment_player.submit_assessment'); ?>
+                                        <i class="fas fa-check-circle me-2"></i> <?php echo Localization::translate('assessment_player.submit_assessment'); ?>
                                     </button>
                                 </div>
                             </div>
@@ -180,7 +206,14 @@ $timeRemaining = $attempt['time_remaining'] ?? ($timeLimit * 60);
                     <!-- Question Navigator -->
                     <div class="col-lg-4">
                         <div class="question-navigator">
-                            <h5><?php echo Localization::translate('assessment_player.question_navigator'); ?></h5>
+                            <div class="navigator-header">
+                                <h5>
+                                    <i class="fas fa-compass me-2"></i><?php echo Localization::translate('assessment_player.question_navigator'); ?>
+                                </h5>
+                                <div class="navigator-progress">
+                                    <small class="text-muted">Progress: <span id="navigator-progress-text">0%</span></small>
+                                </div>
+                            </div>
                             <div class="question-grid" id="question-grid">
                                 <!-- Question numbers will be generated here -->
                             </div>
@@ -319,6 +352,8 @@ $timeRemaining = $attempt['time_remaining'] ?? ($timeLimit * 60);
                 characters: "<?php echo Localization::translate('assessment_player.characters'); ?>"
             }
         };
+        
+
     </script>
 </body>
 </html> 
