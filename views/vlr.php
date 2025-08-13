@@ -3971,7 +3971,7 @@ $canAccessVLR = canAccess('vlr');
 <!-- ✅ VLR Tab Management System -->
 <script src="<?= UrlHelper::url('public/js/vlr_tabs.js') ?>"></script>
 <!-- ✅ VLR Delete Confirmations -->
-<!-- Removed: vlr_confirmations.js is loaded dynamically by confirmation_loader.js -->
+<!-- Manually loading vlr_confirmations.js for reliable delete confirmations -->
 
 <!-- ✅ Universal Preview Modal -->
 <div class="modal fade" id="previewModal" tabindex="-1" aria-labelledby="previewModalLabel" aria-hidden="true">

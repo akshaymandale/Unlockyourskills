@@ -294,6 +294,10 @@ class VLRConfirmations {
 // Initialize VLR confirmations
 if (document.readyState !== 'loading') {
     window.vlrConfirmationsInstance = new VLRConfirmations();
+} else {
+    document.addEventListener('DOMContentLoaded', function() {
+        window.vlrConfirmationsInstance = new VLRConfirmations();
+    });
 }
 
 // Global VLR helper function
