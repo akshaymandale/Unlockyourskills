@@ -147,6 +147,31 @@ document.addEventListener("DOMContentLoaded", function () {
                     hideError(field);
                 }
                 break;
+            case "edit_modal_reports_to":
+                if (value === "") {
+                    showError(field, "validation.reports_to_required");
+                    isValid = false;
+                } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)) {
+                    showError(field, "validation.reports_to_invalid");
+                    isValid = false;
+                } else {
+                    // Check if the email was selected from autocomplete (has data attributes)
+                    const selectedEmail = field.getAttribute('data-selected-email');
+                    const selectedName = field.getAttribute('data-selected-name');
+                    
+                    if (selectedEmail && selectedEmail === value) {
+                        // Email was selected from autocomplete, so it's valid
+                        hideError(field);
+                    } else if (selectedEmail && selectedEmail !== value) {
+                        // User changed the email after selection, show warning
+                        showError(field, "Please select an email from the suggestions or enter a valid email address.");
+                        isValid = false;
+                    } else {
+                        // No autocomplete selection, but email format is valid
+                        hideError(field);
+                    }
+                }
+                break;
 
             case "profile_expiry":
                 let expiryDate = new Date(value);

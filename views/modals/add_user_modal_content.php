@@ -284,8 +284,15 @@ $isSuperAdminForClient = $isFromClientManagement;
                     </select>
                 </div>
                 <div class="col-lg-6 col-md-6 col-sm-12 form-group">
-                    <label><?= Localization::translate('reports_to'); ?></label>
-                    <input type="text" name="reports_to" class="form-control">
+                    <label><?= Localization::translate('reports_to'); ?> <span class="text-danger">*</span></label>
+                    <div class="input-group">
+                        <input type="email" id="modal_reports_to" name="reports_to" class="form-control" placeholder="Start typing to search users...">
+                        <span class="input-group-text">
+                            <i class="fas fa-search text-muted"></i>
+                        </span>
+                    </div>
+                    <div class="invalid-feedback"></div>
+                    <small class="form-text text-muted">Type to search and select from existing users</small>
                 </div>
             </div>
             <div class="row">

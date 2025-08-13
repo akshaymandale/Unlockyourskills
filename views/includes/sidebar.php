@@ -38,6 +38,8 @@ function isCurrentPage($route) {
                 <i class="fas fa-cogs"></i> <span><?= Localization::translate('manage_portal'); ?></span>
             </a>
         </li>
+        
+
 
         <?php if (isset($_SESSION['user']) && $_SESSION['user']['system_role'] === 'super_admin'): ?>
         <li class="list-group-item<?= isCurrentPage('clients') ? ' active' : '' ?>">

@@ -57,6 +57,31 @@
                     isValid = false;
                 }
                 break;
+            case 'modal_reports_to':
+                if (!value) {
+                    showError(field, 'Report to (email) is required.');
+                    isValid = false;
+                } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)) {
+                    showError(field, 'Please enter a valid email address for Report to.');
+                    isValid = false;
+                } else {
+                    // Check if the email was selected from autocomplete (has data attributes)
+                    const selectedEmail = field.getAttribute('data-selected-email');
+                    const selectedName = field.getAttribute('data-selected-name');
+                    
+                    if (selectedEmail && selectedEmail === value) {
+                        // Email was selected from autocomplete, so it's valid
+                        hideError(field);
+                    } else if (selectedEmail && selectedEmail !== value) {
+                        // User changed the email after selection, show warning
+                        showError(field, 'Please select an email from the suggestions or enter a valid email address.');
+                        isValid = false;
+                    } else {
+                        // No autocomplete selection, but email format is valid
+                        hideError(field);
+                    }
+                }
+                break;
             default:
                 // Custom fields validation
                 if (required) {
@@ -84,7 +109,7 @@
     function validateAddUserModal() {
         let isFormValid = true;
         // Validate main fields
-        const fieldsToValidate = document.querySelectorAll('#addUserModalForm #modal_full_name, #addUserModalForm #modal_email, #addUserModalForm #modal_contact_number, #addUserModalForm #modal_user_role');
+        const fieldsToValidate = document.querySelectorAll('#addUserModalForm #modal_full_name, #addUserModalForm #modal_email, #addUserModalForm #modal_contact_number, #addUserModalForm #modal_user_role, #addUserModalForm #modal_reports_to');
         fieldsToValidate.forEach(field => {
             if (!validateField(field)) {
                 isFormValid = false;
@@ -106,7 +131,7 @@
         // Map tab IDs to field selectors
         const tabMappings = {
             'modal-basic-details': ['#modal_full_name', '#modal_email', '#modal_contact_number', '#modal_user_role'],
-            'modal-additional-details': ['#modal_countrySelect', '#modal_stateSelect', '#modal_citySelect', '#modal_timezoneSelect', '[name="language"]', '[name="reports_to"]', '[name="joining_date"]', '[name="retirement_date"]'],
+            'modal-additional-details': ['#modal_countrySelect', '#modal_stateSelect', '#modal_citySelect', '#modal_timezoneSelect', '[name="language"]', '#modal_reports_to', '[name="joining_date"]', '[name="retirement_date"]'],
             'modal-extra-details': []
         };
         // Add all custom fields to extra-details
@@ -186,7 +211,8 @@
             }
         });
         // Attach blur handler to all relevant fields (main + custom)
-        const fields = form.querySelectorAll('#modal_full_name, #modal_email, #modal_contact_number, #modal_user_role, [data-required="1"]');
+        const fields = form.querySelectorAll('#modal_full_name, #modal_email, #modal_contact_number, #modal_user_role, #modal_reports_to, [data-required="1"]');
+        
         fields.forEach(field => {
             field.removeEventListener('blur', field._addUserModalBlurHandler || (()=>{}));
             const handler = function() {

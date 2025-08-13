@@ -58,6 +58,17 @@ Router::middleware(['Auth'])->group(function() {
     Router::post('/users/ajax/search', 'UserManagementController@ajaxSearch');
     Router::post('/users/ajax/toggle-status', 'UserManagementController@toggleStatus');
     Router::post('/users/import', 'UserManagementController@import');
+    
+
+// Original autocomplete route
+Router::get('/users/emails/autocomplete', 'UserManagementController@getUserEmailsForAutocomplete');
+
+// Simpler autocomplete route (like your previous working code)
+Router::get('/users/autocomplete', 'UserManagementController@getUserEmailsForAutocomplete');
+
+
+    Router::get('/organizational-hierarchy', 'UserManagementController@showOrganizationalHierarchy');
+    Router::get('/organizational-hierarchy/data', 'UserManagementController@getOrganizationalHierarchyData');
 
     // User Management Routes
     Router::get('/users', 'UserManagementController@index');

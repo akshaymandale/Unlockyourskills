@@ -231,9 +231,15 @@ $clientName = $_SESSION['client_code'] ?? 'DEFAULT';
                             </select>
                         </div>
                         <div class="col-lg-6 col-md-6 col-sm-12 form-group">
-                            <label><?= Localization::translate('reports_to'); ?></label>
-                            <input type="text" name="reports_to" class="input-field" 
-                                   value="<?= htmlspecialchars($user['reports_to']); ?>">
+                            <label><?= Localization::translate('reports_to'); ?> <span class="text-danger">*</span></label>
+                            <div class="input-group">
+                                <input type="email" name="reports_to" class="input-field" required
+                                    value="<?= htmlspecialchars($user['reports_to']); ?>" placeholder="Start typing to search users...">
+                                <span class="input-group-text">
+                                    <i class="fas fa-search text-muted"></i>
+                                </span>
+                            </div>
+                            <small class="form-text text-muted">Type to search and select from existing users</small>
                         </div>
                     </div>
                     <div class="row">
@@ -450,4 +456,5 @@ $clientName = $_SESSION['client_code'] ?? 'DEFAULT';
 
 
 <script src="<?= UrlHelper::url('public/js/edit_user_validation.js') ?>"></script>
+<script src="<?= UrlHelper::url('public/js/reports_to_autocomplete.js') ?>"></script>
 <?php include 'includes/footer.php'; ?>

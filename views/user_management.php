@@ -781,7 +781,9 @@ document.addEventListener('shown.bs.modal', function(event) {
 <?php include 'includes/footer.php'; ?>
 <script>
 window.addUserSubmitUrl = '<?= UrlHelper::url('users/modal/submit-add') ?>';
+window.currentUserClientId = '<?= htmlspecialchars($_SESSION['user']['client_id']); ?>';
 </script>
 <script src="<?= UrlHelper::url('public/js/add_user_modal_validation.js') ?>"></script>
 <script src="<?= UrlHelper::url('public/js/edit_user_validation.js') ?>"></script>
+<script src="<?= UrlHelper::url('public/js/reports_to_autocomplete.js') ?>"></script>
 <script src="<?= UrlHelper::url('public/js/user_management.js') ?>"></script>

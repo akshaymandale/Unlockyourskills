@@ -417,7 +417,9 @@
     "validation.user_role_required": "User Role is required",
     "validation.profile_expiry_invalid": "Profile Expiry Date cannot be before today",
     "validation.image_format": "Only JPG and PNG files are allowed",
-    "validation.image_size": "File size should not exceed 5MB",
+        "validation.image_size": "File size should not exceed 5MB",
+        "validation.reports_to_required": "Report to (email) is required.",
+        "validation.reports_to_invalid": "Please enter a valid email address for Report to.",
     "_comment10": "scorm_validation.js",
     "validation.scorm_title_required": "SCORM Title is required",
     "validation.scorm_zip_required": "SCORM Zip File is required",
@@ -1672,5 +1674,15 @@
     "search_users": "Search Users",
     "not_started": "Not Started",
     "in_progress": "In Progress",
-    "completed": "Completed"
+    "completed": "Completed",
+    "organizational_hierarchy_title": "Organizational Hierarchy",
+    "organizational_hierarchy_subtitle": "View and manage your organization's reporting structure",
+    "total_users": "Total Users",
+    "active_users": "Active Users",
+    "hierarchy_levels": "Hierarchy Levels",
+    "avg_team_size": "Avg Team Size",
+    "expand_all": "Expand All",
+    "collapse_all": "Collapse All",
+    "refresh": "Refresh",
+    "loading_hierarchy": "Loading organizational hierarchy..."
 }

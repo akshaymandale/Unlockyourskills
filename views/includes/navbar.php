@@ -139,6 +139,9 @@ echo '<!-- SESSION_USER: ' . print_r($_SESSION['user'] ?? [], true) . ' -->';
                     <i class="fas fa-user-edit"></i> <?= Localization::translate('edit_profile'); ?>
                 </a>
                 <?php endif; ?>
+                <a class="dropdown-item" href="<?= UrlHelper::url('organizational-hierarchy') ?>">
+                    <i class="fas fa-sitemap"></i> <?= Localization::translate('organizational_hierarchy_title'); ?>
+                </a>
                 <a class="dropdown-item" href="<?= UrlHelper::url('settings') ?>">
                     <i class="fas fa-cog"></i> <?= Localization::translate('settings'); ?>
                 </a>
