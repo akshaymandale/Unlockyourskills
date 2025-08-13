@@ -163,6 +163,16 @@ document.addEventListener("DOMContentLoaded", function () {
         button.addEventListener("click", function () {
             const assessmentData = JSON.parse(this.dataset.assessment);
 
+            // Check if assessment has attempts and cannot be edited
+            if (assessmentData.has_attempts) {
+                if (typeof showSimpleToast === 'function') {
+                    showSimpleToast('Cannot edit assessment: Assessment has been started by users and cannot be modified.', 'error');
+                } else {
+                    alert('Cannot edit assessment: Assessment has been started by users and cannot be modified.');
+                }
+                return;
+            }
+
             /*assessmentTitle.value = assessmentData.title;
             numAttempts.value = assessmentData.num_attempts;
             passingPercentage.value = assessmentData.passing_percentage;
@@ -308,6 +318,10 @@ document.addEventListener("DOMContentLoaded", function () {
             assessmentModal.show();
         });
     });
+
+    // Delete Assessment Logic - Now handled by VLRConfirmations class
+    // The delete button click events are handled globally by vlr_confirmations.js
+    // which checks for assessment attempts and shows appropriate messages
 
     document.querySelector('button[data-bs-dismiss="modal"]').addEventListener('click', function () {
         assessmentForm.reset();

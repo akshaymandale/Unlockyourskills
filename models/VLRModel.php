@@ -704,8 +704,13 @@ class VLRModel
             return $data;
         }
         foreach ($data as &$package) {
-            $package['can_edit'] = (canEdit('vlr') && ($currentUser['system_role'] === 'super_admin' || $package['created_by'] == $currentUser['id'])) ? 1 : 0;
-            $package['can_delete'] = (canDelete('vlr') && ($currentUser['system_role'] === 'super_admin' || $package['created_by'] == $currentUser['id'])) ? 1 : 0;
+            // Check if assessment has any user attempts
+            $hasAttempts = $this->hasAssessmentAttempts($package['id']);
+            $package['has_attempts'] = $hasAttempts;
+            
+            // Determine permissions based on user role (buttons remain enabled)
+            $package['can_edit'] = canEdit('vlr') && ($currentUser['system_role'] === 'super_admin' || $package['created_by'] == $currentUser['id']) ? 1 : 0;
+            $package['can_delete'] = canDelete('vlr') && ($currentUser['system_role'] === 'super_admin' || $package['created_by'] == $currentUser['id']) ? 1 : 0;
         }
         unset($package);
 
@@ -803,6 +808,26 @@ class VLRModel
             $this->conn->rollBack();
             error_log("Assessment Deletion Error: " . $e->getMessage());
             return false;
+        }
+    }
+
+    /**
+     * Check if an assessment has any user attempts
+     * @param int $assessmentId
+     * @return bool
+     */
+    public function hasAssessmentAttempts($assessmentId)
+    {
+        try {
+            $stmt = $this->conn->prepare("SELECT COUNT(*) as count FROM assessment_attempts WHERE assessment_id = ?");
+            $stmt->execute([$assessmentId]);
+            $result = $stmt->fetch(PDO::FETCH_ASSOC);
+            $count = (int)$result['count'];
+            
+            return $count > 0;
+        } catch (Exception $e) {
+            error_log("Error checking assessment attempts: " . $e->getMessage());
+            return true; // Assume has attempts if error occurs (safer approach)
         }
     }
 

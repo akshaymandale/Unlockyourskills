@@ -880,6 +880,12 @@ class VLRController extends BaseController
 
         // Insert or update logic
         if (!empty($assessmentId)) {
+            // Check if assessment has any user attempts before allowing edit
+            if ($this->VLRModel->hasAssessmentAttempts($assessmentId)) {
+                $this->toastError('Cannot edit assessment: Assessment has been started by users and cannot be modified.', '/unlockyourskills/vlr?tab=assessment');
+                return;
+            }
+            
             $result = $this->VLRModel->updateAssessmentWithQuestions($data, $assessmentId);
             if ($result) {
                 $this->toastSuccess('Assessment updated successfully!', '/unlockyourskills/vlr?tab=assessment');
@@ -906,6 +912,12 @@ class VLRController extends BaseController
 
         if (!$id) {
             $this->toastError('Invalid request.', '/unlockyourskills/vlr?tab=assessment');
+            return;
+        }
+
+        // Check if assessment has any user attempts
+        if ($this->VLRModel->hasAssessmentAttempts($id)) {
+            $this->toastError('Cannot delete assessment: Assessment has been started by users and cannot be deleted.', '/unlockyourskills/vlr?tab=assessment');
             return;
         }
 
