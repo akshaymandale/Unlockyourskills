@@ -256,6 +256,14 @@ class UserManagementController extends BaseController {
             die("Error: Contact number must be numeric and at least 10 digits.");
         }
 
+        if (empty($reports_to)) {
+            die("Error: Report to (email) is required.");
+        }
+
+        if (!filter_var($reports_to, FILTER_VALIDATE_EMAIL)) {
+            die("Error: Invalid email format for Report to field.");
+        }
+
         if (!empty($dob) && strtotime($dob) > time()) {
             die("Error: Date of Birth cannot be a future date.");
         }
@@ -395,6 +403,17 @@ class UserManagementController extends BaseController {
 
         if (!ctype_digit($contact_number) || strlen($contact_number) < 10) {
             echo "<script>alert('Error: Contact number must be numeric and at least 10 digits.'); window.history.back();</script>";
+            return;
+        }
+
+        // Reports to validation
+        $reports_to = trim($_POST['reports_to'] ?? '');
+        if (empty($reports_to)) {
+            echo "<script>alert('Error: Report to (email) is required.'); window.history.back();</script>";
+            return;
+        }
+        if (!filter_var($reports_to, FILTER_VALIDATE_EMAIL)) {
+            echo "<script>alert('Error: Invalid email format for Report to field.'); window.history.back();</script>";
             return;
         }
 
@@ -964,6 +983,12 @@ class UserManagementController extends BaseController {
         if (empty($postData['contact_number'])) $errors[] = 'Contact number is required.';
         if (empty($postData['user_role'])) $errors[] = 'User role is required.';
         
+        // Reports to validation
+        if (empty($postData['reports_to'])) $errors[] = 'Report to (email) is required.';
+        if (!empty($postData['reports_to']) && !filter_var($postData['reports_to'], FILTER_VALIDATE_EMAIL)) {
+            $errors[] = 'Invalid email format for Report to field.';
+        }
+        
         // Add more validation rules as needed from your storeUser method...
 
         return $errors;
@@ -1042,6 +1067,16 @@ class UserManagementController extends BaseController {
             if (empty($user_role)) {
                 $fieldErrors['user_role'] = 'User role is required';
                 $errors[] = 'User role is required';
+            }
+
+            // Reports to validation
+            $reports_to = trim($_POST['reports_to'] ?? '');
+            if (empty($reports_to)) {
+                $fieldErrors['reports_to'] = 'Report to (email) is required';
+                $errors[] = 'Report to (email) is required';
+            } elseif (!filter_var($reports_to, FILTER_VALIDATE_EMAIL)) {
+                $fieldErrors['reports_to'] = 'Please enter a valid email address for Report to';
+                $errors[] = 'Please enter a valid email address for Report to';
             }
 
             // Date of birth validation
@@ -1199,5 +1234,156 @@ class UserManagementController extends BaseController {
         return $fieldErrors;
     }
 
+
+
+    /**
+     * Get user emails for autocomplete search in reports_to field
+     */
+    public function getUserEmailsForAutocomplete() {
+        header('Content-Type: application/json');
+        
+        try {
+            // Get current user for client isolation
+            $currentUser = $_SESSION['user'] ?? null;
+            if (!$currentUser) {
+                echo json_encode(['success' => false, 'message' => 'User not authenticated']);
+                return;
+            }
+
+            // Get search term
+            $searchTerm = trim($_GET['q'] ?? '');
+            
+            // Get client ID for isolation
+            $clientId = null;
+            if ($currentUser['system_role'] === 'admin') {
+                $clientId = $currentUser['client_id'];
+            } elseif ($currentUser['system_role'] === 'super_admin') {
+                // For super_admin, use their client_id if available, or allow access to all
+                $clientId = $currentUser['client_id'] ?? null;
+            } else {
+                // For other roles, use their client_id
+                $clientId = $currentUser['client_id'] ?? null;
+            }
+            
+            // If client_id is passed via GET parameter, use it (for autocomplete context)
+            if (isset($_GET['client_id']) && !empty($_GET['client_id'])) {
+                $clientId = $_GET['client_id'];
+            }
+
+            // Fetch user emails from database (temporarily without performance parameters)
+            $emails = $this->userModel->getUserEmailsForAutocomplete($searchTerm, $clientId);
+            
+            echo json_encode([
+                'success' => true,
+                'emails' => $emails
+            ]);
+            
+        } catch (Exception $e) {
+            error_log("Error fetching user emails for autocomplete: " . $e->getMessage());
+            echo json_encode([
+                'success' => false,
+                'message' => 'Error fetching user emails'
+            ]);
+        }
+    }
+
+    /**
+     * Show organizational hierarchy page
+     */
+    public function showOrganizationalHierarchy() {
+        try {
+            // Get current user for client isolation
+            $currentUser = $_SESSION['user'] ?? null;
+            if (!$currentUser) {
+                header('Location: ' . UrlHelper::url('login'));
+                exit();
+            }
+
+            // Get client ID for isolation
+            $clientId = null;
+            if ($currentUser['system_role'] === 'admin') {
+                $clientId = $currentUser['client_id'];
+            } elseif ($currentUser['system_role'] === 'super_admin') {
+                // For super_admin, require a specific client_id to be provided
+                $clientId = $_GET['client_id'] ?? null;
+                if (!$clientId) {
+                    echo "Error: Client ID is required for super admin users. Please specify a client_id parameter.";
+                    exit;
+                }
+            }
+
+            // Get organizational hierarchy (use lightweight version for better performance)
+            $hierarchy = $this->userModel->getLightweightOrganizationalHierarchy($clientId, 200);
+            
+            // Get current user's reporting chain
+            $userReportingChain = $this->userModel->getUserReportingChain($currentUser['email'], $clientId);
+            
+            // Get current user's direct reports
+            $userDirectReports = $this->userModel->getUserDirectReports($currentUser['email'], $clientId);
+
+            // Include the view
+            include __DIR__ . '/../views/organizational_hierarchy.php';
+            
+        } catch (Exception $e) {
+            error_log("Error showing organizational hierarchy: " . $e->getMessage());
+            echo "Error: " . $e->getMessage();
+        }
+    }
+
+    /**
+     * Get organizational hierarchy data via AJAX
+     */
+    public function getOrganizationalHierarchyData() {
+        header('Content-Type: application/json');
+        
+        try {
+            // Get current user for client isolation
+            $currentUser = $_SESSION['user'] ?? null;
+            if (!$currentUser) {
+                echo json_encode(['success' => false, 'message' => 'User not authenticated']);
+                return;
+            }
+
+            // Get client ID for isolation
+            $clientId = null;
+            if ($currentUser['system_role'] === 'admin') {
+                $clientId = $currentUser['client_id'];
+            } elseif ($currentUser['system_role'] === 'super_admin') {
+                // For super_admin, require a specific client_id to be provided
+                $clientId = $_GET['client_id'] ?? null;
+                if (!$clientId) {
+                    echo json_encode(['success' => false, 'message' => 'Client ID is required for super admin users']);
+                    return;
+                }
+            }
+
+            // Debug logging
+            error_log("Organizational Hierarchy Debug - User: " . json_encode($currentUser));
+            error_log("Organizational Hierarchy Debug - Client ID: " . ($clientId ?? 'null'));
+
+            // Get organizational hierarchy (use lightweight version for better performance)
+            $hierarchy = $this->userModel->getLightweightOrganizationalHierarchy($clientId, 200);
+            
+            // Debug logging
+            error_log("Organizational Hierarchy Debug - Hierarchy result: " . json_encode($hierarchy));
+            
+            echo json_encode([
+                'success' => true,
+                'hierarchy' => $hierarchy,
+                'debug' => [
+                    'user_role' => $currentUser['system_role'] ?? 'unknown',
+                    'client_id' => $clientId,
+                    'hierarchy_count' => count($hierarchy)
+                ]
+            ]);
+            
+        } catch (Exception $e) {
+            error_log("Error fetching organizational hierarchy: " . $e->getMessage());
+            echo json_encode([
+                'success' => false,
+                'message' => 'Error fetching organizational hierarchy'
+            ]);
+        }
+    }
 }
 ?>

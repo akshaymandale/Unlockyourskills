@@ -913,5 +913,242 @@ class UserModel {
         $stmt->execute($userIds);
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
+
+    /**
+     * Get user emails for autocomplete search in reports_to field
+     */
+    public function getUserEmailsForAutocomplete($searchTerm = '', $clientId = null, $limit = 20, $offset = 0) {
+        try {
+            $sql = "SELECT DISTINCT email, full_name FROM user_profiles WHERE is_deleted = 0";
+            $params = [];
+            
+            // Add client isolation if specified
+            if ($clientId) {
+                $sql .= " AND client_id = ?";
+                $params[] = $clientId;
+            }
+            
+            // Add search term if provided
+            if (!empty($searchTerm)) {
+                $sql .= " AND (email LIKE ? OR full_name LIKE ?)";
+                $searchPattern = '%' . $searchTerm . '%';
+                $params[] = $searchPattern;
+                $params[] = $searchPattern;
+            }
+            
+            $sql .= " ORDER BY full_name ASC LIMIT " . (int)$limit . " OFFSET " . (int)$offset;
+            
+            $stmt = $this->conn->prepare($sql);
+            $stmt->execute($params);
+            
+            $results = $stmt->fetchAll(PDO::FETCH_ASSOC);
+            
+            return $results;
+            
+        } catch (PDOException $e) {
+            error_log("Error in getUserEmailsForAutocomplete: " . $e->getMessage());
+            return [];
+        }
+    }
+
+    /**
+     * Get lightweight organizational hierarchy (for performance)
+     */
+    public function getLightweightOrganizationalHierarchy($clientId, $limit = 100) {
+        try {
+            // Set memory limit for this operation
+            ini_set('memory_limit', '256M');
+            
+            // Debug logging
+            error_log("UserModel Debug - Client ID: " . ($clientId ?? 'null'));
+            error_log("UserModel Debug - Limit: " . $limit);
+            
+            // Get only essential user data with strict limits
+            if (!$clientId) {
+                error_log("UserModel Error: Client ID is required for organizational hierarchy");
+                return [];
+            }
+            
+            $sql = "SELECT id, profile_id, full_name, email, user_role, reports_to, user_status 
+                    FROM user_profiles 
+                    WHERE client_id = ? AND is_deleted = 0 
+                    ORDER BY full_name ASC 
+                    LIMIT " . (int)$limit;
+            
+            $stmt = $this->conn->prepare($sql);
+            $stmt->execute([$clientId]);
+            $users = $stmt->fetchAll(PDO::FETCH_ASSOC);
+            
+            // Debug logging
+            error_log("UserModel Debug - Users found: " . count($users));
+            if (count($users) > 0) {
+                error_log("UserModel Debug - Sample user: " . json_encode($users[0]));
+                error_log("UserModel Debug - Sample reports_to: " . ($users[0]['reports_to'] ?? 'null'));
+            }
+            
+            // Validate that we have users with reporting relationships
+            $usersWithReports = array_filter($users, function($user) {
+                return !empty($user['reports_to']);
+            });
+            error_log("UserModel Debug - Users with reports_to: " . count($usersWithReports));
+            
+            // Build simple hierarchy without profile pictures and complex data
+            $hierarchy = [];
+            $userMap = [];
+            $processedUsers = [];
+            
+            // Create a map of users by email for quick lookup
+            foreach ($users as $user) {
+                $userMap[$user['email']] = $user;
+            }
+            
+            error_log("UserModel Debug - User map created with " . count($userMap) . " users");
+            
+            // Build the tree structure with minimal data
+            $rootUsers = 0;
+            foreach ($users as $user) {
+                error_log("UserModel Debug - Processing user: " . $user['email'] . " with reports_to: " . ($user['reports_to'] ?? 'null'));
+                if (empty($user['reports_to']) || !isset($userMap[$user['reports_to']])) {
+                    error_log("UserModel Debug - Adding root user: " . $user['email']);
+                    $hierarchy[] = $this->buildLightweightUserNode($user, $users, $userMap, $processedUsers, 0);
+                    $rootUsers++;
+                } else {
+                    error_log("UserModel Debug - User " . $user['email'] . " has manager " . $user['reports_to'] . " which exists in userMap");
+                }
+            }
+            
+            error_log("UserModel Debug - Root users found: " . $rootUsers);
+            error_log("UserModel Debug - Final hierarchy count: " . count($hierarchy));
+            error_log("UserModel Debug - Final hierarchy structure: " . json_encode($hierarchy));
+            
+            return $hierarchy;
+            
+        } catch (PDOException $e) {
+            error_log("Error in getLightweightOrganizationalHierarchy: " . $e->getMessage());
+            return [];
+        } catch (Exception $e) {
+            error_log("Error in getLightweightOrganizationalHierarchy: " . $e->getMessage());
+            return [];
+        }
+    }
+
+    /**
+     * Build a lightweight user node (minimal data for performance)
+     */
+    private function buildLightweightUserNode($user, $allUsers, $userMap, &$processedUsers, $depth = 0) {
+        // Prevent infinite recursion and excessive depth
+        if ($depth > 8) {
+            return [
+                'id' => $user['id'],
+                'profile_id' => $user['profile_id'],
+                'full_name' => $user['full_name'],
+                'email' => $user['email'],
+                'user_role' => $user['user_role'],
+                'user_status' => $user['user_status'],
+                'subordinates' => [],
+                'warning' => 'Maximum depth reached'
+            ];
+        }
+        
+        // Prevent circular references
+        $userKey = $user['id'] . '_' . $user['email'];
+        if (isset($processedUsers[$userKey])) {
+            return [
+                'id' => $user['id'],
+                'profile_id' => $user['profile_id'],
+                'full_name' => $user['full_name'],
+                'email' => $user['email'],
+                'user_role' => $user['user_role'],
+                'user_status' => $user['user_status'],
+                'subordinates' => [],
+                'warning' => 'Circular reference detected'
+            ];
+        }
+        
+        $processedUsers[$userKey] = true;
+        
+        $node = [
+            'id' => $user['id'],
+            'profile_id' => $user['profile_id'],
+            'full_name' => $user['full_name'],
+            'email' => $user['email'],
+            'user_role' => $user['user_role'],
+            'user_status' => $user['user_status'],
+            'subordinates' => []
+        ];
+        
+        // Find all users who report to this user (limit to prevent memory issues)
+        $subordinateCount = 0;
+        foreach ($allUsers as $subordinate) {
+            if ($subordinate['reports_to'] === $user['email']) {
+                // Limit subordinates per user to prevent memory issues
+                if ($subordinateCount >= 30) {
+                    break;
+                }
+                
+                $node['subordinates'][] = $this->buildLightweightUserNode($subordinate, $allUsers, $userMap, $processedUsers, $depth + 1);
+                $subordinateCount++;
+            }
+        }
+        
+        return $node;
+    }
+
+    /**
+     * Get user's direct reports
+     */
+    public function getUserDirectReports($userEmail, $clientId) {
+        try {
+            $sql = "SELECT id, profile_id, full_name, email, user_role, user_status 
+                    FROM user_profiles 
+                    WHERE reports_to = ? AND client_id = ? AND is_deleted = 0 
+                    ORDER BY full_name ASC";
+            
+            $stmt = $this->conn->prepare($sql);
+            $stmt->execute([$userEmail, $clientId]);
+            
+            return $stmt->fetchAll(PDO::FETCH_ASSOC);
+            
+        } catch (PDOException $e) {
+            error_log("Error in getUserDirectReports: " . $e->getMessage());
+            return [];
+        }
+    }
+
+    /**
+     * Get user's reporting chain (who they report to)
+     */
+    public function getUserReportingChain($userEmail, $clientId) {
+        try {
+            $chain = [];
+            $currentEmail = $userEmail;
+            $maxDepth = 10; // Prevent infinite loops
+            $currentDepth = 0;
+            
+            while (!empty($currentEmail) && $currentDepth < $maxDepth) {
+                $sql = "SELECT id, profile_id, full_name, email, user_role, reports_to 
+                        FROM user_profiles 
+                        WHERE email = ? AND client_id = ? AND is_deleted = 0";
+                
+                $stmt = $this->conn->prepare($sql);
+                $stmt->execute([$currentEmail, $clientId]);
+                $user = $stmt->fetch(PDO::FETCH_ASSOC);
+                
+                if ($user) {
+                    $chain[] = $user;
+                    $currentEmail = $user['reports_to'];
+                    $currentDepth++;
+                } else {
+                    break;
+                }
+            }
+            
+            return array_reverse($chain); // Return from top to bottom
+            
+        } catch (PDOException $e) {
+            error_log("Error in getUserReportingChain: " . $e->getMessage());
+            return [];
+        }
+    }
 }
 ?>

@@ -334,7 +334,9 @@
     "validation.user_role_required": "उपयोगकर्ता भूमिका आवश्यक है",
     "validation.profile_expiry_invalid": "प्रोफ़ाइल समाप्ति तिथि आज से पहले नहीं हो सकती",
     "validation.image_format": "केवल JPG और PNG फ़ाइलें अनुमत हैं",
-    "validation.image_size": "फ़ाइल का आकार 5MB से अधिक नहीं होना चाहिए",
+        "validation.image_size": "फ़ाइल का आकार 5MB से अधिक नहीं होना चाहिए",
+        "validation.reports_to_required": "रिपोर्ट टू (ईमेल) आवश्यक है।",
+        "validation.reports_to_invalid": "रिपोर्ट टू के लिए कृपया एक वैध ईमेल पता दर्ज करें।",
     "_comment10": "scorm_validation.js",
     "validation.scorm_title_required": "SCORM शीर्षक आवश्यक है",
     "validation.scorm_zip_required": "SCORM ज़िप फ़ाइल आवश्यक है",
@@ -1442,5 +1444,15 @@
     "search_users": "यूज़र खोजें",
     "not_started": "शुरू नहीं हुआ",
     "in_progress": "चालू है",
-    "completed": "पूरा हुआ"
+    "completed": "पूरा हुआ",
+    "organizational_hierarchy_title": "संगठनात्मक पदानुक्रम",
+    "organizational_hierarchy_subtitle": "अपने संगठन की रिपोर्टिंग संरचना देखें और प्रबंधित करें",
+    "total_users": "कुल उपयोगकर्ता",
+    "active_users": "सक्रिय उपयोगकर्ता",
+    "hierarchy_levels": "पदानुक्रम स्तर",
+    "avg_team_size": "औसत टीम आकार",
+    "expand_all": "सभी विस्तारित करें",
+    "collapse_all": "सभी संकुचित करें",
+    "refresh": "रिफ्रेश करें",
+    "loading_hierarchy": "संगठनात्मक पदानुक्रम लोड हो रहा है..."
 }
