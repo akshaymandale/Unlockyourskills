@@ -1325,8 +1325,13 @@ $canAccessVLR = canAccess('vlr');
                                                             title="<?= Localization::translate('edit'); ?>"></i>
                                                     </a>
                                                     <?php endif; ?>
+                                                    
                                                     <?php if (!empty($assessment['can_delete'])): ?>
-                                                    <a href="#" class="delete-assessment" data-id="<?= $assessment['id'] ?>" data-title="<?= htmlspecialchars($assessment['title']) ?>">
+                                                    <a href="#" class="delete-assessment" 
+                                                       data-id="<?= $assessment['id'] ?>" 
+                                                       data-title="<?= htmlspecialchars($assessment['title']) ?>"
+                                                       data-type="assessment"
+                                                       data-assessment='<?= json_encode($assessment); ?>'>
                                                         <i class="fas fa-trash-alt delete-icon"
                                                             title="<?= Localization::translate('delete'); ?>"></i>
                                                     </a>
@@ -3912,20 +3917,27 @@ $canAccessVLR = canAccess('vlr');
 
 <?php require_once __DIR__ . '/../core/UrlHelper.php'; ?>
 
-<!-- Assessment Validation Translations -->
-<script>
-window.translations = {
-    'assessment.validation.title_required': '<?= Localization::translate('assessment.validation.title_required') ?>',
-    'assessment.validation.time_limit_required': '<?= Localization::translate('assessment.validation.time_limit_required') ?>',
-    'assessment.validation.time_limit_invalid': '<?= Localization::translate('assessment.validation.time_limit_invalid') ?>',
-    'assessment.validation.num_questions_required': '<?= Localization::translate('assessment.validation.num_questions_required') ?>',
-    'assessment.validation.num_questions_exceeds': '<?= Localization::translate('assessment.validation.num_questions_exceeds') ?>',
-    'assessment.validation.passing_percentage_invalid': '<?= Localization::translate('assessment.validation.passing_percentage_invalid') ?>',
-    'assessment.validation.negative_percentage_required': '<?= Localization::translate('assessment.validation.negative_percentage_required') ?>',
-    'assessment.validation.tags_required': '<?= Localization::translate('assessment.validation.tags_required') ?>',
-    'assessment.validation.questions_required': '<?= Localization::translate('assessment.validation.questions_required') ?>'
-};
-</script>
+        <!-- Assessment Validation Translations -->
+        <script>
+        window.translations = {
+            'assessment.validation.title_required': '<?= Localization::translate('assessment.validation.title_required') ?>',
+            'assessment.validation.time_limit_required': '<?= Localization::translate('assessment.validation.time_limit_required') ?>',
+            'assessment.validation.time_limit_invalid': '<?= Localization::translate('assessment.validation.time_limit_invalid') ?>',
+            'assessment.validation.num_questions_required': '<?= Localization::translate('assessment.validation.num_questions_required') ?>',
+            'assessment.validation.num_questions_exceeds': '<?= Localization::translate('assessment.validation.num_questions_exceeds') ?>',
+            'assessment.validation.passing_percentage_invalid': '<?= Localization::translate('assessment.validation.passing_percentage_invalid') ?>',
+            'assessment.validation.negative_percentage_required': '<?= Localization::translate('assessment.validation.negative_percentage_required') ?>',
+            'assessment.validation.tags_required': '<?= Localization::translate('assessment.validation.tags_required') ?>',
+            'assessment.validation.questions_required': '<?= Localization::translate('assessment.validation.questions_required') ?>'
+        };
+        
+        // Add confirmation translations
+        window.translations['confirmation.delete.title'] = '<?= Localization::translate('confirmation.delete.title') ?>';
+        window.translations['confirmation.delete.message'] = '<?= Localization::translate('confirmation.delete.message') ?>';
+        window.translations['confirmation.delete.subtext'] = '<?= Localization::translate('confirmation.delete.subtext') ?>';
+        window.translations['confirmation.delete.button'] = '<?= Localization::translate('confirmation.delete.button') ?>';
+        window.translations['confirmation.cancel.button'] = '<?= Localization::translate('confirmation.cancel.button') ?>';
+        </script>
 
 <script src="<?= UrlHelper::url('public/js/scorm_validation.js') ?>"></script>
 <script src="<?= UrlHelper::url('public/js/scorm_package.js') ?>"></script>
