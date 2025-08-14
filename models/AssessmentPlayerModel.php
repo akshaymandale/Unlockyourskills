@@ -229,8 +229,25 @@ class AssessmentPlayerModel
         
         $answers = json_decode($attempt['answers'], true) ?: [];
         
+        // Ensure questionId is integer and answer is properly formatted
+        $questionIdInt = (int)$questionId;
+        
+        // For objective questions, ensure answer is integer
+        // For subjective questions, keep as string
+        $questionStmt = $db->prepare("SELECT question_type FROM assessment_questions WHERE id = ?");
+        $questionStmt->execute([$questionIdInt]);
+        $question = $questionStmt->fetch(PDO::FETCH_ASSOC);
+        
+        if ($question && strtolower($question['question_type']) === 'objective') {
+            // Ensure answer is integer for objective questions
+            $formattedAnswer = (int)$answer;
+        } else {
+            // Keep subjective answers as strings
+            $formattedAnswer = (string)$answer;
+        }
+        
         // Update answer for this question
-        $answers[$questionId] = $answer;
+        $answers[$questionIdInt] = $formattedAnswer;
         
         // Update attempt
         $stmt = $db->prepare("
@@ -280,7 +297,11 @@ class AssessmentPlayerModel
 
         foreach ($questionIds as $questionId) {
             if (isset($answers[$questionId])) {
-                $questionScore = $this->calculateQuestionScore($questionId, $answers[$questionId]);
+                // Ensure questionId is integer for consistency
+                $questionIdInt = (int)$questionId;
+                $answer = $answers[$questionId];
+                
+                $questionScore = $this->calculateQuestionScore($questionIdInt, $answer);
                 $totalScore += $questionScore['score'];
                 $maxScore += $questionScore['max_score'];
                 if ($questionScore['score'] > 0) {
@@ -332,20 +353,30 @@ class AssessmentPlayerModel
 
         $maxScore = $question['marks'] ?? 1;
 
-        if ($question['question_type'] === 'objective') {
+        if (strtolower($question['question_type']) === 'objective') {
+            // Ensure answer is treated as integer for comparison
+            $answerId = (int)$answer;
+            $questionIdInt = (int)$questionId;
+            
             // Check if answer is correct
             $stmt = $db->prepare("
                 SELECT COUNT(*) as count FROM assessment_options 
                 WHERE question_id = ? AND id = ? AND is_correct = 1
             ");
-            $stmt->execute([$questionId, $answer]);
+            $stmt->execute([$questionIdInt, $answerId]);
             $result = $stmt->fetch(PDO::FETCH_ASSOC);
             
             $score = $result['count'] > 0 ? $maxScore : 0;
+            
+            // Debug logging (remove in production)
+            error_log("Assessment Scoring Debug - Question: {$questionId}, Answer: {$answer}, Answer Type: " . gettype($answer) . ", Score: {$score}");
         } else {
-            // Subjective questions - give full marks for now
-            // In a real system, you might want manual grading
-            $score = $maxScore;
+            // Subjective questions - require manual grading
+            // For now, give 0 marks until manual grading is implemented
+            $score = 0;
+            
+            // Debug logging (remove in production)
+            error_log("Assessment Scoring Debug - Subjective Question: {$questionId}, Score: {$score} (requires manual grading)");
         }
 
         return ['score' => $score, 'max_score' => $maxScore];
