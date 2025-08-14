@@ -976,6 +976,88 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         });
     });
+
+    // Assessment completion detection and page refresh
+    function checkForAssessmentCompletion() {
+        // Get current course ID from URL or page data
+        const currentCourseId = <?php echo json_encode($course['id'] ?? null); ?>;
+        if (!currentCourseId) return;
+
+        // Check localStorage for any assessment completion flags
+        const keys = Object.keys(localStorage);
+        const assessmentKeys = keys.filter(key => key.startsWith('assessment_completed_'));
+        
+        assessmentKeys.forEach(key => {
+            try {
+                const completionData = JSON.parse(localStorage.getItem(key));
+                
+                // Check if this completion is for the current course
+                if (completionData.courseId == currentCourseId) {
+                    console.log('Assessment completed for current course:', completionData);
+                    
+                    // Remove the flag from localStorage
+                    localStorage.removeItem(key);
+                    
+                    // Show a notification to the user
+                    showAssessmentCompletionNotification(completionData);
+                    
+                    // Refresh the page after a short delay to show updated status
+                    setTimeout(() => {
+                        console.log('Refreshing page to show updated assessment status...');
+                        window.location.reload();
+                    }, 2000);
+                }
+            } catch (error) {
+                console.error('Error parsing assessment completion data:', error);
+                // Remove invalid data
+                localStorage.removeItem(key);
+            }
+        });
+    }
+
+    // Show notification about assessment completion
+    function showAssessmentCompletionNotification(completionData) {
+        const statusClass = completionData.passed ? 'success' : 'warning';
+        const statusIcon = completionData.passed ? 'fa-check-circle' : 'fa-exclamation-triangle';
+        const statusText = completionData.passed ? 'Passed' : 'Failed';
+        
+        // Create notification element
+        const notification = document.createElement('div');
+        notification.className = `alert alert-${statusClass} alert-dismissible fade show position-fixed`;
+        notification.style.cssText = 'top: 20px; right: 20px; z-index: 9999; max-width: 400px;';
+        notification.innerHTML = `
+            <div class="d-flex align-items-center">
+                <i class="fas ${statusIcon} me-2"></i>
+                <div>
+                    <strong>Assessment Completed!</strong><br>
+                    <small>${completionData.assessmentId}: ${statusText} (${completionData.score}/${completionData.maxScore} - ${completionData.percentage}%)</small>
+                </div>
+            </div>
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        `;
+        
+        document.body.appendChild(notification);
+        
+        // Auto-remove after 5 seconds
+        setTimeout(() => {
+            if (notification.parentNode) {
+                notification.remove();
+            }
+        }, 5000);
+    }
+
+    // Check for assessment completion every 2 seconds
+    setInterval(checkForAssessmentCompletion, 2000);
+    
+    // Also check when the page becomes visible (user returns from assessment tab)
+    document.addEventListener('visibilitychange', function() {
+        if (!document.hidden) {
+            checkForAssessmentCompletion();
+        }
+    });
+    
+    // Check immediately when page loads
+    checkForAssessmentCompletion();
 });
 </script>
 
