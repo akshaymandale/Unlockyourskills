@@ -233,6 +233,12 @@ class AssessmentPlayer {
         // Start periodic sync and connection monitoring
         this.startPeriodicSync();
         this.monitorConnection();
+        
+        // Show exit assessment button after assessment starts
+        const exitAssessmentBtn = document.getElementById('exit-assessment');
+        if (exitAssessmentBtn) {
+            exitAssessmentBtn.style.display = 'block';
+        }
     }
 
     // Show session recovery popup
@@ -341,13 +347,39 @@ class AssessmentPlayer {
             confirmSubmitBtn.addEventListener('click', () => this.submitAssessment());
         }
         
+        // Exit assessment button (shown only after assessment starts)
+        const exitAssessmentBtn = document.getElementById('exit-assessment');
+        if (exitAssessmentBtn) {
+            exitAssessmentBtn.addEventListener('click', () => {
+                if (confirm('Are you sure you want to exit this assessment? Your progress will be saved and you can resume later.')) {
+                    // Close the current tab/window
+                    window.close();
+                    
+                    // If window.close() doesn't work (due to browser security), redirect to courses
+                    // This happens when the tab was not opened by JavaScript
+                    setTimeout(() => {
+                        // Use redirect URL from server if available, otherwise default to my-courses
+                        const redirectUrl = window.assessmentData.redirect_url || '/unlockyourskills/my-courses';
+                        window.location.href = redirectUrl;
+                    }, 100);
+                }
+            });
+        }
+        
         // Back to courses
         const backToCoursesBtn = document.getElementById('back-to-courses');
         if (backToCoursesBtn) {
             backToCoursesBtn.addEventListener('click', () => {
-                // Use redirect URL from server if available, otherwise default to my-courses
-                const redirectUrl = window.assessmentData.redirect_url || '/unlockyourskills/my-courses';
-                window.location.href = redirectUrl;
+                // Close the current tab/window
+                window.close();
+                
+                // If window.close() doesn't work (due to browser security), redirect to courses
+                // This happens when the tab was not opened by JavaScript
+                setTimeout(() => {
+                    // Use redirect URL from server if available, otherwise default to my-courses
+                    const redirectUrl = window.assessmentData.redirect_url || '/unlockyourskills/my-courses';
+                    window.location.href = redirectUrl;
+                }, 100);
             });
         }
 

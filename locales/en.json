@@ -1607,6 +1607,7 @@
         "passed": "Passed",
         "failed": "Failed",
         "back_to_courses": "Back to Courses",
+    "exit_assessment": "Exit Assessment",
         "confirm_submit": "Are you sure you want to submit this assessment?",
         "submitting": "Submitting...",
         "auto_submit_warning": "Assessment will be auto-submitted when time expires",

@@ -52,24 +52,31 @@ $timeRemaining = $attempt['time_remaining'] ?? ($timeLimit * 60);
                         <p class="assessment-subtitle"><?php echo htmlspecialchars($assessment['description'] ?? ''); ?></p>
                     </div>
                     <div class="col-md-6 text-end">
-                        <div class="assessment-info">
-                            <div class="info-item">
-                                <span class="info-label">
-                                    <i class="fas fa-question-circle me-2"></i><?php echo Localization::translate('assessment_player.question'); ?>:
-                                </span>
-                                <span class="info-value" id="question-counter">1 / <?php echo $totalQuestions; ?></span>
-                            </div>
-                            <div class="info-item">
-                                <span class="info-label">
-                                    <i class="fas fa-clock me-2"></i><?php echo Localization::translate('assessment_player.time_remaining'); ?>:
-                                </span>
-                                <span class="info-value" id="time-remaining"><?php echo gmdate('H:i:s', $timeRemaining); ?></span>
-                            </div>
-                            <div class="info-item">
-                                <span class="info-label">
-                                    <i class="fas fa-percentage me-2"></i><?php echo Localization::translate('assessment_player.passing_score'); ?>:
-                                </span>
-                                <span class="info-value"><?php echo ($assessment['passing_percentage'] ?? 70); ?>%</span>
+                        <div class="d-flex justify-content-end align-items-start gap-3">
+                            <!-- Exit Assessment Button (shown only after assessment starts) -->
+                            <button type="button" class="btn btn-outline-danger btn-sm" id="exit-assessment" style="display: none;">
+                                <i class="fas fa-times me-2"></i><?php echo Localization::translate('assessment_player.exit_assessment') ?? 'Exit Assessment'; ?>
+                            </button>
+                            
+                            <div class="assessment-info">
+                                <div class="info-item">
+                                    <span class="info-label">
+                                        <i class="fas fa-question-circle me-2"></i><?php echo Localization::translate('assessment_player.question'); ?>:
+                                    </span>
+                                    <span class="info-value" id="question-counter">1 / <?php echo $totalQuestions; ?></span>
+                                </div>
+                                <div class="info-item">
+                                    <span class="info-label">
+                                        <i class="fas fa-clock me-2"></i><?php echo Localization::translate('assessment_player.time_remaining'); ?>:
+                                    </span>
+                                    <span class="info-value" id="time-remaining"><?php echo gmdate('H:i:s', $timeRemaining); ?></span>
+                                </div>
+                                <div class="info-item">
+                                    <span class="info-label">
+                                        <i class="fas fa-percentage me-2"></i><?php echo Localization::translate('assessment_player.passing_score'); ?>:
+                                    </span>
+                                    <span class="info-value"><?php echo ($assessment['passing_percentage'] ?? 70); ?>%</span>
+                                </div>
                             </div>
                         </div>
                     </div>
