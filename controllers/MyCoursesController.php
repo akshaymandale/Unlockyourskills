@@ -68,9 +68,10 @@ class MyCoursesController {
             UrlHelper::redirect('my-courses');
         }
 
-        // Load assessment attempts data and assessment details for this user
+        // Load assessment attempts data, assessment details, and results for this user
         $assessmentAttempts = [];
         $assessmentDetails = [];
+        $assessmentResults = [];
         if (!empty($course['modules']) || !empty($course['prerequisites']) || !empty($course['post_requisites'])) {
             require_once 'models/AssessmentPlayerModel.php';
             $assessmentModel = new AssessmentPlayerModel();
@@ -87,6 +88,9 @@ class MyCoursesController {
                                 
                                 // Get assessment details including num_attempts
                                 $assessmentDetails[$assessmentId] = $assessmentModel->getAssessmentDetails($assessmentId, $clientId);
+                                
+                                // Get assessment results (pass/fail status)
+                                $assessmentResults[$assessmentId] = $assessmentModel->getUserAssessmentResults($assessmentId, $userId, $clientId);
                             }
                         }
                     }
@@ -103,6 +107,9 @@ class MyCoursesController {
                         
                         // Get assessment details including num_attempts
                         $assessmentDetails[$assessmentId] = $assessmentModel->getAssessmentDetails($assessmentId, $clientId);
+                        
+                        // Get assessment results (pass/fail status)
+                        $assessmentResults[$assessmentId] = $assessmentModel->getUserAssessmentResults($assessmentId, $userId, $clientId);
                     }
                 }
             }
@@ -117,14 +124,18 @@ class MyCoursesController {
                         
                         // Get assessment details including num_attempts
                         $assessmentDetails[$assessmentId] = $assessmentModel->getAssessmentDetails($assessmentId, $clientId);
+                        
+                        // Get assessment results (pass/fail status)
+                        $assessmentResults[$assessmentId] = $assessmentModel->getUserAssessmentResults($assessmentId, $userId, $clientId);
                     }
                 }
             }
         }
 
-        // Expose assessment attempts data and details to view
+        // Expose assessment attempts data, details, and results to view
         $GLOBALS['assessmentAttempts'] = $assessmentAttempts;
         $GLOBALS['assessmentDetails'] = $assessmentDetails;
+        $GLOBALS['assessmentResults'] = $assessmentResults;
         
         require 'views/my_course_details.php';
     }

@@ -159,14 +159,23 @@ class AssessmentPlayerModel
             return $existingAttempt['id'];
         }
 
-        // Get assessment details for time limit
+        // Get assessment details for time limit and course_id
         $stmt = $db->prepare("
-            SELECT time_limit FROM assessment_package WHERE id = ?
+            SELECT ap.time_limit, 
+                   COALESCE(
+                       COALESCE(cpr.course_id, cpre.course_id), 
+                       1
+                   ) as course_id
+            FROM assessment_package ap
+            LEFT JOIN course_post_requisites cpr ON ap.id = cpr.content_id AND cpr.content_type = 'assessment'
+            LEFT JOIN course_prerequisites cpre ON ap.id = cpre.prerequisite_id AND cpre.prerequisite_type = 'assessment'
+            WHERE ap.id = ?
         ");
         $stmt->execute([$assessmentId]);
         $assessment = $stmt->fetch(PDO::FETCH_ASSOC);
         
         $timeLimit = $assessment['time_limit'] ?? 60; // Default 60 minutes
+        $courseId = $assessment['course_id'] ?? 1; // Default to course_id 1 if no mapping found
 
         // Get next attempt number
         $stmt = $db->prepare("
@@ -181,11 +190,11 @@ class AssessmentPlayerModel
         // Create new attempt
         $stmt = $db->prepare("
             INSERT INTO assessment_attempts (
-                user_id, assessment_id, attempt_number, status, 
+                user_id, assessment_id, course_id, attempt_number, status, 
                 started_at, time_limit, time_remaining, 
                 current_question, answers, created_at, updated_at
             ) VALUES (
-                ?, ?, ?, 'in_progress', 
+                ?, ?, ?, ?, 'in_progress', 
                 NOW(), ?, ?, 
                 1, '{}', NOW(), NOW()
             )
@@ -194,6 +203,7 @@ class AssessmentPlayerModel
         $stmt->execute([
             $userId, 
             $assessmentId, 
+            $courseId,
             $attemptNumber,
             $timeLimit, 
             $timeLimit * 60 // Convert to seconds
@@ -322,6 +332,39 @@ class AssessmentPlayerModel
         
         if (!$stmt->execute([$attemptId])) {
             return ['success' => false, 'message' => 'Failed to update attempt'];
+        }
+
+        // Save results to assessment_results table
+        $stmt = $db->prepare("
+            INSERT INTO assessment_results (
+                course_id, user_id, assessment_id, attempt_number, score, max_score,
+                percentage, passed, time_taken, started_at, completed_at, answers
+            ) VALUES (
+                ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), ?
+            )
+        ");
+        
+        // Calculate time taken in minutes
+        $startedAt = new DateTime($attempt['started_at']);
+        $completedAt = new DateTime();
+        $timeTaken = $completedAt->diff($startedAt)->i + ($completedAt->diff($startedAt)->h * 60);
+        
+        $resultInserted = $stmt->execute([
+            $attempt['course_id'],
+            $attempt['user_id'],
+            $attempt['assessment_id'],
+            $attempt['attempt_number'],
+            $totalScore,
+            $maxScore,
+            $percentage,
+            $passed ? 1 : 0,
+            $timeTaken,
+            $attempt['started_at'],
+            json_encode($answers)
+        ]);
+        
+        if (!$resultInserted) {
+            error_log("Failed to insert assessment results for attempt ID: " . $attemptId);
         }
 
         return [
@@ -548,5 +591,31 @@ class AssessmentPlayerModel
         $assessment = $stmt->fetch(PDO::FETCH_ASSOC);
 
         return $assessment;
+    }
+
+    // Get user's assessment results (pass/fail status) for a specific assessment
+    public function getUserAssessmentResults($assessmentId, $userId, $clientId = null)
+    {
+        $db = $this->conn;
+
+        $stmt = $db->prepare("
+            SELECT 
+                ar.id,
+                ar.score,
+                ar.max_score,
+                ar.percentage,
+                ar.passed,
+                ar.attempt_number,
+                ar.completed_at,
+                ar.created_at
+            FROM assessment_results ar
+            WHERE ar.assessment_id = :assessment_id 
+            AND ar.user_id = :user_id
+            ORDER BY ar.attempt_number DESC, ar.created_at DESC
+            LIMIT 1
+        ");
+        
+        $stmt->execute([':assessment_id' => $assessmentId, ':user_id' => $userId]);
+        return $stmt->fetch(PDO::FETCH_ASSOC);
     }
 } 

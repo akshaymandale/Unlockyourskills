@@ -176,12 +176,34 @@
                                 $assessmentDetails = $GLOBALS['assessmentDetails'][$assessmentId] ?? [];
                                 
                                 if ($pre['prerequisite_type'] === 'assessment') {
+                                    // Get assessment results for pass/fail status
+                                    $assessmentResults = $GLOBALS['assessmentResults'][$assessmentId] ?? null;
+                                    $hasPassed = $assessmentResults && $assessmentResults['passed'];
+                                    
                                     // Check if user has exceeded maximum attempts
                                     $maxAttempts = $assessmentDetails['num_attempts'] ?? 3;
                                     $attemptCount = count($assessmentAttempts);
                                     $hasExceededAttempts = $attemptCount >= $maxAttempts;
                                     
-                                    if ($hasExceededAttempts) {
+                                    // Show pass/fail status
+                                    if ($assessmentResults) {
+                                        $statusClass = $hasPassed ? 'text-success' : 'text-danger';
+                                        $statusIcon = $hasPassed ? 'fa-check-circle' : 'fa-times-circle';
+                                        $statusText = $hasPassed ? 'Passed' : 'Failed';
+                                        echo "<div class='assessment-status mb-2'>";
+                                        echo "<span class='{$statusClass}'><i class='fas {$statusIcon} me-1'></i>{$statusText}</span>";
+                                        if ($hasPassed) {
+                                            echo "<small class='text-muted ms-2'>(Score: {$assessmentResults['score']}/{$assessmentResults['max_score']} - {$assessmentResults['percentage']}%)</small>";
+                                        }
+                                        echo "</div>";
+                                    }
+                                    
+                                    if ($hasPassed) {
+                                        // Assessment passed - disable start button
+                                        echo "<button class='prerequisite-action-btn prerequisite-action-disabled' disabled title='Assessment completed successfully'>";
+                                        echo "<i class='fas fa-check me-1'></i>Completed";
+                                        echo "</button>";
+                                    } elseif ($hasExceededAttempts) {
                                         // Disable start button and show attempts exceeded message
                                         echo "<button class='prerequisite-action-btn prerequisite-action-disabled' disabled title='Maximum attempts reached'>";
                                         echo "<i class='fas fa-ban me-1'></i>Attempts Exceeded";
@@ -531,10 +553,12 @@
                                                                     }
                                                                     break;
                                                                 case 'assessment':
-                                                                    // Check if user has exceeded maximum attempts
+                                                                    // Get assessment data and results
                                                                     $assessmentId = $content['content_id'];
                                                                     $assessmentAttempts = $GLOBALS['assessmentAttempts'][$assessmentId] ?? [];
                                                                     $assessmentDetails = $GLOBALS['assessmentDetails'][$assessmentId] ?? [];
+                                                                    $assessmentResults = $GLOBALS['assessmentResults'][$assessmentId] ?? null;
+                                                                    $hasPassed = $assessmentResults && $assessmentResults['passed'];
                                                                     $hasExceededAttempts = false;
                                                                     
                                                                     // Get max attempts from assessment details
@@ -542,7 +566,25 @@
                                                                     $attemptCount = count($assessmentAttempts);
                                                                     $hasExceededAttempts = $attemptCount >= $maxAttempts;
                                                                     
-                                                                    if ($hasExceededAttempts) {
+                                                                    // Show pass/fail status
+                                                                    if ($assessmentResults) {
+                                                                        $statusClass = $hasPassed ? 'text-success' : 'text-danger';
+                                                                        $statusIcon = $hasPassed ? 'fa-check-circle' : 'fa-times-circle';
+                                                                        $statusText = $hasPassed ? 'Passed' : 'Failed';
+                                                                        echo "<div class='assessment-status mb-2'>";
+                                                                        echo "<span class='{$statusClass}'><i class='fas {$statusIcon} me-1'></i>{$statusText}</span>";
+                                                                        if ($hasPassed) {
+                                                                            echo "<small class='text-muted ms-2'>(Score: {$assessmentResults['score']}/{$assessmentResults['max_score']} - {$assessmentResults['percentage']}%)</small>";
+                                                                        }
+                                                                        echo "</div>";
+                                                                    }
+                                                                    
+                                                                    if ($hasPassed) {
+                                                                        // Assessment passed - disable start button
+                                                                        echo "<button class='prerequisite-action-btn prerequisite-action-disabled' disabled title='Assessment completed successfully'>";
+                                                                        echo "<i class='fas fa-check me-1'></i>Completed";
+                                                                        echo "</button>";
+                                                                    } elseif ($hasExceededAttempts) {
                                                                         // Disable start button and show attempts exceeded message
                                                                         echo "<button class='prerequisite-action-btn prerequisite-action-disabled' disabled title='Maximum attempts reached'>";
                                                                         echo "<i class='fas fa-ban me-1'></i>Attempts Exceeded";
@@ -724,12 +766,34 @@
                             $assessmentDetails = $GLOBALS['assessmentDetails'][$assessmentId] ?? [];
                             
                             if ($post['content_type'] === 'assessment') {
+                                // Get assessment results for pass/fail status
+                                $assessmentResults = $GLOBALS['assessmentResults'][$assessmentId] ?? null;
+                                $hasPassed = $assessmentResults && $assessmentResults['passed'];
+                                
                                 // Check if user has exceeded maximum attempts
                                 $maxAttempts = $assessmentDetails['num_attempts'] ?? 3;
                                 $attemptCount = count($assessmentAttempts);
                                 $hasExceededAttempts = $attemptCount >= $maxAttempts;
                                 
-                                if ($hasExceededAttempts) {
+                                // Show pass/fail status
+                                if ($assessmentResults) {
+                                    $statusClass = $hasPassed ? 'text-success' : 'text-danger';
+                                    $statusIcon = $hasPassed ? 'fa-check-circle' : 'fa-times-circle';
+                                    $statusText = $hasPassed ? 'Passed' : 'Failed';
+                                    echo "<div class='assessment-status mb-2'>";
+                                    echo "<span class='{$statusClass}'><i class='fas {$statusIcon} me-1'></i>{$statusText}</span>";
+                                    if ($hasPassed) {
+                                        echo "<small class='text-muted ms-2'>(Score: {$assessmentResults['score']}/{$assessmentResults['max_score']} - {$assessmentResults['percentage']}%)</small>";
+                                    }
+                                    echo "</div>";
+                                }
+                                
+                                if ($hasPassed) {
+                                    // Assessment passed - disable start button
+                                    echo "<button class='postrequisite-action-btn postrequisite-action-disabled' disabled title='Assessment completed successfully'>";
+                                    echo "<i class='fas fa-check me-1'></i>Completed";
+                                    echo "</button>";
+                                } elseif ($hasExceededAttempts) {
                                     // Disable start button and show attempts exceeded message
                                     echo "<button class='postrequisite-action-btn postrequisite-action-disabled' disabled title='Maximum attempts reached'>";
                                     echo "<i class='fas fa-ban me-1'></i>Attempts Exceeded";

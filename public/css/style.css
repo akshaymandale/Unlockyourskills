@@ -7600,3 +7600,73 @@ body select:focus,
         display: none; /* Hide names on mobile to save space */
     }
 }
+
+/* Assessment Status Styling */
+.assessment-status {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-bottom: 12px;
+    padding: 8px 12px;
+    background: rgba(0, 0, 0, 0.02);
+    border-radius: 6px;
+    border-left: 3px solid;
+}
+
+.assessment-status .text-success {
+    color: #28a745 !important;
+    font-weight: 600;
+    font-size: 0.9rem;
+}
+
+.assessment-status .text-danger {
+    color: #dc3545 !important;
+    font-weight: 600;
+    font-size: 0.9rem;
+}
+
+.assessment-status .text-success + small {
+    color: #6c757d !important;
+    font-size: 0.8rem;
+}
+
+.assessment-status .text-danger + small {
+    color: #6c757d !important;
+    font-size: 0.8rem;
+}
+
+.assessment-status i {
+    font-size: 1rem;
+}
+
+/* Assessment button states */
+.prerequisite-action-btn.prerequisite-action-disabled,
+.postrequisite-action-btn.postrequisite-action-disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+    background-color: #6c757d !important;
+    border-color: #6c757d !important;
+    color: #fff !important;
+}
+
+.prerequisite-action-btn.prerequisite-action-disabled:hover,
+.postrequisite-action-btn.postrequisite-action-disabled:hover {
+    background-color: #6c757d !important;
+    border-color: #6c757d !important;
+    color: #fff !important;
+    transform: none !important;
+}
+
+/* Responsive assessment status */
+@media (max-width: 768px) {
+    .assessment-status {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 4px;
+    }
+    
+    .assessment-status small {
+        margin-left: 0 !important;
+    }
+}
