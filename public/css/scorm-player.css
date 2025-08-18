@@ -1,0 +1,301 @@
+/**
+ * SCORM Player Custom Styles
+ * Additional styling for the SCORM launcher interface
+ */
+
+/* Custom scrollbar for debug panel */
+.debug-panel::-webkit-scrollbar {
+    width: 8px;
+}
+
+.debug-panel::-webkit-scrollbar-track {
+    background: #f1f1f1;
+    border-radius: 4px;
+}
+
+.debug-panel::-webkit-scrollbar-thumb {
+    background: var(--primary-color);
+    border-radius: 4px;
+}
+
+.debug-panel::-webkit-scrollbar-thumb:hover {
+    background: #5a0b9d;
+}
+
+/* Enhanced button animations */
+.btn-scorm {
+    position: relative;
+    overflow: hidden;
+}
+
+.btn-scorm::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+    transition: left 0.5s;
+}
+
+.btn-scorm:hover::before {
+    left: 100%;
+}
+
+/* Progress bar animations */
+.progress-fill {
+    position: relative;
+    overflow: hidden;
+}
+
+.progress-fill::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent);
+    animation: shimmer 2s infinite;
+}
+
+@keyframes shimmer {
+    0% { left: -100%; }
+    100% { left: 100%; }
+}
+
+/* Enhanced overlay animations */
+.scorm-overlay {
+    backdrop-filter: blur(5px);
+}
+
+.overlay-content {
+    animation: slideInUp 0.3s ease-out;
+}
+
+@keyframes slideInUp {
+    from {
+        transform: translateY(30px);
+        opacity: 0;
+    }
+    to {
+        transform: translateY(0);
+        opacity: 1;
+    }
+}
+
+/* Notification animations */
+.notification {
+    animation: slideInRight 0.3s ease-out;
+}
+
+@keyframes slideInRight {
+    from {
+        transform: translateX(100%);
+        opacity: 0;
+    }
+    to {
+        transform: translateX(0);
+        opacity: 1;
+    }
+}
+
+/* Status value animations */
+.status-value {
+    transition: color 0.3s ease;
+}
+
+.status-value.updated {
+    animation: pulse 0.6s ease-in-out;
+}
+
+@keyframes pulse {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.1); }
+}
+
+/* SCORM Content Container */
+.scorm-content {
+    flex: 1;
+    position: relative;
+    background: white;
+    border-radius: 8px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    overflow: hidden;
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+}
+
+/* Enhanced iframe loading states */
+.scorm-iframe {
+    width: 100%;
+    height: 100%;
+    border: none;
+    border-radius: 8px;
+    transition: opacity 0.3s ease;
+    flex: 1;
+    min-height: 0;
+}
+
+.scorm-iframe.loading {
+    opacity: 0.5;
+}
+
+.scorm-iframe.loaded {
+    opacity: 1;
+}
+
+/* Control group hover effects */
+.control-group {
+    transition: all 0.2s ease;
+}
+
+.control-group:hover {
+    transform: translateY(-1px);
+}
+
+/* Enhanced form controls */
+.form-check-input:checked {
+    background-color: var(--primary-color);
+    border-color: var(--primary-color);
+}
+
+.form-check-input:focus {
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 0.2rem rgba(106, 13, 173, 0.25);
+}
+
+/* Responsive improvements */
+@media (max-width: 576px) {
+    .scorm-header {
+        padding: 10px 15px;
+    }
+    
+    .scorm-title {
+        font-size: 16px;
+    }
+    
+    .scorm-subtitle {
+        font-size: 12px;
+    }
+    
+    .scorm-controls {
+        padding: 10px 15px;
+        gap: 10px;
+    }
+    
+    .btn-scorm {
+        padding: 6px 12px;
+        font-size: 12px;
+    }
+    
+    .scorm-content {
+        margin: 10px;
+    }
+    
+    .scorm-status {
+        padding: 10px 15px;
+        gap: 10px;
+    }
+    
+    .status-item {
+        font-size: 12px;
+    }
+}
+
+/* Dark mode support */
+@media (prefers-color-scheme: dark) {
+    :root {
+        --primary-color: #8a2be2;
+        --secondary-color: #2d2d2d;
+        --border-color: #4a4a4a;
+    }
+    
+    body {
+        background-color: #1a1a1a;
+        color: #ffffff;
+    }
+    
+    .scorm-controls,
+    .scorm-status,
+    .scorm-content {
+        background: #2d2d2d;
+        border-color: #4a4a4a;
+    }
+    
+    .overlay-content {
+        background: #2d2d2d;
+        color: #ffffff;
+    }
+    
+    .debug-panel {
+        background: #2d2d2d;
+        border-color: #4a4a4a;
+        color: #ffffff;
+    }
+}
+
+/* Accessibility improvements */
+.btn-scorm:focus {
+    outline: 2px solid var(--primary-color);
+    outline-offset: 2px;
+}
+
+.btn-scorm:focus:not(:focus-visible) {
+    outline: none;
+}
+
+/* High contrast mode support */
+@media (prefers-contrast: high) {
+    .btn-scorm {
+        border: 2px solid currentColor;
+    }
+    
+    .progress-bar {
+        border: 2px solid currentColor;
+    }
+    
+    .scorm-overlay {
+        background: rgba(0,0,0,0.9);
+    }
+}
+
+/* Reduced motion support */
+@media (prefers-reduced-motion: reduce) {
+    .btn-scorm,
+    .progress-fill,
+    .scorm-overlay,
+    .overlay-content,
+    .notification,
+    .status-value,
+    .control-group {
+        transition: none;
+        animation: none;
+    }
+    
+    .btn-scorm::before,
+    .progress-fill::after {
+        display: none;
+    }
+}
+
+/* Print styles */
+@media print {
+    .scorm-controls,
+    .scorm-status,
+    .debug-toggle,
+    .debug-panel {
+        display: none !important;
+    }
+    
+    .scorm-content {
+        margin: 0;
+        box-shadow: none;
+    }
+    
+    .scorm-iframe {
+        border: 1px solid #000;
+    }
+}

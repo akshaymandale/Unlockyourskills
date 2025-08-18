@@ -68,17 +68,36 @@ class QuestionController extends BaseController {
 
             // Handle file upload
             if ($mediaType !== 'text' && isset($_FILES['mediaFile']) && $_FILES['mediaFile']['error'] === 0) {
-                $targetDir = "uploads/media/";
+                $targetDir = __DIR__ . "/../uploads/media/";
+                
+                // Debug logging
+                error_log("QuestionController: Uploading file for media type: " . $mediaType);
+                error_log("QuestionController: Target directory: " . $targetDir);
+                error_log("QuestionController: File info: " . print_r($_FILES['mediaFile'], true));
+                
                 if (!is_dir($targetDir)) {
+                    error_log("QuestionController: Creating directory: " . $targetDir);
                     mkdir($targetDir, 0777, true);
                     chmod($targetDir, 0777); // Ensure proper permissions
                 }
+                
                 $fileName = basename($_FILES["mediaFile"]["name"]);
                 $mediaFilePath = $targetDir . time() . "_" . $fileName;
+                
+                error_log("QuestionController: Full file path: " . $mediaFilePath);
 
                 if (!move_uploaded_file($_FILES["mediaFile"]["tmp_name"], $mediaFilePath)) {
-                    $errors[] = "Media file upload failed.";
+                    $uploadError = error_get_last();
+                    error_log("QuestionController: File upload failed. Error: " . print_r($uploadError, true));
+                    $errors[] = "Media file upload failed. Error: " . ($uploadError['message'] ?? 'Unknown error');
+                } else {
+                    error_log("QuestionController: File uploaded successfully to: " . $mediaFilePath);
+                    // Store relative path in database for web access
+                    $mediaFilePath = "uploads/media/" . time() . "_" . $fileName;
+                    error_log("QuestionController: Database path: " . $mediaFilePath);
                 }
+            } else {
+                error_log("QuestionController: File upload conditions not met. Media type: " . $mediaType . ", Files: " . print_r($_FILES, true));
             }
 
             if ($questionType === 'Objective') {
@@ -170,7 +189,7 @@ class QuestionController extends BaseController {
             $mediaFilePath = $_POST['existing_media_file'] ?? null;
     
             if ($mediaType !== 'text' && isset($_FILES['mediaFile']) && $_FILES['mediaFile']['error'] === 0) {
-                $targetDir = "uploads/media/";
+                $targetDir = __DIR__ . "/../uploads/media/";
                 if (!is_dir($targetDir)) {
                     mkdir($targetDir, 0777, true);
                     chmod($targetDir, 0777); // Ensure proper permissions
@@ -180,7 +199,13 @@ class QuestionController extends BaseController {
     
                 if (!move_uploaded_file($_FILES["mediaFile"]["tmp_name"], $mediaFilePath)) {
                     $errors[] = "Media file upload failed.";
+                } else {
+                    // Store relative path in database for web access
+                    $mediaFilePath = "uploads/media/" . time() . "_" . $fileName;
                 }
+            } else if ($mediaType !== 'text' && !$mediaFilePath) {
+                // If media type is not text but no file uploaded and no existing file, it's an error
+                $errors[] = "Media file is required for non-text media types.";
             }
     
             if ($questionType === 'Objective') {

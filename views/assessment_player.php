@@ -324,6 +324,8 @@ $timeRemaining = $attempt['time_remaining'] ?? ($timeLimit * 60);
             assessment: <?php echo json_encode($assessment); ?>,
             attempt: <?php echo json_encode($attempt); ?>,
             attemptId: <?php echo json_encode($attemptId); ?>,
+            assessmentId: <?php echo json_encode($assessment['id'] ?? null); ?>,
+            courseId: <?php echo json_encode($attempt['course_id'] ?? null); ?>,
             totalQuestions: <?php echo $totalQuestions; ?>,
             timeLimit: <?php echo $timeLimit; ?>,
             timeRemaining: <?php echo $timeRemaining; ?>,

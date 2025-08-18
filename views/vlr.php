@@ -151,7 +151,7 @@ $canAccessVLR = canAccess('vlr');
                                                         <span class="text-muted" id="zipOptional" style="display: none;">(Optional - leave empty to keep existing file)</span>
                                                     </label>
                                                     <input type="file" class="form-control" id="zipFile" name="zipFile" accept=".zip,.rar,.7z">
-                                                    <small class="text-muted">Max size: 50MB. Formats: ZIP, RAR, 7Z files</small>
+                                                    <small class="text-muted">Max size: 100MB. Formats: ZIP, RAR, 7Z files</small>
                                                     <div id="scormZipPreview" class="mt-2"></div>
                                                 </div>
                                             </div>

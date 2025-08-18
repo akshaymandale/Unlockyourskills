@@ -136,6 +136,17 @@ class VLRController extends BaseController
 
             // Handle file upload (only required for new SCORM or if replacing)
             $zipFileName = $_POST['existing_zip'] ?? null;
+            $launchPath = null; // Initialize launch_path variable
+            
+            // If editing existing SCORM package, get the current launch_path
+            if ($scormId) {
+                $existingScorm = $this->VLRModel->getScormPackageById($scormId, $clientId);
+                if ($existingScorm && !empty($existingScorm['launch_path'])) {
+                    $launchPath = $existingScorm['launch_path'];
+                    error_log('[SCORM] Using existing launch_path: ' . $launchPath);
+                }
+            }
+            
             if (!empty($_FILES['zipFile']['name'])) {
                 $uploadDir = "uploads/scorm/";
 
@@ -169,10 +180,10 @@ class VLRController extends BaseController
                     return;
                 }
 
-                // Validate file size (50MB limit)
-                $maxSize = 50 * 1024 * 1024; // 50MB
+                // Validate file size (100MB limit)
+                $maxSize = 100 * 1024 * 1024; // 100MB
                 if ($_FILES['zipFile']['size'] > $maxSize) {
-                    $this->toastError('File size too large. Maximum size is 50MB.', '/unlockyourskills/vlr?tab=scorm');
+                    $this->toastError('File size too large. Maximum size is 100MB.', '/unlockyourskills/vlr?tab=scorm');
                     return;
                 }
 
@@ -307,19 +318,48 @@ class VLRController extends BaseController
                 'assessment' => trim($_POST['assessment']),
                 'created_by' => $_SESSION['id']  // Store logged-in user
             ];
-            // If launch_path was set during upload, add it to $data
-            if (isset($data['launch_path']) || (isset($launchPath) && $launchPath)) {
-                $data['launch_path'] = $data['launch_path'] ?? $launchPath;
-                error_log('[SCORM] launch_path to be saved: ' . $data['launch_path']);
-            } else if (!isset($data['launch_path'])) {
+            
+            // Ensure zip_file is not empty when editing (use existing if no new upload)
+            if (empty($zipFileName) && $scormId) {
+                $existingScorm = $this->VLRModel->getScormPackageById($scormId, $clientId);
+                if ($existingScorm && !empty($existingScorm['zip_file'])) {
+                    $data['zip_file'] = $existingScorm['zip_file'];
+                    error_log('[SCORM] Preserving existing zip_file: ' . $existingScorm['zip_file']);
+                }
+            }
+            
+            // Set launch_path: use new one from upload if available, otherwise preserve existing
+            if (isset($data['launch_path']) && !empty($data['launch_path'])) {
+                // New launch_path from file upload
+                error_log('[SCORM] Using new launch_path from upload: ' . $data['launch_path']);
+            } elseif (!empty($launchPath)) {
+                // Use existing launch_path (when editing without new upload)
+                $data['launch_path'] = $launchPath;
+                error_log('[SCORM] Preserving existing launch_path: ' . $launchPath);
+            } else {
+                // No launch_path available
                 $data['launch_path'] = null;
-                error_log('[SCORM] launch_path is not set, saving as null.');
+                error_log('[SCORM] No launch_path available, saving as null.');
+            }
+            
+            // Final validation: ensure launch_path is not null if we have a zip_file
+            if (empty($data['launch_path']) && !empty($data['zip_file']) && $scormId) {
+                error_log('[SCORM] WARNING: launch_path is empty but zip_file exists. This might indicate an issue.');
+                // Try to get the existing launch_path one more time
+                $existingScorm = $this->VLRModel->getScormPackageById($scormId, $clientId);
+                if ($existingScorm && !empty($existingScorm['launch_path'])) {
+                    $data['launch_path'] = $existingScorm['launch_path'];
+                    error_log('[SCORM] Recovered launch_path from database: ' . $existingScorm['launch_path']);
+                }
             }
 
             if ($scormId) {
                 // Update existing SCORM package (with client validation)
                 $currentUser = $_SESSION['user'] ?? null;
                 $filterClientId = ($currentUser && $currentUser['system_role'] === 'admin') ? $clientId : null;
+
+                // Log the data being sent to update
+                error_log('[SCORM] Update data for package ' . $scormId . ': ' . json_encode($data));
 
                 $result = $this->VLRModel->updateScormPackage($scormId, $data, $filterClientId);
                 if ($result) {
@@ -342,7 +382,7 @@ class VLRController extends BaseController
     }
 
     // Delete SCROM Package
-    public function delete()
+    public function delete($id = null)
     {
         // Validate session (ensure user is logged in)
         if (!isset($_SESSION['id']) || !isset($_SESSION['user']['client_id'])) {
@@ -353,8 +393,13 @@ class VLRController extends BaseController
         $clientId = $_SESSION['user']['client_id'];
         $currentUser = $_SESSION['user'] ?? null;
 
-        if (isset($_GET['id'])) {
-            $id = $_GET['id'];
+        // Extract ID from URL path parameter
+        if ($id === null) {
+            // Fallback: try to get from GET parameter (for backward compatibility)
+            $id = $_GET['id'] ?? null;
+        }
+        
+        if ($id) {
             error_log("📦 Deleting SCORM package with ID: " . $id);
 
             // Determine client filtering based on user role

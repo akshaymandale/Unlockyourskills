@@ -550,8 +550,18 @@ document.addEventListener('DOMContentLoaded', function () {
 
         // Handle existing media preview
         const mediaPreview = document.getElementById('mediaPreview');
-        if (mediaPreview && question.media_file && question.media_type !== 'text') {
-            showExistingMediaPreview(question.media_file, question.media_type, mediaPreview);
+        
+        if (question.media_file && question.media_type !== 'text') {
+            // Store the existing media file path
+            const existingMediaFileInput = document.getElementById('existingMediaFile');
+            if (existingMediaFileInput) {
+                existingMediaFileInput.value = question.media_file;
+            }
+            
+            // Show the preview
+            if (mediaPreview) {
+                showExistingMediaPreview(question.media_file, question.media_type, mediaPreview);
+            }
         }
 
         // Set answer count and options
@@ -597,7 +607,21 @@ document.addEventListener('DOMContentLoaded', function () {
     function showExistingMediaPreview(mediaFile, mediaType, previewContainer) {
         if (!mediaFile || !previewContainer) return;
 
-        const mediaPath = `${mediaFile}`;
+        // Construct the correct web-accessible path
+        // The database stores paths like "uploads/media/filename.jpg"
+        // We need to make it web-accessible
+        let mediaPath;
+        if (mediaFile.startsWith('uploads/')) {
+            // If it's a relative path, make it web-accessible
+            mediaPath = `/unlockyourskills/${mediaFile}`;
+        } else if (mediaFile.startsWith('/')) {
+            // If it's already an absolute path, use as is
+            mediaPath = mediaFile;
+        } else {
+            // Fallback: assume it's a relative path
+            mediaPath = `/unlockyourskills/uploads/media/${mediaFile}`;
+        }
+        
         const fileName = mediaFile.split('/').pop(); // Extract only the filename
 
         // Create element based on media type

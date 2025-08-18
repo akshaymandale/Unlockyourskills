@@ -930,6 +930,21 @@ class AssessmentPlayer {
             console.log('Stored redirect URL:', window.assessmentData.redirect_url);
         }
 
+        // Store assessment completion flag in localStorage for parent page refresh
+        const assessmentKey = `assessment_completed_${this.attemptId}`;
+        const completionData = {
+            attemptId: this.attemptId,
+            assessmentId: window.assessmentData.assessmentId,
+            courseId: window.assessmentData.courseId,
+            completedAt: new Date().toISOString(),
+            score: results.score,
+            maxScore: results.max_score,
+            percentage: results.percentage,
+            passed: results.passed
+        };
+        localStorage.setItem(assessmentKey, JSON.stringify(completionData));
+        console.log('Stored assessment completion flag:', completionData);
+
         // Show results modal safely
         try {
             const resultsModalElement = document.getElementById('resultsModal');

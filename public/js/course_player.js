@@ -3,10 +3,19 @@ document.addEventListener('DOMContentLoaded', function() {
     const modalTitle = document.getElementById('contentPlayerModalLabel');
     const playerContainer = document.getElementById('content-player-container');
 
-    document.querySelectorAll('.launch-content-btn').forEach(button => {
-        button.addEventListener('click', function() {
-            const type = this.dataset.type;
+    // Only handle launch-content-btn buttons that have data-url (for modal display)
+    // Content viewer links (without data-url) will open in new tabs
+    document.querySelectorAll('.launch-content-btn[data-url]').forEach(button => {
+        button.addEventListener('click', function(e) {
+            // Only handle if this button has a URL for modal display
             const url = this.dataset.url;
+            if (!url) {
+                return; // Let the default link behavior happen
+            }
+            
+            e.preventDefault(); // Prevent default only for modal display
+            
+            const type = this.dataset.type;
             const title = this.dataset.title;
 
             modalTitle.textContent = title;
