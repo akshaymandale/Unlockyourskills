@@ -1,5 +1,5 @@
 document.addEventListener("DOMContentLoaded", function () {
-    const form = document.getElementById("addQuestionForm");
+    const form = document.getElementById("addAssessmentQuestionForm");
 
     const maxFileSize = 5 * 1024 * 1024; // 5 MB
     const mediaType = document.getElementById("questionMediaType");

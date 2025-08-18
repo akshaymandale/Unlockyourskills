@@ -11,6 +11,60 @@ class VLRModel
         $this->conn = $database->connect();
     }
 
+    // ✅ Get SCORM Package by ID
+    public function getScormPackageById($id, $clientId = null)
+    {
+        try {
+            $sql = "SELECT * FROM scorm_packages WHERE id = ? AND is_deleted = 0";
+            $params = [$id];
+
+            if ($clientId !== null) {
+                $sql .= " AND client_id = ?";
+                $params[] = $clientId;
+            }
+
+            $stmt = $this->conn->prepare($sql);
+            $stmt->execute($params);
+            $package = $stmt->fetch(PDO::FETCH_ASSOC);
+
+            if ($package) {
+                error_log("VLRModel getScormPackageById - Found package: " . json_encode($package));
+                return $package;
+            } else {
+                error_log("VLRModel getScormPackageById - No package found for ID: {$id}, Client ID: " . ($clientId ?? 'null'));
+                return null;
+            }
+        } catch (Exception $e) {
+            error_log("Error fetching SCORM package by ID: " . $e->getMessage());
+            return null;
+        }
+    }
+
+    // ✅ Get SCORM Package by Content ID (from course_module_content)
+    public function getScormPackageByContentId($contentId, $clientId)
+    {
+        try {
+            $sql = "SELECT sp.* FROM scorm_packages sp
+                    INNER JOIN course_module_content cmc ON cmc.content_id = sp.id AND cmc.content_type = 'scorm'
+                    WHERE cmc.id = ? AND sp.client_id = ? AND sp.is_deleted = 0";
+            
+            $stmt = $this->conn->prepare($sql);
+            $stmt->execute([$contentId, $clientId]);
+            $package = $stmt->fetch(PDO::FETCH_ASSOC);
+
+            if ($package) {
+                error_log("VLRModel getScormPackageByContentId - Found package for content {$contentId}: " . json_encode($package));
+                return $package;
+            } else {
+                error_log("VLRModel getScormPackageByContentId - No package found for content {$contentId}, Client ID: {$clientId}");
+                return null;
+            }
+        } catch (Exception $e) {
+            error_log("Error fetching SCORM package by content ID: " . $e->getMessage());
+            return null;
+        }
+    }
+
     // ✅ Insert SCORM Package
     public function insertScormPackage($data)
     {

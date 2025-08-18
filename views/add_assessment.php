@@ -223,10 +223,11 @@
         <div class="modal-dialog modal-xl modal-dialog-scrollable">
             <div class="modal-content">
                 <form id="addAssessmentQuestionForm" method="POST"
-                    action="/unlockyourskills/vlr/questions" novalidate>
+                    action="/unlockyourskills/vlr/questions" enctype="multipart/form-data" novalidate>
 
                     <!-- Hidden ID for editing -->
                     <input type="hidden" name="questionId" id="questionId" value="">
+                    <input type="hidden" name="existing_media_file" id="existingMediaFile" value="">
 
                     <div class="modal-header">
                         <h5 class="modal-title" id="addAssessmentQuestionModalLabel"><?= Localization::translate('buttons_add_question'); ?></h5>

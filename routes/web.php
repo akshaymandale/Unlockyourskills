@@ -257,6 +257,13 @@ Router::get('/users/autocomplete', 'UserManagementController@getUserEmailsForAut
     Router::get('/vlr/scorm', 'VLRController@scormIndex');
     Router::post('/vlr/scorm', 'VLRController@addOrEditScormPackage');
     Router::delete('/vlr/scorm/{id}', 'VLRController@delete');
+
+    // SCORM Launcher
+    Router::get('/scorm/launch', 'SCORMController@launch');
+    Router::post('/scorm/progress', 'SCORMController@getProgress');
+    Router::post('/scorm/update', 'SCORMController@updateProgress');
+    Router::post('/scorm/complete', 'SCORMController@complete');
+    Router::get('/scorm/resume', 'SCORMController@getResume');
     
     // External Content
     Router::get('/vlr/external', 'VLRController@externalIndex');
@@ -320,6 +327,7 @@ Router::get('/users/autocomplete', 'UserManagementController@getUserEmailsForAut
     Router::post('/vlr/surveys/selected-questions', 'SurveyQuestionController@getSelectedQuestions');
     // Parameterized routes (MUST come after specific routes)
     Router::get('/vlr/surveys/{id}', 'VLRController@getSurveyById');
+    Router::delete('/vlr/surveys/{id}', 'VLRController@deleteSurvey');
     
     // Feedback Packages
     Router::get('/vlr/feedback', 'VLRController@feedbackIndex');
@@ -545,6 +553,30 @@ Router::get('/course-applicability/getUsersByCustomField', 'CourseApplicabilityC
 // Course Applicability AJAX user search
 Router::get('/course-applicability/search-users', 'CourseApplicabilityController@searchUsers');
 Router::get('/course-applicability/getApplicableUsers', 'CourseApplicabilityController@getApplicableUsers');
+
+// Progress Tracking routes
+Router::post('/progress/initialize', 'ProgressTrackingController@initializeProgress');
+Router::get('/progress/get', 'ProgressTrackingController@getProgress');
+Router::post('/progress/update', 'ProgressTrackingController@updateProgress');
+Router::post('/progress/module/update', 'ProgressTrackingController@updateModuleProgress');
+Router::post('/progress/content/update', 'ProgressTrackingController@updateContentProgress');
+Router::get('/progress/content/get', 'ProgressTrackingController@getContentProgress');
+
+// Content-specific progress tracking
+Router::post('/progress/scorm/update', 'ProgressTrackingController@updateScormProgress');
+Router::post('/progress/video/update', 'ProgressTrackingController@updateVideoProgress');
+Router::post('/progress/audio/update', 'ProgressTrackingController@updateAudioProgress');
+Router::post('/progress/document/update', 'ProgressTrackingController@updateDocumentProgress');
+Router::post('/progress/interactive/update', 'ProgressTrackingController@updateInteractiveProgress');
+Router::post('/progress/external/update', 'ProgressTrackingController@updateExternalProgress');
+
+// Resume functionality
+Router::get('/progress/resume/get', 'ProgressTrackingController@getResumePosition');
+Router::post('/progress/resume/set', 'ProgressTrackingController@setResumePosition');
+
+// Progress calculation and summary
+Router::get('/progress/calculate', 'ProgressTrackingController@calculateProgress');
+Router::get('/progress/summary', 'ProgressTrackingController@getUserProgressSummary');
 // My Courses
 Router::get('/my-courses', 'MyCoursesController@index');
 Router::get('/my-courses/list', 'MyCoursesController@getUserCourses');

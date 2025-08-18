@@ -274,9 +274,9 @@ class AssessmentPlayerModel
     {
         $db = $this->conn;
 
-        // Get attempt data
+        // Get attempt data with negative marking information
         $stmt = $db->prepare("
-            SELECT a.*, ap.passing_percentage
+            SELECT a.*, ap.passing_percentage, ap.negative_marking, ap.negative_marking_percentage
             FROM assessment_attempts a
             JOIN assessment_package ap ON a.assessment_id = ap.id
             WHERE a.id = ?
@@ -304,6 +304,8 @@ class AssessmentPlayerModel
         $totalScore = 0;
         $maxScore = 0;
         $correctAnswers = 0;
+        $negativeMarking = $attempt['negative_marking'] ?? 'No';
+        $negativeMarkingPercentage = $attempt['negative_marking_percentage'] ?? 0;
 
         foreach ($questionIds as $questionId) {
             if (isset($answers[$questionId])) {
@@ -311,13 +313,32 @@ class AssessmentPlayerModel
                 $questionIdInt = (int)$questionId;
                 $answer = $answers[$questionId];
                 
-                $questionScore = $this->calculateQuestionScore($questionIdInt, $answer);
+                $questionScore = $this->calculateQuestionScore(
+                    $questionIdInt, 
+                    $answer, 
+                    $negativeMarking, 
+                    $negativeMarkingPercentage
+                );
                 $totalScore += $questionScore['score'];
                 $maxScore += $questionScore['max_score'];
                 if ($questionScore['score'] > 0) {
                     $correctAnswers++;
                 }
+            } else {
+                // Question not answered - count towards max score but not towards user score
+                // Get question details to add to max score
+                $stmt = $db->prepare("SELECT marks FROM assessment_questions WHERE id = ?");
+                $stmt->execute([$questionId]);
+                $question = $stmt->fetch(PDO::FETCH_ASSOC);
+                if ($question) {
+                    $maxScore += $question['marks'] ?? 1;
+                }
             }
+        }
+
+        // Ensure total score doesn't go below 0 due to negative marking
+        if ($totalScore < 0) {
+            $totalScore = 0;
         }
 
         $percentage = $maxScore > 0 ? round(($totalScore / $maxScore) * 100, 2) : 0;
@@ -374,12 +395,14 @@ class AssessmentPlayerModel
             'percentage' => $percentage,
             'passed' => $passed,
             'correct_answers' => $correctAnswers,
-            'total_questions' => count($questionIds)
+            'total_questions' => count($questionIds),
+            'negative_marking_applied' => $negativeMarking === 'Yes',
+            'negative_marking_percentage' => $negativeMarkingPercentage
         ];
     }
 
     // Calculate score for a single question
-    private function calculateQuestionScore($questionId, $answer)
+    private function calculateQuestionScore($questionId, $answer, $negativeMarking = 'No', $negativeMarkingPercentage = 0)
     {
         $db = $this->conn;
 
@@ -409,10 +432,25 @@ class AssessmentPlayerModel
             $stmt->execute([$questionIdInt, $answerId]);
             $result = $stmt->fetch(PDO::FETCH_ASSOC);
             
-            $score = $result['count'] > 0 ? $maxScore : 0;
+            $isCorrect = $result['count'] > 0;
+            
+            if ($isCorrect) {
+                // Correct answer - full marks
+                $score = $maxScore;
+            } else {
+                // Incorrect answer - apply negative marking if enabled
+                if ($negativeMarking === 'Yes' && $negativeMarkingPercentage > 0) {
+                    // Calculate negative marks based on percentage
+                    $negativeMarks = ($maxScore * $negativeMarkingPercentage) / 100;
+                    $score = -$negativeMarks; // Negative score
+                } else {
+                    // No negative marking - 0 marks
+                    $score = 0;
+                }
+            }
             
             // Debug logging (remove in production)
-            error_log("Assessment Scoring Debug - Question: {$questionId}, Answer: {$answer}, Answer Type: " . gettype($answer) . ", Score: {$score}");
+            error_log("Assessment Scoring Debug - Question: {$questionId}, Answer: {$answer}, Answer Type: " . gettype($answer) . ", Correct: " . ($isCorrect ? 'Yes' : 'No') . ", Score: {$score}, Negative Marking: {$negativeMarking}, Negative Percentage: {$negativeMarkingPercentage}");
         } else {
             // Subjective questions - require manual grading
             // For now, give 0 marks until manual grading is implemented

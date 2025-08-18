@@ -137,6 +137,9 @@ class MyCoursesController {
         $GLOBALS['assessmentDetails'] = $assessmentDetails;
         $GLOBALS['assessmentResults'] = $assessmentResults;
         
+        // Expose course data to view
+        $GLOBALS['course'] = $course;
+        
         require 'views/my_course_details.php';
     }
 

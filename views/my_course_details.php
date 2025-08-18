@@ -3,6 +3,52 @@
 <?php include 'includes/sidebar.php'; ?>
 <?php require_once 'core/IdEncryption.php'; ?>
 
+<style>
+    .prerequisites-completion-status,
+    .modules-completion-status {
+        background: rgba(255, 255, 255, 0.7);
+        border-radius: 12px;
+        padding: 16px;
+        border: 1px solid rgba(0, 0, 0, 0.1);
+    }
+    
+    .prerequisites-completion-status .progress,
+    .modules-completion-status .progress {
+        border-radius: 6px;
+        background-color: rgba(0, 0, 0, 0.1);
+    }
+    
+    .prerequisites-completion-status .progress-bar,
+    .modules-completion-status .progress-bar {
+        border-radius: 6px;
+        transition: width 0.6s ease;
+    }
+    
+    .badge {
+        font-size: 0.8rem;
+        padding: 0.4rem 0.8rem;
+        border-radius: 20px;
+    }
+    
+    .alert {
+        border-radius: 12px;
+        border: none;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    }
+    
+    .alert-warning {
+        background: linear-gradient(135deg, #fff3cd 0%, #fff8e1 100%);
+        color: #856404;
+        border-left: 4px solid #ffc107;
+    }
+    
+    .alert-info {
+        background: linear-gradient(135deg, #d1ecf1 0%, #e8f4f8 100%);
+        color: #0c5460;
+        border-left: 4px solid #17a2b8;
+    }
+</style>
+
 <div class="main-content">
     <div class="container mt-4 course-details" id="courseDetailsPage">
         <!-- Back Arrow and Title -->
@@ -54,6 +100,132 @@
                     return $path;
                 }
                 return UrlHelper::url($path);
+            }
+        }
+        
+        // Helper to check if all prerequisites are completed
+        if (!function_exists('arePrerequisitesCompleted')) {
+            function arePrerequisitesCompleted($prerequisites, $assessmentResults) {
+                if (empty($prerequisites)) {
+                    return true; // No prerequisites means all are completed
+                }
+                
+                foreach ($prerequisites as $pre) {
+                    if ($pre['prerequisite_type'] === 'assessment') {
+                        $assessmentId = $pre['prerequisite_id'];
+                        $result = $assessmentResults[$assessmentId] ?? null;
+                        
+                        // Assessment prerequisite is only completed if passed
+                        if (!$result || !$result['passed']) {
+                            return false;
+                        }
+                    } else {
+                        // For non-assessment prerequisites (courses, modules, etc.), 
+                        // we assume they need to be completed manually or have completion tracking
+                        // For now, we'll consider them as completed if they exist
+                        // This can be enhanced later with actual completion tracking
+                    }
+                }
+                
+                return true;
+            }
+        }
+        
+        // Helper to check if all modules are completed
+        if (!function_exists('areModulesCompleted')) {
+            function areModulesCompleted($modules) {
+                if (empty($modules)) {
+                    return true; // No modules means all are completed
+                }
+                
+                foreach ($modules as $module) {
+                    // Check if module has content and if all content is completed
+                    if (!empty($module['content'])) {
+                        foreach ($module['content'] as $content) {
+                            // For now, we'll check if the module has any progress
+                            // This can be enhanced with actual completion tracking per content type
+                            $progress = intval($module['module_progress'] ?? 0);
+                            if ($progress < 100) {
+                                return false;
+                            }
+                        }
+                    }
+                }
+                
+                return true;
+            }
+        }
+        
+        // Helper to get SCORM progress status
+        if (!function_exists('getScormProgressStatus')) {
+            function getScormProgressStatus($courseId, $contentId, $userId) {
+                try {
+                    // Validate inputs
+                    if (empty($courseId) || empty($contentId) || empty($userId)) {
+                        return [
+                            'status' => 'unknown',
+                            'location' => '',
+                            'score' => 0,
+                            'max_score' => 100,
+                            'session_time' => '',
+                            'last_updated' => '',
+                            'has_progress' => false
+                        ];
+                    }
+                    
+                    // Get database connection
+                    $db = new PDO(
+                        'mysql:unix_socket=/Applications/XAMPP/xamppfiles/var/mysql/mysql.sock;dbname=unlockyourskills',
+                        'root',
+                        ''
+                    );
+                    $db->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+                    
+                    // Query SCORM progress
+                    $stmt = $db->prepare("
+                        SELECT lesson_status, lesson_location, score_raw, score_max, session_time, updated_at 
+                        FROM scorm_progress 
+                        WHERE course_id = ? AND content_id = ? AND user_id = ?
+                    ");
+                    $stmt->execute([$courseId, $contentId, $userId]);
+                    $progress = $stmt->fetch(PDO::FETCH_ASSOC);
+                    
+                    if ($progress) {
+                        return [
+                            'status' => $progress['lesson_status'] ?? 'incomplete',
+                            'location' => $progress['lesson_location'] ?? '',
+                            'score' => $progress['score_raw'] ?? 0,
+                            'max_score' => $progress['score_max'] ?? 100,
+                            'session_time' => $progress['session_time'] ?? '',
+                            'last_updated' => $progress['updated_at'] ?? '',
+                            'has_progress' => true
+                        ];
+                    } else {
+                        return [
+                            'status' => 'not_started',
+                            'location' => '',
+                            'score' => 0,
+                            'max_score' => 100,
+                            'session_time' => '',
+                            'last_updated' => '',
+                            'has_progress' => false
+                        ];
+                    }
+                } catch (Exception $e) {
+                    // Log error for debugging
+                    error_log("Error getting SCORM progress: " . $e->getMessage());
+                    
+                    // Return default status if database error
+                    return [
+                        'status' => 'unknown',
+                        'location' => '',
+                        'score' => 0,
+                        'max_score' => 100,
+                        'session_time' => '',
+                        'last_updated' => '',
+                        'has_progress' => false
+                    ];
+                }
             }
         }
         // Helper to pretty duration
@@ -118,6 +290,48 @@
                     <p class="text-muted small mb-0">Complete these requirements to access this course</p>
                 </div>
             </div>
+            
+            <?php 
+            // Show completion status
+            $completedCount = 0;
+            $totalCount = count($course['prerequisites']);
+            foreach ($course['prerequisites'] as $pre) {
+                if ($pre['prerequisite_type'] === 'assessment') {
+                    $assessmentId = $pre['prerequisite_id'];
+                    $result = $GLOBALS['assessmentResults'][$assessmentId] ?? null;
+                    if ($result && $result['passed']) {
+                        $completedCount++;
+                    }
+                } else {
+                    // For non-assessment prerequisites, consider them as completed for now
+                    $completedCount++;
+                }
+            }
+            $completionPercentage = $totalCount > 0 ? round(($completedCount / $totalCount) * 100) : 0;
+            ?>
+            
+            <div class="prerequisites-completion-status mb-3">
+                <div class="d-flex align-items-center justify-content-between mb-2">
+                    <span class="text-muted">Prerequisites Progress</span>
+                    <span class="badge <?= $completionPercentage === 100 ? 'bg-success' : 'bg-warning' ?>">
+                        <?= $completedCount ?>/<?= $totalCount ?> Completed
+                    </span>
+                </div>
+                <div class="progress" style="height: 8px;">
+                    <div class="progress-bar <?= $completionPercentage === 100 ? 'bg-success' : 'bg-warning' ?>" 
+                         style="width: <?= $completionPercentage ?>%"></div>
+                </div>
+                <?php if ($completionPercentage === 100): ?>
+                    <div class="text-success small mt-1">
+                        <i class="fas fa-check-circle me-1"></i>All prerequisites completed! You can now access the course content.
+                    </div>
+                <?php else: ?>
+                    <div class="text-muted small mt-1">
+                        <i class="fas fa-info-circle me-1"></i>Complete all prerequisites to unlock course modules.
+                    </div>
+                <?php endif; ?>
+            </div>
+            
             <div class="prerequisites-grid">
                 <?php foreach ($course['prerequisites'] as $pre): ?>
                     <div class="prerequisite-item">
@@ -344,7 +558,13 @@
         </div>
         <?php endif; ?>
 
+        <?php
+        // Check if prerequisites are completed
+        $prerequisitesCompleted = arePrerequisitesCompleted($course['prerequisites'] ?? [], $GLOBALS['assessmentResults'] ?? []);
+        ?>
+        
         <!-- Course Content -->
+        <?php if ($prerequisitesCompleted): ?>
         <div class="card mb-4 p-4 shadow-sm border-0" style="background: linear-gradient(135deg, #f0f8ff 0%, #ffffff 100%); border-left: 4px solid #007bff !important;">
             <div class="d-flex align-items-center mb-4">
                 <div class="course-content-icon-wrapper me-3">
@@ -353,6 +573,44 @@
                 <div>
                     <h5 class="text-purple fw-bold mb-1">Course Content</h5>
                     <p class="text-muted small mb-0">Explore modules and learning materials</p>
+                </div>
+            </div>
+            
+            <?php 
+            // Show modules completion status
+            $modulesCompletedCount = 0;
+            $modulesTotalCount = count($course['modules']);
+            $overallModuleProgress = 0;
+            foreach ($course['modules'] as $module) {
+                $progress = intval($module['module_progress'] ?? 0);
+                $overallModuleProgress += $progress;
+                if ($progress >= 100) {
+                    $modulesCompletedCount++;
+                }
+            }
+            $overallModuleProgress = $modulesTotalCount > 0 ? round($overallModuleProgress / $modulesTotalCount) : 0;
+            ?>
+            
+            <div class="modules-completion-status mb-4">
+                <div class="d-flex align-items-center justify-content-between mb-2">
+                    <span class="text-muted">Course Progress</span>
+                    <span class="badge <?= $overallModuleProgress === 100 ? 'bg-success' : 'bg-primary' ?>">
+                        <?= $overallModuleProgress ?>% Complete
+                    </span>
+                </div>
+                <div class="progress" style="height: 10px;">
+                    <div class="progress-bar <?= $overallModuleProgress === 100 ? 'bg-success' : 'bg-primary' ?>" 
+                         style="width: <?= $overallModuleProgress ?>%"></div>
+                </div>
+                <div class="d-flex align-items-center justify-content-between mt-1">
+                    <span class="text-muted small">
+                        <i class="fas fa-layer-group me-1"></i><?= $modulesCompletedCount ?>/<?= $modulesTotalCount ?> Modules Completed
+                    </span>
+                    <?php if ($overallModuleProgress === 100): ?>
+                        <span class="text-success small">
+                            <i class="fas fa-check-circle me-1"></i>Course completed! Post-requisites are now available.
+                        </span>
+                    <?php endif; ?>
                 </div>
             </div>
             
@@ -471,11 +729,44 @@
                                                                 case 'scorm':
                                                                     $launchUrl = $content['scorm_launch_path'] ?? '';
                                                                     if ($launchUrl) {
-                                                                        $resolved = resolveContentUrl($launchUrl);
-                                                                        $viewer = UrlHelper::url('my-courses/view-content') . '?type=scorm&title=' . urlencode($content['title']) . '&src=' . urlencode($resolved);
-                                                                        echo "<a href='" . htmlspecialchars($viewer) . "' target='_blank' class='postrequisite-action-btn btn-secondary'>";
-                                                                        echo "<i class='fas fa-cube me-1'></i>Launch SCORM";
-                                                                        echo "</a>";
+                                                                        // Get SCORM progress status
+                                                                        $scormProgress = getScormProgressStatus($GLOBALS['course']['id'], $content['id'], $_SESSION['user']['id']);
+                                                                        
+                                                                        // Show progress status
+                                                                        echo "<div class='scorm-progress-status mb-2'>";
+                                                                        if ($scormProgress['has_progress']) {
+                                                                            $statusClass = $scormProgress['status'] === 'completed' ? 'text-success' : 'text-warning';
+                                                                            $statusIcon = $scormProgress['status'] === 'completed' ? 'fa-check-circle' : 'fa-clock';
+                                                                            echo "<div class='{$statusClass}'>";
+                                                                            echo "<i class='fas {$statusIcon} me-1'></i>";
+                                                                            echo ucfirst($scormProgress['status']);
+                                                                            if ($scormProgress['score'] > 0) {
+                                                                                echo " - Score: {$scormProgress['score']}/{$scormProgress['max_score']}";
+                                                                            }
+                                                                            if ($scormProgress['last_updated']) {
+                                                                                echo " <small class='text-muted'>(Last: " . date('M j, Y', strtotime($scormProgress['last_updated'])) . ")</small>";
+                                                                            }
+                                                                            echo "</div>";
+                                                                        } else {
+                                                                            echo "<div class='text-muted'><i class='fas fa-circle me-1'></i>Not started</div>";
+                                                                        }
+                                                                        echo "</div>";
+                                                                        
+                                                                        // Show launch button only if not completed
+                                                                        if ($scormProgress['status'] !== 'completed') {
+                                                                            $scormLauncherUrl = UrlHelper::url('scorm/launch') . '?course_id=' . $GLOBALS['course']['id'] . '&module_id=' . $module['id'] . '&content_id=' . $content['id'] . '&title=' . urlencode($content['title']);
+                                                                            echo "<a href='" . htmlspecialchars($scormLauncherUrl) . "' target='_blank' class='postrequisite-action-btn btn-secondary launch-content-btn' 
+                                                                                 data-module-id='" . $module['id'] . "' 
+                                                                                 data-content-id='" . $content['id'] . "' 
+                                                                                 data-type='scorm'
+                                                                                 onclick='launchNewSCORMPlayer(event, " . $GLOBALS['course']['id'] . ", " . $module['id'] . ", " . $content['id'] . ", \"" . addslashes($content['title']) . "\")'>";
+                                                                            echo "<i class='fas fa-cube me-1'></i>Launch SCORM";
+                                                                            echo "</a>";
+                                                                        } else {
+                                                                            echo "<div class='scorm-completed-badge'>";
+                                                                            echo "<span class='badge bg-success'><i class='fas fa-check-circle me-1'></i>SCORM Completed</span>";
+                                                                            echo "</div>";
+                                                                        }
                                                                     } else {
                                                                         echo "<span class='content-error'><i class='fas fa-exclamation-triangle me-1'></i>No SCORM launch path</span>";
                                                                     }
@@ -485,8 +776,11 @@
                                                                     $launchUrl = $content['non_scorm_launch_path'] ?? ($content['interactive_launch_url'] ?? '');
                                                                     if ($launchUrl) {
                                                                         $resolved = resolveContentUrl($launchUrl);
-                                                                        $viewer = UrlHelper::url('my-courses/view-content') . '?type=iframe&title=' . urlencode($content['title']) . '&src=' . urlencode($resolved);
-                                                                        echo "<a href='" . htmlspecialchars($viewer) . "' target='_blank' class='postrequisite-action-btn btn-primary'>";
+                                                                        $viewer = UrlHelper::url('my-courses/view-content') . '?type=iframe&title=' . urlencode($content['title']) . '&src=' . urlencode($resolved) . '&course_id=' . $GLOBALS['course']['id'] . '&module_id=' . $module['id'] . '&content_id=' . $content['id'];
+                                                                        echo "<a href='" . htmlspecialchars($viewer) . "' target='_blank' class='postrequisite-action-btn btn-primary launch-content-btn' 
+                                                                             data-module-id='" . $module['id'] . "' 
+                                                                             data-content-id='" . $content['id'] . "' 
+                                                                             data-type='" . $type . "'>";
                                                                         echo "<i class='fas fa-wand-magic-sparkles me-1'></i>Launch Interactive";
                                                                         echo "</a>";
                                                                     } else {
@@ -497,8 +791,11 @@
                                                                     $videoUrl = $content['video_file_path'] ?? '';
                                                                     if ($videoUrl) {
                                                                         $resolved = resolveContentUrl($videoUrl);
-                                                                        $viewer = UrlHelper::url('my-courses/view-content') . '?type=video&title=' . urlencode($content['title']) . '&src=' . urlencode($resolved);
-                                                                        echo "<a href='" . htmlspecialchars($viewer) . "' target='_blank' class='postrequisite-action-btn btn-danger'>";
+                                                                        $viewer = UrlHelper::url('my-courses/view-content') . '?type=video&title=' . urlencode($content['title']) . '&src=' . urlencode($resolved) . '&course_id=' . $GLOBALS['course']['id'] . '&module_id=' . $module['id'] . '&content_id=' . $content['id'];
+                                                                        echo "<a href='" . htmlspecialchars($viewer) . "' target='_blank' class='postrequisite-action-btn btn-danger launch-content-btn' 
+                                                                             data-module-id='" . $module['id'] . "' 
+                                                                             data-content-id='" . $content['id'] . "' 
+                                                                             data-type='video'>";
                                                                         echo "<i class='fas fa-play me-1'></i>Watch Video";
                                                                         echo "</a>";
                                                                     } else {
@@ -520,8 +817,11 @@
                                                                     $docUrl = $content['document_file_path'] ?? '';
                                                                     if ($docUrl) {
                                                                         $resolved = resolveContentUrl($docUrl);
-                                                                        $viewer = UrlHelper::url('my-courses/view-content') . '?type=document&title=' . urlencode($content['title']) . '&src=' . urlencode($resolved);
-                                                                        echo "<a href='" . htmlspecialchars($viewer) . "' target='_blank' class='postrequisite-action-btn btn-secondary'>";
+                                                                        $viewer = UrlHelper::url('my-courses/view-content') . '?type=document&title=' . urlencode($content['title']) . '&src=' . urlencode($resolved) . '&course_id=' . $GLOBALS['course']['id'] . '&module_id=' . $module['id'] . '&content_id=' . $content['id'];
+                                                                        echo "<a href='" . htmlspecialchars($viewer) . "' target='_blank' class='postrequisite-action-btn btn-secondary launch-content-btn' 
+                                                                             data-module-id='" . $module['id'] . "' 
+                                                                             data-content-id='" . $content['id'] . "' 
+                                                                             data-type='document'>";
                                                                         echo "<i class='fas fa-file-lines me-1'></i>View Document";
                                                                         echo "</a>";
                                                                     } else {
@@ -532,8 +832,11 @@
                                                                     $imgUrl = $content['image_file_path'] ?? '';
                                                                     if ($imgUrl) {
                                                                         $resolved = resolveContentUrl($imgUrl);
-                                                                        $viewer = UrlHelper::url('my-courses/view-content') . '?type=image&title=' . urlencode($content['title']) . '&src=' . urlencode($resolved);
-                                                                        echo "<a href='" . htmlspecialchars($viewer) . "' target='_blank' class='postrequisite-action-btn btn-info'>";
+                                                                        $viewer = UrlHelper::url('my-courses/view-content') . '?type=image&title=' . urlencode($content['title']) . '&src=' . urlencode($resolved) . '&course_id=' . $GLOBALS['course']['id'] . '&module_id=' . $module['id'] . '&content_id=' . $content['id'];
+                                                                        echo "<a href='" . htmlspecialchars($viewer) . "' target='_blank' class='postrequisite-action-btn btn-info launch-content-btn' 
+                                                                             data-module-id='" . $module['id'] . "' 
+                                                                             data-content-id='" . $content['id'] . "' 
+                                                                             data-type='image'>";
                                                                         echo "<i class='fas fa-image me-1'></i>View Image";
                                                                         echo "</a>";
                                                                     } else {
@@ -544,8 +847,11 @@
                                                                     $extUrl = $content['external_content_url'] ?? '';
                                                                     if ($extUrl) {
                                                                         $resolved = resolveContentUrl($extUrl);
-                                                                        $viewer = UrlHelper::url('my-courses/view-content') . '?type=external&title=' . urlencode($content['title']) . '&src=' . urlencode($resolved);
-                                                                        echo "<a href='" . htmlspecialchars($viewer) . "' target='_blank' class='postrequisite-action-btn btn-info'>";
+                                                                        $viewer = UrlHelper::url('my-courses/view-content') . '?type=external&title=' . urlencode($content['title']) . '&src=' . urlencode($resolved) . '&course_id=' . $GLOBALS['course']['id'] . '&module_id=' . $module['id'] . '&content_id=' . $content['id'];
+                                                                        echo "<a href='" . htmlspecialchars($viewer) . "' target='_blank' class='postrequisite-action-btn btn-info launch-content-btn' 
+                                                                             data-module-id='" . $module['id'] . "' 
+                                                                             data-content-id='" . $content['id'] . "' 
+                                                                             data-type='external'>";
                                                                         echo "<i class='fas fa-external-link-alt me-1'></i>Open Link";
                                                                         echo "</a>";
                                                                     } else {
@@ -696,9 +1002,21 @@
                 </div>
             <?php endif; ?>
         </div>
+        <?php else: ?>
+            <div class="alert alert-warning" role="alert">
+                <i class="fas fa-info-circle me-2"></i>
+                You must complete the prerequisites for this course to access the course content.
+            </div>
+        <?php endif; ?>
 
         <!-- Post-requisites -->
-        <?php if (!empty($course['post_requisites'])): ?>
+        <?php 
+        // Check if both prerequisites and modules are completed
+        $modulesCompleted = areModulesCompleted($course['modules'] ?? []);
+        $canAccessPostRequisites = $prerequisitesCompleted && $modulesCompleted;
+        ?>
+        
+        <?php if (!empty($course['post_requisites']) && $canAccessPostRequisites): ?>
         <div class="card mb-4 p-4 shadow-sm border-0" style="background: linear-gradient(135deg, #fff8f9 0%, #ffffff 100%); border-left: 4px solid #20c997 !important;">
             <div class="d-flex align-items-center mb-3">
                 <div class="postrequisite-icon-wrapper me-3">
@@ -874,9 +1192,19 @@
                                     'class' => 'btn-secondary'
                                 ];
                                 
-                                echo "<a class='postrequisite-action-btn {$config['class']}' target='_blank' href='" . UrlHelper::url('my-courses/start') . '?type=' . urlencode($post['content_type']) . '&id=' . urlencode($encryptedPostreqId) . "'>";
-                                echo "<i class='fas {$config['icon']} me-1'></i>{$config['label']}";
-                                echo "</a>";
+                                // Handle SCORM content differently - use the new SCORM launcher
+                                if ($post['content_type'] === 'scorm') {
+                                    // For SCORM content, we need to get the actual content details to launch properly
+                                    // Since this is postrequisite content, we'll need to construct the launch URL differently
+                                    echo "<a class='postrequisite-action-btn {$config['class']}' href='#' onclick='launchPostrequisiteSCORM(event, \"" . addslashes($encryptedPostreqId) . "\", \"" . addslashes($post['content_type']) . "\")'>";
+                                    echo "<i class='fas {$config['icon']} me-1'></i>{$config['label']}";
+                                    echo "</a>";
+                                } else {
+                                    // For non-SCORM content, use the existing start method
+                                    echo "<a class='postrequisite-action-btn {$config['class']}' target='_blank' href='" . UrlHelper::url('my-courses/start') . '?type=' . urlencode($post['content_type']) . '&id=' . urlencode($encryptedPostreqId) . "'>";
+                                    echo "<i class='fas {$config['icon']} me-1'></i>{$config['label']}";
+                                    echo "</a>";
+                                }
                             }
                             ?>
                         </div>
@@ -927,6 +1255,11 @@
                 <?php endforeach; ?>
             </div>
         </div>
+        <?php elseif (!empty($course['post_requisites']) && !$canAccessPostRequisites): ?>
+            <div class="alert alert-info" role="alert">
+                <i class="fas fa-info-circle me-2"></i>
+                Post-requisites will be available after you complete all prerequisites and course modules.
+            </div>
         <?php endif; ?>
     </div>
 </div>
@@ -947,8 +1280,26 @@
 </div>
 
 <script src="/Unlockyourskills/public/js/course_player.js"></script>
+<script src="/unlockyourskills/public/js/progress-tracking.js"></script>
 
 <script>
+// Expose user data to JavaScript for progress tracking
+window.userData = {
+    id: <?php echo json_encode($_SESSION['user']['id'] ?? null); ?>,
+    client_id: <?php echo json_encode($_SESSION['user']['client_id'] ?? null); ?>
+};
+
+// Store user data in session storage for cross-tab access
+if (window.userData.id && window.userData.client_id) {
+    sessionStorage.setItem('user_data', JSON.stringify(window.userData));
+}
+
+// Debug: Check if course data is available
+console.log('Debug: Course data available:', {
+    course: <?php echo json_encode($GLOBALS['course'] ?? null); ?>,
+    courseId: <?php echo json_encode($GLOBALS['course']['id'] ?? null); ?>,
+    courseName: <?php echo json_encode($GLOBALS['course']['name'] ?? null); ?>
+});
 // Initialize Bootstrap tooltips for all title elements
 document.addEventListener('DOMContentLoaded', function() {
     // Initialize tooltips for all elements with data-bs-toggle="tooltip"
@@ -980,7 +1331,7 @@ document.addEventListener('DOMContentLoaded', function() {
     // Assessment completion detection and page refresh
     function checkForAssessmentCompletion() {
         // Get current course ID from URL or page data
-        const currentCourseId = <?php echo json_encode($course['id'] ?? null); ?>;
+        const currentCourseId = <?php echo json_encode($GLOBALS['course']['id'] ?? null); ?>;
         if (!currentCourseId) return;
 
         // Check localStorage for any assessment completion flags
@@ -1058,6 +1409,261 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // Check immediately when page loads
     checkForAssessmentCompletion();
+    
+    // Initialize progress tracking for the current course
+    initializeProgressTracking();
+});
+
+// Progress tracking initialization
+function initializeProgressTracking() {
+    const currentCourseId = <?php echo json_encode($GLOBALS['course']['id'] ?? null); ?>;
+    console.log('Initializing progress tracking for course:', currentCourseId);
+    console.log('Debug: Course object:', <?php echo json_encode($GLOBALS['course'] ?? null); ?>);
+    
+    if (!currentCourseId) {
+        console.warn('No course ID available for progress tracking');
+        console.warn('Course object:', <?php echo json_encode($GLOBALS['course'] ?? null); ?>);
+        return;
+    }
+    
+    // Wait for progress tracker to be available
+    if (window.progressTracker) {
+        window.progressTracker.setCourseContext(currentCourseId);
+        console.log('Progress tracking initialized for course:', currentCourseId);
+    } else {
+        console.warn('Progress tracker not available, retrying...');
+        setTimeout(initializeProgressTracking, 1000);
+    }
+}
+
+// Add progress tracking to module content buttons
+document.addEventListener('click', function(event) {
+    if (event.target.classList.contains('launch-content-btn')) {
+        const courseId = <?php echo json_encode($GLOBALS['course']['id'] ?? null); ?>;
+        const moduleId = event.target.dataset.moduleId;
+        const contentId = event.target.dataset.contentId;
+        const contentType = event.target.dataset.type;
+        
+        console.log('Content button clicked:', {
+            courseId: courseId,
+            moduleId: moduleId,
+            contentId: contentId,
+            contentType: contentType,
+            progressTracker: !!window.progressTracker
+        });
+        
+        if (window.progressTracker && courseId && moduleId && contentId && contentType) {
+            // Set content context for progress tracking
+            window.progressTracker.setCourseContext(courseId, moduleId, contentId, contentType);
+            
+            // Start progress tracking for this content (EXCLUDE SCORM - handled manually)
+            if (contentType !== 'scorm') {
+                window.progressTracker.startProgressTracking(contentId, contentType, 5000); // Update every 5 seconds
+                console.log('Progress tracking started for:', {
+                    courseId: courseId,
+                    moduleId: moduleId,
+                    contentId: contentId,
+                    contentType: contentType
+                });
+            } else {
+                console.log('SCORM content detected - automatic progress tracking DISABLED (handled manually)');
+            }
+        } else {
+            console.warn('Progress tracking not available:', {
+                hasProgressTracker: !!window.progressTracker,
+                hasCourseId: !!courseId,
+                hasModuleId: !!moduleId,
+                hasContentId: !!contentId,
+                hasContentType: !!contentType
+            });
+        }
+    }
+});
+
+// New SCORM Launcher Function
+function launchNewSCORMPlayer(event, courseId, moduleId, contentId, title) {
+    event.preventDefault();
+    
+    console.log('Launching new SCORM player:', {
+        courseId: courseId,
+        moduleId: moduleId,
+        contentId: contentId,
+        title: title
+    });
+    
+    // Build the SCORM launcher URL - use absolute path to avoid relative path issues
+    const scormLauncherUrl = `${window.location.origin}/Unlockyourskills/scorm/launch?course_id=${courseId}&module_id=${moduleId}&content_id=${contentId}&title=${encodeURIComponent(title)}`;
+    
+    console.log('Constructed SCORM URL:', scormLauncherUrl);
+    console.log('Current location:', window.location.href);
+    console.log('Origin:', window.location.origin);
+    
+    // Open in new window/tab with session preservation
+    const scormWindow = window.open(scormLauncherUrl, 'scorm_player', 'width=1200,height=800,scrollbars=yes,resizable=yes,menubar=yes,toolbar=yes');
+    
+    if (scormWindow) {
+        console.log('SCORM player window opened successfully');
+        
+        // Focus the new window
+        scormWindow.focus();
+        
+        // Optional: Add event listener for when the window is closed
+        let hasRefreshed = false; // Prevent multiple refreshes
+        let checkInterval = null;
+        
+        const checkClosed = setInterval(() => {
+            if (scormWindow.closed && !hasRefreshed) {
+                console.log('SCORM player window closed');
+                clearInterval(checkClosed);
+                hasRefreshed = true;
+                
+                // Add return parameter and refresh to show updated SCORM progress
+                const currentUrl = new URL(window.location);
+                currentUrl.searchParams.set('scorm_return', 'true');
+                window.history.replaceState({}, '', currentUrl);
+                
+                // Refresh after a short delay to show updated progress
+                setTimeout(() => {
+                    window.location.reload();
+                }, 500);
+            }
+        }, 1000);
+        
+        // Store the interval reference for cleanup
+        checkInterval = checkClosed;
+        
+        // Cleanup function to prevent memory leaks
+        window.addEventListener('beforeunload', () => {
+            if (checkInterval) {
+                clearInterval(checkInterval);
+            }
+        });
+        
+    } else {
+        console.error('Failed to open SCORM player window');
+        alert('Failed to open SCORM player. Please check your popup blocker settings.');
+    }
+    
+    return false;
+}
+
+// Function to handle SCORM content in postrequisites
+function launchPostrequisiteSCORM(event, encryptedId, contentType) {
+    event.preventDefault();
+    
+    console.log('Launching postrequisite SCORM:', {
+        encryptedId: encryptedId,
+        contentType: contentType
+    });
+    
+    // For postrequisite SCORM content, we need to get the actual content details
+    // This would require an API call to get the content information
+    // For now, we'll show a message and redirect to the course details page
+    
+    alert('SCORM content launching... Please wait while we prepare the content.');
+    
+    // TODO: Implement proper postrequisite SCORM launching
+    // This would require:
+    // 1. Decrypting the postrequisite ID
+    // 2. Getting the content details from the database
+    // 3. Constructing the proper SCORM launcher URL
+    // 4. Opening the SCORM player
+    
+    console.log('Postrequisite SCORM launch not yet implemented for:', encryptedId);
+    
+    return false;
+}
+
+// Add CSS for SCORM progress status
+document.addEventListener('DOMContentLoaded', function() {
+    const style = document.createElement('style');
+    style.textContent = `
+        .scorm-progress-status {
+            padding: 8px 12px;
+            border-radius: 6px;
+            background: #f8f9fa;
+            border-left: 3px solid #dee2e6;
+        }
+        
+        .scorm-progress-status .text-success {
+            color: #198754 !important;
+            font-weight: 500;
+        }
+        
+        .scorm-progress-status .text-warning {
+            color: #fd7e14 !important;
+            font-weight: 500;
+        }
+        
+        .scorm-progress-status .text-muted {
+            color: #6c757d !important;
+        }
+        
+        .scorm-completed-badge {
+            margin-top: 8px;
+        }
+        
+        .scorm-completed-badge .badge {
+            font-size: 0.875rem;
+            padding: 6px 12px;
+        }
+        
+        .scorm-progress-status small {
+            font-size: 0.75rem;
+        }
+    `;
+    document.head.appendChild(style);
+    
+    // Check if we're returning from SCORM launcher (URL parameter)
+    const urlParams = new URLSearchParams(window.location.search);
+    if (urlParams.get('scorm_return') === 'true') {
+        // Check if we've already refreshed to prevent infinite loops
+        const currentTime = Date.now();
+        const lastRefreshTime = sessionStorage.getItem('scorm_refresh_time');
+        const minRefreshInterval = 5000; // Minimum 5 seconds between refreshes
+        
+        console.log('SCORM return detected:', {
+            lastRefreshTime: lastRefreshTime,
+            currentTime: currentTime,
+            timeSinceLastRefresh: lastRefreshTime ? currentTime - parseInt(lastRefreshTime) : 'never',
+            currentUrl: window.location.href
+        });
+        
+        // Check if enough time has passed since last refresh
+        if (!lastRefreshTime || (currentTime - parseInt(lastRefreshTime)) > minRefreshInterval) {
+            console.log('Returning from SCORM launcher - refreshing to show updated progress');
+            
+            // Mark that we've refreshed with timestamp
+            sessionStorage.setItem('scorm_refresh_time', currentTime.toString());
+            
+            // Remove the scorm_return parameter to prevent infinite refresh
+            const currentUrl = new URL(window.location);
+            currentUrl.searchParams.delete('scorm_return');
+            window.history.replaceState({}, '', currentUrl);
+            
+            // Refresh once to show updated progress
+            setTimeout(() => {
+                console.log('Refreshing page to show updated SCORM progress...');
+                window.location.reload();
+            }, 1000);
+        } else {
+            console.log('Refreshed too recently - skipping refresh (minimum interval: 5s)');
+            // Clean up the parameter without refreshing
+            const currentUrl = new URL(window.location);
+            currentUrl.searchParams.delete('scorm_return');
+            window.history.replaceState({}, '', currentUrl);
+        }
+        
+        // Additional safety: Clear any old refresh flags that might cause issues
+        sessionStorage.removeItem('scorm_refresh');
+    } else {
+        // Normal page load - clear any SCORM refresh flags
+        const oldRefreshTime = sessionStorage.getItem('scorm_refresh_time');
+        if (oldRefreshTime) {
+            console.log('Clearing old SCORM refresh timestamp:', oldRefreshTime);
+            sessionStorage.removeItem('scorm_refresh_time');
+        }
+    }
 });
 </script>
 

@@ -753,65 +753,15 @@ document.addEventListener("DOMContentLoaded", function () {
 });
 
 // ✅ Professional Delete Confirmations (moved from vlr.php)
-document.addEventListener('click', function(e) {
-    // SCORM Package Delete
-    if (e.target.closest('.delete-scorm')) {
-        e.preventDefault();
-        const link = e.target.closest('.delete-scorm');
-        const id = link.dataset.id;
-        const title = link.dataset.title;
+// NOTE: These handlers are now handled by the VLR confirmations module
+// which properly sends DELETE requests via POST with method override
+// Removing these to prevent conflicts with the confirmation system
 
-        confirmDelete('SCORM package "' + title + '"', function() {
-            window.location.href = getProjectUrl('vlr/scorm/' + id);
-        });
-    }
+// The following delete functionality is now handled by:
+// - VLR confirmations module (vlr_confirmations.js)
+// - Confirmation modal system (confirmation_modal.js)
+// - Proper DELETE route handling in controllers
 
-    // Document Delete
-    if (e.target.closest('.delete-document')) {
-        e.preventDefault();
-        const link = e.target.closest('.delete-document');
-        const id = link.dataset.id;
-        const title = link.dataset.title;
-
-        confirmDelete('document "' + title + '"', function() {
-            window.location.href = getProjectUrl('vlr/documents/' + id);
-        });
-    }
-
-    // External Content Delete
-    if (e.target.closest('.delete-external')) {
-        e.preventDefault();
-        const link = e.target.closest('.delete-external');
-        const id = link.dataset.id;
-        const title = link.dataset.title;
-
-        confirmDelete('external content "' + title + '"', function() {
-            window.location.href = getProjectUrl('vlr/external/' + id);
-        });
-    }
-
-    // Survey Delete
-    if (e.target.closest('.delete-survey')) {
-        e.preventDefault();
-        const link = e.target.closest('.delete-survey');
-        const id = link.dataset.id;
-        const title = link.dataset.title;
-
-        confirmDelete('survey "' + title + '"', function() {
-            window.location.href = getProjectUrl('surveys/' + id);
-        });
-    }
-
-    // Interactive Content Delete
-    if (e.target.closest('.delete-interactive')) {
-        e.preventDefault();
-        const link = e.target.closest('.delete-interactive');
-        const id = link.dataset.id;
-        const title = link.dataset.title;
-
-        confirmDelete('interactive content "' + title + '"', function() {
-            window.location.href = getProjectUrl('vlr/interactive/' + id);
-        });
-    }
-});
+// If you need to add custom delete behavior, use the confirmation system:
+// confirmDelete('Item name', function() { /* custom logic */ });
 
