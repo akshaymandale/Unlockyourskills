@@ -265,6 +265,12 @@ Router::get('/users/autocomplete', 'UserManagementController@getUserEmailsForAut
     Router::post('/scorm/complete', 'SCORMController@complete');
     Router::get('/scorm/resume', 'SCORMController@getResume');
     
+    // Module Progress API
+    Router::get('/module-progress', 'MyCoursesController@getModuleProgress');
+    
+    // Debug route for testing
+    Router::get('/api/debug', 'MyCoursesController@debug');
+
     // External Content
     Router::get('/vlr/external', 'VLRController@externalIndex');
     Router::post('/vlr/external', 'VLRController@addOrEditExternalContent');

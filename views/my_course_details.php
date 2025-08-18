@@ -47,6 +47,206 @@
         color: #0c5460;
         border-left: 4px solid #17a2b8;
     }
+    
+    .progress-bar.animate {
+        animation: progressPulse 1s ease-in-out;
+    }
+    
+    /* Toast Notification Styles */
+    .toast-notification {
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        background: white;
+        border-radius: 8px;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+        padding: 16px 20px;
+        z-index: 10000;
+        transform: translateX(100%);
+        transition: transform 0.3s ease;
+        border-left: 4px solid #007bff;
+        max-width: 350px;
+    }
+    
+    .toast-notification.show {
+        transform: translateX(0);
+    }
+    
+    .toast-notification.toast-success {
+        border-left-color: #28a745;
+    }
+    
+    .toast-notification.toast-error {
+        border-left-color: #dc3545;
+    }
+    
+    .toast-notification.toast-warning {
+        border-left-color: #ffc107;
+    }
+    
+    .toast-notification.toast-info {
+        border-left-color: #17a2b8;
+    }
+    
+    .toast-content {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+    }
+    
+    .toast-content i {
+        font-size: 1.2rem;
+    }
+    
+    .toast-content i.fa-check-circle {
+        color: #28a745;
+    }
+    
+    .toast-content i.fa-exclamation-circle {
+        color: #dc3545;
+    }
+    
+    .toast-content i.fa-info-circle {
+        color: #17a2b8;
+    }
+    
+    .toast-content span {
+        font-weight: 500;
+        color: #495057;
+    }
+    
+    /* SCORM Progress Status Styles */
+    .scorm-progress-status {
+        padding: 8px 12px;
+        border-radius: 6px;
+        background: #f8f9fa;
+        border-left: 3px solid #dee2e6;
+    }
+    
+    .scorm-progress-status .text-success {
+        color: #198754 !important;
+        font-weight: 500;
+    }
+    
+    .scorm-progress-status .text-warning {
+        color: #fd7e14 !important;
+        font-weight: 500;
+    }
+    
+    .scorm-progress-status .text-muted {
+        color: #6c757d !important;
+    }
+    
+    .scorm-completed-badge {
+        margin-top: 8px;
+    }
+    
+    .scorm-completed-badge .badge {
+        font-size: 0.875rem;
+        padding: 6px 12px;
+    }
+    
+    .scorm-progress-status small {
+        font-size: 0.75rem;
+    }
+    
+    /* Enhanced Progress Bar Styles */
+    .module-progress-section {
+        margin: 15px 0;
+    }
+    
+    .progress-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 8px;
+    }
+    
+    .progress-text {
+        font-weight: 600;
+        color: #495057;
+        font-size: 0.9rem;
+    }
+    
+    .refresh-progress-btn {
+        padding: 4px 8px;
+        font-size: 0.75rem;
+        border-radius: 4px;
+        transition: all 0.2s ease;
+    }
+    
+    .refresh-progress-btn:hover {
+        transform: scale(1.05);
+    }
+    
+    .refresh-progress-btn:active {
+        transform: scale(0.95);
+    }
+    
+    .progress {
+        height: 8px;
+        border-radius: 4px;
+        background-color: #e9ecef;
+        overflow: hidden;
+        box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.1);
+    }
+    
+    .progress-bar {
+        transition: width 0.6s ease;
+        border-radius: 4px;
+    }
+    
+    .progress-bar.bg-success {
+        background: linear-gradient(45deg, #28a745, #20c997);
+    }
+    
+    .progress-bar.bg-primary {
+        background: linear-gradient(45deg, #007bff, #0056b3);
+    }
+    
+    .progress-bar.bg-secondary {
+        background: linear-gradient(45deg, #6c757d, #495057);
+    }
+    
+    /* Content Progress Styles */
+    .content-progress {
+        min-width: 120px;
+    }
+    
+    .content-progress-info {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 4px;
+    }
+    
+    .content-progress-text {
+        font-size: 0.8rem;
+        font-weight: 600;
+        color: #495057;
+    }
+    
+    .content-progress-bar {
+        width: 100%;
+        height: 6px;
+        background-color: #e9ecef;
+        border-radius: 3px;
+        overflow: hidden;
+    }
+    
+    .content-progress-fill {
+        height: 100%;
+        background: linear-gradient(45deg, #007bff, #0056b3);
+        border-radius: 3px;
+        transition: width 0.4s ease;
+    }
+    
+    /* Progress Animation */
+    @keyframes progressPulse {
+        0% { opacity: 1; }
+        50% { opacity: 0.7; }
+        100% { opacity: 1; }
+    }
 </style>
 
 <div class="main-content">
@@ -169,7 +369,8 @@
                             'max_score' => 100,
                             'session_time' => '',
                             'last_updated' => '',
-                            'has_progress' => false
+                            'has_progress' => false,
+                            'progress_percentage' => 0
                         ];
                     }
                     
@@ -183,7 +384,7 @@
                     
                     // Query SCORM progress
                     $stmt = $db->prepare("
-                        SELECT lesson_status, lesson_location, score_raw, score_max, session_time, updated_at 
+                        SELECT lesson_status, lesson_location, score_raw, score_max, session_time, updated_at, suspend_data 
                         FROM scorm_progress 
                         WHERE course_id = ? AND content_id = ? AND user_id = ?
                     ");
@@ -191,14 +392,32 @@
                     $progress = $stmt->fetch(PDO::FETCH_ASSOC);
                     
                     if ($progress) {
+                        // Calculate progress percentage based on SCORM data
+                        $progressPercentage = 0;
+                        $status = $progress['lesson_status'] ?? 'incomplete';
+                        
+                        if ($status === 'completed') {
+                            $progressPercentage = 100;
+                        } elseif ($status === 'incomplete') {
+                            // Calculate progress based on lesson_location and suspend_data
+                            if (!empty($progress['lesson_location'])) {
+                                $progressPercentage = 75; // Has location data - user has navigated
+                            } elseif (!empty($progress['suspend_data'])) {
+                                $progressPercentage = 50; // Has suspend data - user has interacted
+                            } else {
+                                $progressPercentage = 25; // Just started
+                            }
+                        }
+                        
                         return [
-                            'status' => $progress['lesson_status'] ?? 'incomplete',
+                            'status' => $status,
                             'location' => $progress['lesson_location'] ?? '',
                             'score' => $progress['score_raw'] ?? 0,
                             'max_score' => $progress['score_max'] ?? 100,
                             'session_time' => $progress['session_time'] ?? '',
                             'last_updated' => $progress['updated_at'] ?? '',
-                            'has_progress' => true
+                            'has_progress' => true,
+                            'progress_percentage' => $progressPercentage
                         ];
                     } else {
                         return [
@@ -208,7 +427,8 @@
                             'max_score' => 100,
                             'session_time' => '',
                             'last_updated' => '',
-                            'has_progress' => false
+                            'has_progress' => false,
+                            'progress_percentage' => 0
                         ];
                     }
                 } catch (Exception $e) {
@@ -223,7 +443,8 @@
                         'max_score' => 100,
                         'session_time' => '',
                         'last_updated' => '',
-                        'has_progress' => false
+                        'has_progress' => false,
+                        'progress_percentage' => 0
                     ];
                 }
             }
@@ -615,35 +836,57 @@
             </div>
             
             <?php if (!empty($course['modules'])): ?>
-                <div class="course-modules-container">
+                <div class="course-modules-container" data-course-id="<?= $course['id'] ?>">
                     <?php foreach ($course['modules'] as $idx => $module): ?>
-                        <div class="module-card mb-3">
+                        <div class="module-item" data-module-id="<?= $module['id'] ?>">
                             <div class="module-header" data-bs-toggle="collapse" data-bs-target="#collapse<?= $idx ?>" aria-expanded="false" aria-controls="collapse<?= $idx ?>">
                                 <div class="module-header-content">
-                                    <div class="module-info">
-                                        <div class="module-icon-wrapper me-3">
-                                            <i class="fas fa-folder text-white"></i>
-                                        </div>
-                                        <div class="module-details">
-                                            <div class="module-number">Module <?= ($idx + 1) ?></div>
-                                            <h6 class="module-title mb-1" 
-                                                data-bs-toggle="tooltip" 
-                                                data-bs-placement="top" 
-                                                title="<?= htmlspecialchars($module['title']) ?>">
-                                                <?= htmlspecialchars($module['title']) ?>
-                                            </h6>
-                                        </div>
-                                    </div>
-                                    <div class="module-progress-section">
-                                        <div class="progress-info">
-                                            <span class="progress-text"><?= intval($module['module_progress'] ?? 0) ?>% Complete</span>
-                                            <div class="progress" role="progressbar" aria-label="Module progress" aria-valuenow="<?= intval($module['module_progress'] ?? 0) ?>" aria-valuemin="0" aria-valuemax="100">
-                                                <div class="progress-bar" style="width: <?= intval($module['module_progress'] ?? 0) ?>%"></div>
+                                    <div class="module-header-left">
+                                        <div class="module-info">
+                                            <div class="module-icon-wrapper me-3">
+                                                <i class="fas fa-folder text-white"></i>
+                                            </div>
+                                            <div class="module-details">
+                                                <div class="module-number">Module <?= ($idx + 1) ?></div>
+                                                <h6 class="module-title mb-1" 
+                                                    data-bs-toggle="tooltip" 
+                                                    data-bs-placement="top" 
+                                                    title="<?= htmlspecialchars($module['title']) ?>">
+                                                    <?= htmlspecialchars($module['title']) ?>
+                                                </h6>
                                             </div>
                                         </div>
                                     </div>
-                                    <div class="module-toggle">
-                                        <i class="fas fa-chevron-down"></i>
+                                    <div class="module-header-center">
+                                        <div class="module-progress-section">
+                                            <div class="progress-info">
+                                                <div class="progress-text">
+                                                    <?php 
+                                                    $realProgress = intval($module['real_progress'] ?? $module['module_progress'] ?? 0);
+                                                    $completedItems = intval($module['completed_items'] ?? 0);
+                                                    $totalItems = intval($module['total_items'] ?? 0);
+                                                    echo $realProgress . '% Complete';
+                                                    if ($totalItems > 0) {
+                                                        echo ' (' . $completedItems . '/' . $totalItems . ')';
+                                                    }
+                                                    ?>
+                                                </div>
+                                                <div class="progress" role="progressbar" aria-label="Module progress" aria-valuenow="<?= $realProgress ?>" aria-valuemin="0" aria-valuemax="100">
+                                                    <div class="progress-bar <?= $realProgress >= 100 ? 'bg-success' : ($realProgress > 0 ? 'bg-primary' : 'bg-secondary') ?>" 
+                                                         style="width: <?= $realProgress ?>%"></div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="module-header-actions">
+                                        <button class="btn btn-sm btn-outline-primary refresh-progress-btn" 
+                                                onclick="refreshModuleProgressSimple(<?= $module['id'] ?>, <?= $GLOBALS['course']['id'] ?>)"
+                                                title="Refresh progress">
+                                            <i class="fas fa-sync-alt"></i>
+                                        </button>
+                                        <div class="module-toggle">
+                                            <i class="fas fa-chevron-down"></i>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
@@ -714,61 +957,60 @@
                                                 <div class="content-item-center">
                                                     <div class="content-progress">
                                                         <div class="content-progress-info">
-                                                            <span class="content-progress-text"><?= intval($content['progress'] ?? 0) ?>%</span>
-                                                            <div class="content-progress-bar" role="progressbar" aria-label="Content progress" aria-valuenow="<?= intval($content['progress'] ?? 0) ?>" aria-valuemin="0" aria-valuemax="100">
-                                                                <div class="content-progress-fill" style="width: <?= intval($content['progress'] ?? 0) ?>%"></div>
+                                                            <?php
+                                                            // Calculate progress for SCORM content from scorm_progress table
+                                                            $progressPercentage = 0;
+                                                            if ($content['type'] === 'scorm') {
+                                                                $scormProgress = getScormProgressStatus($GLOBALS['course']['id'], $content['id'], $_SESSION['user']['id']);
+                                                                $progressPercentage = $scormProgress['progress_percentage'];
+                                                            } else {
+                                                                $progressPercentage = intval($content['progress'] ?? 0);
+                                                            }
+                                                            ?>
+                                                            <span class="content-progress-text"><?= $progressPercentage ?>%</span>
+                                                            <div class="content-progress-bar" role="progressbar" aria-label="Content progress" aria-valuenow="<?= $progressPercentage ?>" aria-valuemin="0" aria-valuemax="100">
+                                                                <div class="content-progress-fill" style="width: <?= $progressPercentage ?>%"></div>
                                                             </div>
                                                         </div>
                                                     </div>
                                                 </div>
                                                 <div class="content-item-right">
                                                     <div class="content-controls">
-                                                        <div class="content-actions">
                                                         <?php
+                                                            // Normalize output into status and actions for alignment
+                                                            $statusHtml = '';
+                                                            $actionsHtml = '';
                                                             switch ($content['type']) {
                                                                 case 'scorm':
                                                                     $launchUrl = $content['scorm_launch_path'] ?? '';
                                                                     if ($launchUrl) {
-                                                                        // Get SCORM progress status
                                                                         $scormProgress = getScormProgressStatus($GLOBALS['course']['id'], $content['id'], $_SESSION['user']['id']);
-                                                                        
-                                                                        // Show progress status
-                                                                        echo "<div class='scorm-progress-status mb-2'>";
+                                                                        // Build status
+                                                                        $statusHtml .= "<div class='scorm-progress-status mb-2'>";
                                                                         if ($scormProgress['has_progress']) {
                                                                             $statusClass = $scormProgress['status'] === 'completed' ? 'text-success' : 'text-warning';
                                                                             $statusIcon = $scormProgress['status'] === 'completed' ? 'fa-check-circle' : 'fa-clock';
-                                                                            echo "<div class='{$statusClass}'>";
-                                                                            echo "<i class='fas {$statusIcon} me-1'></i>";
-                                                                            echo ucfirst($scormProgress['status']);
-                                                                            if ($scormProgress['score'] > 0) {
-                                                                                echo " - Score: {$scormProgress['score']}/{$scormProgress['max_score']}";
+                                                                            $statusHtml .= "<div class='{$statusClass}'><i class='fas {$statusIcon} me-1'></i>" . ucfirst($scormProgress['status']);
+                                                                            if (!empty($scormProgress['score'])) {
+                                                                                $statusHtml .= " - Score: {$scormProgress['score']}/{$scormProgress['max_score']}";
                                                                             }
-                                                                            if ($scormProgress['last_updated']) {
-                                                                                echo " <small class='text-muted'>(Last: " . date('M j, Y', strtotime($scormProgress['last_updated'])) . ")</small>";
+                                                                            if (!empty($scormProgress['last_updated'])) {
+                                                                                $statusHtml .= " <small class='text-muted'>(Last: " . date('M j, Y', strtotime($scormProgress['last_updated'])) . ")</small>";
                                                                             }
-                                                                            echo "</div>";
+                                                                            $statusHtml .= "</div>";
                                                                         } else {
-                                                                            echo "<div class='text-muted'><i class='fas fa-circle me-1'></i>Not started</div>";
+                                                                            $statusHtml .= "<div class='text-muted'><i class='fas fa-circle me-1'></i>Not started</div>";
                                                                         }
-                                                                        echo "</div>";
-                                                                        
-                                                                        // Show launch button only if not completed
+                                                                        $statusHtml .= "</div>";
+                                                                        // Actions
                                                                         if ($scormProgress['status'] !== 'completed') {
                                                                             $scormLauncherUrl = UrlHelper::url('scorm/launch') . '?course_id=' . $GLOBALS['course']['id'] . '&module_id=' . $module['id'] . '&content_id=' . $content['id'] . '&title=' . urlencode($content['title']);
-                                                                            echo "<a href='" . htmlspecialchars($scormLauncherUrl) . "' target='_blank' class='postrequisite-action-btn btn-secondary launch-content-btn' 
-                                                                                 data-module-id='" . $module['id'] . "' 
-                                                                                 data-content-id='" . $content['id'] . "' 
-                                                                                 data-type='scorm'
-                                                                                 onclick='launchNewSCORMPlayer(event, " . $GLOBALS['course']['id'] . ", " . $module['id'] . ", " . $content['id'] . ", \"" . addslashes($content['title']) . "\")'>";
-                                                                            echo "<i class='fas fa-cube me-1'></i>Launch SCORM";
-                                                                            echo "</a>";
+                                                                            $actionsHtml .= "<a href='" . htmlspecialchars($scormLauncherUrl) . "' target='_blank' class='postrequisite-action-btn btn-secondary launch-content-btn' data-module-id='" . $module['id'] . "' data-content-id='" . $content['id'] . "' data-type='scorm' onclick='launchNewSCORMPlayer(event, " . $GLOBALS['course']['id'] . ", " . $module['id'] . ", " . $content['id'] . ", \"" . addslashes($content['title']) . "\")'><i class='fas fa-cube me-1'></i>Launch</a>";
                                                                         } else {
-                                                                            echo "<div class='scorm-completed-badge'>";
-                                                                            echo "<span class='badge bg-success'><i class='fas fa-check-circle me-1'></i>SCORM Completed</span>";
-                                                                            echo "</div>";
+                                                                            $statusHtml .= "<div class='scorm-completed-badge'><span class='badge bg-success'><i class='fas fa-check-circle me-1'></i>SCORM Completed</span></div>";
                                                                         }
                                                                     } else {
-                                                                        echo "<span class='content-error'><i class='fas fa-exclamation-triangle me-1'></i>No SCORM launch path</span>";
+                                                                        $statusHtml .= "<span class='content-error'><i class='fas fa-exclamation-triangle me-1'></i>No SCORM launch path</span>";
                                                                     }
                                                                     break;
                                                                 case 'non_scorm':
@@ -777,14 +1019,9 @@
                                                                     if ($launchUrl) {
                                                                         $resolved = resolveContentUrl($launchUrl);
                                                                         $viewer = UrlHelper::url('my-courses/view-content') . '?type=iframe&title=' . urlencode($content['title']) . '&src=' . urlencode($resolved) . '&course_id=' . $GLOBALS['course']['id'] . '&module_id=' . $module['id'] . '&content_id=' . $content['id'];
-                                                                        echo "<a href='" . htmlspecialchars($viewer) . "' target='_blank' class='postrequisite-action-btn btn-primary launch-content-btn' 
-                                                                             data-module-id='" . $module['id'] . "' 
-                                                                             data-content-id='" . $content['id'] . "' 
-                                                                             data-type='" . $type . "'>";
-                                                                        echo "<i class='fas fa-wand-magic-sparkles me-1'></i>Launch Interactive";
-                                                                        echo "</a>";
+                                                                        $actionsHtml .= "<a href='" . htmlspecialchars($viewer) . "' target='_blank' class='postrequisite-action-btn btn-primary launch-content-btn' data-module-id='" . $module['id'] . "' data-content-id='" . $content['id'] . "' data-type='" . $type . "'><i class='fas fa-wand-magic-sparkles me-1'></i>Launch Interactive</a>";
                                                                     } else {
-                                                                        echo "<span class='content-error'><i class='fas fa-exclamation-triangle me-1'></i>No launch path</span>";
+                                                                        $statusHtml .= "<span class='content-error'><i class='fas fa-exclamation-triangle me-1'></i>No launch path</span>";
                                                                     }
                                                                     break;
                                                                 case 'video':
@@ -792,25 +1029,18 @@
                                                                     if ($videoUrl) {
                                                                         $resolved = resolveContentUrl($videoUrl);
                                                                         $viewer = UrlHelper::url('my-courses/view-content') . '?type=video&title=' . urlencode($content['title']) . '&src=' . urlencode($resolved) . '&course_id=' . $GLOBALS['course']['id'] . '&module_id=' . $module['id'] . '&content_id=' . $content['id'];
-                                                                        echo "<a href='" . htmlspecialchars($viewer) . "' target='_blank' class='postrequisite-action-btn btn-danger launch-content-btn' 
-                                                                             data-module-id='" . $module['id'] . "' 
-                                                                             data-content-id='" . $content['id'] . "' 
-                                                                             data-type='video'>";
-                                                                        echo "<i class='fas fa-play me-1'></i>Watch Video";
-                                                                        echo "</a>";
+                                                                        $actionsHtml .= "<a href='" . htmlspecialchars($viewer) . "' target='_blank' class='postrequisite-action-btn btn-danger launch-content-btn' data-module-id='" . $module['id'] . "' data-content-id='" . $content['id'] . "' data-type='video'><i class='fas fa-play me-1'></i>Watch Video</a>";
                                                                     } else {
-                                                                        echo "<span class='content-error'><i class='fas fa-exclamation-triangle me-1'></i>No video file</span>";
+                                                                        $statusHtml .= "<span class='content-error'><i class='fas fa-exclamation-triangle me-1'></i>No video file</span>";
                                                                     }
                                                                     break;
                                                                 case 'audio':
                                                                     $audioUrl = $content['audio_file_path'] ?? '';
                                                                     if ($audioUrl) {
                                                                         $resolved = resolveContentUrl($audioUrl);
-                                                                        echo "<div class='audio-player-wrapper'>";
-                                                                        echo "<audio controls preload='none'><source src='" . htmlspecialchars($resolved) . "' type='audio/mpeg'></audio>";
-                                                                        echo "</div>";
+                                                                        $actionsHtml .= "<div class='audio-player-wrapper'><audio controls preload='none'><source src='" . htmlspecialchars($resolved) . "' type='audio/mpeg'></audio></div>";
                                                                     } else {
-                                                                        echo "<span class='content-error'><i class='fas fa-exclamation-triangle me-1'></i>No audio file</span>";
+                                                                        $statusHtml .= "<span class='content-error'><i class='fas fa-exclamation-triangle me-1'></i>No audio file</span>";
                                                                     }
                                                                     break;
                                                                 case 'document':
@@ -818,14 +1048,9 @@
                                                                     if ($docUrl) {
                                                                         $resolved = resolveContentUrl($docUrl);
                                                                         $viewer = UrlHelper::url('my-courses/view-content') . '?type=document&title=' . urlencode($content['title']) . '&src=' . urlencode($resolved) . '&course_id=' . $GLOBALS['course']['id'] . '&module_id=' . $module['id'] . '&content_id=' . $content['id'];
-                                                                        echo "<a href='" . htmlspecialchars($viewer) . "' target='_blank' class='postrequisite-action-btn btn-secondary launch-content-btn' 
-                                                                             data-module-id='" . $module['id'] . "' 
-                                                                             data-content-id='" . $content['id'] . "' 
-                                                                             data-type='document'>";
-                                                                        echo "<i class='fas fa-file-lines me-1'></i>View Document";
-                                                                        echo "</a>";
+                                                                        $actionsHtml .= "<a href='" . htmlspecialchars($viewer) . "' target='_blank' class='postrequisite-action-btn btn-secondary launch-content-btn' data-module-id='" . $module['id'] . "' data-content-id='" . $content['id'] . "' data-type='document'><i class='fas fa-file-lines me-1'></i>View Document</a>";
                                                                     } else {
-                                                                        echo "<span class='content-error'><i class='fas fa-exclamation-triangle me-1'></i>No document file</span>";
+                                                                        $statusHtml .= "<span class='content-error'><i class='fas fa-exclamation-triangle me-1'></i>No document file</span>";
                                                                     }
                                                                     break;
                                                                 case 'image':
@@ -833,14 +1058,9 @@
                                                                     if ($imgUrl) {
                                                                         $resolved = resolveContentUrl($imgUrl);
                                                                         $viewer = UrlHelper::url('my-courses/view-content') . '?type=image&title=' . urlencode($content['title']) . '&src=' . urlencode($resolved) . '&course_id=' . $GLOBALS['course']['id'] . '&module_id=' . $module['id'] . '&content_id=' . $content['id'];
-                                                                        echo "<a href='" . htmlspecialchars($viewer) . "' target='_blank' class='postrequisite-action-btn btn-info launch-content-btn' 
-                                                                             data-module-id='" . $module['id'] . "' 
-                                                                             data-content-id='" . $content['id'] . "' 
-                                                                             data-type='image'>";
-                                                                        echo "<i class='fas fa-image me-1'></i>View Image";
-                                                                        echo "</a>";
+                                                                        $actionsHtml .= "<a href='" . htmlspecialchars($viewer) . "' target='_blank' class='postrequisite-action-btn btn-info launch-content-btn' data-module-id='" . $module['id'] . "' data-content-id='" . $content['id'] . "' data-type='image'><i class='fas fa-image me-1'></i>View Image</a>";
                                                                     } else {
-                                                                        echo "<span class='content-error'><i class='fas fa-exclamation-triangle me-1'></i>No image file</span>";
+                                                                        $statusHtml .= "<span class='content-error'><i class='fas fa-exclamation-triangle me-1'></i>No image file</span>";
                                                                     }
                                                                     break;
                                                                 case 'external':
@@ -848,60 +1068,40 @@
                                                                     if ($extUrl) {
                                                                         $resolved = resolveContentUrl($extUrl);
                                                                         $viewer = UrlHelper::url('my-courses/view-content') . '?type=external&title=' . urlencode($content['title']) . '&src=' . urlencode($resolved) . '&course_id=' . $GLOBALS['course']['id'] . '&module_id=' . $module['id'] . '&content_id=' . $content['id'];
-                                                                        echo "<a href='" . htmlspecialchars($viewer) . "' target='_blank' class='postrequisite-action-btn btn-info launch-content-btn' 
-                                                                             data-module-id='" . $module['id'] . "' 
-                                                                             data-content-id='" . $content['id'] . "' 
-                                                                             data-type='external'>";
-                                                                        echo "<i class='fas fa-external-link-alt me-1'></i>Open Link";
-                                                                        echo "</a>";
+                                                                        $actionsHtml .= "<a href='" . htmlspecialchars($viewer) . "' target='_blank' class='postrequisite-action-btn btn-info launch-content-btn' data-module-id='" . $module['id'] . "' data-content-id='" . $content['id'] . "' data-type='external'><i class='fas fa-external-link-alt me-1'></i>Open Link</a>";
                                                                     } else {
-                                                                        echo "<span class='content-error'><i class='fas fa-exclamation-triangle me-1'></i>No external link</span>";
+                                                                        $statusHtml .= "<span class='content-error'><i class='fas fa-exclamation-triangle me-1'></i>No external link</span>";
                                                                     }
                                                                     break;
                                                                 case 'assessment':
-                                                                    // Get assessment data and results
                                                                     $assessmentId = $content['content_id'];
                                                                     $assessmentAttempts = $GLOBALS['assessmentAttempts'][$assessmentId] ?? [];
                                                                     $assessmentDetails = $GLOBALS['assessmentDetails'][$assessmentId] ?? [];
                                                                     $assessmentResults = $GLOBALS['assessmentResults'][$assessmentId] ?? null;
                                                                     $hasPassed = $assessmentResults && $assessmentResults['passed'];
-                                                                    $hasExceededAttempts = false;
-                                                                    
-                                                                    // Get max attempts from assessment details
                                                                     $maxAttempts = $assessmentDetails['num_attempts'] ?? 3;
                                                                     $attemptCount = count($assessmentAttempts);
                                                                     $hasExceededAttempts = $attemptCount >= $maxAttempts;
-                                                                    
-                                                                    // Show pass/fail status
+                                                                    // Status
                                                                     if ($assessmentResults) {
                                                                         $statusClass = $hasPassed ? 'text-success' : 'text-danger';
                                                                         $statusIcon = $hasPassed ? 'fa-check-circle' : 'fa-times-circle';
                                                                         $statusText = $hasPassed ? 'Passed' : 'Failed';
-                                                                        echo "<div class='assessment-status mb-2'>";
-                                                                        echo "<span class='{$statusClass}'><i class='fas {$statusIcon} me-1'></i>{$statusText}</span>";
+                                                                        $statusHtml .= "<div class='assessment-status mb-2'><span class='{$statusClass}'><i class='fas {$statusIcon} me-1'></i>{$statusText}</span>";
                                                                         if ($hasPassed) {
-                                                                            echo "<small class='text-muted ms-2'>(Score: {$assessmentResults['score']}/{$assessmentResults['max_score']} - {$assessmentResults['percentage']}%)</small>";
+                                                                            $statusHtml .= "<small class='text-muted ms-2'>(Score: {$assessmentResults['score']}/{$assessmentResults['max_score']} - {$assessmentResults['percentage']}%)</small>";
                                                                         }
-                                                                        echo "</div>";
+                                                                        $statusHtml .= "</div>";
                                                                     }
-                                                                    
+                                                                    // Actions
                                                                     if ($hasPassed) {
-                                                                        // Assessment passed - disable start button
-                                                                        echo "<button class='prerequisite-action-btn prerequisite-action-disabled' disabled title='Assessment completed successfully'>";
-                                                                        echo "<i class='fas fa-check me-1'></i>Completed";
-                                                                        echo "</button>";
+                                                                        $actionsHtml .= "<button class='prerequisite-action-btn prerequisite-action-disabled' disabled title='Assessment completed successfully'><i class='fas fa-check me-1'></i>Completed</button>";
                                                                     } elseif ($hasExceededAttempts) {
-                                                                        // Disable start button and show attempts exceeded message
-                                                                        echo "<button class='prerequisite-action-btn prerequisite-action-disabled' disabled title='Maximum attempts reached'>";
-                                                                        echo "<i class='fas fa-ban me-1'></i>Attempts Exceeded";
-                                                                        echo "</button>";
+                                                                        $actionsHtml .= "<button class='prerequisite-action-btn prerequisite-action-disabled' disabled title='Maximum attempts reached'><i class='fas fa-ban me-1'></i>Attempts Exceeded</button>";
                                                                     } else {
-                                                                        // Show start button with attempt count
                                                                         $encryptedId = IdEncryption::encrypt($content['content_id']);
                                                                         $startUrl = UrlHelper::url('my-courses/start') . '?type=' . urlencode($type) . '&id=' . urlencode($encryptedId);
-                                                                        echo "<a href='" . htmlspecialchars($startUrl) . "' target='_blank' class='prerequisite-action-btn'>";
-                                                                        echo "<i class='fas fa-play me-1'></i>Start";
-                                                                        echo "</a>";
+                                                                        $actionsHtml .= "<a href='" . htmlspecialchars($startUrl) . "' target='_blank' class='prerequisite-action-btn'><i class='fas fa-play me-1'></i>Start</a>";
                                                                     }
                                                                     break;
                                                                 case 'survey':
@@ -909,24 +1109,20 @@
                                                                 case 'assignment':
                                                                     $encryptedId = IdEncryption::encrypt($content['content_id']);
                                                                     $startUrl = UrlHelper::url('my-courses/start') . '?type=' . urlencode($type) . '&id=' . urlencode($encryptedId);
-                                                                    echo "<a href='" . htmlspecialchars($startUrl) . "' target='_blank' class='prerequisite-action-btn'>";
-                                                                    echo "<i class='fas fa-play me-1'></i>Start";
-                                                                    echo "</a>";
+                                                                    $actionsHtml .= "<a href='" . htmlspecialchars($startUrl) . "' target='_blank' class='prerequisite-action-btn'><i class='fas fa-play me-1'></i>Start</a>";
                                                                     break;
                                                                 default:
-                                                                    echo "<span class='postrequisite-action-btn btn-secondary' style='opacity: 0.6; cursor: not-allowed;' disabled>";
-                                                                    echo "<i class='fas fa-ban me-1'></i>Not available";
-                                                                    echo "</span>";
+                                                                    $actionsHtml .= "<span class='postrequisite-action-btn btn-secondary' style='opacity: 0.6; cursor: not-allowed;' disabled><i class='fas fa-ban me-1'></i>Not available</span>";
                                                                     break;
                                                             }
+                                                            echo "<div class='content-status'>" . $statusHtml . "</div>";
+                                                            echo "<div class='content-actions'>" . $actionsHtml . "</div>";
                                                         ?>
-                                                        </div>
-                                                        <div class="content-toggle" data-bs-toggle="collapse" data-bs-target="#contentDetails<?= $idx ?>_<?= $content['id'] ?? $loop->index ?>" aria-expanded="false">
+                                                        <button type="button" class="content-toggle" data-bs-toggle="collapse" data-bs-target="#contentDetails<?= $idx ?>_<?= $content['id'] ?? $loop->index ?>" aria-expanded="false">
                                                             <i class="fas fa-chevron-down"></i>
-                                                        </div>
+                                                        </button>
                                                     </div>
-                                                    
-                                                    </div>
+                                                </div>
                                             </div>
                                             
                                             <?php if ($type === 'assessment'): ?>
@@ -1574,47 +1770,156 @@ function launchPostrequisiteSCORM(event, encryptedId, contentType) {
     return false;
 }
 
-// Add CSS for SCORM progress status
-document.addEventListener('DOMContentLoaded', function() {
-    const style = document.createElement('style');
-    style.textContent = `
-        .scorm-progress-status {
-            padding: 8px 12px;
-            border-radius: 6px;
-            background: #f8f9fa;
-            border-left: 3px solid #dee2e6;
-        }
-        
-        .scorm-progress-status .text-success {
-            color: #198754 !important;
-            font-weight: 500;
-        }
-        
-        .scorm-progress-status .text-warning {
-            color: #fd7e14 !important;
-            font-weight: 500;
-        }
-        
-        .scorm-progress-status .text-muted {
-            color: #6c757d !important;
-        }
-        
-        .scorm-completed-badge {
-            margin-top: 8px;
-        }
-        
-        .scorm-completed-badge .badge {
-            font-size: 0.875rem;
-            padding: 6px 12px;
-        }
-        
-        .scorm-progress-status small {
-            font-size: 0.75rem;
-        }
-    `;
-    document.head.appendChild(style);
+// Function to refresh module progress
+function refreshModuleProgress(moduleId, courseId) {
+    const refreshBtn = event.target.closest('.refresh-progress-btn');
+    const progressSection = refreshBtn.closest('.module-progress-section');
     
-    // Check if we're returning from SCORM launcher (URL parameter)
+    // Show loading state
+    refreshBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+    refreshBtn.disabled = true;
+    
+    // Make AJAX request to get updated progress
+    fetch(`/Unlockyourskills/module-progress?module_id=${moduleId}&course_id=${courseId}`, {
+        method: 'GET',
+        credentials: 'include',
+        headers: {
+            'Content-Type': 'application/json',
+        }
+    })
+    .then(response => {
+        console.log('Response status:', response.status);
+        console.log('Response headers:', response.headers);
+        return response.text(); // Get response as text first to debug
+    })
+    .then(text => {
+        console.log('Raw response:', text);
+        
+        // Try to parse as JSON
+        try {
+            const data = JSON.parse(text);
+            return data;
+        } catch (e) {
+            console.error('Failed to parse JSON response:', e);
+            console.error('Response was:', text);
+            throw new Error('Invalid JSON response from server');
+        }
+    })
+    .then(data => {
+        if (data.success) {
+            // Update progress display
+            updateModuleProgressDisplay(progressSection, data.data);
+            
+            // Show success animation
+            const progressBar = progressSection.querySelector('.progress-bar');
+            progressBar.classList.add('animate');
+            setTimeout(() => progressBar.classList.remove('animate'), 1000);
+            
+            console.log('Module progress updated successfully:', data.data);
+        } else {
+            console.error('Failed to update module progress:', data.error);
+            showToast('Failed to refresh progress', 'error');
+        }
+    })
+    .catch(error => {
+        console.error('Error refreshing module progress:', error);
+        showToast('Error refreshing progress', 'error');
+    })
+    .finally(() => {
+        // Restore button state
+        refreshBtn.innerHTML = '<i class="fas fa-sync-alt"></i>';
+        refreshBtn.disabled = false;
+    });
+}
+
+// Simple refresh function that reloads the page
+function refreshModuleProgressSimple(moduleId, courseId) {
+    const refreshBtn = event.target.closest('.refresh-progress-btn');
+    
+    // Show loading state
+    refreshBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+    refreshBtn.disabled = true;
+    
+    // Show toast notification
+    showToast('Refreshing progress...', 'info');
+    
+    // Reload the page after a short delay to show updated progress
+    setTimeout(() => {
+        window.location.reload();
+    }, 1000);
+}
+
+// Function to update module progress display
+function updateModuleProgressDisplay(progressSection, progressData) {
+    const progressText = progressSection.querySelector('.progress-text');
+    const progressBar = progressSection.querySelector('.progress-bar');
+    const progressValue = progressSection.querySelector('[aria-valuenow]');
+    
+    // Update progress text
+    const completedItems = progressData.completed_items || 0;
+    const totalItems = progressData.total_items || 0;
+    const progressPercentage = progressData.progress_percentage || 0;
+    
+    progressText.innerHTML = `${progressPercentage}% Complete${totalItems > 0 ? ` (${completedItems}/${totalItems})` : ''}`;
+    
+    // Update progress bar
+    progressBar.style.width = `${progressPercentage}%`;
+    progressValue.setAttribute('aria-valuenow', progressPercentage);
+    
+    // Update progress bar color class
+    progressBar.className = 'progress-bar';
+    if (progressPercentage >= 100) {
+        progressBar.classList.add('bg-success');
+    } else if (progressPercentage > 0) {
+        progressBar.classList.add('bg-primary');
+    } else {
+        progressBar.classList.add('bg-secondary');
+    }
+}
+
+// Function to show toast notifications
+function showToast(message, type = 'info') {
+    // Create toast element
+    const toast = document.createElement('div');
+    toast.className = `toast-notification toast-${type}`;
+    toast.innerHTML = `
+        <div class="toast-content">
+            <i class="fas fa-${type === 'success' ? 'check-circle' : type === 'error' ? 'exclamation-circle' : 'info-circle'}"></i>
+            <span>${message}</span>
+        </div>
+    `;
+    
+    // Add to page
+    document.body.appendChild(toast);
+    
+    // Show toast
+    setTimeout(() => toast.classList.add('show'), 100);
+    
+    // Remove toast after 3 seconds
+    setTimeout(() => {
+        toast.classList.remove('show');
+        setTimeout(() => document.body.removeChild(toast), 300);
+    }, 3000);
+}
+
+// Auto-refresh progress every 30 seconds for active modules
+setInterval(() => {
+    const activeModules = document.querySelectorAll('.module-progress-section');
+    activeModules.forEach(moduleSection => {
+        const progressBar = moduleSection.querySelector('.progress-bar');
+        const progressPercentage = parseInt(moduleSection.querySelector('[aria-valuenow]').getAttribute('aria-valuenow'));
+        
+        // Only auto-refresh if progress is not 100% (not completed)
+        if (progressPercentage < 100) {
+            // For auto-refresh, we'll just log that it's time to refresh
+            // The user can manually refresh if needed
+            console.log('Auto-refresh: Module progress is', progressPercentage + '%, user can manually refresh if needed');
+        }
+    });
+}, 30000); // 30 seconds
+
+// Check if we're returning from SCORM launcher (URL parameter)
+document.addEventListener('DOMContentLoaded', function() {
     const urlParams = new URLSearchParams(window.location.search);
     if (urlParams.get('scorm_return') === 'true') {
         // Check if we've already refreshed to prevent infinite loops
