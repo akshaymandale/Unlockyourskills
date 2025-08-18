@@ -78,8 +78,17 @@ class MyCoursesController {
             
             // Check attempts for each assessment in modules
             if (!empty($course['modules'])) {
-                foreach ($course['modules'] as $module) {
+                foreach ($course['modules'] as &$module) {
                     if (!empty($module['content'])) {
+                        // Calculate real-time module progress
+                        $moduleProgress = $courseModel->getModuleContentProgress($module['id'], $userId, $clientId);
+                        $module['real_progress'] = $moduleProgress['progress_percentage'];
+                        $module['completed_items'] = $moduleProgress['completed_items'];
+                        $module['total_items'] = $moduleProgress['total_items'];
+                        
+                        // Update content with progress information
+                        $module['content'] = $moduleProgress['content_progress'];
+                        
                         foreach ($module['content'] as $content) {
                             if ($content['content_type'] === 'assessment') {
                                 $assessmentId = $content['content_id'];
@@ -141,6 +150,82 @@ class MyCoursesController {
         $GLOBALS['course'] = $course;
         
         require 'views/my_course_details.php';
+    }
+
+    // API endpoint for module progress
+    public function getModuleProgress() {
+        if (!isset($_SESSION['id']) || !isset($_SESSION['user'])) {
+            http_response_code(401);
+            echo json_encode(['success' => false, 'error' => 'Unauthorized']);
+            exit;
+        }
+
+        $userId = $_SESSION['user']['id'];
+        $clientId = $_SESSION['user']['client_id'] ?? null;
+        
+        // Get request parameters
+        $moduleId = $_GET['module_id'] ?? null;
+        $courseId = $_GET['course_id'] ?? null;
+
+        if (!$moduleId || !$courseId) {
+            http_response_code(400);
+            echo json_encode(['success' => false, 'error' => 'Missing required parameters']);
+            exit;
+        }
+
+        try {
+            error_log("Module progress API called - Module: $moduleId, Course: $courseId, User: $userId, Client: $clientId");
+            
+            require_once 'models/CourseModel.php';
+            $courseModel = new CourseModel();
+            
+            // Get module progress data
+            $moduleProgress = $courseModel->getModuleContentProgress($moduleId, $userId, $clientId);
+            error_log("Module progress data retrieved: " . json_encode($moduleProgress));
+            
+            // Verify the module belongs to the specified course
+            $course = $courseModel->getCourseById($courseId, $clientId, $userId);
+            if (!$course) {
+                error_log("Course not found: $courseId");
+                http_response_code(404);
+                echo json_encode(['success' => false, 'error' => 'Course not found']);
+                exit;
+            }
+            
+            // Check if module exists in this course
+            $moduleExists = false;
+            foreach ($course['modules'] ?? [] as $module) {
+                if ($module['id'] == $moduleId) {
+                    $moduleExists = true;
+                    break;
+                }
+            }
+            
+            if (!$moduleExists) {
+                error_log("Module $moduleId not found in course $courseId");
+                http_response_code(404);
+                echo json_encode(['success' => false, 'error' => 'Module not found in course']);
+                exit;
+            }
+            
+            error_log("Module progress API success - returning data");
+            
+            // Return success response
+            echo json_encode([
+                'success' => true,
+                'data' => $moduleProgress,
+                'timestamp' => date('Y-m-d H:i:s')
+            ]);
+            
+        } catch (Exception $e) {
+            error_log("Module progress API error: " . $e->getMessage());
+            http_response_code(500);
+            echo json_encode([
+                'success' => false, 
+                'error' => 'Internal server error',
+                'debug' => $e->getMessage()
+            ]);
+        }
     }
 
     // Standard content viewer in a new tab (iframe page)
@@ -265,6 +350,20 @@ class MyCoursesController {
         $activity = $payload;
         require 'views/activity_player.php';
         error_log("=== activity_player.php loaded successfully ===");
+    }
+
+    // Debug method for testing API routing
+    public function debug() {
+        echo json_encode([
+            'success' => true,
+            'message' => 'Debug route working',
+            'session' => [
+                'user_id' => $_SESSION['user']['id'] ?? 'not_set',
+                'client_id' => $_SESSION['user']['client_id'] ?? 'not_set',
+                'session_id' => session_id()
+            ],
+            'timestamp' => date('Y-m-d H:i:s')
+        ]);
     }
 
     private function normalizeEmbedUrl($url, $type) {

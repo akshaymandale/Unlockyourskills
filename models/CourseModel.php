@@ -1475,4 +1475,179 @@ class CourseModel
         
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
+
+    // Calculate real-time module progress
+    public function getModuleProgress($moduleId, $userId)
+    {
+        $sql = "SELECT 
+                    cm.id as module_id,
+                    cm.title as module_title,
+                    cm.estimated_duration,
+                    COALESCE(mp.completion_percentage, 0) as completion_percentage,
+                    COALESCE(mp.status, 'not_started') as status,
+                    COALESCE(mp.completion_time, 0) as completion_time
+                FROM course_modules cm
+                LEFT JOIN course_enrollments ce ON ce.course_id = cm.course_id AND ce.user_id = :user_id
+                LEFT JOIN module_progress mp ON mp.module_id = cm.id AND mp.enrollment_id = ce.id
+                WHERE cm.id = :module_id AND (cm.deleted_at IS NULL OR cm.deleted_at = '0000-00-00 00:00:00')";
+        
+        $stmt = $this->conn->prepare($sql);
+        $stmt->execute([':user_id' => $userId, ':module_id' => $moduleId]);
+        return $stmt->fetch(PDO::FETCH_ASSOC);
+    }
+    
+    // Calculate content completion progress for a module
+    public function getModuleContentProgress($moduleId, $userId, $clientId = null)
+    {
+        // Get all content items in the module
+        $contentItems = $this->getModuleContent($moduleId);
+        $totalItems = count($contentItems);
+        $completedItems = 0;
+        $totalProgress = 0;
+        
+        if ($totalItems === 0) {
+            return [
+                'total_items' => 0,
+                'completed_items' => 0,
+                'progress_percentage' => 0,
+                'content_progress' => []
+            ];
+        }
+        
+        foreach ($contentItems as &$content) {
+            $contentId = $content['content_id'];
+            $contentType = $content['content_type'];
+            $progress = 0;
+            $status = 'not_started';
+            
+            // Calculate progress based on content type
+            switch ($contentType) {
+                case 'assessment':
+                    $progress = $this->getAssessmentProgress($contentId, $userId, $clientId);
+                    break;
+                case 'scorm':
+                    $progress = $this->getScormProgress($contentId, $userId, $clientId);
+                    break;
+                case 'video':
+                case 'audio':
+                case 'document':
+                case 'image':
+                case 'interactive':
+                case 'non_scorm':
+                case 'external':
+                    $progress = $this->getContentProgress($contentId, $userId, $clientId);
+                    break;
+                default:
+                    $progress = 0;
+            }
+            
+            // Determine if content is completed (progress >= 100%)
+            if ($progress >= 100) {
+                $completedItems++;
+                $status = 'completed';
+            } elseif ($progress > 0) {
+                $status = 'in_progress';
+            }
+            
+            $content['progress'] = $progress;
+            $content['status'] = $status;
+            $totalProgress += $progress;
+        }
+        
+        $overallProgress = $totalItems > 0 ? round($totalProgress / $totalItems) : 0;
+        
+        return [
+            'total_items' => $totalItems,
+            'completed_items' => $completedItems,
+            'progress_percentage' => $overallProgress,
+            'content_progress' => $contentItems
+        ];
+    }
+    
+    // Get assessment progress
+    private function getAssessmentProgress($assessmentId, $userId, $clientId)
+    {
+        try {
+            require_once 'models/AssessmentPlayerModel.php';
+            $assessmentModel = new AssessmentPlayerModel();
+            $results = $assessmentModel->getUserAssessmentResults($assessmentId, $userId, $clientId);
+            
+            if ($results && isset($results['passed'])) {
+                return $results['passed'] ? 100 : 0;
+            }
+            
+            // Check if user has attempted the assessment
+            $attempts = $assessmentModel->getUserCompletedAssessmentAttempts($assessmentId, $userId, $clientId);
+            return !empty($attempts) ? 50 : 0; // 50% if attempted but not completed
+        } catch (Exception $e) {
+            error_log("Error getting assessment progress: " . $e->getMessage());
+            return 0;
+        }
+    }
+    
+    // Get SCORM progress
+    private function getScormProgress($contentId, $userId, $clientId)
+    {
+        try {
+            $sql = "SELECT lesson_status, lesson_location, score_raw, score_max 
+                    FROM scorm_progress 
+                    WHERE content_id = ? AND user_id = ? AND client_id = ?";
+            $stmt = $this->conn->prepare($sql);
+            $stmt->execute([$contentId, $userId, $clientId]);
+            $progress = $stmt->fetch(PDO::FETCH_ASSOC);
+            
+            if ($progress) {
+                if ($progress['lesson_status'] === 'completed') {
+                    return 100;
+                } elseif ($progress['lesson_status'] === 'incomplete' && !empty($progress['lesson_location'])) {
+                    return 75; // In progress
+                } elseif (!empty($progress['lesson_location'])) {
+                    return 50; // Started
+                }
+            }
+            return 0;
+        } catch (Exception $e) {
+            error_log("Error getting SCORM progress: " . $e->getMessage());
+            return 0;
+        }
+    }
+    
+    // Get general content progress
+    private function getContentProgress($contentId, $userId, $clientId)
+    {
+        try {
+            // Check if user has accessed this content
+            $sql = "SELECT status, progress_percentage 
+                    FROM content_progress 
+                    WHERE content_id = ? AND user_id = ? AND client_id = ?";
+            $stmt = $this->conn->prepare($sql);
+            $stmt->execute([$contentId, $userId, $clientId]);
+            $progress = $stmt->fetch(PDO::FETCH_ASSOC);
+            
+            if ($progress) {
+                return intval($progress['progress_percentage'] ?? 0);
+            }
+            
+            // Check if user has started this content (for video, audio, etc.)
+            $sql = "SELECT started_at, completed_at 
+                    FROM user_content_activity 
+                    WHERE content_id = ? AND user_id = ? AND client_id = ?";
+            $stmt = $this->conn->prepare($sql);
+            $stmt->execute([$contentId, $userId, $clientId]);
+            $activity = $stmt->fetch(PDO::FETCH_ASSOC);
+            
+            if ($activity) {
+                if ($activity['completed_at']) {
+                    return 100;
+                } elseif ($activity['started_at']) {
+                    return 25; // Started but not completed
+                }
+            }
+            
+            return 0;
+        } catch (Exception $e) {
+            error_log("Error getting content progress: " . $e->getMessage());
+            return 0;
+        }
+    }
 } 
