@@ -91,6 +91,7 @@ Router::get('/users/autocomplete', 'UserManagementController@getUserEmailsForAut
     // ===================================
     Router::get('/my-courses', 'MyCoursesController@index');
     Router::get('/my-courses/list', 'MyCoursesController@getUserCourses');
+    Router::get('/my-courses/count', 'MyCoursesController@getUserCoursesCount');
     Router::get('/manage-portal', 'ManagePortalController@index');
     Router::get('/my-courses/details/{id}', 'MyCoursesController@details');
     Router::get('/my-courses/view-content', 'MyCoursesController@viewContent');
