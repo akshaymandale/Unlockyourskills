@@ -389,6 +389,13 @@ class ProgressTracker {
             }
         }
         
+        // For document content, use the document progress API instead of general progress API
+        if (contentType === 'document') {
+            console.log('📄 Document content detected in progress tracking, skipping general API call');
+            // Don't call general progress API for documents - they have their own tracker
+            return;
+        }
+        
         // Get current progress data based on content type
         const progressData = this.getCurrentProgressData(contentType);
         
@@ -574,14 +581,27 @@ class ProgressTracker {
      * Get document progress data
      */
     getDocumentProgressData() {
-        // This would need to be implemented based on the document viewer being used
-        // For now, return basic data
+        // Check if document progress tracker is available
+        if (window.documentProgressTracker && window.documentProgressTracker.isInitialized) {
+            const tracker = window.documentProgressTracker;
+            return {
+                current_page: tracker.currentPage || 1,
+                total_pages: tracker.totalPages || 1,
+                viewed_percentage: tracker.totalPages > 0 ? (tracker.pagesViewed.size / tracker.totalPages) * 100 : 0,
+                is_completed: tracker.totalPages > 0 ? (tracker.pagesViewed.size / tracker.totalPages) * 100 >= 80 : false,
+                last_viewed_at: new Date().toISOString(),
+                time_spent: tracker.timeSpent || 0
+            };
+        }
+        
+        // Fallback to basic data if tracker not available
         return {
             current_page: 1,
             total_pages: 1,
-            viewed_percentage: 100,
-            is_completed: true,
-            last_viewed_at: new Date().toISOString()
+            viewed_percentage: 0,
+            is_completed: false,
+            last_viewed_at: new Date().toISOString(),
+            time_spent: 0
         };
     }
 

@@ -341,13 +341,10 @@
                 foreach ($modules as $module) {
                     // Check if module has content and if all content is completed
                     if (!empty($module['content'])) {
-                        foreach ($module['content'] as $content) {
-                            // For now, we'll check if the module has any progress
-                            // This can be enhanced with actual completion tracking per content type
-                            $progress = intval($module['module_progress'] ?? 0);
-                            if ($progress < 100) {
-                                return false;
-                            }
+                        // Use real_progress if available, fallback to module_progress
+                        $progress = intval($module['real_progress'] ?? $module['module_progress'] ?? 0);
+                        if ($progress < 100) {
+                            return false;
                         }
                     }
                 }
@@ -449,6 +446,240 @@
                 }
             }
         }
+        
+        // Helper to get document progress status
+        if (!function_exists('getDocumentProgressStatus')) {
+            function getDocumentProgressStatus($courseId, $contentId, $userId) {
+                try {
+                    // Validate inputs
+                    if (empty($courseId) || empty($contentId) || empty($userId)) {
+                        return 0;
+                    }
+                    
+                    // Get database connection
+                    $db = new PDO(
+                        'mysql:unix_socket=/Applications/XAMPP/xamppfiles/var/mysql/mysql.sock;dbname=unlockyourskills',
+                        'root',
+                        ''
+                    );
+                    $db->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+                    
+                    // Get client_id from session
+                    $clientId = $_SESSION['user']['client_id'] ?? null;
+                    
+                    // Query document progress
+                    $sql = "SELECT viewed_percentage, is_completed, time_spent, last_viewed_at 
+                            FROM document_progress 
+                            WHERE content_id = :content_id AND user_id = :user_id AND course_id = :course_id";
+                    
+                    if ($clientId) {
+                        $sql .= " AND client_id = :client_id";
+                    }
+                    
+                    $stmt = $db->prepare($sql);
+                    $params = [
+                        ':content_id' => $contentId,
+                        ':user_id' => $userId,
+                        ':course_id' => $courseId
+                    ];
+                    
+                    if ($clientId) {
+                        $params[':client_id'] = $clientId;
+                    }
+                    
+                    $stmt->execute($params);
+                    $result = $stmt->fetch(PDO::FETCH_ASSOC);
+                    
+                    if ($result) {
+                        if ($result['is_completed']) {
+                            return 100;
+                        } else {
+                            return floatval($result['viewed_percentage']);
+                        }
+                    }
+                    
+                    return 0;
+                } catch (Exception $e) {
+                    error_log("Error getting document progress: " . $e->getMessage());
+                    return 0;
+                }
+            }
+        }
+        
+        // Helper to get document progress data (similar to SCORM)
+        if (!function_exists('getDocumentProgressData')) {
+            function getDocumentProgressData($courseId, $contentId, $userId) {
+                try {
+                    // Validate inputs
+                    if (empty($courseId) || empty($contentId) || empty($userId)) {
+                        return [
+                            'progress' => 0,
+                            'status' => ['status' => 'not_started', 'text' => 'Not Started'],
+                            'last_viewed_at' => null
+                        ];
+                    }
+                    
+                    // Get database connection
+                    $db = new PDO(
+                        'mysql:unix_socket=/Applications/XAMPP/xamppfiles/var/mysql/mysql.sock;dbname=unlockyourskills',
+                        'root',
+                        ''
+                    );
+                    $db->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+                    
+                    // Get client_id from session
+                    $clientId = $_SESSION['user']['client_id'] ?? null;
+                    
+                    // Query document progress with all needed data
+                    $sql = "SELECT status, viewed_percentage, is_completed, current_page, last_viewed_at 
+                            FROM document_progress 
+                            WHERE content_id = :content_id AND user_id = :user_id AND course_id = :course_id";
+                    
+                    if ($clientId) {
+                        $sql .= " AND client_id = :client_id";
+                    }
+                    
+                    $stmt = $db->prepare($sql);
+                    $params = [
+                        ':content_id' => $contentId,
+                        ':user_id' => $userId,
+                        ':course_id' => $courseId
+                    ];
+                    
+                    if ($clientId) {
+                        $params[':client_id'] = $clientId;
+                    }
+                    
+                    $stmt->execute($params);
+                    $result = $stmt->fetch(PDO::FETCH_ASSOC);
+                    
+                    if ($result) {
+                        // Calculate progress
+                        $progress = 0;
+                        if ($result['is_completed']) {
+                            $progress = 100;
+                        } elseif ($result['viewed_percentage'] >= 80) {
+                            $progress = 100;
+                        } elseif ($result['viewed_percentage'] > 0) {
+                            $progress = floatval($result['viewed_percentage']);
+                        } elseif ($result['current_page'] > 1) {
+                            $progress = 25;
+                        }
+                        
+                        // Get status
+                        $status = getDocumentCompletionStatus($courseId, $contentId, $userId);
+                        
+                        return [
+                            'progress' => $progress,
+                            'status' => $status,
+                            'last_viewed_at' => $result['last_viewed_at']
+                        ];
+                    }
+                    
+                    return [
+                        'progress' => 0,
+                        'status' => ['status' => 'not_started', 'text' => 'Not Started'],
+                        'last_viewed_at' => null
+                    ];
+                    
+                } catch (Exception $e) {
+                    error_log("Error getting document progress data: " . $e->getMessage());
+                    return [
+                        'progress' => 0,
+                        'status' => ['status' => 'error', 'text' => 'Error'],
+                        'last_viewed_at' => null
+                    ];
+                }
+            }
+        }
+        
+        // Helper to get document completion status
+        if (!function_exists('getDocumentCompletionStatus')) {
+            function getDocumentCompletionStatus($courseId, $contentId, $userId) {
+                try {
+                    // Validate inputs
+                    if (empty($courseId) || empty($contentId) || empty($userId)) {
+                        return ['status' => 'not_started', 'text' => 'Not Started'];
+                    }
+                    
+                    // Check if PDO is available
+                    if (!class_exists('PDO')) {
+                        error_log("PDO class not available");
+                        return ['status' => 'error', 'text' => 'Database Error'];
+                    }
+                    
+                    // Get database connection
+                    $db = new PDO(
+                        'mysql:unix_socket=/Applications/XAMPP/xamppfiles/var/mysql/mysql.sock;dbname=unlockyourskills',
+                        'root',
+                        ''
+                    );
+                    
+                    // Set error mode with fallback
+                    if (defined('PDO::ERRMODE_EXCEPTION')) {
+                        $db->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+                    }
+                    
+                    // Get client_id from session
+                    $clientId = $_SESSION['user']['client_id'] ?? null;
+                    
+                    // Simple query using status column directly
+                    $sql = "SELECT status, viewed_percentage, is_completed, current_page 
+                            FROM document_progress 
+                            WHERE content_id = :content_id AND user_id = :user_id AND course_id = :course_id";
+                    
+                    if ($clientId) {
+                        $sql .= " AND client_id = :client_id";
+                    }
+                    
+                    $stmt = $db->prepare($sql);
+                    $params = [
+                        ':content_id' => $contentId,
+                        ':user_id' => $userId,
+                        ':course_id' => $courseId
+                    ];
+                    
+                    if ($clientId) {
+                        $params[':client_id'] = $clientId;
+                    }
+                    
+                    $stmt->execute($params);
+                    $result = $stmt->fetch(PDO::FETCH_ASSOC);
+                    
+                    // Get status directly from database column
+                    if ($result && isset($result['status'])) {
+                        $status = $result['status'];
+                        $text = match($status) {
+                            'completed' => 'Completed',
+                            'in_progress' => 'In Progress',
+                            'started' => 'Started',
+                            'not_started' => 'Not Started',
+                            default => 'Unknown'
+                        };
+                        return ['status' => $status, 'text' => $text];
+                    }
+                    
+                    // Fallback for existing records without status column
+                    if ($result) {
+                        if ($result['is_completed']) {
+                            return ['status' => 'completed', 'text' => 'Completed'];
+                        } elseif ($result['viewed_percentage'] >= 80) {
+                            return ['status' => 'completed', 'text' => 'Completed'];
+                        } elseif ($result['viewed_percentage'] > 0) {
+                            return ['status' => 'in_progress', 'text' => 'In Progress'];
+                        } elseif ($result['current_page'] > 1) {
+                            return ['status' => 'started', 'text' => 'Started'];
+                        }
+                    }
+                    
+                    return ['status' => 'not_started', 'text' => 'Not Started'];
+                } catch (Exception $e) {
+                    error_log("Error getting document completion status: " . $e->getMessage());
+                    return ['status' => 'error', 'text' => 'Error'];
+                }
+            }
+        }
+        
         // Helper to pretty duration
         $durationParts = [];
         if (!empty($course['duration_hours'])) { $durationParts[] = intval($course['duration_hours']) . 'h'; }
@@ -626,9 +857,9 @@
                                         $statusIcon = $hasPassed ? 'fa-check-circle' : 'fa-times-circle';
                                         $statusText = $hasPassed ? 'Passed' : 'Failed';
                                         echo "<div class='assessment-status mb-2'>";
-                                        echo "<span class='{$statusClass}'><i class='fas {$statusIcon} me-1'></i>{$statusText}</span>";
+                                        echo "<div class='{$statusClass}'><i class='fas {$statusIcon} me-1'></i>{$statusText}</div>";
                                         if ($hasPassed) {
-                                            echo "<small class='text-muted ms-2'>(Score: {$assessmentResults['score']}/{$assessmentResults['max_score']} - {$assessmentResults['percentage']}%)</small>";
+                                            echo "<div class='text-muted mt-1'>(Score: {$assessmentResults['score']}/{$assessmentResults['max_score']} - {$assessmentResults['percentage']}%)</div>";
                                         }
                                         echo "</div>";
                                     }
@@ -803,7 +1034,7 @@
             $modulesTotalCount = count($course['modules']);
             $overallModuleProgress = 0;
             foreach ($course['modules'] as $module) {
-                $progress = intval($module['module_progress'] ?? 0);
+                $progress = intval($module['real_progress'] ?? $module['module_progress'] ?? 0);
                 $overallModuleProgress += $progress;
                 if ($progress >= 100) {
                     $modulesCompletedCount++;
@@ -958,19 +1189,26 @@
                                                     <div class="content-progress">
                                                         <div class="content-progress-info">
                                                             <?php
-                                                            // Calculate progress for SCORM content from scorm_progress table
+                                                            // Calculate progress for different content types
                                                             $progressPercentage = 0;
                                                             if ($content['type'] === 'scorm') {
                                                                 $scormProgress = getScormProgressStatus($GLOBALS['course']['id'], $content['id'], $_SESSION['user']['id']);
                                                                 $progressPercentage = $scormProgress['progress_percentage'];
-                                                            } else {
-                                                                $progressPercentage = intval($content['progress'] ?? 0);
-                                                            }
+                                                                            } elseif ($content['type'] === 'document') {
+                    // Get document progress from document_progress table
+                    $progressPercentage = getDocumentProgressStatus($GLOBALS['course']['id'], $content['id'], $_SESSION['user']['id']);
+                    
+                    // Get document completion status
+                    $documentStatus = getDocumentCompletionStatus($GLOBALS['course']['id'], $content['id'], $_SESSION['user']['id']);
+                } else {
+                    $progressPercentage = intval($content['progress'] ?? 0);
+                }
                                                             ?>
                                                             <span class="content-progress-text"><?= $progressPercentage ?>%</span>
                                                             <div class="content-progress-bar" role="progressbar" aria-label="Content progress" aria-valuenow="<?= $progressPercentage ?>" aria-valuemin="0" aria-valuemax="100">
                                                                 <div class="content-progress-fill" style="width: <?= $progressPercentage ?>%"></div>
                                                             </div>
+
                                                         </div>
                                                     </div>
                                                 </div>
@@ -1047,8 +1285,43 @@
                                                                     $docUrl = $content['document_file_path'] ?? '';
                                                                     if ($docUrl) {
                                                                         $resolved = resolveContentUrl($docUrl);
-                                                                        $viewer = UrlHelper::url('my-courses/view-content') . '?type=document&title=' . urlencode($content['title']) . '&src=' . urlencode($resolved) . '&course_id=' . $GLOBALS['course']['id'] . '&module_id=' . $module['id'] . '&content_id=' . $content['id'];
-                                                                        $actionsHtml .= "<a href='" . htmlspecialchars($viewer) . "' target='_blank' class='postrequisite-action-btn btn-secondary launch-content-btn' data-module-id='" . $module['id'] . "' data-content-id='" . $content['id'] . "' data-type='document'><i class='fas fa-file-lines me-1'></i>View Document</a>";
+                                                                        // Get the actual document package ID from the content
+                                                                        $documentPackageId = $content['content_id'] ?? null;
+                                                                        
+                                                                                                                // Get document progress and status with additional data
+                                        $documentProgressData = getDocumentProgressData($GLOBALS['course']['id'], $content['id'], $_SESSION['user']['id']);
+                                        $documentProgress = $documentProgressData['progress'];
+                                        $documentStatus = $documentProgressData['status'];
+                                        $lastViewedAt = $documentProgressData['last_viewed_at'];
+                                                                        
+                                                                                                                // Build status exactly like SCORM
+                                        $statusHtml .= "<div class='document-progress-status mb-2'>";
+                                        if ($documentProgress > 0) {
+                                            $statusClass = $documentStatus['status'] === 'completed' ? 'text-success' : 'text-warning';
+                                            $statusIcon = $documentStatus['status'] === 'completed' ? 'fa-check-circle' : 'fa-clock';
+                                            $statusHtml .= "<div class='{$statusClass}'><i class='fas {$statusIcon} me-1'></i>" . ucfirst($documentStatus['status']);
+                                            if ($documentProgress > 0) {
+                                                $statusHtml .= " - Progress: {$documentProgress}%";
+                                            }
+                                            // Add last viewed date like SCORM
+                                            if ($lastViewedAt) {
+                                                $lastViewed = date('M j, Y', strtotime($lastViewedAt));
+                                                $statusHtml .= " <small class='text-muted'>(Last: {$lastViewed})</small>";
+                                            }
+                                            $statusHtml .= "</div>";
+                                        } else {
+                                            $statusHtml .= "<div class='text-muted'><i class='fas fa-circle me-1'></i>Not started</div>";
+                                        }
+                                        $statusHtml .= "</div>";
+                                                                        
+                                                                        $viewer = UrlHelper::url('my-courses/view-content') . '?type=document&title=' . urlencode($content['title']) . '&src=' . urlencode($resolved) . '&course_id=' . $GLOBALS['course']['id'] . '&module_id=' . $module['id'] . '&content_id=' . $content['id'] . '&document_package_id=' . $documentPackageId;
+                                                                        
+                                                                        // Show completed badge if document is completed
+                                                                        if ($documentStatus['status'] === 'completed') {
+                                                                            $statusHtml .= "<div class='document-completed-badge'><span class='badge bg-success'><i class='fas fa-check-circle me-1'></i>Document Completed</span></div>";
+                                                                        } else {
+                                                                            $actionsHtml .= "<a href='" . htmlspecialchars($viewer) . "' target='_blank' class='postrequisite-action-btn btn-secondary launch-content-btn' data-module-id='" . $module['id'] . "' data-content-id='" . $content['id'] . "' data-type='document'><i class='fas fa-file-lines me-1'></i>View Document</a>";
+                                                                        }
                                                                     } else {
                                                                         $statusHtml .= "<span class='content-error'><i class='fas fa-exclamation-triangle me-1'></i>No document file</span>";
                                                                     }
@@ -1087,9 +1360,9 @@
                                                                         $statusClass = $hasPassed ? 'text-success' : 'text-danger';
                                                                         $statusIcon = $hasPassed ? 'fa-check-circle' : 'fa-times-circle';
                                                                         $statusText = $hasPassed ? 'Passed' : 'Failed';
-                                                                        $statusHtml .= "<div class='assessment-status mb-2'><span class='{$statusClass}'><i class='fas {$statusIcon} me-1'></i>{$statusText}</span>";
+                                                                        $statusHtml .= "<div class='assessment-status mb-2'><div class='{$statusClass}'><i class='fas {$statusIcon} me-1'></i>{$statusText}</div>";
                                                                         if ($hasPassed) {
-                                                                            $statusHtml .= "<small class='text-muted ms-2'>(Score: {$assessmentResults['score']}/{$assessmentResults['max_score']} - {$assessmentResults['percentage']}%)</small>";
+                                                                            $statusHtml .= "<div class='text-muted mt-1'>(Score: {$assessmentResults['score']}/{$assessmentResults['max_score']} - {$assessmentResults['percentage']}%)</div>";
                                                                         }
                                                                         $statusHtml .= "</div>";
                                                                     }
@@ -1210,7 +1483,43 @@
         // Check if both prerequisites and modules are completed
         $modulesCompleted = areModulesCompleted($course['modules'] ?? []);
         $canAccessPostRequisites = $prerequisitesCompleted && $modulesCompleted;
-        ?>
+        
+        // Debug information to help troubleshoot
+        if (isset($_GET['debug']) && $_GET['debug'] === 'true'): ?>
+            <div class="alert alert-info mb-4">
+                <h6><i class="fas fa-bug me-2"></i>Debug Information</h6>
+                <div class="row">
+                    <div class="col-md-6">
+                        <strong>Prerequisites:</strong><br>
+                        <small class="text-muted">
+                            Status: <?= $prerequisitesCompleted ? 'Completed' : 'Not Completed' ?><br>
+                            Count: <?= count($course['prerequisites'] ?? []) ?><br>
+                            <?php if (!empty($course['prerequisites'])): ?>
+                                <?php foreach ($course['prerequisites'] as $pre): ?>
+                                    - <?= $pre['prerequisite_type'] ?>: <?= $pre['prerequisite_id'] ?><br>
+                                <?php endforeach; ?>
+                            <?php endif; ?>
+                        </small>
+                    </div>
+                    <div class="col-md-6">
+                        <strong>Modules:</strong><br>
+                        <small class="text-muted">
+                            Status: <?= $modulesCompleted ? 'Completed' : 'Not Completed' ?><br>
+                            Count: <?= count($course['modules'] ?? []) ?><br>
+                            <?php if (!empty($course['modules'])): ?>
+                                <?php foreach ($course['modules'] as $module): ?>
+                                    - Module <?= $module['id'] ?>: <?= ($module['real_progress'] ?? $module['module_progress'] ?? 0) ?>%<br>
+                                <?php endforeach; ?>
+                            <?php endif; ?>
+                        </small>
+                    </div>
+                </div>
+                <div class="mt-2">
+                    <strong>Post-requisites Access:</strong> <?= $canAccessPostRequisites ? 'Yes' : 'No' ?><br>
+                    <strong>Post-requisites Count:</strong> <?= count($course['post_requisites'] ?? []) ?>
+                </div>
+            </div>
+        <?php endif; ?>
         
         <?php if (!empty($course['post_requisites']) && $canAccessPostRequisites): ?>
         <div class="card mb-4 p-4 shadow-sm border-0" style="background: linear-gradient(135deg, #fff8f9 0%, #ffffff 100%); border-left: 4px solid #20c997 !important;">
@@ -1268,8 +1577,8 @@
                                     <h6 class="postrequisite-title mb-1" 
                                         data-bs-toggle="tooltip" 
                                         data-bs-placement="top" 
-                                        title="<?= htmlspecialchars($post['content_title'] ?? $post['title'] ?? 'N/A') ?>">
-                                        <?= htmlspecialchars($post['content_title'] ?? $post['title'] ?? 'N/A') ?>
+                                        title="<?= htmlspecialchars($post['content_title'] ?? 'N/A') ?>">
+                                        <?= htmlspecialchars($post['content_title'] ?? 'N/A') ?>
                                     </h6>
                                     <span class="postrequisite-type"><?= htmlspecialchars(ucfirst($type)) ?></span>
                                 </div>
@@ -1295,9 +1604,9 @@
                                     $statusIcon = $hasPassed ? 'fa-check-circle' : 'fa-times-circle';
                                     $statusText = $hasPassed ? 'Passed' : 'Failed';
                                     echo "<div class='assessment-status mb-2'>";
-                                    echo "<span class='{$statusClass}'><i class='fas {$statusIcon} me-1'></i>{$statusText}</span>";
+                                    echo "<div class='{$statusClass}'><i class='fas {$statusIcon} me-1'></i>{$statusText}</div>";
                                     if ($hasPassed) {
-                                        echo "<small class='text-muted ms-2'>(Score: {$assessmentResults['score']}/{$assessmentResults['max_score']} - {$assessmentResults['percentage']}%)</small>";
+                                        echo "<div class='text-muted mt-1'>(Score: {$assessmentResults['score']}/{$assessmentResults['max_score']} - {$assessmentResults['percentage']}%)</div>";
                                     }
                                     echo "</div>";
                                 }
@@ -1969,7 +2278,76 @@ document.addEventListener('DOMContentLoaded', function() {
             sessionStorage.removeItem('scorm_refresh_time');
         }
     }
+    
+    // Start document close monitoring
+    startDocumentCloseMonitoring();
 });
+
+// Simple document close monitoring using localStorage polling
+function startDocumentCloseMonitoring() {
+    // Get all document content IDs from the page
+    const documentButtons = document.querySelectorAll('.launch-content-btn[data-type="document"]');
+    const documentIds = Array.from(documentButtons).map(btn => btn.dataset.contentId);
+    
+    if (documentIds.length === 0) {
+        return; // No documents to monitor
+    }
+    
+    console.log('Monitoring document close events for:', documentIds);
+    
+    // Check every 2 seconds for document close flags
+    const checkInterval = setInterval(() => {
+        let shouldRefresh = false;
+        
+        documentIds.forEach(contentId => {
+            if (contentId) {
+                const closeFlag = localStorage.getItem('document_closed_' + contentId);
+                if (closeFlag) {
+                    console.log('Document close detected for:', contentId);
+                    localStorage.removeItem('document_closed_' + contentId);
+                    shouldRefresh = true;
+                }
+            }
+        });
+        
+        if (shouldRefresh) {
+            console.log('Document was closed - refreshing page to show updated progress');
+            
+            // Show a simple notification
+            const notification = document.createElement('div');
+            notification.className = 'alert alert-info alert-dismissible fade show position-fixed';
+            notification.style.cssText = 'top: 20px; right: 20px; z-index: 9999; max-width: 300px;';
+            notification.innerHTML = `
+                <i class="fas fa-sync-alt me-2"></i>
+                <strong>Document Closed</strong><br>
+                Refreshing page to show updated progress...
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            `;
+            
+            document.body.appendChild(notification);
+            
+            // Auto-dismiss after 3 seconds
+            setTimeout(() => {
+                if (notification.parentNode) {
+                    notification.remove();
+                }
+            }, 3000);
+            
+            // Refresh the page after a short delay
+            setTimeout(() => {
+                window.location.reload();
+            }, 2000);
+            
+            // Stop monitoring since we're refreshing
+            clearInterval(checkInterval);
+        }
+    }, 2000);
+    
+    // Clean up interval when page is unloaded
+    window.addEventListener('beforeunload', () => {
+        clearInterval(checkInterval);
+    });
+}
 </script>
 
 <?php include 'includes/footer.php'; ?> 

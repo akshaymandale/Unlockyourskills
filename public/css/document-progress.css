@@ -1,0 +1,382 @@
+/**
+ * Document Progress Tracker Styles
+ * Styles for the document progress tracking UI components
+ */
+
+/* Document Progress Container */
+.document-progress-container {
+    position: sticky;
+    top: 48px;
+    z-index: 1000;
+    background: #ffffff;
+    border-bottom: 2px solid #e5d6ff;
+    box-shadow: 0 2px 4px rgba(106, 13, 173, 0.1);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+}
+
+.document-progress-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 16px;
+    background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+    border-bottom: 1px solid #dee2e6;
+}
+
+.progress-info {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    flex: 1;
+}
+
+.progress-label {
+    font-weight: 600;
+    color: #495057;
+    font-size: 14px;
+}
+
+/* Status Badge */
+.status-badge {
+    font-size: 11px;
+    font-weight: 600;
+    padding: 4px 8px;
+    border-radius: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    min-width: 80px;
+    text-align: center;
+}
+
+.status-not-started {
+    background-color: #f8f9fa;
+    color: #6c757d;
+    border: 1px solid #dee2e6;
+}
+
+.status-in-progress {
+    background-color: #fff3cd;
+    color: #856404;
+    border: 1px solid #ffeaa7;
+}
+
+.status-completed {
+    background-color: #d4edda;
+    color: #155724;
+    border: 1px solid #c3e6cb;
+}
+
+.progress-text {
+    font-weight: 700;
+    color: #6a0dad;
+    font-size: 16px;
+    min-width: 40px;
+}
+
+.page-counter {
+    font-size: 13px;
+    color: #6c757d;
+    background: #f8f9fa;
+    padding: 4px 8px;
+    border-radius: 4px;
+    border: 1px solid #e9ecef;
+}
+
+.progress-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.progress-actions .btn {
+    font-size: 12px;
+    padding: 6px 12px;
+    border-radius: 6px;
+    transition: all 0.2s ease;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.progress-actions .btn-info {
+    background-color: #17a2b8;
+    border-color: #17a2b8;
+    color: #ffffff;
+}
+
+.progress-actions .btn-info:hover {
+    background-color: #138496;
+    border-color: #138496;
+}
+
+.progress-actions .btn:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+/* Progress Bar Container */
+.progress-bar-container {
+    padding: 8px 16px;
+    background: #ffffff;
+}
+
+.progress-bar {
+    width: 100%;
+    height: 8px;
+    background-color: #e9ecef;
+    border-radius: 4px;
+    overflow: hidden;
+    position: relative;
+}
+
+.progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, #6a0dad 0%, #8e44ad 100%);
+    border-radius: 4px;
+    transition: width 0.3s ease;
+    position: relative;
+}
+
+.progress-fill::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: linear-gradient(90deg, transparent 0%, rgba(255, 255, 255, 0.3) 50%, transparent 100%);
+    animation: shimmer 2s infinite;
+}
+
+@keyframes shimmer {
+    0% { transform: translateX(-100%); }
+    100% { transform: translateX(100%); }
+}
+
+/* Document Stats */
+.document-stats {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 8px 16px;
+    background: #f8f9fa;
+    border-top: 1px solid #e9ecef;
+    font-size: 12px;
+}
+
+.time-counter {
+    color: #495057;
+    font-weight: 500;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.time-counter::before {
+    content: '⏱️';
+    font-size: 14px;
+}
+
+.completion-threshold {
+    color: #6c757d;
+    font-style: italic;
+}
+
+/* Document Notifications */
+.document-notification {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    max-width: 350px;
+    padding: 12px 16px;
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    z-index: 10001;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
+    animation: slideInRight 0.3s ease-out;
+    border-left: 4px solid;
+}
+
+.document-notification.success {
+    background: #d1e7dd;
+    border-left-color: #0f5132;
+    color: #0f5132;
+}
+
+.document-notification.error {
+    background: #f8d7da;
+    border-left-color: #842029;
+    color: #842029;
+}
+
+.document-notification.warning {
+    background: #fff3cd;
+    border-left-color: #664d03;
+    color: #664d03;
+}
+
+.notification-content {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.notification-content i {
+    font-size: 16px;
+    flex-shrink: 0;
+}
+
+.notification-content span {
+    font-size: 14px;
+    font-weight: 500;
+}
+
+@keyframes slideInRight {
+    from {
+        transform: translateX(100%);
+        opacity: 0;
+    }
+    to {
+        transform: translateX(0);
+        opacity: 1;
+    }
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+    .document-progress-header {
+        flex-direction: column;
+        gap: 12px;
+        align-items: stretch;
+        padding: 12px;
+    }
+    
+    .progress-info {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 8px;
+    }
+    
+    .progress-actions {
+        justify-content: flex-end;
+    }
+    
+    .document-stats {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 4px;
+    }
+    
+    .document-notification {
+        right: 10px;
+        left: 10px;
+        max-width: none;
+    }
+}
+
+@media (max-width: 480px) {
+    .progress-info {
+        gap: 6px;
+    }
+    
+    .progress-actions .btn {
+        font-size: 11px;
+        padding: 5px 10px;
+    }
+    
+    .progress-label,
+    .progress-text {
+        font-size: 13px;
+    }
+    
+    .page-counter {
+        font-size: 12px;
+        padding: 3px 6px;
+    }
+}
+
+/* Integration with existing viewer styles */
+.viewer-header + .document-progress-container {
+    top: 48px;
+}
+
+/* Dark mode support (if needed) */
+@media (prefers-color-scheme: dark) {
+    .document-progress-container {
+        background: #2d3748;
+        border-bottom-color: #4a5568;
+    }
+    
+    .document-progress-header {
+        background: linear-gradient(135deg, #2d3748 0%, #4a5568 100%);
+        border-bottom-color: #4a5568;
+    }
+    
+    .progress-label {
+        color: #e2e8f0;
+    }
+    
+    .progress-text {
+        color: #b794f6;
+    }
+    
+    .page-counter {
+        background: #4a5568;
+        color: #e2e8f0;
+        border-color: #718096;
+    }
+    
+    .document-stats {
+        background: #2d3748;
+        border-top-color: #4a5568;
+    }
+    
+    .time-counter {
+        color: #e2e8f0;
+    }
+    
+    .completion-threshold {
+        color: #a0aec0;
+    }
+}
+
+/* High contrast mode support */
+@media (prefers-contrast: high) {
+    .document-progress-container {
+        border-bottom: 3px solid #000;
+    }
+    
+    .progress-bar {
+        border: 1px solid #000;
+    }
+    
+    .progress-fill {
+        background: #000;
+    }
+    
+    .progress-actions .btn {
+        border: 2px solid #000;
+    }
+}
+
+/* Reduced motion support */
+@media (prefers-reduced-motion: reduce) {
+    .progress-fill,
+    .progress-actions .btn,
+    .document-notification {
+        transition: none;
+    }
+    
+    .progress-fill::after {
+        animation: none;
+    }
+    
+    @keyframes slideInRight {
+        from, to {
+            transform: translateX(0);
+            opacity: 1;
+        }
+    }
+}
+
+

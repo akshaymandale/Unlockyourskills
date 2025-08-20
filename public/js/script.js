@@ -140,11 +140,13 @@ document.addEventListener("DOMContentLoaded", function () {
                 event.preventDefault();
                 let selectedLang = this.getAttribute("data-lang");
 
-                // ✅ Update URL without reloading the page
-                let url = new URL(window.location.href);
-                url.searchParams.set("lang", selectedLang);
+                // ✅ Call the language switching endpoint
+                let langUrl = getProjectUrl(`lang/${selectedLang}`);
 
-                fetch(url.href)
+                fetch(langUrl, {
+                    method: 'GET',
+                    credentials: 'same-origin'
+                })
                     .then(() => {
                         // ✅ Update Navbar Language
                         const selectedLanguageEl = document.getElementById("selectedLanguage");

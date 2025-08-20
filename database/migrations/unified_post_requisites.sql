@@ -10,7 +10,7 @@ CREATE TABLE IF NOT EXISTS `course_post_requisites` (
   `content_id` int(11) NOT NULL COMMENT 'ID from respective package table (assessment_package, feedback_package, survey_package, assignment_package)',
   `requisite_type` enum('post_course', 'module_requisite') NOT NULL DEFAULT 'post_course' COMMENT 'When this content should be completed',
   `module_id` int(11) DEFAULT NULL COMMENT 'NULL for post course requisites, module_id for module-specific',
-  `title` varchar(255) NOT NULL,
+  -- title removed; display should use the source package title
   `description` text,
   `is_required` tinyint(1) NOT NULL DEFAULT '1',
   `sort_order` int(11) NOT NULL DEFAULT 0,
@@ -41,7 +41,7 @@ CREATE TABLE IF NOT EXISTS `course_post_requisites` (
 -- Migrate from course_assessments
 INSERT INTO `course_post_requisites` (
     `course_id`, `content_type`, `content_id`, `requisite_type`, `module_id`, 
-    `title`, `description`, `is_required`, `sort_order`, `settings`, 
+    `description`, `is_required`, `sort_order`, `settings`, 
     `created_by`, `updated_by`, `created_at`, `updated_at`, `is_deleted`
 )
 SELECT 
@@ -50,7 +50,6 @@ SELECT
     `assessment_id` as `content_id`, 
     `assessment_type` as `requisite_type`, 
     `module_id`, 
-    `title`, 
     `description`, 
     `is_required`, 
     `assessment_order` as `sort_order`, 
@@ -68,7 +67,7 @@ WHERE `deleted_at` IS NULL;
 -- Migrate from course_feedback
 INSERT INTO `course_post_requisites` (
     `course_id`, `content_type`, `content_id`, `requisite_type`, `module_id`, 
-    `title`, `description`, `is_required`, `sort_order`, `settings`, 
+    `description`, `is_required`, `sort_order`, `settings`, 
     `created_by`, `updated_by`, `created_at`, `updated_at`, `is_deleted`
 )
 SELECT 
@@ -77,7 +76,6 @@ SELECT
     `feedback_id` as `content_id`, 
     `feedback_type` as `requisite_type`, 
     `module_id`, 
-    `title`, 
     `description`, 
     `is_required`, 
     `feedback_order` as `sort_order`, 
@@ -93,7 +91,7 @@ WHERE `deleted_at` IS NULL;
 -- Migrate from course_surveys
 INSERT INTO `course_post_requisites` (
     `course_id`, `content_type`, `content_id`, `requisite_type`, `module_id`, 
-    `title`, `description`, `is_required`, `sort_order`, `settings`, 
+    `description`, `is_required`, `sort_order`, `settings`, 
     `created_by`, `updated_by`, `created_at`, `updated_at`, `is_deleted`
 )
 SELECT 
@@ -102,7 +100,6 @@ SELECT
     `survey_id` as `content_id`, 
     `survey_type` as `requisite_type`, 
     `module_id`, 
-    `title`, 
     `description`, 
     `is_required`, 
     `survey_order` as `sort_order`, 
@@ -118,7 +115,7 @@ WHERE `deleted_at` IS NULL;
 -- Migrate from course_assignments
 INSERT INTO `course_post_requisites` (
     `course_id`, `content_type`, `content_id`, `requisite_type`, `module_id`, 
-    `title`, `description`, `is_required`, `sort_order`, `settings`, 
+    `description`, `is_required`, `sort_order`, `settings`, 
     `created_by`, `updated_by`, `created_at`, `updated_at`, `is_deleted`
 )
 SELECT 
@@ -127,18 +124,14 @@ SELECT
     `assignment_id` as `content_id`, 
     `assignment_type` as `requisite_type`, 
     `module_id`, 
-    `title`, 
     `description`, 
     `is_required`, 
-    `sort_order`, 
+    `assignment_order` as `sort_order`, 
     NULL as `settings`,
     `created_by`, 
     `updated_by`, 
     `created_at`, 
     `updated_at`, 
-    `is_deleted`
+    IF(`is_deleted` = 1, 1, 0) as `is_deleted`
 FROM `course_assignments` 
 WHERE `is_deleted` = 0;
-
--- Old tables have been dropped in a separate migration
--- See: database/migrations/drop_old_post_requisite_tables.sql 

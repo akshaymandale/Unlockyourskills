@@ -6333,6 +6333,11 @@ body select:focus,
     max-width: 100%;
     word-wrap: break-word;
     hyphens: auto;
+    /* Text truncation with ellipsis */
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 250px; /* Limit width to prevent layout issues */
 }
 
 /* Additional protection for very long titles */
@@ -6341,6 +6346,10 @@ body select:focus,
     flex: 1;
     min-width: 0; /* Allow content to shrink */
     /* Removed max-width restriction to prevent badge cutoff */
+    /* Ensure proper spacing for truncated titles */
+    padding-right: 10px;
+    /* Prevent text from wrapping and ensure proper truncation */
+    overflow: hidden;
 }
 
 /* Ensure button stays in fixed position */
@@ -6349,6 +6358,7 @@ body select:focus,
     flex-shrink: 0; /* Prevent button from shrinking */
     min-width: 100px; /* Ensure consistent button width */
     white-space: nowrap; /* Keep button text on one line */
+    margin-left: auto; /* Push button to the right */
 }
 
 .prerequisite-type,
@@ -6662,6 +6672,7 @@ body select:focus,
     .prerequisite-title,
     .postrequisite-title {
         font-size: 15px;
+        max-width: 200px; /* Smaller max-width for mobile */
     }
     
     .prerequisite-type,
@@ -7133,6 +7144,90 @@ body select:focus,
     height: 100%;
 }
 
+/* Content Status Badges */
+.content-status-badge {
+    font-size: 10px;
+    font-weight: 600;
+    padding: 3px 8px;
+    border-radius: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-left: 8px;
+    white-space: nowrap;
+}
+
+.content-status-badge.status-not_started {
+    background-color: #f8f9fa;
+    color: #6c757d;
+    border: 1px solid #dee2e6;
+}
+
+.content-status-badge.status-started {
+    background-color: #e3f2fd;
+    color: #1976d2;
+    border: 1px solid #bbdefb;
+}
+
+.content-status-badge.status-in_progress {
+    background-color: #fff3cd;
+    color: #856404;
+    border: 1px solid #ffeaa7;
+}
+
+.content-status-badge.status-completed {
+    background-color: #d4edda;
+    color: #155724;
+    border: 1px solid #c3e6cb;
+}
+
+.content-status-badge.status-error {
+    background-color: #f8d7da;
+    color: #721c24;
+    border: 1px solid #f5c6cb;
+}
+
+/* Document Badge Styles - Matching SCORM Pattern EXACTLY */
+.document-progress-status {
+    padding: 8px 12px;
+    border-radius: 6px;
+    background: #f8f9fa;
+    border-left: 3px solid #dee2e6;
+    margin-bottom: 8px;
+}
+
+.document-progress-status .text-success {
+    color: #198754 !important;
+    font-weight: 500;
+}
+
+.document-progress-status .text-warning {
+    color: #fd7e14 !important;
+    font-weight: 500;
+}
+
+.document-progress-status .text-muted {
+    color: #6c757d !important;
+}
+
+.document-completed-badge {
+    margin-top: 8px;
+}
+
+.document-completed-badge .badge {
+    font-size: 0.875rem;
+    padding: 6px 12px;
+}
+
+.document-progress-status small {
+    font-size: 0.75rem;
+}
+
+.document-progress-status i {
+    margin-right: 6px;
+    width: 14px;
+    text-align: center;
+}
+
 .content-controls .content-toggle {
     width: 28px;
     height: 28px;
@@ -7551,6 +7646,12 @@ body select:focus,
 /* Ensure tooltips appear above other elements */
 .tooltip {
     z-index: 9999;
+    pointer-events: none; /* Prevent tooltip from interfering with layout */
+}
+
+/* Ensure tooltip content is properly accessible */
+.tooltip.show {
+    pointer-events: auto;
 }
 
 /* Responsive tooltip adjustments */
@@ -7560,6 +7661,29 @@ body select:focus,
         font-size: 0.8rem;
         padding: 6px 10px;
     }
+}
+
+/* Enhanced tooltip styling for truncated titles */
+.custom-tooltip .tooltip-inner {
+    word-wrap: break-word;
+    white-space: normal;
+    text-align: left;
+    max-width: 350px;
+}
+
+/* Ensure tooltips for all tooltip-enabled titles show pointer cursor */
+.prerequisite-title[data-bs-toggle="tooltip"],
+.postrequisite-title[data-bs-toggle="tooltip"],
+.content-title[data-bs-toggle="tooltip"],
+.module-title[data-bs-toggle="tooltip"] {
+    cursor: pointer;
+}
+
+/* Hover effect for truncated titles */
+.prerequisite-title:hover,
+.postrequisite-title:hover {
+    color: #6a0dad;
+    transition: color 0.2s ease;
 }
 
 /* Reports To Autocomplete Styling */
@@ -7636,9 +7760,9 @@ body select:focus,
 /* Assessment Status Styling */
 .assessment-status {
     display: flex;
-    align-items: center;
-    flex-wrap: wrap;
-    gap: 8px;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 4px;
     margin-bottom: 12px;
     padding: 8px 12px;
     background: rgba(0, 0, 0, 0.02);
@@ -7658,14 +7782,21 @@ body select:focus,
     font-size: 0.9rem;
 }
 
-.assessment-status .text-success + small {
+.assessment-status .text-success + .text-muted {
     color: #6c757d !important;
     font-size: 0.8rem;
 }
 
-.assessment-status .text-danger + small {
+.assessment-status .text-danger + .text-muted {
     color: #6c757d !important;
     font-size: 0.8rem;
+}
+
+/* Ensure score information is properly styled */
+.assessment-status .text-muted {
+    color: #6c757d !important;
+    font-size: 0.8rem;
+    line-height: 1.2;
 }
 
 .assessment-status i {
@@ -7698,7 +7829,7 @@ body select:focus,
         gap: 4px;
     }
     
-    .assessment-status small {
+    .assessment-status .text-muted {
         margin-left: 0 !important;
     }
 }
