@@ -69,7 +69,7 @@ if ($currentUser) {
                     <div class="col-md-6">
                         <div class="card user-box shadow-sm" id="userSettingsCard" style="cursor: pointer;">
                             <h5><i class="fas fa-user-cog"></i> <?= Localization::translate('user_settings'); ?></h5>
-                            <p><small class="text-muted">Edit your profile and account settings</small></p>
+                            <p><small class="text-muted"><?= Localization::translate('user_settings_description'); ?></small></p>
                         </div>
                     </div>
                 </div>
@@ -83,7 +83,7 @@ if ($currentUser) {
                     <?php if ($canAccessCourseManagement): ?>
                     <div class="col-md-6">
                         <div class="card user-box shadow-sm" onclick="location.href='<?= UrlHelper::url('course-management') ?>'">
-                            <h5><i class="fas fa-chalkboard-teacher"></i> <?= Localization::translate('course_creation'); ?></h5>
+                            <h5><i class="fas fa-chalkboard-teacher"></i> <?= Localization::translate('course_creation.title'); ?></h5>
                             <p><small class="text-muted"><?= Localization::translate('create_courses'); ?></small></p>
                         </div>
                     </div>
@@ -120,11 +120,11 @@ if ($currentUser) {
                     <?php if (canAccess('vlr')): ?>
                     <div class="col-md-6">
                         <div class="card user-box shadow-sm" onclick="window.location.href='<?= UrlHelper::url('vlr') ?>'">
-                            <h5><i class="fas fa-layer-group text-purple"></i> VLR Management</h5>
-                            <p><small class="text-muted">Manage all learning resources and packages (SCORM, non-SCORM, assessment, audio, video, document, image, external, survey, feedback, interactive, AI content, assignment)</small></p>
+                            <h5><i class="fas fa-layer-group text-purple"></i> <?= Localization::translate('vlr_management'); ?></h5>
+                            <p><small class="text-muted"><?= Localization::translate('vlr_management_description'); ?></small></p>
                             <div class="mt-2">
-                                <span class="badge bg-success">Active</span>
-                                <span class="badge bg-light text-dark">New Feature</span>
+                                <span class="badge bg-success"><?= Localization::translate('active_badge'); ?></span>
+                                <span class="badge bg-light text-dark"><?= Localization::translate('new_feature_badge'); ?></span>
                             </div>
                         </div>
                     </div>
@@ -135,7 +135,7 @@ if ($currentUser) {
             <!-- ✅ Social Tab -->
             <div class="tab-pane fade card shadow-lg p-4" id="social">
                 <h3 class="text-purple"><?= Localization::translate('social'); ?></h3>
-                <p class="text-muted mb-4">Manage social features and engagement tools for your learners</p>
+                <p class="text-muted mb-4"><?= Localization::translate('social_features_description'); ?></p>
 
                 <div class="row">
                     <!-- Opinion Poll Management -->
@@ -143,10 +143,10 @@ if ($currentUser) {
                     <div class="col-md-6">
                         <div class="card user-box shadow-sm" onclick="window.location.href='<?= UrlHelper::url('opinion-polls') ?>'">
                             <h5><i class="fas fa-poll text-purple"></i> Opinion Poll Management</h5>
-                            <p><small class="text-muted">Create and manage opinion polls for learner engagement</small></p>
+                            <p><small class="text-muted"><?= Localization::translate('opinion_poll_description'); ?></small></p>
                             <div class="mt-2">
-                                <span class="badge bg-success">Active</span>
-                                <span class="badge bg-light text-dark">New Feature</span>
+                                <span class="badge bg-success"><?= Localization::translate('active_badge'); ?></span>
+                                <span class="badge bg-light text-dark"><?= Localization::translate('new_feature_badge'); ?></span>
                             </div>
                         </div>
                     </div>
@@ -157,10 +157,10 @@ if ($currentUser) {
                     <div class="col-md-6">
                         <div class="card user-box shadow-sm" onclick="window.location.href='<?= UrlHelper::url('announcements') ?>'">
                             <h5><i class="fas fa-bullhorn text-purple"></i> Announcement Management</h5>
-                            <p><small class="text-muted">Create and manage announcements for your organization</small></p>
+                            <p><small class="text-muted"><?= Localization::translate('announcement_description'); ?></small></p>
                             <div class="mt-2">
-                                <span class="badge bg-success">Active</span>
-                                <span class="badge bg-light text-dark">New Feature</span>
+                                <span class="badge bg-success"><?= Localization::translate('active_badge'); ?></span>
+                                <span class="badge bg-light text-dark"><?= Localization::translate('new_feature_badge'); ?></span>
                             </div>
                         </div>
                     </div>
@@ -171,10 +171,10 @@ if ($currentUser) {
                     <div class="col-md-6">
                         <div class="card user-box shadow-sm" onclick="window.location.href='<?= UrlHelper::url('events') ?>'">
                             <h5><i class="fas fa-calendar-alt text-purple"></i> Event Management</h5>
-                            <p><small class="text-muted">Create and manage events, webinars, and live sessions</small></p>
+                            <p><small class="text-muted"><?= Localization::translate('event_description'); ?></small></p>
                             <div class="mt-2">
-                                <span class="badge bg-success">Active</span>
-                                <span class="badge bg-light text-dark">New Feature</span>
+                                <span class="badge bg-success"><?= Localization::translate('active_badge'); ?></span>
+                                <span class="badge bg-light text-dark"><?= Localization::translate('new_feature_badge'); ?></span>
                             </div>
                         </div>
                     </div>
@@ -182,33 +182,33 @@ if ($currentUser) {
 
                     <!-- Discussion Forums (Coming Soon) -->
                     <div class="col-md-6">
-                        <div class="card user-box shadow-sm" onclick="alert('Discussion Forums - Coming Soon')">
-                            <h5><i class="fas fa-comments text-muted"></i> Discussion Forums</h5>
-                            <p><small class="text-muted">Enable course discussions and Q&A forums</small></p>
+                        <div class="card user-box shadow-sm" onclick="alert('<?= Localization::translate('discussion_forums'); ?> - <?= Localization::translate('coming_soon'); ?>')">
+                            <h5><i class="fas fa-comments text-muted"></i> <?= Localization::translate('discussion_forums'); ?></h5>
+                            <p><small class="text-muted"><?= Localization::translate('discussion_forums_description'); ?></small></p>
                             <div class="mt-2">
-                                <span class="badge bg-secondary">Coming Soon</span>
+                                <span class="badge bg-secondary"><?= Localization::translate('coming_soon'); ?></span>
                             </div>
                         </div>
                     </div>
 
                     <!-- Social Learning (Coming Soon) -->
                     <div class="col-md-6">
-                        <div class="card user-box shadow-sm" onclick="alert('Social Learning - Coming Soon')">
-                            <h5><i class="fas fa-users text-muted"></i> Social Learning</h5>
-                            <p><small class="text-muted">Peer-to-peer learning and collaboration tools</small></p>
+                        <div class="card user-box shadow-sm" onclick="alert('<?= Localization::translate('social_learning'); ?> - <?= Localization::translate('coming_soon'); ?>')">
+                            <h5><i class="fas fa-users text-muted"></i> <?= Localization::translate('social_learning'); ?></h5>
+                            <p><small class="text-muted"><?= Localization::translate('social_learning_description'); ?></small></p>
                             <div class="mt-2">
-                                <span class="badge bg-secondary">Coming Soon</span>
+                                <span class="badge bg-secondary"><?= Localization::translate('coming_soon'); ?></span>
                             </div>
                         </div>
                     </div>
 
                     <!-- Leaderboards (Coming Soon) -->
                     <div class="col-md-6">
-                        <div class="card user-box shadow-sm" onclick="alert('Leaderboards - Coming Soon')">
-                            <h5><i class="fas fa-trophy text-muted"></i> Leaderboards</h5>
-                            <p><small class="text-muted">Gamification and achievement tracking</small></p>
+                        <div class="card user-box shadow-sm" onclick="alert('<?= Localization::translate('leaderboards'); ?> - <?= Localization::translate('coming_soon'); ?>')">
+                            <h5><i class="fas fa-trophy text-muted"></i> <?= Localization::translate('leaderboards'); ?></h5>
+                            <p><small class="text-muted"><?= Localization::translate('leaderboards_description'); ?></small></p>
                             <div class="mt-2">
-                                <span class="badge bg-secondary">Coming Soon</span>
+                                <span class="badge bg-secondary"><?= Localization::translate('coming_soon'); ?></span>
                             </div>
                         </div>
                     </div>
@@ -218,10 +218,10 @@ if ($currentUser) {
                     <div class="col-md-6">
                         <div class="card user-box shadow-sm" onclick="window.location.href='<?= UrlHelper::url('feed') ?>'">
                             <h5><i class="fas fa-rss text-purple"></i> Social Feed (News Wall)</h5>
-                            <p><small class="text-muted">Share updates, media, and discussions in a community feed</small></p>
+                            <p><small class="text-muted"><?= Localization::translate('social_feed_description'); ?></small></p>
                             <div class="mt-2">
-                                <span class="badge bg-success">Active</span>
-                                <span class="badge bg-light text-dark">New Feature</span>
+                                <span class="badge bg-success"><?= Localization::translate('active_badge'); ?></span>
+                                <span class="badge bg-light text-dark"><?= Localization::translate('new_feature_badge'); ?></span>
                             </div>
                         </div>
                     </div>
@@ -255,14 +255,14 @@ if ($currentUser) {
                 <h4 class="text-purple mt-4"><?= Localization::translate('system_configuration'); ?></h4>
                 <div class="row">
                     <div class="col-md-6">
-                        <div class="card user-box shadow-sm" onclick="alert('General Settings - Coming Soon')">
+                        <div class="card user-box shadow-sm" onclick="alert('<?= Localization::translate('general_settings_coming_soon'); ?>')">
                             <h5><i class="fas fa-sliders-h"></i> <?= Localization::translate('general_settings'); ?></h5>
                             <p><small class="text-muted"><?= Localization::translate('system_wide_settings'); ?></small></p>
                         </div>
                     </div>
 
                     <div class="col-md-6">
-                        <div class="card user-box shadow-sm" onclick="alert('Security Settings - Coming Soon')">
+                        <div class="card user-box shadow-sm" onclick="alert('<?= Localization::translate('security_settings_coming_soon'); ?>')">
                             <h5><i class="fas fa-shield-alt"></i> <?= Localization::translate('security_settings'); ?></h5>
                             <p><small class="text-muted"><?= Localization::translate('security_configuration'); ?></small></p>
                         </div>
@@ -284,7 +284,7 @@ document.addEventListener('DOMContentLoaded', function() {
         userSettingsCard.addEventListener('click', function(e) {
             e.preventDefault();
             e.stopPropagation();
-            alert('User Settings - Profile editing feature coming soon!');
+            alert('<?= Localization::translate('user_settings_coming_soon'); ?>');
         });
     }
 });

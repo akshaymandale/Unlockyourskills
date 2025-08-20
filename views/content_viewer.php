@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title><?= htmlspecialchars($title ?? 'Content') ?></title>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+  <link rel="stylesheet" href="/Unlockyourskills/public/css/document-progress.css">
   <style>
     :root { --purple: #6a0dad; --light: #f8f9fa; --border: #e5d6ff; }
     html, body { height: 100%; margin: 0; background: #fff; }
@@ -181,7 +182,6 @@
         <button class="btn btn-info" onclick="captureSCORMDataFromIframe()"><i class="fas fa-sync"></i> Capture Data</button>
         <button class="btn btn-warning" onclick="forceCaptureAllSCORMData()"><i class="fas fa-exclamation-triangle"></i> Force Capture</button>
         <button class="btn btn-success" onclick="saveSCORMProgress()"><i class="fas fa-save"></i> Save Progress</button>
-        <button class="btn btn-secondary" onclick="debugCurrentState()"><i class="fas fa-bug"></i> Debug</button>
     <?php endif; ?>
     </div>
     <?php if (!empty($src ?? '')): ?>
@@ -241,6 +241,22 @@
   
   // Function to close the current tab
   function closeTab() {
+    // Set a flag in localStorage to indicate document was closed
+    try {
+      const urlParams = new URLSearchParams(window.location.search);
+      const courseId = urlParams.get('course_id');
+      const moduleId = urlParams.get('module_id');
+      const contentId = urlParams.get('content_id');
+      
+      if (courseId && moduleId && contentId) {
+        localStorage.setItem('document_closed_' + contentId, Date.now().toString());
+        console.log('Document close flag set for:', contentId);
+      }
+    } catch (error) {
+      console.error('Error setting document close flag:', error);
+    }
+    
+    // Original close functionality
     try { window.close(); } catch(e) {}
     setTimeout(function(){
       try { window.open('', '_self'); window.close(); } catch(e) {}
@@ -1213,9 +1229,35 @@
   }
   
   // Load progress tracker
-  const script = document.createElement('script');
-  script.src = '/unlockyourskills/public/js/progress-tracking.js';
-  document.head.appendChild(script);
+  const progressScript = document.createElement('script');
+  progressScript.src = '/unlockyourskills/public/js/progress-tracking.js';
+  document.head.appendChild(progressScript);
+  
+  // Load document progress tracker for document content
+  const urlParams = new URLSearchParams(window.location.search);
+  const contentType = urlParams.get('type');
+  
+  if (contentType === 'document') {
+    console.log('📄 Document content detected, loading progress tracker...');
+                    const documentProgressScript = document.createElement('script');
+                // Add cache-busting parameter
+                documentProgressScript.src = '/Unlockyourskills/public/js/document-progress.js?v=' + Date.now();
+                documentProgressScript.onload = function() {
+                    console.log('✅ Document progress script loaded');
+                    
+                    // Start tracking immediately when script loads
+                    if (window.documentProgressTracker) {
+                        console.log('🚀 Starting document tracking immediately...');
+                        window.documentProgressTracker.startTracking();
+                    } else {
+                        console.log('⏳ Document progress tracker not ready yet, will start on DOM ready');
+                    }
+                };
+                documentProgressScript.onerror = function() {
+                    console.error('❌ Failed to load document progress script');
+                };
+                document.head.appendChild(documentProgressScript);
+  }
   
   // Initialize when content loads
   document.addEventListener('DOMContentLoaded', function() {
@@ -1226,13 +1268,41 @@
     const courseId = urlParams.get('course_id');
     const moduleId = urlParams.get('module_id');
     const contentId = urlParams.get('content_id');
+    const documentPackageId = urlParams.get('document_package_id');
     
     debugLog('📋 URL Parameters:', {
       contentType,
       courseId,
       moduleId,
-      contentId
+      contentId,
+      documentPackageId
     });
+    
+    // Initialize document progress tracker for document content
+    if (contentType === 'document' && courseId && contentId) {
+      debugLog('📄 Document content detected, initializing progress tracker');
+      
+      // Wait for document progress tracker to be available
+      const waitForDocumentTracker = () => {
+        if (window.documentProgressTracker) {
+          debugLog('✅ Document progress tracker ready');
+          
+          // Set the document package ID if available
+          if (documentPackageId) {
+            window.documentProgressTracker.documentPackageId = documentPackageId;
+            debugLog('📦 Document package ID set:', documentPackageId);
+          }
+          
+          // Start tracking
+          window.documentProgressTracker.startTracking();
+        } else {
+          debugLog('⏳ Document progress tracker not ready yet, retrying in 500ms');
+          setTimeout(waitForDocumentTracker, 500);
+        }
+      };
+      
+      waitForDocumentTracker();
+    }
     
     // Wait for progress tracker to be available
     const waitForProgressTracker = () => {
@@ -1275,6 +1345,58 @@
     waitForProgressTracker();
   });
   
+  // Send notification when document is first loaded
+  document.addEventListener('DOMContentLoaded', function() {
+    console.log('Document viewer loaded, notifying parent page');
+    notifyDocumentOpened();
+    
+    // Also notify when the document content is actually viewed
+    setTimeout(() => {
+      notifyDocumentViewed();
+    }, 1000); // Wait 1 second for content to load
+  });
+
+  // Handle page focus to track when user returns to document
+  window.addEventListener('focus', function() {
+    console.log('Document window gained focus - user returned to document');
+    notifyDocumentViewed();
+  });
+
+  // Set document close flag when page is unloaded (additional safety)
+  window.addEventListener('beforeunload', function(event) {
+    console.log('Document is being unloaded - setting close flag');
+    setDocumentCloseFlag();
+  });
+
+  // Set document close flag when page is hidden
+  document.addEventListener('pagehide', function(event) {
+    console.log('Document page is being hidden - setting close flag');
+    setDocumentCloseFlag();
+  });
+
+  // Set document close flag when window is unloaded
+  window.addEventListener('unload', function(event) {
+    console.log('Document window is being unloaded - setting close flag');
+    setDocumentCloseFlag();
+  });
+
+  // Helper function to set document close flag
+  function setDocumentCloseFlag() {
+    try {
+      const urlParams = new URLSearchParams(window.location.search);
+      const courseId = urlParams.get('course_id');
+      const moduleId = urlParams.get('module_id');
+      const contentId = urlParams.get('content_id');
+      
+      if (courseId && moduleId && contentId) {
+        localStorage.setItem('document_closed_' + contentId, Date.now().toString());
+        console.log('Document close flag set via event listener for:', contentId);
+      }
+    } catch (error) {
+      console.error('Error setting document close flag via event listener:', error);
+    }
+  }
+
   // Save progress on page unload
   window.addEventListener('beforeunload', function(e) {
     if (window.progressTracker && window.progressTracker.isInitialized && Object.keys(window.scormData).length > 0) {

@@ -578,13 +578,7 @@
             </div>
         </div>
         <div class="row">
-            <div class="col-md-6">
-                <div class="mb-2">
-                    <label class="form-label"><?= Localization::translate('course_creation.content_title') ?></label>
-                    <input type="text" class="form-control" name="modules[][content][][title]">
-                </div>
-            </div>
-            <div class="col-md-6">
+            <div class="col-md-12">
                 <div class="mb-2">
                     <label class="form-label"><?= Localization::translate('course_creation.sort_order') ?></label>
                     <input type="number" class="form-control" name="modules[][content][][sort_order]" min="1" value="1">

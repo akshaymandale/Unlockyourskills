@@ -257,10 +257,10 @@ class CourseModel
         }
 
         $sql = "INSERT INTO course_module_content (
-            module_id, content_type, content_id, title, description,
+            module_id, content_type, content_id, description,
             content_order, is_required, estimated_duration, created_by
         ) VALUES (
-            :module_id, :content_type, :content_id, :title, :description,
+            :module_id, :content_type, :content_id, :description,
             :content_order, :is_required, :estimated_duration, :created_by
         )";
 
@@ -269,7 +269,6 @@ class CourseModel
             ':module_id' => $moduleId,
             ':content_type' => $contentType,
             ':content_id' => $contentId,
-            ':title' => $contentData['title'] ?? '',
             ':description' => $contentData['description'] ?? '',
             ':content_order' => $contentData['sort_order'] ?? 0, // Map sort_order to content_order
             ':is_required' => isset($contentData['is_required']) ? 1 : 0,
@@ -305,10 +304,10 @@ class CourseModel
         error_log("Full prerequisite data: " . json_encode($prerequisiteData));
 
         $sql = "INSERT INTO course_prerequisites (
-            course_id, prerequisite_type, prerequisite_id, prerequisite_name, 
+            course_id, prerequisite_type, prerequisite_id, 
             prerequisite_description, sort_order, created_by
         ) VALUES (
-            :course_id, :prerequisite_type, :prerequisite_id, :prerequisite_name,
+            :course_id, :prerequisite_type, :prerequisite_id,
             :prerequisite_description, :sort_order, :created_by
         )";
 
@@ -317,7 +316,6 @@ class CourseModel
             ':course_id' => $courseId,
             ':prerequisite_type' => $prerequisiteType,
             ':prerequisite_id' => $prerequisiteId,
-            ':prerequisite_name' => $prerequisiteData['title'] ?? '',
             ':prerequisite_description' => $prerequisiteData['description'] ?? '',
             ':sort_order' => intval($prerequisiteData['sort_order'] ?? 0),
             ':created_by' => $prerequisiteData['created_by']
@@ -393,10 +391,10 @@ class CourseModel
 
         $sql = "INSERT INTO course_post_requisites (
             course_id, content_type, content_id, requisite_type, module_id,
-            title, description, is_required, sort_order, settings, created_by
+            description, is_required, sort_order, settings, created_by
         ) VALUES (
             :course_id, :content_type, :content_id, :requisite_type, :module_id,
-            :title, :description, :is_required, :sort_order, :settings, :created_by
+            :description, :is_required, :sort_order, :settings, :created_by
         )";
 
         error_log("SQL Query: $sql");
@@ -407,7 +405,6 @@ class CourseModel
             ':content_id' => $contentId,
             ':requisite_type' => $requisiteData['requisite_type'] ?? 'post_course',
             ':module_id' => $requisiteData['module_id'] ?? null,
-            ':title' => $requisiteData['title'] ?? '',
             ':description' => $requisiteData['description'] ?? '',
             ':is_required' => isset($requisiteData['is_required']) ? 1 : 0,
             ':sort_order' => intval($requisiteData['sort_order'] ?? 0),
@@ -688,7 +685,7 @@ class CourseModel
         $stmt->execute([$moduleId]);
         $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
         
-        // Enrich each content item with launch/file URLs as per content type
+        // Enrich each content item with launch/file URLs and titles as per content type
         foreach ($rows as &$row) {
             // Normalize type for frontend
             if (!isset($row['type']) && isset($row['content_type'])) {
@@ -704,77 +701,113 @@ class CourseModel
             try {
                 switch ($type) {
                     case 'scorm': {
-                        $q = $this->conn->prepare("SELECT launch_path, zip_file FROM scorm_packages WHERE id = ? AND (is_deleted = 0 OR is_deleted IS NULL)");
+                        $q = $this->conn->prepare("SELECT title, launch_path, zip_file FROM scorm_packages WHERE id = ? AND (is_deleted = 0 OR is_deleted IS NULL)");
                         $q->execute([$contentId]);
                         $data = $q->fetch(PDO::FETCH_ASSOC);
-                        if ($data && !empty($data['launch_path'])) {
-                            $launch = $data['launch_path'];
-                            // Normalize to a web path that actually exists
-                            $isAbsolute = preg_match('#^(https?://|/)#i', $launch);
-                            if (!$isAbsolute) {
-                                // If only a file is stored, rebuild with extracted folder from zip_file
-                                $folder = !empty($data['zip_file']) ? pathinfo($data['zip_file'], PATHINFO_FILENAME) : '';
-                                if (!empty($folder)) {
-                                    $candidate = 'uploads/scorm/' . $folder . '/' . ltrim($launch, '/');
-                                } else {
-                                    $candidate = 'uploads/scorm/' . ltrim($launch, '/');
-                                }
-                                // If file exists, use it; else fallback to raw
-                                if (file_exists($candidate)) {
-                                    $launch = $candidate;
-                                }
+                        if ($data) {
+                            // Override title with actual package title
+                            if (!empty($data['title'])) {
+                                $row['title'] = $data['title'];
                             }
-                            $row['scorm_launch_path'] = $launch;
+                            
+                            if (!empty($data['launch_path'])) {
+                                $launch = $data['launch_path'];
+                                // Normalize to a web path that actually exists
+                                $isAbsolute = preg_match('#^(https?://|/)#i', $launch);
+                                if (!$isAbsolute) {
+                                    // If only a file is stored, rebuild with extracted folder from zip_file
+                                    $folder = !empty($data['zip_file']) ? pathinfo($data['zip_file'], PATHINFO_FILENAME) : '';
+                                    if (!empty($folder)) {
+                                        $candidate = 'uploads/scorm/' . $folder . '/' . ltrim($launch, '/');
+                                    } else {
+                                        $candidate = 'uploads/scorm/' . ltrim($launch, '/');
+                                    }
+                                    // If file exists, use it; else fallback to raw
+                                    if (file_exists($candidate)) {
+                                        $launch = $candidate;
+                                    }
+                                }
+                                $row['scorm_launch_path'] = $launch;
+                            }
                         }
                         break;
                     }
                     case 'non_scorm': {
-                        $q = $this->conn->prepare("SELECT content_url, launch_file FROM non_scorm_package WHERE id = ? AND (is_deleted = 0 OR is_deleted IS NULL)");
+                        $q = $this->conn->prepare("SELECT title, content_url, launch_file FROM non_scorm_package WHERE id = ? AND (is_deleted = 0 OR is_deleted IS NULL)");
                         $q->execute([$contentId]);
                         $data = $q->fetch(PDO::FETCH_ASSOC);
                         if ($data) {
+                            // Override title with actual package title
+                            if (!empty($data['title'])) {
+                                $row['title'] = $data['title'];
+                            }
+                            
                             $row['non_scorm_launch_path'] = $data['content_url'] ?: ($data['launch_file'] ?? null);
                         }
                         break;
                     }
                     case 'interactive': {
-                        $q = $this->conn->prepare("SELECT content_url, content_file, embed_code FROM interactive_ai_content_package WHERE id = ? AND (is_deleted = 0 OR is_deleted IS NULL)");
+                        $q = $this->conn->prepare("SELECT title, content_url, content_file, embed_code FROM interactive_ai_content_package WHERE id = ? AND (is_deleted = 0 OR is_deleted IS NULL)");
                         $q->execute([$contentId]);
                         $data = $q->fetch(PDO::FETCH_ASSOC);
                         if ($data) {
+                            // Override title with actual package title
+                            if (!empty($data['title'])) {
+                                $row['title'] = $data['title'];
+                            }
+                            
                             $row['interactive_launch_url'] = $data['content_url'] ?: ($data['content_file'] ?? null);
                         }
                         break;
                     }
                     case 'video': {
-                        $q = $this->conn->prepare("SELECT video_file FROM video_package WHERE id = ? AND (is_deleted = 0 OR is_deleted IS NULL)");
+                        $q = $this->conn->prepare("SELECT title, video_file FROM video_package WHERE id = ? AND (is_deleted = 0 OR is_deleted IS NULL)");
                         $q->execute([$contentId]);
                         $data = $q->fetch(PDO::FETCH_ASSOC);
-                        if ($data && !empty($data['video_file'])) {
-                            $file = $data['video_file'];
-                            $row['video_file_path'] = (preg_match('#^(https?://|/)#i', $file) || strpos($file, 'uploads/') === 0)
-                                ? $file
-                                : ('uploads/video/' . $file);
+                        if ($data) {
+                            // Override title with actual package title
+                            if (!empty($data['title'])) {
+                                $row['title'] = $data['title'];
+                            }
+                            
+                            if (!empty($data['video_file'])) {
+                                $file = $data['video_file'];
+                                $row['video_file_path'] = (preg_match('#^(https?://|/)#i', $file) || strpos($file, 'uploads/') === 0)
+                                    ? $file
+                                    : ('uploads/video/' . $file);
+                            }
                         }
                         break;
                     }
                     case 'audio': {
-                        $q = $this->conn->prepare("SELECT audio_file FROM audio_package WHERE id = ? AND (is_deleted = 0 OR is_deleted IS NULL)");
+                        $q = $this->conn->prepare("SELECT title, audio_file FROM audio_package WHERE id = ? AND (is_deleted = 0 OR is_deleted IS NULL)");
                         $q->execute([$contentId]);
                         $data = $q->fetch(PDO::FETCH_ASSOC);
-                        if ($data && !empty($data['audio_file'])) {
-                            $file = $data['audio_file'];
-                            $row['audio_file_path'] = (preg_match('#^(https?://|/)#i', $file) || strpos($file, 'uploads/') === 0)
-                                ? $file
-                                : ('uploads/audio/' . $file);
+                        if ($data) {
+                            // Override title with actual package title
+                            if (!empty($data['title'])) {
+                                $row['title'] = $data['title'];
+                            }
+                            
+                            if (!empty($data['audio_file'])) {
+                                $file = $data['audio_file'];
+                                $row['audio_file_path'] = (preg_match('#^(https?://|/)#i', $file) || strpos($file, 'uploads/') === 0)
+                                    ? $file
+                                    : ('uploads/audio/' . $file);
+                            }
                         }
                         break;
                     }
                     case 'document': {
-                        $q = $this->conn->prepare("SELECT word_excel_ppt_file, ebook_manual_file, research_file FROM documents WHERE id = ? AND (is_deleted = 0 OR is_deleted IS NULL)");
+                        $q = $this->conn->prepare("SELECT title, word_excel_ppt_file, ebook_manual_file, research_file FROM documents WHERE id = ? AND (is_deleted = 0 OR is_deleted IS NULL)");
                         $q->execute([$contentId]);
                         $data = $q->fetch(PDO::FETCH_ASSOC);
                         if ($data) {
+                            // Override title with actual package title
+                            if (!empty($data['title'])) {
+                                $row['title'] = $data['title'];
+                            }
+                            
                             $file = $data['word_excel_ppt_file'] ?: ($data['ebook_manual_file'] ?: ($data['research_file'] ?? null));
                             if ($file) {
                                 $row['document_file_path'] = (preg_match('#^(https?://|/)#i', $file) || strpos($file, 'uploads/') === 0)
@@ -785,22 +818,34 @@ class CourseModel
                         break;
                     }
                     case 'image': {
-                        $q = $this->conn->prepare("SELECT image_file FROM image_package WHERE id = ? AND (is_deleted = 0 OR is_deleted IS NULL)");
+                        $q = $this->conn->prepare("SELECT title, image_file FROM image_package WHERE id = ? AND (is_deleted = 0 OR is_deleted IS NULL)");
                         $q->execute([$contentId]);
                         $data = $q->fetch(PDO::FETCH_ASSOC);
-                        if ($data && !empty($data['image_file'])) {
-                            $file = $data['image_file'];
-                            $row['image_file_path'] = (preg_match('#^(https?://|/)#i', $file) || strpos($file, 'uploads/') === 0)
-                                ? $file
-                                : ('uploads/image/' . $file);
+                        if ($data) {
+                            // Override title with actual package title
+                            if (!empty($data['title'])) {
+                                $row['title'] = $data['title'];
+                            }
+                            
+                            if (!empty($data['image_file'])) {
+                                $file = $data['image_file'];
+                                $row['image_file_path'] = (preg_match('#^(https?://|/)#i', $file) || strpos($file, 'uploads/') === 0)
+                                    ? $file
+                                    : ('uploads/image/' . $file);
+                            }
                         }
                         break;
                     }
                     case 'external': {
-                        $q = $this->conn->prepare("SELECT course_url, video_url, article_url, audio_url FROM external_content WHERE id = ? AND (is_deleted = 0 OR is_deleted IS NULL)");
+                        $q = $this->conn->prepare("SELECT title, course_url, video_url, article_url, audio_url FROM external_content WHERE id = ? AND (is_deleted = 0 OR is_deleted IS NULL)");
                         $q->execute([$contentId]);
                         $data = $q->fetch(PDO::FETCH_ASSOC);
                         if ($data) {
+                            // Override title with actual package title
+                            if (!empty($data['title'])) {
+                                $row['title'] = $data['title'];
+                            }
+                            
                             $url = $data['course_url'] ?: ($data['video_url'] ?: ($data['article_url'] ?: ($data['audio_url'] ?? null)));
                             if ($url) {
                                 $row['external_content_url'] = $url;
@@ -813,10 +858,45 @@ class CourseModel
                         $q->execute([$contentId]);
                         $data = $q->fetch(PDO::FETCH_ASSOC);
                         if ($data) {
+                            // Override title with actual package title
+                            if (!empty($data['title'])) {
+                                $row['title'] = $data['title'];
+                            }
+                            
                             $row['assessment_title'] = $data['title'];
                             $row['num_attempts'] = $data['num_attempts'];
                             $row['time_limit'] = $data['time_limit'];
                             $row['passing_percentage'] = $data['passing_percentage'];
+                        }
+                        break;
+                    }
+                    case 'survey': {
+                        $q = $this->conn->prepare("SELECT title FROM survey_package WHERE id = ? AND (is_deleted = 0 OR is_deleted IS NULL)");
+                        $q->execute([$contentId]);
+                        $data = $q->fetch(PDO::FETCH_ASSOC);
+                        if ($data && !empty($data['title'])) {
+                            // Override title with actual package title
+                            $row['title'] = $data['title'];
+                        }
+                        break;
+                    }
+                    case 'feedback': {
+                        $q = $this->conn->prepare("SELECT title FROM feedback_package WHERE id = ? AND (is_deleted = 0 OR is_deleted IS NULL)");
+                        $q->execute([$contentId]);
+                        $data = $q->fetch(PDO::FETCH_ASSOC);
+                        if ($data && !empty($data['title'])) {
+                            // Override title with actual package title
+                            $row['title'] = $data['title'];
+                        }
+                        break;
+                    }
+                    case 'assignment': {
+                        $q = $this->conn->prepare("SELECT title FROM assignment_package WHERE id = ? AND (is_deleted = 0 OR is_deleted IS NULL)");
+                        $q->execute([$contentId]);
+                        $data = $q->fetch(PDO::FETCH_ASSOC);
+                        if ($data && !empty($data['title'])) {
+                            // Override title with actual package title
+                            $row['title'] = $data['title'];
                         }
                         break;
                     }
@@ -923,16 +1003,16 @@ class CourseModel
                     $row['title'] = null;
                     $row['type'] = $row['prerequisite_type'];
             }
-            // Fallback: use cp.prerequisite_name if join title is empty
-            if (empty($row['title']) && !empty($row['prerequisite_name'])) {
-                $row['title'] = $row['prerequisite_name'];
-            }
+            // Titles now only come from package tables, no fallback to prerequisite_name
             if (empty($row['title'])) {
                 $row['title'] = 'Untitled';
             }
             if (empty($row['type'])) {
                 $row['type'] = 'unknown';
             }
+            
+            // Set prerequisite_course_title for backward compatibility with existing views
+            $row['prerequisite_course_title'] = $row['title'];
         }
         return $results;
     }
@@ -1526,11 +1606,14 @@ class CourseModel
                     $progress = $this->getAssessmentProgress($contentId, $userId, $clientId);
                     break;
                 case 'scorm':
-                    $progress = $this->getScormProgress($contentId, $userId, $clientId);
+                    // For SCORM, use the course_module_content.id, not the content_id
+                    $progress = $this->getScormProgress($content['id'], $userId, $clientId);
+                    break;
+                case 'document':
+                    $progress = $this->getDocumentProgress($content['id'], $userId, $clientId);
                     break;
                 case 'video':
                 case 'audio':
-                case 'document':
                 case 'image':
                 case 'interactive':
                 case 'non_scorm':
@@ -1589,6 +1672,8 @@ class CourseModel
     private function getScormProgress($contentId, $userId, $clientId)
     {
         try {
+            // The contentId parameter is the course_module_content.id
+            // We need to find progress records that match this content_id
             $sql = "SELECT lesson_status, lesson_location, score_raw, score_max 
                     FROM scorm_progress 
                     WHERE content_id = ? AND user_id = ? AND client_id = ?";
@@ -1608,6 +1693,37 @@ class CourseModel
             return 0;
         } catch (Exception $e) {
             error_log("Error getting SCORM progress: " . $e->getMessage());
+            return 0;
+        }
+    }
+    
+    // Get document progress
+    private function getDocumentProgress($contentId, $userId, $clientId)
+    {
+        try {
+            // The contentId parameter is the course_module_content.id
+            // We need to find progress records that match this content_id
+            $sql = "SELECT viewed_percentage, is_completed, time_spent, current_page, total_pages 
+                    FROM document_progress 
+                    WHERE content_id = ? AND user_id = ? AND client_id = ?";
+            $stmt = $this->conn->prepare($sql);
+            $stmt->execute([$contentId, $userId, $clientId]);
+            $progress = $stmt->fetch(PDO::FETCH_ASSOC);
+            
+            if ($progress) {
+                if ($progress['is_completed']) {
+                    return 100; // Completed
+                } elseif ($progress['viewed_percentage'] >= 80) { // 80% threshold
+                    return 100; // Completed based on threshold
+                } elseif ($progress['viewed_percentage'] > 0) {
+                    return floatval($progress['viewed_percentage']); // In progress
+                } elseif ($progress['current_page'] > 1) {
+                    return 25; // Started but no percentage yet
+                }
+            }
+            return 0; // Not started
+        } catch (Exception $e) {
+            error_log("Error getting document progress: " . $e->getMessage());
             return 0;
         }
     }

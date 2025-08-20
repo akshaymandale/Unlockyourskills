@@ -268,6 +268,15 @@ Router::get('/users/autocomplete', 'UserManagementController@getUserEmailsForAut
     // Module Progress API
     Router::get('/module-progress', 'MyCoursesController@getModuleProgress');
     
+    // Document Progress API
+    Router::post('/api/document-progress/start', 'DocumentProgressController@startTracking');
+    Router::post('/api/document-progress/update', 'DocumentProgressController@updateProgress');
+    Router::post('/api/document-progress/complete', 'DocumentProgressController@markComplete');
+    Router::get('/api/document-progress/get', 'DocumentProgressController@getProgress');
+    Router::post('/api/document-progress/bookmark', 'DocumentProgressController@saveBookmark');
+    Router::post('/api/document-progress/notes', 'DocumentProgressController@saveNotes');
+    Router::get('/api/document-progress/debug', 'DocumentProgressController@debug');
+    
     // Debug route for testing
     Router::get('/api/debug', 'MyCoursesController@debug');
 

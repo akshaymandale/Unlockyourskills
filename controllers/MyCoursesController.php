@@ -104,6 +104,8 @@ class MyCoursesController {
                         }
                     }
                 }
+                // Important: break the reference to avoid unintended carry-over between iterations
+                unset($module);
             }
             
             // Check attempts for each assessment in prerequisites

@@ -126,7 +126,7 @@ CREATE TABLE IF NOT EXISTS course_module_content (
     module_id INT NOT NULL,
     content_type VARCHAR(50) NOT NULL, -- 'scorm', 'video', 'audio', 'document', 'interactive', 'assignment'
     content_id INT NOT NULL, -- ID from respective VLR table
-    title VARCHAR(255),
+    -- title removed; display should use the source package title
     description TEXT,
     content_order INT DEFAULT 0,
     is_required BOOLEAN DEFAULT TRUE,
@@ -154,7 +154,7 @@ CREATE TABLE IF NOT EXISTS course_prerequisites (
     course_id INT NOT NULL,
     prerequisite_type ENUM('course', 'assessment', 'survey', 'feedback', 'scorm', 'video', 'audio', 'document', 'interactive', 'assignment', 'external', 'image', 'skill', 'certification') NOT NULL,
     prerequisite_id INT NOT NULL, -- ID of prerequisite (references different tables based on prerequisite_type)
-    prerequisite_name VARCHAR(255), -- Display name
+    -- prerequisite_name removed; display should use the source package title
     prerequisite_description TEXT,
     sort_order INT DEFAULT 0,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,

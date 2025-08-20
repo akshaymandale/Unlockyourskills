@@ -183,7 +183,7 @@ if (!isset($course) || !$course) {
                         <div class="prerequisite-item d-flex align-items-center p-3 border rounded mb-2">
                             <i class="fas fa-link me-3 text-primary"></i>
                             <div class="flex-grow-1">
-                                <strong><?= htmlspecialchars($prerequisite['prerequisite_name'] ?: $prerequisite['prerequisite_course_title'] ?: 'Untitled Prerequisite') ?></strong>
+                                <strong><?= htmlspecialchars($prerequisite['prerequisite_course_title'] ?: 'Untitled Prerequisite') ?></strong>
                                 <br>
                                 <small class="text-muted"><?= htmlspecialchars($prerequisite['prerequisite_description'] ?? 'No description') ?></small>
                             </div>
