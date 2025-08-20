@@ -30,11 +30,19 @@ class MyCoursesController {
             exit;
         }
         $userId = $_SESSION['user']['id'];
+        $clientId = $_SESSION['user']['client_id'] ?? null;
         $status = $_GET['status'] ?? '';
         $search = $_GET['search'] ?? '';
         $page = max(1, intval($_GET['page'] ?? 1));
         $perPage = intval($_GET['per_page'] ?? 12);
-        $courses = $this->myCoursesModel->getUserCourses($userId, $status, $search, $page, $perPage);
+        
+        if (!$clientId) {
+            header('Content-Type: application/json');
+            echo json_encode(['success' => false, 'message' => 'Client ID not found in session']);
+            exit;
+        }
+        
+        $courses = $this->myCoursesModel->getUserCourses($userId, $status, $search, $page, $perPage, $clientId);
         
         // Add encrypted IDs for secure URLs
         if (is_array($courses)) {
@@ -47,6 +55,31 @@ class MyCoursesController {
         
         header('Content-Type: application/json');
         echo json_encode(['success' => true, 'courses' => $courses]);
+        exit;
+    }
+
+    // AJAX: Get total count of user courses (for pagination)
+    public function getUserCoursesCount() {
+        if (!isset($_SESSION['id']) || !isset($_SESSION['user'])) {
+            header('Content-Type: application/json');
+            echo json_encode(['success' => false, 'message' => 'Unauthorized']);
+            exit;
+        }
+        $userId = $_SESSION['user']['id'];
+        $clientId = $_SESSION['user']['client_id'] ?? null;
+        $status = $_GET['status'] ?? '';
+        $search = $_GET['search'] ?? '';
+        
+        if (!$clientId) {
+            header('Content-Type: application/json');
+            echo json_encode(['success' => false, 'message' => 'Client ID not found in session']);
+            exit;
+        }
+        
+        $totalCount = $this->myCoursesModel->getUserCoursesCount($userId, $status, $search, $clientId);
+        
+        header('Content-Type: application/json');
+        echo json_encode(['success' => true, 'total' => $totalCount]);
         exit;
     }
 
