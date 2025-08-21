@@ -1535,11 +1535,6 @@ function getVideoProgressData($courseId, $contentId, $userId) {
                                                 $statusHtml .= " <small class='text-muted'>(Last: " . date('M j, Y', strtotime($videoProgressData['last_watched_at'])) . ")</small>";
                                             }
                                             $statusHtml .= "</div>";
-                                            
-                                            // Add video status badge
-                                            $statusHtml .= "<div class='video-status-badge mt-1'>";
-                                            $statusHtml .= "<span class='badge bg-info'>" . ucfirst(str_replace('_', ' ', $videoProgressData['video_status'])) . "</span>";
-                                            $statusHtml .= "</div>";
                                         } else {
                                             $statusHtml .= "<div class='text-muted'><i class='fas fa-circle me-1'></i>Not started</div>";
                                         }

@@ -7228,6 +7228,48 @@ body select:focus,
     text-align: center;
 }
 
+/* Video Badge Styles - Matching Document Pattern EXACTLY */
+.video-progress-status {
+    padding: 8px 12px;
+    border-radius: 6px;
+    background: #f8f9fa;
+    border-left: 3px solid #dee2e6;
+    margin-bottom: 8px;
+}
+
+.video-progress-status .text-success {
+    color: #198754 !important;
+    font-weight: 500;
+}
+
+.video-progress-status .text-warning {
+    color: #fd7e14 !important;
+    font-weight: 500;
+}
+
+.video-progress-status .text-muted {
+    color: #6c757d !important;
+}
+
+.video-completed-badge {
+    margin-top: 8px;
+}
+
+.video-completed-badge .badge {
+    font-size: 0.875rem;
+    padding: 6px 12px;
+}
+
+.video-progress-status small {
+    font-size: 0.75rem;
+}
+
+.video-progress-status i {
+    margin-right: 6px;
+    width: 14px;
+    text-align: center;
+}
+
 .content-controls .content-toggle {
     width: 28px;
     height: 28px;
