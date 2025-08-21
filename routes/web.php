@@ -98,6 +98,23 @@ Router::get('/users/autocomplete', 'UserManagementController@getUserEmailsForAut
     Router::get('/my-courses/start', 'MyCoursesController@start');
 
     // ===================================
+    // AUDIO PROGRESS TRACKING
+    // ===================================
+    Router::post('/audio-progress/update', 'AudioProgressController@updateProgress');
+    Router::get('/audio-progress/get', 'AudioProgressController@getProgress');
+    Router::post('/audio-progress/complete', 'AudioProgressController@markCompleted');
+    Router::post('/audio-progress/status', 'AudioProgressController@updateStatus');
+    Router::post('/audio-progress/playback-status', 'AudioProgressController@updatePlaybackStatus');
+    Router::get('/audio-progress/resume-position', 'AudioProgressController@getResumePosition');
+    Router::get('/audio-progress/summary', 'AudioProgressController@getSummary');
+    Router::get('/api/audio-content-info', 'AudioProgressController@getContentInfo');
+    
+    // Hybrid approach routes
+    Router::post('/audio-progress/immediate-save', 'AudioProgressController@immediateSave');
+    Router::post('/audio-progress/beacon-save', 'AudioProgressController@beaconSave');
+    Router::post('/audio-progress/batch-update', 'AudioProgressController@batchUpdate');
+
+    // ===================================
     // ASSESSMENT PLAYER
     // ===================================
     Router::get('/assessment-player', 'AssessmentPlayerController@start');

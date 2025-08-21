@@ -3,6 +3,73 @@
 <?php include 'includes/sidebar.php'; ?>
 <?php require_once 'core/IdEncryption.php'; ?>
 
+<?php
+/**
+ * Get audio progress data for a specific content
+ */
+function getAudioProgressData($courseId, $contentId, $userId) {
+    try {
+        $database = new Database();
+        $conn = $database->connect();
+        
+        $sql = "SELECT ap.*, 
+                       ap.audio_status,
+                       ap.playback_status,
+                       ap.is_completed,
+                       ap.listened_percentage,
+                       ap.last_listened_at,
+                       ap.play_count,
+                       ap.updated_at
+                FROM audio_progress ap
+                WHERE ap.course_id = ? AND ap.content_id = ? AND ap.user_id = ?";
+        
+        $stmt = $conn->prepare($sql);
+        $stmt->execute([$courseId, $contentId, $userId]);
+        $progress = $stmt->fetch(PDO::FETCH_ASSOC);
+        
+        if ($progress) {
+            // Determine status based on completion and playback
+            $status = [
+                'status' => $progress['audio_status'],
+                'playback_status' => $progress['playback_status'],
+                'is_completed' => $progress['is_completed'],
+                'progress' => $progress['listened_percentage'],
+                'last_listened_at' => $progress['last_listened_at'],
+                'play_count' => $progress['play_count']
+            ];
+        } else {
+            $status = [
+                'status' => 'not_started',
+                'playback_status' => 'not_started',
+                'is_completed' => false,
+                'progress' => 0,
+                'last_listened_at' => null,
+                'play_count' => 0
+            ];
+        }
+        
+        return [
+            'progress' => $progress ? $progress['listened_percentage'] : 0,
+            'status' => $status
+        ];
+        
+    } catch (Exception $e) {
+        error_log("Error getting audio progress data: " . $e->getMessage());
+        return [
+            'progress' => 0,
+            'status' => [
+                'status' => 'not_started',
+                'playback_status' => 'not_started',
+                'is_completed' => false,
+                'progress' => 0,
+                'last_listened_at' => null,
+                'play_count' => 0
+            ]
+        ];
+    }
+}
+?>
+
 <style>
     .prerequisites-completion-status,
     .modules-completion-status {
@@ -150,6 +217,8 @@
         font-size: 0.75rem;
     }
     
+
+    
     /* Enhanced Progress Bar Styles */
     .module-progress-section {
         margin: 15px 0;
@@ -246,6 +315,13 @@
         0% { opacity: 1; }
         50% { opacity: 0.7; }
         100% { opacity: 1; }
+    }
+    
+
+    
+    /* Progress bar updating animation */
+    .content-progress-fill.updating {
+        animation: progressPulse 1s ease-in-out;
     }
 </style>
 
@@ -1194,15 +1270,19 @@
                                                             if ($content['type'] === 'scorm') {
                                                                 $scormProgress = getScormProgressStatus($GLOBALS['course']['id'], $content['id'], $_SESSION['user']['id']);
                                                                 $progressPercentage = $scormProgress['progress_percentage'];
-                                                                            } elseif ($content['type'] === 'document') {
-                    // Get document progress from document_progress table
-                    $progressPercentage = getDocumentProgressStatus($GLOBALS['course']['id'], $content['id'], $_SESSION['user']['id']);
-                    
-                    // Get document completion status
-                    $documentStatus = getDocumentCompletionStatus($GLOBALS['course']['id'], $content['id'], $_SESSION['user']['id']);
-                } else {
-                    $progressPercentage = intval($content['progress'] ?? 0);
-                }
+                                                            } elseif ($content['type'] === 'document') {
+                                                                // Get document progress from document_progress table
+                                                                $progressPercentage = getDocumentProgressStatus($GLOBALS['course']['id'], $content['id'], $_SESSION['user']['id']);
+                                                                
+                                                                // Get document completion status
+                                                                $documentStatus = getDocumentCompletionStatus($GLOBALS['course']['id'], $content['id'], $_SESSION['user']['id']);
+                                                            } elseif ($content['type'] === 'audio') {
+                                                                // Get audio progress from audio_progress table
+                                                                $audioProgressData = getAudioProgressData($GLOBALS['course']['id'], $content['id'], $_SESSION['user']['id']);
+                                                                $progressPercentage = $audioProgressData['progress'];
+                                                            } else {
+                                                                $progressPercentage = intval($content['progress'] ?? 0);
+                                                            }
                                                             ?>
                                                             <span class="content-progress-text"><?= $progressPercentage ?>%</span>
                                                             <div class="content-progress-bar" role="progressbar" aria-label="Content progress" aria-valuenow="<?= $progressPercentage ?>" aria-valuemin="0" aria-valuemax="100">
@@ -1276,7 +1356,41 @@
                                                                     $audioUrl = $content['audio_file_path'] ?? '';
                                                                     if ($audioUrl) {
                                                                         $resolved = resolveContentUrl($audioUrl);
-                                                                        $actionsHtml .= "<div class='audio-player-wrapper'><audio controls preload='none'><source src='" . htmlspecialchars($resolved) . "' type='audio/mpeg'></audio></div>";
+                                                                        
+                                                                        // Get audio progress and status with additional data
+                                                                        $audioProgressData = getAudioProgressData($GLOBALS['course']['id'], $content['id'], $_SESSION['user']['id']);
+                                                                        $audioProgress = $audioProgressData['progress'];
+                                                                        $audioStatus = $audioProgressData['status'];
+                                                                        $lastListenedAt = $audioStatus['last_listened_at'];
+                                                                        
+                                                                        // Build status exactly like documents
+                                                                        $statusHtml .= "<div class='document-progress-status mb-2'>";
+                                                                        if ($audioProgress > 0) {
+                                                                            $statusClass = $audioStatus['status'] === 'completed' ? 'text-success' : 'text-warning';
+                                                                            $statusIcon = $audioStatus['status'] === 'completed' ? 'fa-check-circle' : 'fa-clock';
+                                                                            $statusHtml .= "<div class='{$statusClass}'><i class='fas {$statusIcon} me-1'></i>" . ucfirst($audioStatus['status']);
+                                                                            if ($audioProgress > 0) {
+                                                                                $statusHtml .= " - Progress: {$audioProgress}%";
+                                                                            }
+                                                                            // Add last listened date like documents
+                                                                            if ($lastListenedAt) {
+                                                                                $lastListened = date('M j, Y', strtotime($lastListenedAt));
+                                                                                $statusHtml .= " <small class='text-muted'>(Last: {$lastListened})</small>";
+                                                                            }
+                                                                            $statusHtml .= "</div>";
+                                                                        } else {
+                                                                            $statusHtml .= "<div class='text-muted'><i class='fas fa-circle me-1'></i>Not started</div>";
+                                                                        }
+                                                                        $statusHtml .= "</div>";
+                                                                        
+                                                                        $viewer = UrlHelper::url('my-courses/view-content') . '?type=audio&title=' . urlencode($content['title']) . '&src=' . urlencode($resolved) . '&course_id=' . $GLOBALS['course']['id'] . '&module_id=' . $module['id'] . '&content_id=' . $content['id'];
+                                                                        
+                                                                        // Show completed badge if audio is completed
+                                                                        if ($audioStatus['status'] === 'completed') {
+                                                                            $statusHtml .= "<div class='document-completed-badge'><span class='badge bg-success'><i class='fas fa-check-circle me-1'></i>Audio Completed</span></div>";
+                                                                        } else {
+                                                                            $actionsHtml .= "<a href='" . htmlspecialchars($viewer) . "' target='_blank' class='postrequisite-action-btn btn-warning launch-content-btn' data-module-id='" . $module['id'] . "' data-content-id='" . $content['id'] . "' data-type='audio'><i class='fas fa-headphones me-1'></i>Listen Audio</a>";
+                                                                        }
                                                                     } else {
                                                                         $statusHtml .= "<span class='content-error'><i class='fas fa-exclamation-triangle me-1'></i>No audio file</span>";
                                                                     }
@@ -2279,52 +2393,150 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
     
-    // Start document close monitoring
-    startDocumentCloseMonitoring();
+    // Start document close monitoring (only once)
+    if (!window.documentCloseMonitoringStarted) {
+        startDocumentCloseMonitoring();
+        window.documentCloseMonitoringStarted = true;
+    }
 });
 
-// Simple document close monitoring using localStorage polling
+// Simple document and audio close monitoring using localStorage polling
 function startDocumentCloseMonitoring() {
+    // Prevent multiple monitoring instances
+    if (window.documentCloseMonitoringActive) {
+        console.log('Document close monitoring already active, skipping...');
+        return;
+    }
+    
     // Get all document content IDs from the page
     const documentButtons = document.querySelectorAll('.launch-content-btn[data-type="document"]');
     const documentIds = Array.from(documentButtons).map(btn => btn.dataset.contentId);
     
-    if (documentIds.length === 0) {
-        return; // No documents to monitor
+    // Get all audio content IDs from the page
+    const audioButtons = document.querySelectorAll('.launch-content-btn[data-type="audio"]');
+    const audioIds = Array.from(audioButtons).map(btn => btn.dataset.contentId);
+    
+    if (documentIds.length === 0 && audioIds.length === 0) {
+        return; // No content to monitor
     }
     
     console.log('Monitoring document close events for:', documentIds);
+    console.log('Monitoring audio close events for:', audioIds);
     
-    // Check every 2 seconds for document close flags
+    // Mark monitoring as active
+    window.documentCloseMonitoringActive = true;
+    
+    // Check every 2 seconds for content close flags
     const checkInterval = setInterval(() => {
-        let shouldRefresh = false;
+        // Prevent multiple refresh attempts
+        if (window.pageRefreshInProgress) {
+            console.log('Page refresh already in progress, skipping...');
+            return;
+        }
         
-        documentIds.forEach(contentId => {
+        // Prevent monitoring if page is about to refresh
+        if (window.pageRefreshScheduled) {
+            console.log('Page refresh already scheduled, stopping monitoring...');
+            clearInterval(checkInterval);
+            return;
+        }
+        
+        let shouldRefresh = false;
+        let closedContentType = '';
+        let closedContentId = '';
+        
+        // Check document close flags
+        for (let i = 0; i < documentIds.length && !shouldRefresh; i++) {
+            const contentId = documentIds[i];
             if (contentId) {
                 const closeFlag = localStorage.getItem('document_closed_' + contentId);
                 if (closeFlag) {
                     console.log('Document close detected for:', contentId);
+                    
+                    // Check if this content was already processed recently
+                    const processedKey = `processed_document_${contentId}`;
+                    const lastProcessed = sessionStorage.getItem(processedKey);
+                    const now = Date.now();
+                    
+                    if (lastProcessed && (now - parseInt(lastProcessed)) < 5000) {
+                        console.log('Document content already processed recently, skipping...');
+                        localStorage.removeItem('document_closed_' + contentId);
+                        continue;
+                    }
+                    
+                    // Mark as processed
+                    sessionStorage.setItem(processedKey, now.toString());
+                    
                     localStorage.removeItem('document_closed_' + contentId);
                     shouldRefresh = true;
+                    closedContentType = 'Document';
+                    closedContentId = contentId;
+                    // Break out of the loop once we find a flag
+                    break;
                 }
             }
-        });
+        }
+        
+        // Check audio close flags
+        for (let i = 0; i < audioIds.length && !shouldRefresh; i++) {
+            const contentId = audioIds[i];
+            if (contentId) {
+                const closeFlag = localStorage.getItem('audio_closed_' + contentId);
+                if (closeFlag) {
+                    console.log('Audio close detected for:', contentId, 'at timestamp:', closeFlag);
+                    
+                    // Check if this content was already processed recently
+                    const processedKey = `processed_audio_${contentId}`;
+                    const lastProcessed = sessionStorage.getItem(processedKey);
+                    const now = Date.now();
+                    
+                    if (lastProcessed && (now - parseInt(lastProcessed)) < 5000) {
+                        console.log('Audio content already processed recently, skipping...');
+                        localStorage.removeItem('audio_closed_' + contentId);
+                        continue;
+                    }
+                    
+                    // Mark as processed
+                    sessionStorage.setItem(processedKey, now.toString());
+                    
+                    // Remove the flag immediately to prevent duplicate detection
+                    localStorage.removeItem('audio_closed_' + contentId);
+                    shouldRefresh = true;
+                    closedContentType = 'Audio';
+                    closedContentId = contentId;
+                    // Break out of the loop once we find a flag
+                    break;
+                }
+            }
+        }
         
         if (shouldRefresh) {
-            console.log('Document was closed - refreshing page to show updated progress');
+            // Mark refresh as in progress to prevent duplicates
+            window.pageRefreshInProgress = true;
+            
+            console.log(`${closedContentType} was closed - refreshing page to show updated progress`);
+            console.log('Content type:', closedContentType, 'Content ID:', closedContentId);
+            
+            // Check if we already have a notification to prevent duplicates
+            if (document.querySelector('.alert-info[data-content-refresh]')) {
+                console.log('Notification already exists, skipping duplicate...');
+                return;
+            }
             
             // Show a simple notification
             const notification = document.createElement('div');
             notification.className = 'alert alert-info alert-dismissible fade show position-fixed';
+            notification.setAttribute('data-content-refresh', 'true');
             notification.style.cssText = 'top: 20px; right: 20px; z-index: 9999; max-width: 300px;';
             notification.innerHTML = `
                 <i class="fas fa-sync-alt me-2"></i>
-                <strong>Document Closed</strong><br>
+                <strong>${closedContentType} Closed</strong><br>
                 Refreshing page to show updated progress...
                 <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
             `;
             
             document.body.appendChild(notification);
+            console.log('Notification created and added to page');
             
             // Auto-dismiss after 3 seconds
             setTimeout(() => {
@@ -2333,10 +2545,38 @@ function startDocumentCloseMonitoring() {
                 }
             }, 3000);
             
-            // Refresh the page after a short delay
-            setTimeout(() => {
-                window.location.reload();
-            }, 2000);
+            // Mark refresh as scheduled to prevent further monitoring
+            window.pageRefreshScheduled = true;
+            
+            // For audio content, update progress immediately before refresh
+            if (closedContentType === 'Audio') {
+                console.log('Audio was closed - updating progress before refresh');
+                console.log('Calling refreshAudioProgress for content ID:', closedContentId);
+                
+                // Update progress and then refresh after it completes
+                refreshAudioProgress(closedContentId).then((result) => {
+                    console.log('Audio progress update completed with result:', result);
+                    // Wait a bit more for the progress update to complete, then refresh
+                    setTimeout(() => {
+                        console.log('Audio progress updated, refreshing page...');
+                        window.location.reload();
+                    }, 1000);
+                }).catch((error) => {
+                    console.error('Audio progress update failed with error:', error);
+                    // If progress update fails, still refresh after delay
+                    setTimeout(() => {
+                        console.log('Audio progress update failed, refreshing page anyway...');
+                        window.location.reload();
+                    }, 2000);
+                });
+            } else {
+                // For other content types, refresh the page after a short delay
+                console.log('Non-audio content closed, refreshing page after delay...');
+                setTimeout(() => {
+                    console.log('Refreshing page for non-audio content...');
+                    window.location.reload();
+                }, 2000);
+            }
             
             // Stop monitoring since we're refreshing
             clearInterval(checkInterval);
@@ -2346,8 +2586,95 @@ function startDocumentCloseMonitoring() {
     // Clean up interval when page is unloaded
     window.addEventListener('beforeunload', () => {
         clearInterval(checkInterval);
+        window.documentCloseMonitoringActive = false;
+        window.pageRefreshInProgress = false;
+    });
+    
+    // Reset flags when page is refreshed
+    window.addEventListener('pageshow', () => {
+        if (window.performance.navigation.type === 1) { // Page refresh
+            console.log('Page refreshed, resetting monitoring flags');
+            window.documentCloseMonitoringActive = false;
+            window.pageRefreshInProgress = false;
+            window.documentCloseMonitoringStarted = false;
+            
+            // Clear processed content flags
+            const keysToRemove = [];
+            for (let i = 0; i < sessionStorage.length; i++) {
+                const key = sessionStorage.key(i);
+                if (key && (key.startsWith('processed_audio_') || key.startsWith('processed_document_'))) {
+                    keysToRemove.push(key);
+                }
+            }
+            keysToRemove.forEach(key => {
+                sessionStorage.removeItem(key);
+                console.log('Cleared processed flag:', key);
+            });
+            
+            // Reset refresh flags
+            window.pageRefreshScheduled = false;
+        }
     });
 }
+
+
+
+// Function to refresh audio progress
+function refreshAudioProgress(contentId) {
+    if (!contentId) return Promise.resolve();
+    
+    console.log('Refreshing audio progress for:', contentId);
+    
+    // Find the content card
+    const contentCard = document.querySelector(`[data-content-id="${contentId}"]`).closest('.content-item-card');
+    if (!contentCard) return Promise.resolve();
+    
+    // Show loading state
+    const progressText = contentCard.querySelector('.content-progress-text');
+    const progressFill = contentCard.querySelector('.content-progress-fill');
+    
+    if (progressText) progressText.textContent = 'Loading...';
+    if (progressFill) progressFill.classList.add('updating');
+    
+    // Fetch updated progress from the server
+    const courseId = <?= $GLOBALS['course']['id'] ?? 'null' ?>;
+    if (!courseId) return Promise.resolve();
+    
+    // Return a promise for proper async handling
+    return fetch(`/Unlockyourskills/audio-progress/resume-position?course_id=${courseId}&content_id=${contentId}`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                // Calculate percentage from resume position and duration
+                let progressPercentage = 0;
+                if (data.duration > 0 && data.resume_position > 0) {
+                    progressPercentage = Math.round((data.resume_position / data.duration) * 100);
+                }
+                
+                // Update progress bar
+                if (progressText) progressText.textContent = `${progressPercentage}%`;
+                if (progressFill) {
+                    progressFill.style.width = `${progressPercentage}%`;
+                    progressFill.setAttribute('aria-valuenow', progressPercentage);
+                }
+                
+                console.log(`Audio progress refreshed: ${progressPercentage}%`);
+                return true; // Success
+            }
+            return false; // No success
+        })
+        .catch(error => {
+            console.error('Error refreshing audio progress:', error);
+            if (progressText) progressText.textContent = 'Error';
+            throw error; // Re-throw for catch handling
+        })
+        .finally(() => {
+            if (progressFill) progressFill.classList.remove('updating');
+        });
+}
+
+// Global function for external access
+window.refreshAudioProgress = refreshAudioProgress;
 </script>
 
 <?php include 'includes/footer.php'; ?> 
