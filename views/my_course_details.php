@@ -407,6 +407,84 @@ function getAudioProgressData($courseId, $contentId, $userId) {
             }
         }
         
+        // Helper to calculate module real progress dynamically
+        if (!function_exists('calculateModuleRealProgress')) {
+            function calculateModuleRealProgress($moduleId, $courseId, $userId) {
+                try {
+                    // Get database connection
+                    $db = new PDO(
+                        'mysql:unix_socket=/Applications/XAMPP/xamppfiles/var/mysql/mysql.sock;dbname=unlockyourskills',
+                        'root',
+                        ''
+                    );
+                    $db->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+                    
+                    // Get all content items in the module
+                    $stmt = $db->prepare("
+                        SELECT id, content_type 
+                        FROM course_module_content 
+                        WHERE module_id = ? AND (deleted_at IS NULL OR deleted_at = '0000-00-00 00:00:00')
+                        ORDER BY content_order ASC
+                    ");
+                    $stmt->execute([$moduleId]);
+                    $contentItems = $stmt->fetchAll(PDO::FETCH_ASSOC);
+                    
+                    if (empty($contentItems)) {
+                        return 0;
+                    }
+                    
+                    $totalProgress = 0;
+                    $totalItems = count($contentItems);
+                    
+                    foreach ($contentItems as $content) {
+                        $contentId = $content['id'];
+                        $contentType = $content['content_type'];
+                        $progress = 0;
+                        
+                        switch ($contentType) {
+                            case 'audio':
+                                $audioProgressData = getAudioProgressData($courseId, $contentId, $userId);
+                                $progress = $audioProgressData['progress'];
+                                break;
+                                
+                            case 'document':
+                                $progress = getDocumentProgressStatus($courseId, $contentId, $userId);
+                                break;
+                                
+                            case 'scorm':
+                                $scormProgress = getScormProgressStatus($courseId, $contentId, $userId);
+                                $progress = $scormProgress['progress_percentage'];
+                                break;
+                                
+                            default:
+                                // For other content types, check if they have any progress
+                                $stmt = $db->prepare("
+                                    SELECT cp.status, cp.completion_percentage 
+                                    FROM content_progress cp
+                                    JOIN course_enrollments ce ON cp.enrollment_id = ce.id
+                                    WHERE cp.content_id = ? AND ce.user_id = ?
+                                ");
+                                $stmt->execute([$contentId, $userId]);
+                                $genProgress = $stmt->fetch(PDO::FETCH_ASSOC);
+                                
+                                if ($genProgress) {
+                                    $progress = intval($genProgress['completion_percentage'] ?? 0);
+                                }
+                                break;
+                        }
+                        
+                        $totalProgress += $progress;
+                    }
+                    
+                    return $totalItems > 0 ? round($totalProgress / $totalItems) : 0;
+                    
+                } catch (Exception $e) {
+                    error_log("Error calculating module real progress: " . $e->getMessage());
+                    return 0;
+                }
+            }
+        }
+        
         // Helper to check if all modules are completed
         if (!function_exists('areModulesCompleted')) {
             function areModulesCompleted($modules) {
@@ -419,6 +497,29 @@ function getAudioProgressData($courseId, $contentId, $userId) {
                     if (!empty($module['content'])) {
                         // Use real_progress if available, fallback to module_progress
                         $progress = intval($module['real_progress'] ?? $module['module_progress'] ?? 0);
+                        if ($progress < 100) {
+                            return false;
+                        }
+                    }
+                }
+                
+                return true;
+            }
+        }
+        
+        // Helper to check if all modules are completed
+        if (!function_exists('areModulesCompleted')) {
+            function areModulesCompleted($modules) {
+                if (empty($modules)) {
+                    return true; // No modules means all are completed
+                }
+                
+                foreach ($modules as $module) {
+                    // Check if module has content and if all content is completed
+                    if (!empty($module['content'])) {
+                        // Calculate real progress including audio progress
+                        $realProgress = calculateModuleRealProgress($module['id'], $GLOBALS['course']['id'], $_SESSION['user']['id']);
+                        $progress = intval($realProgress ?? $module['real_progress'] ?? $module['module_progress'] ?? 0);
                         if ($progress < 100) {
                             return false;
                         }
@@ -1110,7 +1211,9 @@ function getAudioProgressData($courseId, $contentId, $userId) {
             $modulesTotalCount = count($course['modules']);
             $overallModuleProgress = 0;
             foreach ($course['modules'] as $module) {
-                $progress = intval($module['real_progress'] ?? $module['module_progress'] ?? 0);
+                // Calculate real progress dynamically
+                $realProgress = calculateModuleRealProgress($module['id'], $course['id'], $_SESSION['user']['id']);
+                $progress = intval($realProgress ?? $module['real_progress'] ?? $module['module_progress'] ?? 0);
                 $overallModuleProgress += $progress;
                 if ($progress >= 100) {
                     $modulesCompletedCount++;
@@ -1169,7 +1272,9 @@ function getAudioProgressData($courseId, $contentId, $userId) {
                                             <div class="progress-info">
                                                 <div class="progress-text">
                                                     <?php 
-                                                    $realProgress = intval($module['real_progress'] ?? $module['module_progress'] ?? 0);
+                                                    // Calculate real progress dynamically
+                                                    $realProgress = calculateModuleRealProgress($module['id'], $course['id'], $_SESSION['user']['id']);
+                                                    $realProgress = intval($realProgress ?? $module['real_progress'] ?? $module['module_progress'] ?? 0);
                                                     $completedItems = intval($module['completed_items'] ?? 0);
                                                     $totalItems = intval($module['total_items'] ?? 0);
                                                     echo $realProgress . '% Complete';
@@ -1622,7 +1727,7 @@ function getAudioProgressData($courseId, $contentId, $userId) {
                             Count: <?= count($course['modules'] ?? []) ?><br>
                             <?php if (!empty($course['modules'])): ?>
                                 <?php foreach ($course['modules'] as $module): ?>
-                                    - Module <?= $module['id'] ?>: <?= ($module['real_progress'] ?? $module['module_progress'] ?? 0) ?>%<br>
+                                                                         - Module <?= $module['id'] ?>: <?= calculateModuleRealProgress($module['id'], $course['id'], $_SESSION['user']['id']) ?>%<br>
                                 <?php endforeach; ?>
                             <?php endif; ?>
                         </small>
