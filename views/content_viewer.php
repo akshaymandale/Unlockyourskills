@@ -6,6 +6,7 @@
   <title><?= htmlspecialchars($title ?? 'Content') ?></title>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
   <link rel="stylesheet" href="/Unlockyourskills/public/css/document-progress.css">
+  <link rel="stylesheet" href="/Unlockyourskills/public/css/audio-progress.css">
   <style>
     :root { --purple: #6a0dad; --light: #f8f9fa; --border: #e5d6ff; }
     html, body { height: 100%; margin: 0; background: #fff; }
@@ -198,11 +199,81 @@
         Your browser does not support the video tag.
       </video>
     <?php elseif (($type ?? '') === 'audio'): ?>
-      <audio controls autoplay style="width:100%; height:48px;">
-        <source src="<?= htmlspecialchars($src) ?>" type="audio/mpeg">
-        Your browser does not support the audio element.
-      </audio>
-      <iframe class="viewer-frame" src="about:blank" style="display:none"></iframe>
+      <div class="audio-player-container" style="height: calc(100vh - 48px); display: flex; flex-direction: column; align-items: center; justify-content: center; background: linear-gradient(135deg, var(--light, #f8f9fa) 0%, var(--border, #e5d6ff) 100%); padding: 20px;">
+        <div class="audio-player-card" style="background: white; border-radius: 20px; padding: 40px; box-shadow: 0 10px 30px rgba(0,0,0,0.1); text-align: center; max-width: 600px; width: 100%;">
+          <div class="audio-icon" style="font-size: 80px; color: var(--purple, #6a0dad); margin-bottom: 20px;">
+            <i class="fas fa-headphones"></i>
+          </div>
+          <h2 class="audio-title" style="color: var(--purple, #6a0dad); margin-bottom: 30px; font-size: 24px; font-weight: 600; font-family: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif;">
+            <?= htmlspecialchars($title ?? 'Audio Content') ?>
+          </h2>
+          
+          <!-- Audio Progress Tracking Container -->
+          <div class="audio-progress-container">
+            <div class="audio-progress-header">
+              <h3 class="audio-progress-title">Progress Tracking</h3>
+              <div class="audio-progress-status">
+                <span class="audio-completion-badge" style="display: none;">Completed</span>
+              </div>
+            </div>
+            
+            <div class="audio-progress-bar-container">
+              <div class="audio-progress-bar">
+                <div class="audio-progress-bar-fill" style="width: 0%"></div>
+              </div>
+            </div>
+            
+            <div class="audio-progress-text">0% Complete</div>
+            
+            <div class="audio-progress-details">
+              <div class="audio-progress-detail">
+                <div class="audio-progress-detail-label">Current Time</div>
+                <div class="audio-progress-detail-value" id="current-time">0:00</div>
+              </div>
+              <div class="audio-progress-detail">
+                <div class="audio-progress-detail-label">Duration</div>
+                <div class="audio-progress-detail-value" id="duration">0:00</div>
+              </div>
+              <div class="audio-progress-detail">
+                <div class="audio-progress-detail-label">Play Count</div>
+                <div class="audio-progress-detail-value" id="play-count">0</div>
+              </div>
+            </div>
+            
+            <div class="audio-progress-stats">
+              <div class="audio-stat">
+                <span class="audio-stat-value" id="listened-percentage">0</span>
+                <div class="audio-stat-label">% Listened</div>
+              </div>
+              <div class="audio-stat">
+                <span class="audio-stat-value" id="completion-status">Not Started</span>
+                <div class="audio-stat-label">Status</div>
+              </div>
+              <div class="audio-stat">
+                <span class="audio-stat-value" id="audio-playback-status">Not Started</span>
+                <div class="audio-stat-label">Playback</div>
+              </div>
+            </div>
+          </div>
+          
+          <div class="audio-player-wrapper" style="width: 100%; margin-bottom: 30px;">
+            <audio controls preload="metadata" style="width: 100%; height: 60px;" id="audio-player">
+              <source src="<?= htmlspecialchars($src) ?>" type="audio/mpeg">
+              <source src="<?= htmlspecialchars($src) ?>" type="audio/wav">
+              <source src="<?= htmlspecialchars($src) ?>" type="audio/ogg">
+              Your browser does not support the audio element.
+            </audio>
+          </div>
+          
+
+          
+          <div class="audio-info" style="color: var(--purple, #6a0dad); font-size: 14px; line-height: 1.6; margin-top: 20px; font-family: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif;">
+            <p><i class="fas fa-info-circle me-2"></i>Click play to start listening to the audio content.</p>
+            <p><i class="fas fa-clock me-2"></i>You can pause, rewind, or adjust the volume as needed.</p>
+            <p><i class="fas fa-chart-line me-2"></i>Your progress is automatically tracked and saved.</p>
+          </div>
+        </div>
+      </div>
     <?php else: ?>
       <?php if (($type ?? '') === 'scorm'): ?>
         <iframe class="viewer-frame" src="<?= htmlspecialchars($src) ?>" allow="fullscreen *; geolocation *; microphone *; camera *" referrerpolicy="no-referrer-when-downgrade"></iframe>
@@ -214,6 +285,7 @@
     <div style="height: calc(100vh - 48px); display:flex; align-items:center; justify-content:center; color:#777; font-family: system-ui;">No content to display.</div>
   <?php endif; ?>
   
+  <script src="/Unlockyourskills/public/js/audio-progress.js"></script>
   <script>
   // Global variables for SCORM functionality
   window.scormData = {};
@@ -1228,15 +1300,17 @@
     sessionStorage.setItem('user_data', JSON.stringify(window.userData));
   }
   
-  // Load progress tracker
-  const progressScript = document.createElement('script');
-  progressScript.src = '/unlockyourskills/public/js/progress-tracking.js';
-  document.head.appendChild(progressScript);
-  
-  // Load document progress tracker for document content
+  // Load progress tracker (only for non-audio content)
   const urlParams = new URLSearchParams(window.location.search);
   const contentType = urlParams.get('type');
   
+  if (contentType !== 'audio') {
+    const progressScript = document.createElement('script');
+    progressScript.src = '/unlockyourskills/public/js/progress-tracking.js';
+    document.head.appendChild(progressScript);
+  }
+  
+  // Load document progress tracker for document content
   if (contentType === 'document') {
     console.log('📄 Document content detected, loading progress tracker...');
                     const documentProgressScript = document.createElement('script');
@@ -1304,47 +1378,62 @@
       waitForDocumentTracker();
     }
     
-    // Wait for progress tracker to be available
-    const waitForProgressTracker = () => {
-      debugLog('⏳ Waiting for progress tracker...', {
-        hasProgressTracker: !!window.progressTracker,
-        isInitialized: window.progressTracker?.isInitialized,
-        hasAllParams: !!(courseId && moduleId && contentId && contentType)
-      });
-      
-      if (window.progressTracker && window.progressTracker.isInitialized && courseId && moduleId && contentId && contentType) {
-        debugLog('✅ Progress tracker ready, setting course context');
-        window.progressTracker.setCourseContext(courseId, moduleId, contentId, contentType);
+    // Wait for progress tracker to be available (only for non-audio content)
+    if (contentType !== 'audio') {
+      const waitForProgressTracker = () => {
+        debugLog('⏳ Waiting for progress tracker...', {
+          hasProgressTracker: !!window.progressTracker,
+          isInitialized: window.progressTracker?.isInitialized,
+          hasAllParams: !!(courseId && moduleId && contentId && contentType)
+        });
         
-        // Setup SCORM functionality
-        if (contentType === 'scorm') {
-          debugLog('🎯 Setting up SCORM functionality');
-          setupScormFunctionality();
+        if (window.progressTracker && window.progressTracker.isInitialized && courseId && moduleId && contentId && contentType) {
+          debugLog('✅ Progress tracker ready, setting course context');
+          window.progressTracker.setCourseContext(courseId, moduleId, contentId, contentType);
           
-          // Add periodic SCORM data state logging for debugging
-          setInterval(() => {
-            if (Object.keys(window.scormData).length > 0) {
-              debugLog('🔄 Periodic SCORM data check:', window.scormData);
-            }
-          }, 5000); // Check every 5 seconds
-          
-          // Add periodic resume modal condition check
-          setInterval(() => {
-            if (window.scormAPIReady && !window.resumeModalShown) {
-              debugLog('🔄 Periodic resume modal check');
-              checkResumeModalConditions();
-            }
-          }, 2000); // Check every 2 seconds
+          // Setup SCORM functionality
+          if (contentType === 'scorm') {
+            debugLog('🎯 Setting up SCORM functionality');
+            setupScormFunctionality();
+            
+            // Add periodic SCORM data state logging for debugging
+            setInterval(() => {
+              if (Object.keys(window.scormData).length > 0) {
+                debugLog('🔄 Periodic SCORM data check:', window.scormData);
+              }
+            }, 5000); // Check every 5 seconds
+            
+            // Add periodic resume modal condition check
+            setInterval(() => {
+              if (window.scormAPIReady && !window.resumeModalShown) {
+                debugLog('🔄 Periodic resume modal check');
+                checkResumeModalConditions();
+              }
+            }, 2000); // Check every 2 seconds
+          }
+        } else {
+          debugLog('⏳ Progress tracker not ready yet, retrying in 500ms');
+          setTimeout(waitForProgressTracker, 500);
         }
-      } else {
-        debugLog('⏳ Progress tracker not ready yet, retrying in 500ms');
-        setTimeout(waitForProgressTracker, 500);
-      }
-    };
-    
-    waitForProgressTracker();
+      };
+      
+      waitForProgressTracker();
+    } else {
+      debugLog('🎵 Audio content detected, skipping general progress tracker initialization');
+    }
   });
   
+  // Define document notification functions
+  function notifyDocumentOpened() {
+    console.log('Document opened notification');
+    // This function can be extended to notify parent window or track document opening
+  }
+
+  function notifyDocumentViewed() {
+    console.log('Document viewed notification');
+    // This function can be extended to track document viewing
+  }
+
   // Send notification when document is first loaded
   document.addEventListener('DOMContentLoaded', function() {
     console.log('Document viewer loaded, notifying parent page');
@@ -1362,22 +1451,25 @@
     notifyDocumentViewed();
   });
 
-  // Set document close flag when page is unloaded (additional safety)
+  // Set close flags when page is unloaded (additional safety)
   window.addEventListener('beforeunload', function(event) {
-    console.log('Document is being unloaded - setting close flag');
+    console.log('Page is being unloaded - setting close flags');
     setDocumentCloseFlag();
+    setAudioCloseFlag();
   });
 
-  // Set document close flag when page is hidden
+  // Set close flags when page is hidden
   document.addEventListener('pagehide', function(event) {
-    console.log('Document page is being hidden - setting close flag');
+    console.log('Page is being hidden - setting close flags');
     setDocumentCloseFlag();
+    setAudioCloseFlag();
   });
 
-  // Set document close flag when window is unloaded
+  // Set close flags when window is unloaded
   window.addEventListener('unload', function(event) {
-    console.log('Document window is being unloaded - setting close flag');
+    console.log('Window is being unloaded - setting close flags');
     setDocumentCloseFlag();
+    setAudioCloseFlag();
   });
 
   // Helper function to set document close flag
@@ -1394,6 +1486,23 @@
       }
     } catch (error) {
       console.error('Error setting document close flag via event listener:', error);
+    }
+  }
+
+  // Helper function to set audio close flag
+  function setAudioCloseFlag() {
+    try {
+      const urlParams = new URLSearchParams(window.location.search);
+      const courseId = urlParams.get('course_id');
+      const moduleId = urlParams.get('module_id');
+      const contentId = urlParams.get('content_id');
+      
+      if (courseId && moduleId && contentId) {
+        localStorage.setItem('audio_closed_' + contentId, Date.now().toString());
+        console.log('Audio close flag set via event listener for:', contentId);
+      }
+    } catch (error) {
+      console.error('Error setting audio close flag via event listener:', error);
     }
   }
 
@@ -1418,6 +1527,12 @@
         
         window.progressTracker.setResumePosition(moduleId, contentId, scormData);
       }
+    }
+    
+    // Set audio close flag for audio content
+    const contentType = new URLSearchParams(window.location.search).get('type');
+    if (contentType === 'audio') {
+      setAudioCloseFlag();
     }
   });
 
@@ -1874,7 +1989,226 @@
       showNotification('Force save failed. Check console for details.', 'error');
     }
   }
+
+  // ===================================
+  // AUDIO PROGRESS TRACKING FUNCTIONS
+  // ===================================
+
+  // Initialize audio progress tracking when page loads
+  document.addEventListener('DOMContentLoaded', function() {
+    if (window.location.search.includes('type=audio')) {
+      console.log('Audio content detected, initializing progress tracking...');
+      initializeAudioProgressTracking();
+    }
+  });
+
+  function initializeAudioProgressTracking() {
+    const audioPlayer = document.getElementById('audio-player');
+    if (!audioPlayer) return;
+
+    let lastUpdateTime = 0;
+    const updateThrottle = 500; // Only update every 500ms
+
+    // Throttled update function to prevent excessive updates
+    function throttledUpdateProgress() {
+      const now = Date.now();
+      if (now - lastUpdateTime >= updateThrottle) {
+        updateProgressDisplay();
+        lastUpdateTime = now;
+      }
+    }
+
+    // Update progress display elements with throttling
+    audioPlayer.addEventListener('timeupdate', throttledUpdateProgress);
+    audioPlayer.addEventListener('loadedmetadata', updateProgressDisplay);
+    audioPlayer.addEventListener('play', updateProgressDisplay);
+    audioPlayer.addEventListener('pause', updateProgressDisplay);
+    audioPlayer.addEventListener('seeked', updateProgressDisplay);
+
+    // Update immediately when function is called
+    updateProgressDisplay();
+
+    // Also update after a short delay to ensure audio is loaded
+    setTimeout(() => {
+      updateProgressDisplay();
+    }, 100);
+
+    // Set up periodic updates with longer interval
+    setInterval(() => {
+      updateProgressDisplay();
+    }, 2000); // Update every 2 seconds instead of 1 second
+
+    // Also check if progress elements still exist in DOM
+    setInterval(() => {
+      const progressContainer = document.querySelector('.audio-progress-container');
+      if (!progressContainer) {
+        console.warn('⚠️ Audio progress container not found in DOM!');
+      } else {
+        const progressBar = document.querySelector('.audio-progress-bar-fill');
+        const progressText = document.querySelector('.audio-progress-text');
+        if (!progressBar || !progressText) {
+          console.warn('⚠️ Some progress elements missing from DOM!');
+        }
+      }
+    }, 5000); // Check every 5 seconds instead of 2 seconds
+
+    // Load existing progress if available
+    loadExistingProgress();
+  }
+
+  function updateProgressDisplay() {
+    const audioPlayer = document.getElementById('audio-player');
+    if (!audioPlayer) return;
+
+    const currentTime = audioPlayer.currentTime || 0;
+    const duration = audioPlayer.duration || 0;
+    
+    // Only log occasionally to prevent spam
+    if (Math.random() < 0.1) { // 10% chance to log
+      console.log('Audio progress update:', { currentTime, duration, readyState: audioPlayer.readyState });
+    }
+    
+    // Always update time displays, even if duration is 0
+    const currentTimeEl = document.getElementById('current-time');
+    const durationEl = document.getElementById('duration');
+    
+    if (currentTimeEl) {
+      currentTimeEl.textContent = formatTime(currentTime);
+    }
+    
+    if (durationEl) {
+      durationEl.textContent = formatTime(duration);
+    }
+    
+    // Update progress elements only if duration is available
+    if (duration && duration > 0) {
+      const percentage = Math.round((currentTime / duration) * 100);
+      
+      // Update progress bar
+      const progressBar = document.querySelector('.audio-progress-bar-fill');
+      if (progressBar) {
+        progressBar.style.width = percentage + '%';
+      }
+      
+      // Update progress text
+      const progressText = document.querySelector('.audio-progress-text');
+      if (progressText) {
+        progressText.textContent = percentage + '% Complete';
+      }
+      
+      // Update percentage display
+      const percentageEl = document.getElementById('listened-percentage');
+      if (percentageEl) {
+        percentageEl.textContent = percentage;
+      }
+      
+      // Update status
+      const statusEl = document.getElementById('completion-status');
+      if (statusEl) {
+        if (percentage >= 80) {
+          statusEl.textContent = 'Completed';
+          statusEl.style.color = '#28a745';
+        } else if (percentage > 0) {
+          statusEl.textContent = 'In Progress';
+          statusEl.style.color = '#fd7e14';
+        } else {
+          statusEl.textContent = 'Not Started';
+          statusEl.style.color = '#666';
+        }
+      }
+
+      // Update playback status based on audio element state
+      const playbackStatusEl = document.getElementById('audio-playback-status');
+      if (playbackStatusEl) {
+        if (audioPlayer.paused) {
+          if (audioPlayer.currentTime === 0) {
+            playbackStatusEl.textContent = 'Not Started';
+            playbackStatusEl.style.color = '#666';
+          } else {
+            playbackStatusEl.textContent = 'Paused';
+            playbackStatusEl.style.color = '#fd7e14';
+          }
+        } else {
+          playbackStatusEl.textContent = 'Playing';
+          playbackStatusEl.style.color = '#28a745';
+        }
+      }
+    } else {
+      // Duration not available yet, show initial state
+      const progressBar = document.querySelector('.audio-progress-bar-fill');
+      if (progressBar) {
+        progressBar.style.width = '0%';
+      }
+      
+      const progressText = document.querySelector('.audio-progress-text');
+      if (progressText) {
+        progressText.textContent = '0% Complete';
+      }
+      
+      const percentageEl = document.getElementById('listened-percentage');
+      if (percentageEl) {
+        percentageEl.textContent = '0';
+      }
+      
+      const statusEl = document.getElementById('completion-status');
+      if (statusEl) {
+        statusEl.textContent = 'Not Started';
+        statusEl.style.color = '#666';
+      }
+
+      const playbackStatusEl = document.getElementById('audio-playback-status');
+      if (playbackStatusEl) {
+        playbackStatusEl.textContent = 'Not Started';
+        playbackStatusEl.style.color = '#666';
+      }
+    }
+  }
+
+  function formatTime(seconds) {
+    if (isNaN(seconds)) return '0:00';
+    
+    const minutes = Math.floor(seconds / 60);
+    const remainingSeconds = Math.floor(seconds % 60);
+    return minutes + ':' + (remainingSeconds < 10 ? '0' : '') + remainingSeconds;
+  }
+
+  function loadExistingProgress() {
+    // This function would load existing progress from the database
+    // For now, we'll just initialize with default values
+    console.log('Loading existing audio progress...');
+  }
+
+
+
+  // Show notification function (if not already defined)
+  function showNotification(message, type = 'info') {
+    const notification = document.createElement('div');
+    notification.className = `audio-completion-notification ${type}`;
+    notification.innerHTML = `
+      <div class="notification-content">
+        <i class="fas fa-${type === 'success' ? 'check-circle' : type === 'error' ? 'exclamation-circle' : type === 'warning' ? 'exclamation-triangle' : 'info-circle'}"></i>
+        <span>${message}</span>
+      </div>
+    `;
+    
+    // Add to the page
+    document.body.appendChild(notification);
+    
+    // Show notification
+    setTimeout(() => {
+      notification.classList.add('show');
+    }, 100);
+    
+    // Remove after 3 seconds
+    setTimeout(() => {
+      notification.classList.remove('show');
+      setTimeout(() => {
+        if (notification.parentNode) {
+          notification.parentNode.removeChild(notification);
+        }
+      }, 300);
+    }, 3000);
+  }
   </script>
 </body>
-</html> 
 </html>

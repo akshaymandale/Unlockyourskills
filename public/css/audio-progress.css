@@ -1,0 +1,327 @@
+/**
+ * Audio Progress Tracking Styles
+ * Styles for audio progress tracking elements and notifications
+ */
+
+/* Audio Progress Container */
+.audio-progress-container {
+    background: rgba(255, 255, 255, 0.95);
+    border-radius: 12px;
+    padding: 20px;
+    margin: 20px 0;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    border: 1px solid rgba(0, 0, 0, 0.1);
+    /* Ensure container is always visible */
+    display: block !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+    position: relative !important;
+    z-index: 1 !important;
+}
+
+.audio-progress-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 15px;
+}
+
+.audio-progress-title {
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--purple, #6a0dad);
+    margin: 0;
+    font-family: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif;
+}
+
+.audio-progress-status {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+/* Progress Bar */
+.audio-progress-bar-container {
+    margin-bottom: 15px;
+    /* Ensure container is always visible */
+    display: block !important;
+    visibility: visible !important;
+}
+
+.audio-progress-bar {
+    width: 100%;
+    height: 8px;
+    background-color: var(--border, #e5d6ff);
+    border-radius: 4px;
+    overflow: hidden;
+    position: relative;
+    /* Ensure bar is always visible */
+    display: block !important;
+    visibility: visible !important;
+}
+
+.audio-progress-bar-fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--purple, #6a0dad) 0%, #8a2be2 100%);
+    border-radius: 4px;
+    transition: width 0.3s ease;
+    position: relative;
+    /* Ensure fill is always visible */
+    display: block !important;
+    visibility: visible !important;
+    min-width: 0% !important;
+}
+
+.audio-progress-bar-fill::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: linear-gradient(90deg, transparent 0%, rgba(255, 255, 255, 0.3) 50%, transparent 100%);
+    animation: progressShine 2s infinite;
+}
+
+@keyframes progressShine {
+    0% { transform: translateX(-100%); }
+    100% { transform: translateX(100%); }
+}
+
+/* Progress Text */
+.audio-progress-text {
+    font-size: 14px;
+    color: var(--purple, #6a0dad);
+    text-align: center;
+    margin: 10px 0;
+    font-weight: 600;
+    font-family: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif;
+    /* Ensure text is always visible */
+    display: block !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+}
+
+/* Progress Details */
+.audio-progress-details {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 15px;
+    margin-top: 15px;
+}
+
+.audio-progress-detail {
+    text-align: center;
+    padding: 10px;
+    background: var(--light, #f8f9fa);
+    border-radius: 8px;
+    border: 1px solid var(--border, #e5d6ff);
+}
+
+.audio-progress-detail-label {
+    font-size: 12px;
+    color: var(--purple, #6a0dad);
+    margin-bottom: 5px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    font-weight: 600;
+    font-family: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif;
+}
+
+.audio-progress-detail-value {
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--purple, #6a0dad);
+    font-family: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif;
+}
+
+/* Completion Badge */
+.audio-completion-badge {
+    display: inline-block;
+    background: var(--purple, #6a0dad);
+    color: white;
+    padding: 6px 12px;
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    animation: badgePulse 2s infinite;
+    font-family: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif;
+}
+
+@keyframes badgePulse {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.05); }
+}
+
+/* Completion Notification */
+.audio-completion-notification {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+    padding: 20px;
+    z-index: 10000;
+    transform: translateX(100%);
+    transition: transform 0.3s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+    border-left: 4px solid var(--purple, #6a0dad);
+    max-width: 300px;
+}
+
+.audio-completion-notification.show {
+    transform: translateX(0);
+}
+
+.notification-content {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.notification-content i {
+    font-size: 24px;
+    color: var(--purple, #6a0dad);
+}
+
+.notification-content span {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--purple, #6a0dad);
+    font-family: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif;
+}
+
+
+
+/* Progress Stats */
+.audio-progress-stats {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 15px;
+    padding: 15px;
+    background: linear-gradient(135deg, var(--light, #f8f9fa) 0%, var(--border, #e5d6ff) 100%);
+    border-radius: 8px;
+    border: 1px solid var(--border, #e5d6ff);
+}
+
+.audio-stat {
+    text-align: center;
+}
+
+.audio-stat-value {
+    font-size: 18px;
+    font-weight: 700;
+    color: var(--purple, #6a0dad);
+    display: block;
+    font-family: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif;
+}
+
+.audio-stat-label {
+    font-size: 11px;
+    color: var(--purple, #6a0dad);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-top: 2px;
+    font-weight: 600;
+    font-family: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif;
+}
+
+
+
+/* Responsive Design */
+@media (max-width: 768px) {
+    .audio-progress-container {
+        padding: 15px;
+        margin: 15px 0;
+    }
+    
+    .audio-progress-details {
+        grid-template-columns: 1fr;
+        gap: 10px;
+    }
+    
+    .audio-progress-stats {
+        flex-direction: column;
+        gap: 15px;
+    }
+    
+    .audio-completion-notification {
+        right: 10px;
+        left: 10px;
+        max-width: none;
+    }
+}
+
+/* Dark Mode Support */
+@media (prefers-color-scheme: dark) {
+    .audio-progress-container {
+        background: rgba(33, 37, 41, 0.95);
+        border-color: rgba(255, 255, 255, 0.1);
+    }
+    
+    .audio-progress-title {
+        color: #f8f9fa;
+    }
+    
+    .audio-progress-detail {
+        background: #495057;
+        border-color: #6c757d;
+    }
+    
+    .audio-progress-detail-value {
+        color: #f8f9fa;
+    }
+    
+    .audio-progress-stats {
+        background: linear-gradient(135deg, #495057 0%, #6c757d 100%);
+        border-color: #6c757d;
+    }
+}
+
+/* Print Styles */
+@media print {
+    .audio-progress-container,
+    .audio-completion-notification {
+        display: none;
+    }
+}
+
+/* Resume Notification Styles */
+.audio-resume-notification {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    background: white;
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    padding: 16px 20px;
+    z-index: 10000;
+    transform: translateX(100%);
+    transition: transform 0.3s ease;
+    border-left: 4px solid #28a745;
+    max-width: 350px;
+}
+
+.audio-resume-notification.show {
+    transform: translateX(0);
+}
+
+.audio-resume-notification .notification-content {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.audio-resume-notification .notification-content i {
+    font-size: 1.2rem;
+    color: #28a745;
+}
+
+.audio-resume-notification .notification-content span {
+    color: #495057;
+    font-size: 0.9rem;
+    font-weight: 500;
+}

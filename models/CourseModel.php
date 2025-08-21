@@ -1760,6 +1760,22 @@ class CourseModel
                 }
             }
             
+            // Check for audio progress specifically
+            $sql = "SELECT listened_percentage, is_completed 
+                    FROM audio_progress 
+                    WHERE content_id = ? AND user_id = ? AND client_id = ?";
+            $stmt = $this->conn->prepare($sql);
+            $stmt->execute([$contentId, $userId, $clientId]);
+            $audioProgress = $stmt->fetch(PDO::FETCH_ASSOC);
+            
+            if ($audioProgress) {
+                if ($audioProgress['is_completed']) {
+                    return 100;
+                } else {
+                    return intval($audioProgress['listened_percentage'] ?? 0);
+                }
+            }
+            
             return 0;
         } catch (Exception $e) {
             error_log("Error getting content progress: " . $e->getMessage());
