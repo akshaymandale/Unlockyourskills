@@ -192,13 +192,8 @@
     <?php endif; ?>
   </div>
   
-  <?php if (!empty($src ?? '')): ?>
-    <?php if (($type ?? '') === 'video'): ?>
-      <video class="viewer-frame" controls autoplay playsinline>
-        <source src="<?= htmlspecialchars($src) ?>" type="video/mp4">
-        Your browser does not support the video tag.
-      </video>
-    <?php elseif (($type ?? '') === 'audio'): ?>
+      <?php if (!empty($src ?? '')): ?>
+      <?php if (($type ?? '') === 'audio'): ?>
       <div class="audio-player-container" style="height: calc(100vh - 48px); display: flex; flex-direction: column; align-items: center; justify-content: center; background: linear-gradient(135deg, var(--light, #f8f9fa) 0%, var(--border, #e5d6ff) 100%); padding: 20px;">
         <div class="audio-player-card" style="background: white; border-radius: 20px; padding: 40px; box-shadow: 0 10px 30px rgba(0,0,0,0.1); text-align: center; max-width: 600px; width: 100%;">
           <div class="audio-icon" style="font-size: 80px; color: var(--purple, #6a0dad); margin-bottom: 20px;">
@@ -275,8 +270,16 @@
         </div>
       </div>
     <?php else: ?>
+
       <?php if (($type ?? '') === 'scorm'): ?>
         <iframe class="viewer-frame" src="<?= htmlspecialchars($src) ?>" allow="fullscreen *; geolocation *; microphone *; camera *" referrerpolicy="no-referrer-when-downgrade"></iframe>
+      <?php elseif (($type ?? '') === 'video'): ?>
+        <div class="video-container" style="width: 100%; height: calc(100vh - 48px); display: flex; align-items: center; justify-content: center; background: #000;">
+          <video id="videoPlayer" controls style="max-width: 100%; max-height: 100%;" preload="metadata">
+            <source src="<?= htmlspecialchars($src) ?>" type="video/mp4">
+            Your browser does not support the video tag.
+          </video>
+        </div>
       <?php else: ?>
         <iframe class="viewer-frame" src="<?= htmlspecialchars($src) ?>" allowfullscreen referrerpolicy="no-referrer-when-downgrade"></iframe>
       <?php endif; ?>
@@ -286,7 +289,26 @@
   <?php endif; ?>
   
   <script src="/Unlockyourskills/public/js/audio-progress.js"></script>
+  <script src="/Unlockyourskills/public/js/video-progress.js"></script>
   <script>
+  
+  <?php
+  // Helper to resolve URLs for content paths
+  if (!function_exists('resolveContentUrl')) {
+      function resolveContentUrl($path) {
+          if (empty($path)) {
+              return '';
+          }
+          if (preg_match('#^https?://#i', $path)) {
+              return $path;
+          }
+          if ($path[0] === '/') {
+              return $path;
+          }
+          return UrlHelper::url($path);
+      }
+  }
+  ?>
   // Global variables for SCORM functionality
   window.scormData = {};
   window.scormIframe = null;
@@ -313,19 +335,25 @@
   
   // Function to close the current tab
   function closeTab() {
-    // Set a flag in localStorage to indicate document was closed
+    // Set a flag in localStorage to indicate content was closed
     try {
       const urlParams = new URLSearchParams(window.location.search);
       const courseId = urlParams.get('course_id');
       const moduleId = urlParams.get('module_id');
       const contentId = urlParams.get('content_id');
+      const contentType = urlParams.get('type');
       
       if (courseId && moduleId && contentId) {
-        localStorage.setItem('document_closed_' + contentId, Date.now().toString());
-        console.log('Document close flag set for:', contentId);
+        if (contentType === 'video') {
+          localStorage.setItem('video_closed_' + contentId, Date.now().toString());
+          console.log('Video close flag set for:', contentId);
+        } else {
+          localStorage.setItem('document_closed_' + contentId, Date.now().toString());
+          console.log('Document close flag set for:', contentId);
+        }
       }
     } catch (error) {
-      console.error('Error setting document close flag:', error);
+      console.error('Error setting content close flag:', error);
     }
     
     // Original close functionality
@@ -1300,11 +1328,11 @@
     sessionStorage.setItem('user_data', JSON.stringify(window.userData));
   }
   
-  // Load progress tracker (only for non-audio content)
+  // Load progress tracker (only for non-audio and non-video content)
   const urlParams = new URLSearchParams(window.location.search);
   const contentType = urlParams.get('type');
   
-  if (contentType !== 'audio') {
+  if (contentType !== 'audio' && contentType !== 'video') {
     const progressScript = document.createElement('script');
     progressScript.src = '/unlockyourskills/public/js/progress-tracking.js';
     document.head.appendChild(progressScript);
@@ -1352,7 +1380,7 @@
       documentPackageId
     });
     
-    // Initialize document progress tracker for document content
+    // Initialize document progress tracker for document content only
     if (contentType === 'document' && courseId && contentId) {
       debugLog('📄 Document content detected, initializing progress tracker');
       
@@ -1378,8 +1406,48 @@
       waitForDocumentTracker();
     }
     
-    // Wait for progress tracker to be available (only for non-audio content)
-    if (contentType !== 'audio') {
+    // Initialize video progress tracker for video content
+    if (contentType === 'video' && courseId && contentId) {
+      debugLog('🎬 Video content detected, initializing progress tracker');
+      
+      // Get video parameters from PHP global variables
+      const videoPackageId = <?php echo json_encode($GLOBALS['video_package_id'] ?? null); ?>;
+      const clientId = <?php echo json_encode($GLOBALS['client_id'] ?? null); ?>;
+      
+      debugLog('📋 Video parameters:', { courseId, moduleId, contentId, videoPackageId, clientId });
+      
+      // Wait for video progress tracker to be available
+      const waitForVideoTracker = () => {
+        if (window.VideoProgressTracker) {
+          debugLog('✅ Video progress tracker ready');
+          
+          // Initialize video progress tracking
+          const videoElement = document.getElementById('videoPlayer');
+          if (videoElement) {
+            window.videoProgressTracker = new window.VideoProgressTracker(videoElement, {
+              courseId: parseInt(courseId),
+              moduleId: parseInt(moduleId),
+              contentId: parseInt(contentId),
+              videoPackageId: parseInt(videoPackageId),
+              clientId: parseInt(clientId),
+              completionThreshold: 80
+            });
+            
+            debugLog('🚀 Video progress tracking started');
+          } else {
+            debugLog('❌ Video element not found');
+          }
+        } else {
+          debugLog('⏳ Video progress tracker not ready yet, retrying in 500ms');
+          setTimeout(waitForVideoTracker, 500);
+        }
+      };
+      
+      waitForVideoTracker();
+    }
+    
+    // Wait for progress tracker to be available (only for non-audio and non-video content)
+    if (contentType !== 'audio' && contentType !== 'video') {
       const waitForProgressTracker = () => {
         debugLog('⏳ Waiting for progress tracker...', {
           hasProgressTracker: !!window.progressTracker,

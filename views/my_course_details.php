@@ -68,6 +68,61 @@ function getAudioProgressData($courseId, $contentId, $userId) {
         ];
     }
 }
+
+// Helper to get video progress data
+function getVideoProgressData($courseId, $contentId, $userId) {
+    try {
+        $database = new Database();
+        $conn = $database->connect();
+        
+        $sql = "SELECT vp.*, 
+                       vp.is_completed,
+                       vp.video_status,
+                       vp.watched_percentage,
+                       vp.last_watched_at,
+                       vp.play_count,
+                       vp.updated_at
+                FROM video_progress vp
+                WHERE vp.course_id = ? AND vp.content_id = ? AND vp.user_id = ?";
+        
+        $stmt = $conn->prepare($sql);
+        $stmt->execute([$courseId, $contentId, $userId]);
+        $progress = $stmt->fetch(PDO::FETCH_ASSOC);
+        
+        if ($progress) {
+            return [
+                'progress' => intval($progress['watched_percentage'] ?? 0),
+                'is_completed' => (bool)$progress['is_completed'],
+                'video_status' => $progress['video_status'] ?? 'not_started',
+                'current_time' => intval($progress['current_time'] ?? 0),
+                'duration' => intval($progress['duration'] ?? 0),
+                'play_count' => intval($progress['play_count'] ?? 0),
+                'last_watched_at' => $progress['last_watched_at']
+            ];
+        } else {
+            return [
+                'progress' => 0,
+                'is_completed' => false,
+                'video_status' => 'not_started',
+                'current_time' => 0,
+                'duration' => 0,
+                'play_count' => 0,
+                'last_watched_at' => null
+            ];
+        }
+        
+    } catch (Exception $e) {
+        error_log("Error getting video progress data: " . $e->getMessage());
+        return [
+            'progress' => 0,
+            'is_completed' => false,
+            'current_time' => 0,
+            'duration' => 0,
+            'play_count' => 0,
+            'last_watched_at' => null
+        ];
+    }
+}
 ?>
 
 <style>
@@ -445,6 +500,11 @@ function getAudioProgressData($courseId, $contentId, $userId) {
                             case 'audio':
                                 $audioProgressData = getAudioProgressData($courseId, $contentId, $userId);
                                 $progress = $audioProgressData['progress'];
+                                break;
+                                
+                            case 'video':
+                                $videoProgressData = getVideoProgressData($courseId, $contentId, $userId);
+                                $progress = $videoProgressData['progress'];
                                 break;
                                 
                             case 'document':
@@ -1385,6 +1445,10 @@ function getAudioProgressData($courseId, $contentId, $userId) {
                                                                 // Get audio progress from audio_progress table
                                                                 $audioProgressData = getAudioProgressData($GLOBALS['course']['id'], $content['id'], $_SESSION['user']['id']);
                                                                 $progressPercentage = $audioProgressData['progress'];
+                                                            } elseif ($content['type'] === 'video') {
+                                                                // Get video progress from video_progress table
+                                                                $videoProgressData = getVideoProgressData($GLOBALS['course']['id'], $content['id'], $_SESSION['user']['id']);
+                                                                $progressPercentage = $videoProgressData['progress'];
                                                             } else {
                                                                 $progressPercentage = intval($content['progress'] ?? 0);
                                                             }
@@ -1452,7 +1516,41 @@ function getAudioProgressData($courseId, $contentId, $userId) {
                                                                     if ($videoUrl) {
                                                                         $resolved = resolveContentUrl($videoUrl);
                                                                         $viewer = UrlHelper::url('my-courses/view-content') . '?type=video&title=' . urlencode($content['title']) . '&src=' . urlencode($resolved) . '&course_id=' . $GLOBALS['course']['id'] . '&module_id=' . $module['id'] . '&content_id=' . $content['id'];
-                                                                        $actionsHtml .= "<a href='" . htmlspecialchars($viewer) . "' target='_blank' class='postrequisite-action-btn btn-danger launch-content-btn' data-module-id='" . $module['id'] . "' data-content-id='" . $content['id'] . "' data-type='video'><i class='fas fa-play me-1'></i>Watch Video</a>";
+                                                                        
+                                                                        // Get video progress status
+                                                                        $videoProgressData = getVideoProgressData($GLOBALS['course']['id'], $content['id'], $_SESSION['user']['id']);
+                                                                        
+                                                                                                                // Build status
+                                        $statusHtml .= "<div class='video-progress-status mb-2'>";
+                                        if ($videoProgressData['progress'] > 0) {
+                                            $statusClass = $videoProgressData['is_completed'] ? 'text-success' : 'text-warning';
+                                            $statusIcon = $videoProgressData['is_completed'] ? 'fa-check-circle' : 'fa-play-circle';
+                                            $statusHtml .= "<div class='{$statusClass}'><i class='fas {$statusIcon} me-1'></i>";
+                                            if ($videoProgressData['is_completed']) {
+                                                $statusHtml .= "Completed";
+                                            } else {
+                                                $statusHtml .= "In Progress - " . $videoProgressData['progress'] . "%";
+                                            }
+                                            if (!empty($videoProgressData['last_watched_at'])) {
+                                                $statusHtml .= " <small class='text-muted'>(Last: " . date('M j, Y', strtotime($videoProgressData['last_watched_at'])) . ")</small>";
+                                            }
+                                            $statusHtml .= "</div>";
+                                            
+                                            // Add video status badge
+                                            $statusHtml .= "<div class='video-status-badge mt-1'>";
+                                            $statusHtml .= "<span class='badge bg-info'>" . ucfirst(str_replace('_', ' ', $videoProgressData['video_status'])) . "</span>";
+                                            $statusHtml .= "</div>";
+                                        } else {
+                                            $statusHtml .= "<div class='text-muted'><i class='fas fa-circle me-1'></i>Not started</div>";
+                                        }
+                                        $statusHtml .= "</div>";
+                                                                        
+                                                                        // Actions
+                                                                        if (!$videoProgressData['is_completed']) {
+                                                                            $actionsHtml .= "<a href='" . htmlspecialchars($viewer) . "' target='_blank' class='postrequisite-action-btn btn-danger launch-content-btn' data-module-id='" . $module['id'] . "' data-content-id='" . $content['id'] . "' data-type='video' data-video-package-id='" . $content['content_id'] . "' onclick='launchVideoPlayer(event, " . $GLOBALS['course']['id'] . ", " . $module['id'] . ", " . $content['id'] . ", \"" . addslashes($content['title']) . "\")'><i class='fas fa-play me-1'></i>Watch Video</a>";
+                                                                        } else {
+                                                                            $statusHtml .= "<div class='video-completed-badge'><span class='badge bg-success'><i class='fas fa-check-circle me-1'></i>Video Completed</span></div>";
+                                                                        }
                                                                     } else {
                                                                         $statusHtml .= "<span class='content-error'><i class='fas fa-exclamation-triangle me-1'></i>No video file</span>";
                                                                     }
@@ -2024,6 +2122,65 @@ console.log('Debug: Course data available:', {
     courseId: <?php echo json_encode($GLOBALS['course']['id'] ?? null); ?>,
     courseName: <?php echo json_encode($GLOBALS['course']['name'] ?? null); ?>
 });
+
+// Function to launch video player
+function launchVideoPlayer(event, courseId, moduleId, contentId, contentTitle) {
+    event.preventDefault();
+    
+    // Get the content card to extract video package ID
+    const contentCard = event.target.closest('.content-item-card');
+    if (!contentCard) {
+        console.error('Content card not found');
+        return;
+    }
+    
+    // Get video package ID from data attribute
+    const videoPackageId = contentCard.querySelector('[data-video-package-id]')?.dataset.videoPackageId;
+    if (!videoPackageId) {
+        console.error('Video package ID not found');
+        return;
+    }
+    
+    // Get user's client ID from the page
+    const clientId = <?= $_SESSION['user']['client_id'] ?? 'null' ?>;
+    if (!clientId) {
+        console.error('Client ID not found');
+        return;
+    }
+    
+    console.log('Launching video player:', {
+        courseId,
+        moduleId,
+        contentId,
+        videoPackageId,
+        clientId,
+        contentTitle
+    });
+    
+    // Create video viewer URL with correct course context
+    const viewerUrl = `/Unlockyourskills/my-courses/view-content?type=video&course_id=${courseId}&module_id=${moduleId}&content_id=${contentId}&video_package_id=${videoPackageId}&client_id=${clientId}&title=${encodeURIComponent(contentTitle)}`;
+    
+    // Open video in new tab
+    const videoWindow = window.open(viewerUrl, '_blank', 'width=1200,height=800,scrollbars=yes,resizable=yes');
+    
+    if (videoWindow) {
+        console.log('Video player launched successfully');
+        
+        // Set close flag for monitoring
+        localStorage.setItem('video_closed_' + contentId, 'false');
+        
+        // Monitor video window close
+        const checkClosed = setInterval(() => {
+            if (videoWindow.closed) {
+                clearInterval(checkClosed);
+                localStorage.setItem('video_closed_' + contentId, 'true');
+                console.log('Video window closed for content:', contentId);
+            }
+        }, 1000);
+    } else {
+        console.error('Failed to open video player window');
+    }
+}
 // Initialize Bootstrap tooltips for all title elements
 document.addEventListener('DOMContentLoaded', function() {
     // Initialize tooltips for all elements with data-bs-toggle="tooltip"
@@ -2521,12 +2678,17 @@ function startDocumentCloseMonitoring() {
     const audioButtons = document.querySelectorAll('.launch-content-btn[data-type="audio"]');
     const audioIds = Array.from(audioButtons).map(btn => btn.dataset.contentId);
     
-    if (documentIds.length === 0 && audioIds.length === 0) {
+    // Get all video content IDs from the page
+    const videoButtons = document.querySelectorAll('.launch-content-btn[data-type="video"]');
+    const videoIds = Array.from(videoButtons).map(btn => btn.dataset.contentId);
+    
+    if (documentIds.length === 0 && audioIds.length === 0 && videoIds.length === 0) {
         return; // No content to monitor
     }
     
     console.log('Monitoring document close events for:', documentIds);
     console.log('Monitoring audio close events for:', audioIds);
+    console.log('Monitoring video close events for:', videoIds);
     
     // Mark monitoring as active
     window.documentCloseMonitoringActive = true;
@@ -2614,6 +2776,39 @@ function startDocumentCloseMonitoring() {
                 }
             }
         }
+
+        // Check video close flags
+        for (let i = 0; i < videoIds.length && !shouldRefresh; i++) {
+            const contentId = videoIds[i];
+            if (contentId) {
+                const closeFlag = localStorage.getItem('video_closed_' + contentId);
+                if (closeFlag) {
+                    console.log('Video close detected for:', contentId, 'at timestamp:', closeFlag);
+                    
+                    // Check if this content was already processed recently
+                    const processedKey = `processed_video_${contentId}`;
+                    const lastProcessed = sessionStorage.getItem(processedKey);
+                    const now = Date.now();
+                    
+                    if (lastProcessed && (now - parseInt(lastProcessed)) < 5000) {
+                        console.log('Video content already processed recently, skipping...');
+                        localStorage.removeItem('video_closed_' + contentId);
+                        continue;
+                    }
+                    
+                    // Mark as processed
+                    sessionStorage.setItem(processedKey, now.toString());
+                    
+                    // Remove the flag immediately to prevent duplicate detection
+                    localStorage.removeItem('video_closed_' + contentId);
+                    shouldRefresh = true;
+                    closedContentType = 'Video';
+                    closedContentId = contentId;
+                    // Break out of the loop once we find a flag
+                    break;
+                }
+            }
+        }
         
         if (shouldRefresh) {
             // Mark refresh as in progress to prevent duplicates
@@ -2674,11 +2869,32 @@ function startDocumentCloseMonitoring() {
                         window.location.reload();
                     }, 2000);
                 });
+            } else if (closedContentType === 'Video') {
+                // For video content, update progress immediately before refresh
+                console.log('Video was closed - updating progress before refresh');
+                console.log('Calling refreshVideoProgress for content ID:', closedContentId);
+                
+                // Update progress and then refresh after it completes
+                refreshVideoProgress(closedContentId).then((result) => {
+                    console.log('Video progress update completed with result:', result);
+                    // Wait a bit more for the progress update to complete, then refresh
+                    setTimeout(() => {
+                        console.log('Video progress updated, refreshing page...');
+                        window.location.reload();
+                    }, 1000);
+                }).catch((error) => {
+                    console.error('Video progress update failed with error:', error);
+                    // If progress update fails, still refresh after delay
+                    setTimeout(() => {
+                        console.log('Video progress update failed, refreshing page anyway...');
+                        window.location.reload();
+                    }, 2000);
+                });
             } else {
                 // For other content types, refresh the page after a short delay
-                console.log('Non-audio content closed, refreshing page after delay...');
+                console.log('Non-audio/video content closed, refreshing page after delay...');
                 setTimeout(() => {
-                    console.log('Refreshing page for non-audio content...');
+                    console.log('Refreshing page for non-audio/video content...');
                     window.location.reload();
                 }, 2000);
             }
@@ -2707,7 +2923,7 @@ function startDocumentCloseMonitoring() {
             const keysToRemove = [];
             for (let i = 0; i < sessionStorage.length; i++) {
                 const key = sessionStorage.key(i);
-                if (key && (key.startsWith('processed_audio_') || key.startsWith('processed_document_'))) {
+                if (key && (key.startsWith('processed_audio_') || key.startsWith('processed_document_') || key.startsWith('processed_video_'))) {
                     keysToRemove.push(key);
                 }
             }
@@ -2780,6 +2996,63 @@ function refreshAudioProgress(contentId) {
 
 // Global function for external access
 window.refreshAudioProgress = refreshAudioProgress;
+
+// Function to refresh video progress
+function refreshVideoProgress(contentId) {
+    if (!contentId) return Promise.resolve();
+    
+    console.log('Refreshing video progress for:', contentId);
+    
+    // Find the content card
+    const contentCard = document.querySelector(`[data-content-id="${contentId}"]`).closest('.content-item-card');
+    if (!contentCard) return Promise.resolve();
+    
+    // Show loading state
+    const progressText = contentCard.querySelector('.content-progress-text');
+    const progressFill = contentCard.querySelector('.content-progress-fill');
+    
+    if (progressText) progressText.textContent = 'Loading...';
+    if (progressFill) progressFill.classList.add('updating');
+    
+    // Fetch updated progress from the server
+    const courseId = <?= $GLOBALS['course']['id'] ?? 'null' ?>;
+    if (!courseId) return Promise.resolve();
+    
+    // Return a promise for proper async handling
+    return fetch(`/Unlockyourskills/video-progress/resume-position?course_id=${courseId}&content_id=${contentId}`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                // Calculate percentage from resume position and duration
+                let progressPercentage = 0;
+                if (data.duration > 0 && data.resume_position > 0) {
+                    progressPercentage = Math.round((data.resume_position / data.duration) * 100);
+                }
+                
+                // Update progress bar
+                if (progressText) progressText.textContent = `${progressPercentage}%`;
+                if (progressFill) {
+                    progressFill.style.width = `${progressPercentage}%`;
+                    progressFill.setAttribute('aria-valuenow', progressPercentage);
+                }
+                
+                console.log(`Video progress refreshed: ${progressPercentage}%`);
+                return true; // Success
+            }
+            return false; // No success
+        })
+        .catch(error => {
+            console.error('Error refreshing video progress:', error);
+            if (progressText) progressText.textContent = 'Error';
+            throw error; // Re-throw for catch handling
+        })
+        .finally(() => {
+            if (progressFill) progressFill.classList.remove('updating');
+        });
+}
+
+// Global function for external access
+window.refreshVideoProgress = refreshVideoProgress;
 </script>
 
 <?php include 'includes/footer.php'; ?> 
