@@ -1444,7 +1444,7 @@ function getVideoProgressData($courseId, $contentId, $userId) {
                                                             } elseif ($content['type'] === 'audio') {
                                                                 // Get audio progress from audio_progress table
                                                                 $audioProgressData = getAudioProgressData($GLOBALS['course']['id'], $content['id'], $_SESSION['user']['id']);
-                                                                $progressPercentage = $audioProgressData['progress'];
+                                                                $progressPercentage = intval($audioProgressData['progress']);
                                                             } elseif ($content['type'] === 'video') {
                                                                 // Get video progress from video_progress table
                                                                 $videoProgressData = getVideoProgressData($GLOBALS['course']['id'], $content['id'], $_SESSION['user']['id']);
@@ -1557,7 +1557,7 @@ function getVideoProgressData($courseId, $contentId, $userId) {
                                                                         
                                                                         // Get audio progress and status with additional data
                                                                         $audioProgressData = getAudioProgressData($GLOBALS['course']['id'], $content['id'], $_SESSION['user']['id']);
-                                                                        $audioProgress = $audioProgressData['progress'];
+                                                                        $audioProgress = intval($audioProgressData['progress']);
                                                                         $audioStatus = $audioProgressData['status'];
                                                                         $lastListenedAt = $audioStatus['last_listened_at'];
                                                                         
