@@ -114,6 +114,13 @@ Router::get('/users/autocomplete', 'UserManagementController@getUserEmailsForAut
     Router::post('/audio-progress/beacon-save', 'AudioProgressController@beaconSave');
     Router::post('/audio-progress/batch-update', 'AudioProgressController@batchUpdate');
 
+    // Video progress routes
+    Router::post('/video-progress/immediate-save', 'VideoProgressController@immediateSave');
+    Router::post('/video-progress/beacon-save', 'VideoProgressController@beaconSave');
+    Router::post('/video-progress/batch-update', 'VideoProgressController@batchUpdate');
+    Router::get('/video-progress/resume-position', 'VideoProgressController@getResumePosition');
+    Router::get('/video-progress/stats', 'VideoProgressController@getVideoStats');
+
     // ===================================
     // ASSESSMENT PLAYER
     // ===================================

@@ -271,10 +271,72 @@ class MyCoursesController {
         $type = $_GET['type'] ?? 'iframe';
         $rawSrc = $_GET['src'] ?? '';
         $title = $_GET['title'] ?? 'Content';
-        $src = $this->normalizeEmbedUrl($rawSrc, $type);
-        // Expose $type to view
+        
+        // Handle video content differently
+        if ($type === 'video') {
+            $courseId = $_GET['course_id'] ?? null;
+            $moduleId = $_GET['module_id'] ?? null;
+            $contentId = $_GET['content_id'] ?? null;
+            $videoPackageId = $_GET['video_package_id'] ?? null;
+            $clientId = $_GET['client_id'] ?? null;
+            
+            // Validate required parameters
+            if (!$courseId || !$moduleId || !$contentId || !$videoPackageId || !$clientId) {
+                UrlHelper::redirect('my-courses');
+            }
+            
+            // Get video file path from video_package table
+            require_once 'models/VideoProgressModel.php';
+            $videoModel = new VideoProgressModel();
+            $videoPackage = $videoModel->getVideoPackageById($videoPackageId);
+            
+            if (!$videoPackage) {
+                UrlHelper::redirect('my-courses');
+            }
+            
+            // Construct proper video URL
+            $videoFileName = $videoPackage['video_file'];
+            $src = '/Unlockyourskills/uploads/video/' . $videoFileName;
+            
+            // Expose additional data for video content
+            $GLOBALS['course_id'] = $courseId;
+            $GLOBALS['module_id'] = $moduleId;
+            $GLOBALS['content_id'] = $contentId;
+            $GLOBALS['video_package_id'] = $videoPackageId;
+            $GLOBALS['client_id'] = $clientId;
+        } else {
+            $src = $this->normalizeEmbedUrl($rawSrc, $type);
+        }
+        
+        // Expose $type and $src to view
         $GLOBALS['type'] = $type;
+        $GLOBALS['src'] = $src;
+        $GLOBALS['title'] = $title;
+        
+        // Set local variables for the template
+        $type = $type;
+        $src = $src;
+        $title = $title;
+        
+
+        
         require 'views/content_viewer.php';
+    }
+    
+    /**
+     * Helper to resolve URLs for content paths
+     */
+    private function resolveContentUrl($path) {
+        if (empty($path)) {
+            return '';
+        }
+        if (preg_match('#^https?://#i', $path)) {
+            return $path;
+        }
+        if ($path[0] === '/') {
+            return $path;
+        }
+        return UrlHelper::url($path);
     }
 
     // Start an assessment/survey/feedback/assignment in a new tab
