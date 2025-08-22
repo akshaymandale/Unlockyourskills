@@ -570,6 +570,11 @@ function getImageProgressData($courseId, $contentId, $userId) {
                                 $progress = $scormProgress['progress_percentage'];
                                 break;
                                 
+                            case 'assessment':
+                                // Get assessment progress using the same logic as CourseModel
+                                $progress = getAssessmentProgressStatus($courseId, $contentId, $userId);
+                                break;
+                                
                             default:
                                 // For other content types, check if they have any progress
                                 $stmt = $db->prepare("
@@ -594,6 +599,61 @@ function getImageProgressData($courseId, $contentId, $userId) {
                     
                 } catch (Exception $e) {
                     error_log("Error calculating module real progress: " . $e->getMessage());
+                    return 0;
+                }
+            }
+        }
+        
+        // Helper to get assessment progress status
+        if (!function_exists('getAssessmentProgressStatus')) {
+            function getAssessmentProgressStatus($courseId, $contentId, $userId) {
+                try {
+                    // Validate inputs
+                    if (empty($courseId) || empty($contentId) || empty($userId)) {
+                        return 0;
+                    }
+                    
+                    // Get database connection
+                    $db = new PDO(
+                        'mysql:unix_socket=/Applications/XAMPP/xamppfiles/var/mysql/mysql.sock;dbname=unlockyourskills',
+                        'root',
+                        ''
+                    );
+                    $db->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+                    
+                    // Get client_id from session
+                    $clientId = $_SESSION['user']['client_id'] ?? null;
+                    
+                    // Get the assessment package ID from course_module_content
+                    $stmt = $db->prepare("
+                        SELECT content_id 
+                        FROM course_module_content 
+                        WHERE id = ? AND content_type = 'assessment'
+                    ");
+                    $stmt->execute([$contentId]);
+                    $contentData = $stmt->fetch(PDO::FETCH_ASSOC);
+                    
+                    if (!$contentData) {
+                        return 0;
+                    }
+                    
+                    $assessmentId = $contentData['content_id'];
+                    
+                    // Use AssessmentPlayerModel for consistency with CourseModel
+                    require_once 'models/AssessmentPlayerModel.php';
+                    $assessmentModel = new AssessmentPlayerModel();
+                    $results = $assessmentModel->getUserAssessmentResults($assessmentId, $userId, $clientId, $courseId);
+                    
+                    if ($results && isset($results['passed'])) {
+                        return $results['passed'] ? 100 : 0;
+                    }
+                    
+                    // Check if user has attempted the assessment
+                    $attempts = $assessmentModel->getUserCompletedAssessmentAttempts($assessmentId, $userId, $clientId);
+                    return !empty($attempts) ? 50 : 0; // 50% if attempted but not completed
+                    
+                } catch (Exception $e) {
+                    error_log("Error getting assessment progress status: " . $e->getMessage());
                     return 0;
                 }
             }
@@ -1168,7 +1228,7 @@ function getImageProgressData($courseId, $contentId, $userId) {
                                     } else {
                                         // Show start button with attempt count
                                         $encryptedPrereqId = IdEncryption::encrypt($pre['prerequisite_id']);
-                                        echo "<a class='prerequisite-action-btn' target='_blank' href='" . UrlHelper::url('my-courses/start') . '?type=' . urlencode($pre['prerequisite_type']) . '&id=' . urlencode($encryptedPrereqId) . "'>";
+                                        echo "<a class='prerequisite-action-btn' target='_blank' href='" . UrlHelper::url('my-courses/start') . '?type=' . urlencode($pre['prerequisite_type']) . '&id=' . urlencode($encryptedPrereqId) . '&course_id=' . $GLOBALS['course']['id'] . "'>";
                                         echo "<i class='fas fa-play me-1'></i>Start";
                                         echo "</a>";
                                     }
@@ -1241,7 +1301,7 @@ function getImageProgressData($courseId, $contentId, $userId) {
                                         'class' => 'btn-secondary'
                                     ];
                                     
-                                    echo "<a class='prerequisite-action-btn {$config['class']}' target='_blank' href='" . UrlHelper::url('my-courses/start') . '?type=' . urlencode($pre['prerequisite_type']) . '&id=' . urlencode($encryptedPrereqId) . "'>";
+                                    echo "<a class='prerequisite-action-btn {$config['class']}' target='_blank' href='" . UrlHelper::url('my-courses/start') . '?type=' . urlencode($pre['prerequisite_type']) . '&id=' . urlencode($encryptedPrereqId) . '&course_id=' . $GLOBALS['course']['id'] . "'>";
                                     echo "<i class='fas {$config['icon']} me-1'></i>{$config['label']}";
                                     echo "</a>";
                                 }
@@ -2021,7 +2081,7 @@ function getImageProgressData($courseId, $contentId, $userId) {
                                 } else {
                                     // Show start button with attempt count
                                     $encryptedPostreqId = IdEncryption::encrypt($post['content_id']);
-                                    echo "<a class='postrequisite-action-btn' target='_blank' href='" . UrlHelper::url('my-courses/start') . '?type=' . urlencode($post['content_type']) . '&id=' . urlencode($encryptedPostreqId) . "'>";
+                                    echo "<a class='postrequisite-action-btn' target='_blank' href='" . UrlHelper::url('my-courses/start') . '?type=' . urlencode($post['content_type']) . '&id=' . urlencode($encryptedPostreqId) . '&course_id=' . $GLOBALS['course']['id'] . "'>";
                                     echo "<i class='fas fa-play me-1'></i>Start";
                                     echo "</a>";
                                 }
@@ -2103,7 +2163,7 @@ function getImageProgressData($courseId, $contentId, $userId) {
                                     echo "</a>";
                                 } else {
                                     // For non-SCORM content, use the existing start method
-                                    echo "<a class='postrequisite-action-btn {$config['class']}' target='_blank' href='" . UrlHelper::url('my-courses/start') . '?type=' . urlencode($post['content_type']) . '&id=' . urlencode($encryptedPostreqId) . "'>";
+                                    echo "<a class='postrequisite-action-btn {$config['class']}' target='_blank' href='" . UrlHelper::url('my-courses/start') . '?type=' . urlencode($post['content_type']) . '&id=' . urlencode($encryptedPostreqId) . '&course_id=' . $GLOBALS['course']['id'] . "'>";
                                     echo "<i class='fas {$config['icon']} me-1'></i>{$config['label']}";
                                     echo "</a>";
                                 }
