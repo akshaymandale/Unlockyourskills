@@ -90,7 +90,7 @@ document.addEventListener("DOMContentLoaded", function () {
         switch (fieldName) {
             case "title":
                 if (value === "") {
-                    showError(field, translate("validation.required.title"));
+                    showError(field, translate('validation.required.title'));
                     isValid = false;
                 } else {
                     hideError(field);
@@ -100,7 +100,7 @@ document.addEventListener("DOMContentLoaded", function () {
             case "content_type":
             case "contentType":
                 if (value === "") {
-                    showError(field, translate("validation.required.content_type"));
+                    showError(field, translate('validation.required.content_type'));
                     isValid = false;
                 } else {
                     hideError(field);
@@ -110,7 +110,7 @@ document.addEventListener("DOMContentLoaded", function () {
             case "version_number":
             case "versionNumber":
                 if (value === "") {
-                    showError(field, translate("validation.required.version"));
+                    showError(field, translate('validation.required.version'));
                     isValid = false;
                 } else {
                     hideError(field);
@@ -133,10 +133,10 @@ document.addEventListener("DOMContentLoaded", function () {
                 const isFieldRequired = isFieldRequiredForContentType(fieldName, currentContentType);
 
                 if (isFieldRequired && value === "") {
-                    showError(field, translate("validation.required.url"));
+                    showError(field, translate('validation.required.url'));
                     isValid = false;
                 } else if (value !== "" && !isValidURL(value)) {
-                    showError(field, translate("validation.invalid.url"));
+                    showError(field, translate('validation.invalid.url'));
                     isValid = false;
                 } else {
                     hideError(field);
@@ -153,7 +153,7 @@ document.addEventListener("DOMContentLoaded", function () {
                 const isThisFieldRequired = isFieldRequiredForContentType(fieldName, currentContentTypeForField);
 
                 if (isThisFieldRequired && value === "") {
-                    showError(field, translate("validation.required.field"));
+                    showError(field, translate('validation.required.field'));
                     isValid = false;
                 } else {
                     hideError(field);
@@ -170,11 +170,16 @@ document.addEventListener("DOMContentLoaded", function () {
 
                 const isAudioFileRequired = currentContentTypeForAudio === "podcasts-audio" && currentAudioSource === "upload";
 
-                if (isAudioFileRequired && field.files.length === 0) {
-                    showError(field, translate("validation.required.audio_file"));
+                // Check if this is an edit operation (has existing_audio_file hidden field)
+                const existingAudioField = document.getElementById("existing_audio_file");
+                const hasExistingAudio = existingAudioField && existingAudioField.value.trim() !== "";
+
+                if (isAudioFileRequired && field.files.length === 0 && !hasExistingAudio) {
+                    // Only show error if no file selected AND no existing file
+                    showError(field, translate('validation.required.audio_file'));
                     isValid = false;
                 } else if (field.files.length > 0 && !isValidAudioFile(field.files[0])) {
-                    showError(field, translate("validation.invalid.audio_file"));
+                    showError(field, translate('validation.invalid.audio_file'));
                     isValid = false;
                 } else {
                     hideError(field);
@@ -184,7 +189,7 @@ document.addEventListener("DOMContentLoaded", function () {
             case "thumbnail":
                 // ✅ Thumbnail is optional, only validate if file is selected
                 if (field.files.length > 0 && !isValidThumbnail(field.files[0])) {
-                    showError(field, translate("validation.invalid.thumbnail"));
+                    showError(field, translate('validation.invalid.thumbnail'));
                     isValid = false;
                 } else {
                     hideError(field);
@@ -290,6 +295,5 @@ document.addEventListener("DOMContentLoaded", function () {
         document.querySelectorAll(".error-message").forEach(el => el.textContent = "");
         document.querySelectorAll(".is-invalid").forEach(el => el.classList.remove("is-invalid"));
     }
-
 
 });

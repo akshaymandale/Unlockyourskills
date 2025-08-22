@@ -92,10 +92,16 @@ document.addEventListener("DOMContentLoaded", function () {
             // Get existing asterisks
             const audioFileAsterisk = audioFileLabel.querySelector('.text-danger');
             const audioUrlAsterisk = audioUrlLabel.querySelector('.text-danger');
+            
+            // Check if there's an existing audio file
+            const existingAudioField = document.getElementById('existing_audio_file');
+            const hasExistingAudio = existingAudioField && existingAudioField.value.trim() !== '';
 
             if (audioSource.value === "upload") {
-                // Show asterisk for audio file, hide for audio URL
-                if (audioFileAsterisk) audioFileAsterisk.style.display = 'inline';
+                // For upload source, hide asterisk if there's an existing file
+                if (audioFileAsterisk) {
+                    audioFileAsterisk.style.display = hasExistingAudio ? 'none' : 'inline';
+                }
                 if (audioUrlAsterisk) audioUrlAsterisk.style.display = 'none';
             } else {
                 // Show asterisk for audio URL, hide for audio file
@@ -220,6 +226,14 @@ document.addEventListener("DOMContentLoaded", function () {
         thumbnailPreview.style.display = "none";
         const thumbnailFileLink = document.getElementById("thumbnailFileLink");
         if (thumbnailFileLink) thumbnailFileLink.innerHTML = '';
+        
+        // Clear audio file preview for new content
+        const audioFilePreview = document.getElementById("audioFilePreview");
+        if (audioFilePreview) audioFilePreview.innerHTML = '';
+        
+        // Clear existing audio file field for new content
+        const existingAudioField = document.getElementById('existing_audio_file');
+        if (existingAudioField) existingAudioField.value = '';
 
         modalTitle.textContent = "Add External Content";
     });
@@ -491,6 +505,10 @@ document.addEventListener("DOMContentLoaded", function () {
             if (thumbnailFileLink) thumbnailFileLink.innerHTML = '';
             const thumbnailPreview = document.getElementById("thumbnailPreview");
             if (thumbnailPreview) thumbnailPreview.style.display = 'none';
+            
+            // Clear audio file preview
+            const audioFilePreview = document.getElementById("audioFilePreview");
+            if (audioFilePreview) audioFilePreview.innerHTML = '';
 
             document.getElementById("external_id").value = contentData.id || "";
             document.getElementById("title").value = contentData.title || "";
@@ -517,6 +535,18 @@ document.addEventListener("DOMContentLoaded", function () {
             document.getElementById("author").value = contentData.author || "";
             document.getElementById("audioSource").value = contentData.audio_source || "upload";
             document.getElementById("audioUrl").value = contentData.audio_url || "";
+            document.getElementById("speaker").value = contentData.speaker || "";
+            
+            // ✅ Handle existing audio file for podcasts-audio content
+            if (contentData.content_type === 'podcasts-audio' && contentData.audio_file) {
+                const existingAudioField = document.getElementById('existing_audio_file');
+                if (existingAudioField) {
+                    existingAudioField.value = contentData.audio_file;
+                }
+                
+                // Show existing audio file preview (similar to SCORM)
+                showExistingAudioFilePreview(contentData.audio_file);
+            }
 
             // ✅ Show existing file previews (following Non-SCORM pattern)
             if (contentData.thumbnail && thumbnailFileLink) {
@@ -549,4 +579,92 @@ document.addEventListener("DOMContentLoaded", function () {
             $("#externalContentModal").modal("show");
         });
     });
+
+    // ✅ Audio File Preview Functions (Similar to SCORM)
+    
+    // Show preview for existing audio files
+    function showExistingAudioFilePreview(fileName) {
+        const audioPreview = document.getElementById("audioFilePreview");
+        if (!audioPreview) return;
+
+        // Get file extension for icon
+        const fileExtension = fileName.split('.').pop().toLowerCase();
+        const audioIcon = fileExtension === 'mp3' ? 'fa-music' : 'fa-volume-up';
+        
+        const previewHTML = `
+            <div class="preview-wrapper">
+                <div style="padding: 10px; border: 1px solid #ddd; border-radius: 5px; background: #e8f4fd; position: relative; display: flex; align-items: center; gap: 10px;">
+                    <i class="fas ${audioIcon}" style="font-size: 24px; color: #007bff;"></i>
+                    <div style="flex: 1;">
+                        <strong>Current Audio File:</strong><br>
+                        <span style="font-size: 12px; color: #6c757d;">${fileName}</span>
+                    </div>
+                    <button type="button" class="btn btn-sm btn-outline-danger remove-preview" onclick="removeAudioFilePreview()" title="Remove current file">×</button>
+                </div>
+                <p style="margin-top: 5px; font-size: 12px; color: #6c757d;">
+                    Current file: <a href="uploads/external/audio/${fileName}" target="_blank">${fileName}</a>
+                    <br><small class="text-muted">Leave the file input empty to keep this audio file</small>
+                </p>
+            </div>
+        `;
+
+        audioPreview.innerHTML = previewHTML;
+    }
+
+    // Show preview for new audio file uploads
+    function showNewAudioFilePreview(file) {
+        const audioPreview = document.getElementById("audioFilePreview");
+        if (!audioPreview) return;
+
+        const fileExtension = file.name.split('.').pop().toLowerCase();
+        const audioIcon = fileExtension === 'mp3' ? 'fa-music' : 'fa-volume-up';
+        
+        const previewHTML = `
+            <div class="preview-wrapper">
+                <div style="padding: 10px; border: 1px solid #ddd; border-radius: 5px; background: #e8f5e8; position: relative; display: flex; align-items: center; gap: 10px;">
+                    <i class="fas ${audioIcon}" style="font-size: 24px; color: #28a745;"></i>
+                    <div style="flex: 1;">
+                        <strong>New Audio File:</strong><br>
+                        <span style="font-size: 12px; color: #6c757d;">${file.name} (${(file.size / 1024 / 1024).toFixed(2)} MB)</span>
+                    </div>
+                    <button type="button" class="btn btn-sm btn-outline-danger remove-preview" onclick="clearAudioFileInput()" title="Remove new file">×</button>
+                </div>
+            </div>
+        `;
+
+        audioPreview.innerHTML = previewHTML;
+    }
+
+    // Global function to remove existing audio file preview
+    window.removeAudioFilePreview = function() {
+        const audioPreview = document.getElementById("audioFilePreview");
+        const existingAudioField = document.getElementById("existing_audio_file");
+        
+        if (audioPreview) audioPreview.innerHTML = '';
+        if (existingAudioField) existingAudioField.value = '';
+    };
+
+    // Global function to clear new audio file input
+    window.clearAudioFileInput = function() {
+        const audioFile = document.getElementById("audioFile");
+        const audioPreview = document.getElementById("audioFilePreview");
+        
+        if (audioFile) audioFile.value = '';
+        if (audioPreview) audioPreview.innerHTML = '';
+    };
+
+    // Listen for audio file input changes
+    const audioFileInput = document.getElementById("audioFile");
+    if (audioFileInput) {
+        audioFileInput.addEventListener("change", function(event) {
+            const file = event.target.files[0];
+            if (file) {
+                showNewAudioFilePreview(file);
+            } else {
+                const audioPreview = document.getElementById("audioFilePreview");
+                if (audioPreview) audioPreview.innerHTML = '';
+            }
+        });
+    }
+
 });

@@ -245,8 +245,17 @@ class VLRModel
     public function updateExternalContent($id, $data, $clientId = null)
     {
         try {
-            // Ensure audio_file exists in data
-            $audioFile = isset($data['audio_file']) ? $data['audio_file'] : null;
+            // Handle audio_file - preserve existing if not provided during edit
+            $audioFile = null;
+            if (isset($data['audio_file'])) {
+                $audioFile = $data['audio_file'];
+            } else {
+                // No audio_file provided, preserve existing value
+                $existingContent = $this->getExternalContentById($id, $clientId);
+                if ($existingContent && isset($existingContent['audio_file'])) {
+                    $audioFile = $existingContent['audio_file'];
+                }
+            }
 
             $sql = "UPDATE external_content SET
                 title = :title,
@@ -303,6 +312,27 @@ class VLRModel
             return true;
         } catch (PDOException $e) {
             error_log("Update Error: " . $e->getMessage());
+            return false;
+        }
+    }
+
+    // Get External Content by ID
+    public function getExternalContentById($id, $clientId = null)
+    {
+        try {
+            $sql = "SELECT * FROM external_content WHERE id = ? AND is_deleted = 0";
+            $params = [$id];
+
+            if ($clientId !== null) {
+                $sql .= " AND client_id = ?";
+                $params[] = $clientId;
+            }
+
+            $stmt = $this->conn->prepare($sql);
+            $stmt->execute($params);
+            return $stmt->fetch(PDO::FETCH_ASSOC);
+        } catch (PDOException $e) {
+            error_log("Get External Content by ID Error: " . $e->getMessage());
             return false;
         }
     }

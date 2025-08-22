@@ -491,6 +491,10 @@ class VLRController extends BaseController
                 if ($audioSource === "upload" && empty($_FILES['audio_file']['name']) && !$isEdit) {
                     $errors[] = "Audio file is required.";
                 }
+                // For edit mode with upload source, allow existing audio file to be preserved
+                if ($audioSource === "upload" && $isEdit && empty($_FILES['audio_file']['name'])) {
+                    // This is fine - existing file will be preserved
+                }
             }
 
             // ✅ Thumbnail Upload Handling (NEW)
@@ -565,6 +569,11 @@ class VLRController extends BaseController
                         $errors[] = "Failed to upload audio file.";
                     }
                 }
+            } elseif ($isEdit && $audioSource === "upload") {
+                // ✅ Preserve existing audio file if no new one is uploaded during edit
+                // For now, we'll let the update proceed and the database will keep the existing value
+                // This is similar to how SCORM handles existing files
+                error_log('[External Content] Edit mode with upload source - existing audio file will be preserved');
             }
 
             // ✅ If errors exist, redirect with toast notification
@@ -597,9 +606,21 @@ class VLRController extends BaseController
                 'updated_by' => $modifiedBy,
             ];
 
-            // ✅ Include uploaded files if present (thumbnail already set in main array)
-            if ($audioFile)
+            // ✅ Include audio file in data - preserve existing if no new file uploaded
+            if ($audioFile) {
                 $data['audio_file'] = $audioFile;
+                error_log('[External Content] Using new audio file: ' . $audioFile);
+            } elseif ($isEdit && $audioSource === "upload") {
+                // Don't set audio_file - let the database keep the existing value
+                // This prevents overwriting the existing audio file with null
+                error_log('[External Content] Edit mode - preserving existing audio file in database');
+            }
+            
+            // Debug logging for edit operations
+            if ($isEdit) {
+                error_log('[External Content] Edit operation - ID: ' . $id . ', Content Type: ' . $contentType . ', Audio Source: ' . $audioSource);
+                error_log('[External Content] Audio file in data: ' . ($data['audio_file'] ?? 'NOT SET'));
+            }
 
             // Insert or update the database
             if ($isEdit) {
