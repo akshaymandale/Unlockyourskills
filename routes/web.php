@@ -121,6 +121,11 @@ Router::get('/users/autocomplete', 'UserManagementController@getUserEmailsForAut
     Router::get('/video-progress/resume-position', 'VideoProgressController@getResumePosition');
     Router::get('/video-progress/stats', 'VideoProgressController@getVideoStats');
 
+    // Image progress tracking routes
+    Router::post('/image-progress/mark-as-viewed', 'ImageProgressController@markAsViewed');
+    Router::get('/image-progress/get-progress', 'ImageProgressController@getProgress');
+    Router::post('/image-progress/update-progress', 'ImageProgressController@updateProgress');
+
     // ===================================
     // ASSESSMENT PLAYER
     // ===================================

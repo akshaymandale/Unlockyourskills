@@ -123,6 +123,55 @@ function getVideoProgressData($courseId, $contentId, $userId) {
         ];
     }
 }
+
+// Helper to get image progress data
+function getImageProgressData($courseId, $contentId, $userId) {
+    try {
+        $database = new Database();
+        $conn = $database->connect();
+        
+        $sql = "SELECT ip.*, 
+                       ip.image_status,
+                       ip.is_completed,
+                       ip.view_count,
+                       ip.viewed_at,
+                       ip.updated_at
+                FROM image_progress ip
+                WHERE ip.course_id = ? AND ip.content_id = ? AND ip.user_id = ?";
+        
+        $stmt = $conn->prepare($sql);
+        $stmt->execute([$courseId, $contentId, $userId]);
+        $progress = $stmt->fetch(PDO::FETCH_ASSOC);
+        
+        if ($progress) {
+            return [
+                'progress' => $progress['is_completed'] ? 100 : 0,
+                'is_completed' => (bool)$progress['is_completed'],
+                'image_status' => $progress['image_status'] ?? 'not_viewed',
+                'view_count' => intval($progress['view_count'] ?? 0),
+                'viewed_at' => $progress['viewed_at']
+            ];
+        } else {
+            return [
+                'progress' => 0,
+                'is_completed' => false,
+                'image_status' => 'not_viewed',
+                'view_count' => 0,
+                'viewed_at' => null
+            ];
+        }
+        
+    } catch (Exception $e) {
+        error_log("Error getting image progress data: " . $e->getMessage());
+        return [
+            'progress' => 0,
+            'is_completed' => false,
+            'image_status' => 'not_viewed',
+            'view_count' => 0,
+            'viewed_at' => null
+        ];
+    }
+}
 ?>
 
 <style>
@@ -505,6 +554,11 @@ function getVideoProgressData($courseId, $contentId, $userId) {
                             case 'video':
                                 $videoProgressData = getVideoProgressData($courseId, $contentId, $userId);
                                 $progress = $videoProgressData['progress'];
+                                break;
+                                
+                            case 'image':
+                                $imageProgressData = getImageProgressData($courseId, $contentId, $userId);
+                                $progress = $imageProgressData['progress'];
                                 break;
                                 
                             case 'document':
@@ -1449,6 +1503,10 @@ function getVideoProgressData($courseId, $contentId, $userId) {
                                                                 // Get video progress from video_progress table
                                                                 $videoProgressData = getVideoProgressData($GLOBALS['course']['id'], $content['id'], $_SESSION['user']['id']);
                                                                 $progressPercentage = $videoProgressData['progress'];
+                                                            } elseif ($content['type'] === 'image') {
+                                                                // Get image progress from image_progress table
+                                                                $imageProgressData = getImageProgressData($GLOBALS['course']['id'], $content['id'], $_SESSION['user']['id']);
+                                                                $progressPercentage = $imageProgressData['progress'];
                                                             } else {
                                                                 $progressPercentage = intval($content['progress'] ?? 0);
                                                             }
@@ -1642,8 +1700,35 @@ function getVideoProgressData($courseId, $contentId, $userId) {
                                                                     $imgUrl = $content['image_file_path'] ?? '';
                                                                     if ($imgUrl) {
                                                                         $resolved = resolveContentUrl($imgUrl);
-                                                                        $viewer = UrlHelper::url('my-courses/view-content') . '?type=image&title=' . urlencode($content['title']) . '&src=' . urlencode($resolved) . '&course_id=' . $GLOBALS['course']['id'] . '&module_id=' . $module['id'] . '&content_id=' . $content['id'];
-                                                                        $actionsHtml .= "<a href='" . htmlspecialchars($viewer) . "' target='_blank' class='postrequisite-action-btn btn-info launch-content-btn' data-module-id='" . $module['id'] . "' data-content-id='" . $content['id'] . "' data-type='image'><i class='fas fa-image me-1'></i>View Image</a>";
+                                                                        
+                                                                        // Get image progress and status
+                                                                        $imageProgressData = getImageProgressData($GLOBALS['course']['id'], $content['id'], $_SESSION['user']['id']);
+                                                                        
+                                                                        // Build status exactly like documents
+                                                                        $statusHtml .= "<div class='image-progress-status mb-2'>";
+                                                                        if ($imageProgressData['is_completed']) {
+                                                                            $statusHtml .= "<div class='text-success'><i class='fas fa-check-circle me-1'></i>Viewed";
+                                                                            if ($imageProgressData['view_count'] > 0) {
+                                                                                $statusHtml .= " - View Count: {$imageProgressData['view_count']}";
+                                                                            }
+                                                                            if ($imageProgressData['viewed_at']) {
+                                                                                $lastViewed = date('M j, Y', strtotime($imageProgressData['viewed_at']));
+                                                                                $statusHtml .= " <small class='text-muted'>(Last: {$lastViewed})</small>";
+                                                                            }
+                                                                            $statusHtml .= "</div>";
+                                                                        } else {
+                                                                            $statusHtml .= "<div class='text-muted'><i class='fas fa-circle me-1'></i>Not viewed</div>";
+                                                                        }
+                                                                        $statusHtml .= "</div>";
+                                                                        
+                                                                        $viewer = UrlHelper::url('my-courses/view-content') . '?type=image&title=' . urlencode($content['title']) . '&src=' . urlencode($resolved) . '&course_id=' . $GLOBALS['course']['id'] . '&module_id=' . $module['id'] . '&content_id=' . $content['id'] . '&image_package_id=' . $content['content_id'] . '&client_id=' . $_SESSION['user']['client_id'];
+                                                                        
+                                                                        // Show completed badge if image is viewed
+                                                                        if ($imageProgressData['is_completed']) {
+                                                                            $statusHtml .= "<div class='image-completed-badge'><span class='badge bg-success'><i class='fas fa-check-circle me-1'></i>Image Viewed</span></div>";
+                                                                        } else {
+                                                                            $actionsHtml .= "<a href='" . htmlspecialchars($viewer) . "' target='_blank' class='postrequisite-action-btn btn-info launch-content-btn' data-module-id='" . $module['id'] . "' data-content-id='" . $content['id'] . "' data-type='image' data-image-package-id='" . $content['content_id'] . "' onclick='launchImagePlayer(event, " . $GLOBALS['course']['id'] . ", " . $module['id'] . ", " . $content['id'] . ", \"" . addslashes($content['title']) . "\")'><i class='fas fa-image me-1'></i>View Image</a>";
+                                                                        }
                                                                     } else {
                                                                         $statusHtml .= "<span class='content-error'><i class='fas fa-exclamation-triangle me-1'></i>No image file</span>";
                                                                     }
@@ -2118,8 +2203,33 @@ console.log('Debug: Course data available:', {
     courseName: <?php echo json_encode($GLOBALS['course']['name'] ?? null); ?>
 });
 
-// Function to launch video player
-function launchVideoPlayer(event, courseId, moduleId, contentId, contentTitle) {
+        // Function to launch image player
+        function launchImagePlayer(event, courseId, moduleId, contentId, contentTitle) {
+            event.preventDefault();
+            const contentCard = event.target.closest('.content-item-card');
+            if (!contentCard) { console.error('Content card not found'); return; }
+            const imagePackageId = contentCard.querySelector('[data-image-package-id]')?.dataset.imagePackageId;
+            if (!imagePackageId) { console.error('Image package ID not found'); return; }
+            const clientId = <?= $_SESSION['user']['client_id'] ?? 'null' ?>;
+            if (!clientId) { console.error('Client ID not found'); return; }
+            console.log('Launching image player:', { courseId, moduleId, contentId, imagePackageId, clientId, contentTitle });
+            const viewerUrl = `/Unlockyourskills/my-courses/view-content?type=image&course_id=${courseId}&module_id=${moduleId}&content_id=${contentId}&image_package_id=${imagePackageId}&client_id=${clientId}&title=${encodeURIComponent(contentTitle)}`;
+            const imageWindow = window.open(viewerUrl, '_blank', 'width=1200,height=800,scrollbars=yes,resizable=yes');
+            if (imageWindow) {
+                console.log('Image player launched successfully');
+                localStorage.setItem('image_closed_' + contentId, 'false');
+                const checkClosed = setInterval(() => {
+                    if (imageWindow.closed) {
+                        clearInterval(checkClosed);
+                        localStorage.setItem('image_closed_' + contentId, 'true');
+                        console.log('Image window closed for content:', contentId);
+                    }
+                }, 1000);
+            } else { console.error('Failed to open image player window'); }
+        }
+
+        // Function to launch video player
+        function launchVideoPlayer(event, courseId, moduleId, contentId, contentTitle) {
     event.preventDefault();
     
     // Get the content card to extract video package ID
@@ -2677,13 +2787,18 @@ function startDocumentCloseMonitoring() {
     const videoButtons = document.querySelectorAll('.launch-content-btn[data-type="video"]');
     const videoIds = Array.from(videoButtons).map(btn => btn.dataset.contentId);
     
-    if (documentIds.length === 0 && audioIds.length === 0 && videoIds.length === 0) {
+    // Get all image content IDs from the page
+    const imageButtons = document.querySelectorAll('.launch-content-btn[data-type="image"]');
+    const imageIds = Array.from(imageButtons).map(btn => btn.dataset.contentId);
+    
+    if (documentIds.length === 0 && audioIds.length === 0 && videoIds.length === 0 && imageIds.length === 0) {
         return; // No content to monitor
     }
     
     console.log('Monitoring document close events for:', documentIds);
     console.log('Monitoring audio close events for:', audioIds);
     console.log('Monitoring video close events for:', videoIds);
+    console.log('Monitoring image close events for:', imageIds);
     
     // Mark monitoring as active
     window.documentCloseMonitoringActive = true;
@@ -2805,6 +2920,39 @@ function startDocumentCloseMonitoring() {
             }
         }
         
+        // Check image close flags
+        for (let i = 0; i < imageIds.length && !shouldRefresh; i++) {
+            const contentId = imageIds[i];
+            if (contentId) {
+                const closeFlag = localStorage.getItem('image_closed_' + contentId);
+                if (closeFlag) {
+                    console.log('Image close detected for:', contentId, 'at timestamp:', closeFlag);
+                    
+                    // Check if this content was already processed recently
+                    const processedKey = `processed_image_${contentId}`;
+                    const lastProcessed = sessionStorage.getItem(processedKey);
+                    const now = Date.now();
+                    
+                    if (lastProcessed && (now - parseInt(lastProcessed)) < 5000) {
+                        console.log('Image content already processed recently, skipping...');
+                        localStorage.removeItem('image_closed_' + contentId);
+                        continue;
+                    }
+                    
+                    // Mark as processed
+                    sessionStorage.setItem(processedKey, now.toString());
+                    
+                    // Remove the flag immediately to prevent duplicate detection
+                    localStorage.removeItem('image_closed_' + contentId);
+                    shouldRefresh = true;
+                    closedContentType = 'Image';
+                    closedContentId = contentId;
+                    // Break out of the loop once we find a flag
+                    break;
+                }
+            }
+        }
+        
         if (shouldRefresh) {
             // Mark refresh as in progress to prevent duplicates
             window.pageRefreshInProgress = true;
@@ -2918,7 +3066,7 @@ function startDocumentCloseMonitoring() {
             const keysToRemove = [];
             for (let i = 0; i < sessionStorage.length; i++) {
                 const key = sessionStorage.key(i);
-                if (key && (key.startsWith('processed_audio_') || key.startsWith('processed_document_') || key.startsWith('processed_video_'))) {
+                if (key && (key.startsWith('processed_audio_') || key.startsWith('processed_document_') || key.startsWith('processed_video_') || key.startsWith('processed_image_'))) {
                     keysToRemove.push(key);
                 }
             }

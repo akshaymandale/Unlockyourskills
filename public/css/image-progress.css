@@ -1,0 +1,166 @@
+/* Image Progress Tracking Styles */
+
+/* Image Progress Status Container */
+.image-progress-status {
+    padding: 8px 12px;
+    border-radius: 6px;
+    background: #f8f9fa;
+    border-left: 3px solid #dee2e6;
+    margin-bottom: 8px;
+}
+
+/* Image Progress Status Text Colors */
+.image-progress-status .text-success {
+    color: #198754 !important;
+    font-weight: 500;
+}
+
+.image-progress-status .text-warning {
+    color: #fd7e14 !important;
+    font-weight: 500;
+}
+
+.image-progress-status .text-muted {
+    color: #6c757d !important;
+}
+
+/* Image Completed Badge */
+.image-completed-badge {
+    margin-top: 8px;
+}
+
+.image-completed-badge .badge {
+    font-size: 0.875rem;
+    padding: 6px 12px;
+}
+
+/* Image Progress Status Typography */
+.image-progress-status small {
+    font-size: 0.75rem;
+}
+
+.image-progress-status i {
+    margin-right: 6px;
+    width: 14px;
+    text-align: center;
+}
+
+/* Image Viewer Container */
+.image-viewer-container {
+    width: 100%;
+    height: calc(100vh - 48px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #000;
+    overflow: hidden;
+}
+
+.image-viewer-container img {
+    max-width: 100%;
+    max-height: 100%;
+    object-fit: contain;
+    border-radius: 8px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+}
+
+/* Image Progress Indicators */
+.image-progress-indicator {
+    position: absolute;
+    top: 20px;
+    right: 20px;
+    background: rgba(0, 0, 0, 0.7);
+    color: white;
+    padding: 8px 12px;
+    border-radius: 20px;
+    font-size: 0.875rem;
+    z-index: 1000;
+}
+
+.image-progress-indicator.completed {
+    background: rgba(25, 135, 84, 0.9);
+}
+
+.image-progress-indicator.viewed {
+    background: rgba(253, 126, 20, 0.9);
+}
+
+/* Image Status Badges */
+.image-status-badge {
+    display: inline-block;
+    margin-top: 4px;
+}
+
+.image-status-badge .badge {
+    font-size: 0.75rem;
+    padding: 4px 8px;
+    border-radius: 12px;
+}
+
+.image-status-badge .badge.bg-success {
+    background-color: #198754 !important;
+}
+
+.image-status-badge .badge.bg-warning {
+    background-color: #fd7e14 !important;
+}
+
+.image-status-badge .badge.bg-secondary {
+    background-color: #6c757d !important;
+}
+
+/* Image Progress Loading States */
+.image-progress-loading {
+    opacity: 0.7;
+    pointer-events: none;
+}
+
+.image-progress-loading::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 20px;
+    height: 20px;
+    margin: -10px 0 0 -10px;
+    border: 2px solid #f3f3f3;
+    border-top: 2px solid #3498db;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+    .image-viewer-container {
+        height: calc(100vh - 80px);
+    }
+    
+    .image-progress-indicator {
+        top: 10px;
+        right: 10px;
+        font-size: 0.75rem;
+        padding: 6px 10px;
+    }
+    
+    .image-progress-status {
+        padding: 6px 10px;
+        font-size: 0.875rem;
+    }
+}
+
+/* Dark Mode Support */
+@media (prefers-color-scheme: dark) {
+    .image-progress-status {
+        background: #2d3748;
+        border-left-color: #4a5568;
+    }
+    
+    .image-progress-status .text-muted {
+        color: #a0aec0 !important;
+    }
+}

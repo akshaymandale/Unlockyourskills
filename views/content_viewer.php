@@ -280,6 +280,13 @@
             Your browser does not support the video tag.
           </video>
         </div>
+      <?php elseif (($type ?? '') === 'image'): ?>
+        <div class="image-viewer-container">
+          <img src="<?= htmlspecialchars($src) ?>" alt="Image Content" style="max-width: 100%; max-height: 100%; object-fit: contain;">
+          <div class="image-progress-indicator viewed">
+            <i class="fas fa-eye me-1"></i>Image Viewed
+          </div>
+        </div>
       <?php else: ?>
         <iframe class="viewer-frame" src="<?= htmlspecialchars($src) ?>" allowfullscreen referrerpolicy="no-referrer-when-downgrade"></iframe>
       <?php endif; ?>
@@ -290,6 +297,7 @@
   
   <script src="/Unlockyourskills/public/js/audio-progress.js"></script>
   <script src="/Unlockyourskills/public/js/video-progress.js"></script>
+  <script src="/Unlockyourskills/public/js/image-progress.js"></script>
   <script>
   
   <?php
@@ -343,15 +351,18 @@
       const contentId = urlParams.get('content_id');
       const contentType = urlParams.get('type');
       
-      if (courseId && moduleId && contentId) {
-        if (contentType === 'video') {
-          localStorage.setItem('video_closed_' + contentId, Date.now().toString());
-          console.log('Video close flag set for:', contentId);
-        } else {
-          localStorage.setItem('document_closed_' + contentId, Date.now().toString());
-          console.log('Document close flag set for:', contentId);
+              if (courseId && moduleId && contentId) {
+          if (contentType === 'video') {
+            localStorage.setItem('video_closed_' + contentId, Date.now().toString());
+            console.log('Video close flag set for:', contentId);
+          } else if (contentType === 'image') {
+            localStorage.setItem('image_closed_' + contentId, Date.now().toString());
+            console.log('Image close flag set for:', contentId);
+          } else {
+            localStorage.setItem('document_closed_' + contentId, Date.now().toString());
+            console.log('Document close flag set for:', contentId);
+          }
         }
-      }
     } catch (error) {
       console.error('Error setting content close flag:', error);
     }
