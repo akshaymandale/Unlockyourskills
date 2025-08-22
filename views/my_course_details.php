@@ -1770,7 +1770,7 @@ function getImageProgressData($courseId, $contentId, $userId) {
                                                                         $actionsHtml .= "<button class='prerequisite-action-btn prerequisite-action-disabled' disabled title='Maximum attempts reached'><i class='fas fa-ban me-1'></i>Attempts Exceeded</button>";
                                                                     } else {
                                                                         $encryptedId = IdEncryption::encrypt($content['content_id']);
-                                                                        $startUrl = UrlHelper::url('my-courses/start') . '?type=' . urlencode($type) . '&id=' . urlencode($encryptedId);
+                                                                        $startUrl = UrlHelper::url('my-courses/start') . '?type=' . urlencode($type) . '&id=' . urlencode($encryptedId) . '&course_id=' . $GLOBALS['course']['id'];
                                                                         $actionsHtml .= "<a href='" . htmlspecialchars($startUrl) . "' target='_blank' class='prerequisite-action-btn'><i class='fas fa-play me-1'></i>Start</a>";
                                                                     }
                                                                     break;

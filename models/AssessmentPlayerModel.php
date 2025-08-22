@@ -135,7 +135,7 @@ class AssessmentPlayerModel
     }
 
     // Create or get existing attempt
-    public function createOrGetAttempt($assessmentId, $userId, $clientId = null)
+    public function createOrGetAttempt($assessmentId, $userId, $clientId = null, $courseId = null)
     {
         $db = $this->conn;
 
@@ -159,23 +159,36 @@ class AssessmentPlayerModel
             return $existingAttempt['id'];
         }
 
-        // Get assessment details for time limit and course_id
+        // Get assessment details for time limit
         $stmt = $db->prepare("
-            SELECT ap.time_limit, 
-                   COALESCE(
-                       COALESCE(cpr.course_id, cpre.course_id), 
-                       1
-                   ) as course_id
+            SELECT ap.time_limit
             FROM assessment_package ap
-            LEFT JOIN course_post_requisites cpr ON ap.id = cpr.content_id AND cpr.content_type = 'assessment'
-            LEFT JOIN course_prerequisites cpre ON ap.id = cpre.prerequisite_id AND cpre.prerequisite_type = 'assessment'
+
+
             WHERE ap.id = ?
         ");
         $stmt->execute([$assessmentId]);
         $assessment = $stmt->fetch(PDO::FETCH_ASSOC);
         
         $timeLimit = $assessment['time_limit'] ?? 60; // Default 60 minutes
-        $courseId = $assessment['course_id'] ?? 1; // Default to course_id 1 if no mapping found
+        
+        // Use the provided course_id, or fallback to default if not provided
+        if (!$courseId) {
+            // Fallback to the old logic only if course_id is not provided
+            $stmt = $db->prepare("
+                SELECT COALESCE(
+                    COALESCE(cpr.course_id, cpre.course_id), 
+                    1
+                ) as course_id
+                FROM assessment_package ap
+                LEFT JOIN course_post_requisites cpr ON ap.id = cpr.content_id AND cpr.content_type = 'assessment'
+                LEFT JOIN course_prerequisites cpre ON ap.id = cpr.prerequisite_id AND cpr.prerequisite_type = 'assessment'
+                WHERE ap.id = ?
+            ");
+            $stmt->execute([$assessmentId]);
+            $fallbackResult = $stmt->fetch(PDO::FETCH_ASSOC);
+            $courseId = $fallbackResult['course_id'] ?? 1;
+        }
 
         // Get next attempt number
         $stmt = $db->prepare("
@@ -631,8 +644,8 @@ class AssessmentPlayerModel
         return $assessment;
     }
 
-    // Get user's assessment results (pass/fail status) for a specific assessment
-    public function getUserAssessmentResults($assessmentId, $userId, $clientId = null)
+    // Get user's assessment results (pass/fail status) for a specific assessment and course
+    public function getUserAssessmentResults($assessmentId, $userId, $clientId = null, $courseId = null)
     {
         $db = $this->conn;
 
@@ -649,11 +662,17 @@ class AssessmentPlayerModel
             FROM assessment_results ar
             WHERE ar.assessment_id = :assessment_id 
             AND ar.user_id = :user_id
+            " . ($courseId ? "AND ar.course_id = :course_id" : "") . "
             ORDER BY ar.attempt_number DESC, ar.created_at DESC
             LIMIT 1
         ");
         
-        $stmt->execute([':assessment_id' => $assessmentId, ':user_id' => $userId]);
+        $params = [':assessment_id' => $assessmentId, ':user_id' => $userId];
+        if ($courseId) {
+            $params[':course_id'] = $courseId;
+        }
+        
+        $stmt->execute($params);
         return $stmt->fetch(PDO::FETCH_ASSOC);
     }
 } 
