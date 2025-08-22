@@ -131,8 +131,8 @@ class MyCoursesController {
                                 // Get assessment details including num_attempts
                                 $assessmentDetails[$assessmentId] = $assessmentModel->getAssessmentDetails($assessmentId, $clientId);
                                 
-                                // Get assessment results (pass/fail status)
-                                $assessmentResults[$assessmentId] = $assessmentModel->getUserAssessmentResults($assessmentId, $userId, $clientId);
+                                // Get assessment results (pass/fail status) for this specific course
+                                $assessmentResults[$assessmentId] = $assessmentModel->getUserAssessmentResults($assessmentId, $userId, $clientId, $course['id']);
                             }
                         }
                     }
@@ -152,8 +152,8 @@ class MyCoursesController {
                         // Get assessment details including num_attempts
                         $assessmentDetails[$assessmentId] = $assessmentModel->getAssessmentDetails($assessmentId, $clientId);
                         
-                        // Get assessment results (pass/fail status)
-                        $assessmentResults[$assessmentId] = $assessmentModel->getUserAssessmentResults($assessmentId, $userId, $clientId);
+                        // Get assessment results (pass/fail status) for this specific course
+                        $assessmentResults[$assessmentId] = $assessmentModel->getUserAssessmentResults($assessmentId, $userId, $clientId, $course['id']);
                     }
                 }
             }
@@ -169,8 +169,8 @@ class MyCoursesController {
                         // Get assessment details including num_attempts
                         $assessmentDetails[$assessmentId] = $assessmentModel->getAssessmentDetails($assessmentId, $clientId);
                         
-                        // Get assessment results (pass/fail status)
-                        $assessmentResults[$assessmentId] = $assessmentModel->getUserAssessmentResults($assessmentId, $userId, $clientId);
+                        // Get assessment results (pass/fail status) for this specific course
+                        $assessmentResults[$assessmentId] = $assessmentModel->getUserAssessmentResults($assessmentId, $userId, $clientId, $course['id']);
                     }
                 }
             }
@@ -435,9 +435,19 @@ class MyCoursesController {
                     }
                     error_log("User can take assessment");
                     
-                    // Create or get existing attempt
-                    error_log("Creating/getting assessment attempt...");
-                    $attemptId = $assessmentModel->createOrGetAttempt($id, $userId, $clientId);
+                    // Get course_id from URL parameters
+                    $courseId = $_GET['course_id'] ?? null;
+                    error_log("Course ID from URL: {$courseId}");
+                    
+                    if (!$courseId) {
+                        error_log("ERROR: No course_id provided, redirecting to my-courses");
+                        UrlHelper::redirect('my-courses');
+                        return;
+                    }
+                    
+                    // Create or get existing attempt with course_id
+                    error_log("Creating/getting assessment attempt with course_id: {$courseId}...");
+                    $attemptId = $assessmentModel->createOrGetAttempt($id, $userId, $clientId, $courseId);
                     error_log("Attempt ID: {$attemptId}");
                     
                     // Get current attempt data
