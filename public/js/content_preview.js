@@ -314,18 +314,47 @@ function showExternalPreview(externalData) {
             
         case 'podcasts-audio':
             if (externalData.audio_file) {
-                const audioPath = externalData.audio_file.startsWith('uploads/') ? 
-                    externalData.audio_file : `uploads/external/${externalData.audio_file}`;
+                // Construct the correct audio file path
+                let audioPath;
+                if (externalData.audio_file.startsWith('http')) {
+                    // External URL
+                    audioPath = externalData.audio_file;
+                } else if (externalData.audio_file.startsWith('/')) {
+                    // Absolute path
+                    audioPath = externalData.audio_file;
+                } else if (externalData.audio_file.startsWith('uploads/')) {
+                    // Relative path starting with uploads/
+                    audioPath = `/${window.location.pathname.split('/')[1]}/${externalData.audio_file}`;
+                } else {
+                    // Just filename, construct full path
+                    audioPath = `/${window.location.pathname.split('/')[1]}/uploads/external/audio/${externalData.audio_file}`;
+                }
+                
+                // Debug logging
+                console.log('🔊 Audio Preview Debug:', {
+                    originalFile: externalData.audio_file,
+                    constructedPath: audioPath,
+                    pathname: window.location.pathname,
+                    pathParts: window.location.pathname.split('/')
+                });
+                
                 previewContent = `
                     <div class="external-viewer">
                         <div class="audio-player">
-                            <audio controls style="width: 100%;">
+                            <audio controls style="width: 100%;" preload="metadata" onerror="handleAudioError(this)">
                                 <source src="${audioPath}" type="audio/mpeg">
+                                <source src="${audioPath}" type="audio/mp3">
                                 <source src="${audioPath}" type="audio/wav">
+                                <source src="${audioPath}" type="audio/ogg">
                                 Your browser does not support the audio element.
                             </audio>
                         </div>
                         <p class="mt-2"><strong>Speaker:</strong> ${externalData.speaker || 'Unknown'}</p>
+                        <div class="mt-2">
+                            <a href="${audioPath}" target="_blank" class="btn btn-sm btn-outline-primary">
+                                <i class="fas fa-download"></i> Download Audio
+                            </a>
+                        </div>
                     </div>
                 `;
             } else if (externalData.audio_url) {
@@ -413,6 +442,24 @@ function getContentTypeName(contentType) {
     };
 
     return contentTypeMap[contentType] || contentType || 'Unknown';
+}
+
+// Audio error handling function
+function handleAudioError(audioElement) {
+    console.error('🔊 Audio playback error:', audioElement.error);
+    const audioContainer = audioElement.closest('.audio-player');
+    if (audioContainer) {
+        const errorDiv = document.createElement('div');
+        errorDiv.className = 'alert alert-danger mt-2';
+        errorDiv.innerHTML = `
+            <i class="fas fa-exclamation-triangle"></i>
+            <strong>Audio Playback Error:</strong> 
+            ${audioElement.error ? audioElement.error.message : 'Unknown error occurred'}
+            <br>
+            <small>Please check the audio file path or try downloading the file.</small>
+        `;
+        audioContainer.appendChild(errorDiv);
+    }
 }
 
 
