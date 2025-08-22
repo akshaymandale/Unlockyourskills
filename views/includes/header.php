@@ -37,6 +37,9 @@ require_once __DIR__ . '/../../config/Localization.php';
 
         <!-- ✅ Custom CSS -->
         <link rel="stylesheet" href="<?= UrlHelper::url('public/css/style.css') ?>">
+        
+        <!-- ✅ Image Progress CSS -->
+        <link rel="stylesheet" href="<?= UrlHelper::url('public/css/image-progress.css') ?>">
 
         <!-- ✅ JavaScript Translations -->
         <script>

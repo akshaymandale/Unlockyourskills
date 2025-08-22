@@ -304,6 +304,37 @@ class MyCoursesController {
             $GLOBALS['content_id'] = $contentId;
             $GLOBALS['video_package_id'] = $videoPackageId;
             $GLOBALS['client_id'] = $clientId;
+        } elseif ($type === 'image') {
+            $courseId = $_GET['course_id'] ?? null;
+            $moduleId = $_GET['module_id'] ?? null;
+            $contentId = $_GET['content_id'] ?? null;
+            $imagePackageId = $_GET['image_package_id'] ?? null;
+            $clientId = $_GET['client_id'] ?? null;
+            
+            // Validate required parameters
+            if (!$courseId || !$moduleId || !$contentId || !$imagePackageId || !$clientId) {
+                UrlHelper::redirect('my-courses');
+            }
+            
+            // Get image file path from image_package table
+            require_once 'models/ImageProgressModel.php';
+            $imageModel = new ImageProgressModel();
+            $imagePackage = $imageModel->getImagePackageById($imagePackageId);
+            
+            if (!$imagePackage) {
+                UrlHelper::redirect('my-courses');
+            }
+            
+            // Construct proper image URL
+            $imageFileName = $imagePackage['image_file'];
+            $src = '/Unlockyourskills/uploads/image/' . $imageFileName;
+            
+            // Expose additional data for image content
+            $GLOBALS['course_id'] = $courseId;
+            $GLOBALS['module_id'] = $moduleId;
+            $GLOBALS['content_id'] = $contentId;
+            $GLOBALS['image_package_id'] = $imagePackageId;
+            $GLOBALS['client_id'] = $clientId;
         } else {
             $src = $this->normalizeEmbedUrl($rawSrc, $type);
         }
