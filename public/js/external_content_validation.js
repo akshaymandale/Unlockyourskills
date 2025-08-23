@@ -226,7 +226,12 @@ document.addEventListener("DOMContentLoaded", function () {
 
     // ✅ Helper function to validate URL format
     function isValidURL(value) {
-        let urlPattern = /^(https?:\/\/)?(www\.)?([\w-]+\.)+[\w]{2,}(:\d+)?(\/[\w/_-]*(\?\S+)?)?$/i;
+        // Updated pattern to support more complex URLs including:
+        // - Google Cloud Storage URLs (commondatastorage.googleapis.com)
+        // - URLs with multiple subdirectories
+        // - URLs with special characters in paths
+        // - URLs with query parameters and fragments
+        let urlPattern = /^(https?:\/\/)?(www\.)?([\w-]+\.)+[\w]{2,}(:\d+)?(\/[\w\/._-]*(\?[^#]*)?(\#.*)?)?$/i;
         return urlPattern.test(value);
     }
 
