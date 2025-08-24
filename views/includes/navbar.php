@@ -64,8 +64,8 @@ echo '<!-- SESSION_USER: ' . print_r($_SESSION['user'] ?? [], true) . ' -->';
 <nav class="navbar">
     <div class="navbar-left">
         <button class="sidebar-toggle" id="sidebarToggle"><i class="fas fa-bars"></i></button>
-        <a class="navbar-brand" href="#">
-            <img src="public/images/UYSlogo.png" alt="<?= Localization::translate('client_logo'); ?>">
+        <a class="navbar-brand" href="<?= UrlHelper::url('') ?>">
+            <img src="<?= UrlHelper::url('public/images/UYSlogo.png') ?>" alt="<?= Localization::translate('client_logo'); ?>">
         </a>
     </div>
     
