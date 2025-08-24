@@ -25,6 +25,11 @@ require_once __DIR__ . '/../../config/Localization.php';
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Unlock Your Skills</title>
     
+    <!-- Favicon -->
+    <link rel="icon" type="image/png" href="<?= UrlHelper::url('public/images/favicon.png') ?>">
+    <link rel="shortcut icon" type="image/png" href="<?= UrlHelper::url('public/images/favicon.png') ?>">
+    <link rel="apple-touch-icon" href="<?= UrlHelper::url('public/images/apple-touch-icon.png') ?>">
+    
     <!-- Session timeout meta tag -->
     <meta name="session-start" content="<?= (isset($_SESSION['last_activity']) ? $_SESSION['last_activity'] * 1000 : time() * 1000) ?>">
 
