@@ -29,6 +29,9 @@ require_once __DIR__ . '/../../core/UrlHelper.php';
     <!-- <script src="<?= UrlHelper::url('public/bootstrap/js/bootstrap.bundle.min.js') ?>"></script> -->
 
     <script src="<?= UrlHelper::url('public/js/script.js') ?>"></script>
+    
+    <!-- ✅ External Content Progress Tracking -->
+    <script src="<?= UrlHelper::url('public/js/external-progress.js') ?>"></script>
 
 
 </body>

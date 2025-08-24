@@ -335,9 +335,42 @@ class MyCoursesController {
             $GLOBALS['content_id'] = $contentId;
             $GLOBALS['image_package_id'] = $imagePackageId;
             $GLOBALS['client_id'] = $clientId;
+        } elseif ($type === 'external') {
+            $courseId = $_GET['course_id'] ?? null;
+            $moduleId = $_GET['module_id'] ?? null;
+            $contentId = $_GET['content_id'] ?? null;
+            $clientId = $_SESSION['user']['client_id'] ?? null;
+            
+            // Validate required parameters for external content
+            if (!$courseId || !$moduleId || !$contentId || !$clientId) {
+                UrlHelper::redirect('my-courses');
+            }
+            
+            // Process the source URL for external content (convert YouTube to embed, etc.)
+            // Ensure proper URL decoding
+            $decodedSrc = urldecode($rawSrc);
+            $src = $this->normalizeEmbedUrl($decodedSrc, $type);
+            
+            // Debug logging for URL processing
+            error_log("External content URL processing:");
+            error_log("  Raw source: $rawSrc");
+            error_log("  Decoded source: $decodedSrc");
+            error_log("  Processed source: $src");
+            error_log("  Type: $type");
+            
+            // Expose additional data for external content
+            $GLOBALS['course_id'] = $courseId;
+            $GLOBALS['module_id'] = $moduleId;
+            $GLOBALS['content_id'] = $contentId;
+            $GLOBALS['client_id'] = $clientId;
         } else {
             $src = $this->normalizeEmbedUrl($rawSrc, $type);
         }
+        
+        // Ensure all variables are defined
+        $type = $type ?? 'iframe';
+        $src = $src ?? '';
+        $title = $title ?? 'Content';
         
         // Expose $type and $src to view
         $GLOBALS['type'] = $type;
@@ -348,6 +381,15 @@ class MyCoursesController {
         $type = $type;
         $src = $src;
         $title = $title;
+        
+        // Debug logging for external content
+        if ($type === 'external') {
+            error_log("External content debug - Type: $type, Src: $src, Title: $title");
+            error_log("Course ID: " . ($GLOBALS['course_id'] ?? 'NOT SET'));
+            error_log("Module ID: " . ($GLOBALS['module_id'] ?? 'NOT SET'));
+            error_log("Content ID: " . ($GLOBALS['content_id'] ?? 'NOT SET'));
+            error_log("Client ID: " . ($GLOBALS['client_id'] ?? 'NOT SET'));
+        }
         
 
         
@@ -506,9 +548,10 @@ class MyCoursesController {
 
     private function normalizeEmbedUrl($url, $type) {
         if (empty($url)) return '';
+        
         // If absolute http(s), possibly transform for YouTube/Vimeo
         if (preg_match('#^https?://#i', $url)) {
-            // YouTube
+            // YouTube - always convert to embed for external content
             if (strpos($url, 'youtube.com/watch') !== false || strpos($url, 'youtu.be/') !== false) {
                 // Extract video id
                 $videoId = null;
@@ -521,16 +564,55 @@ class MyCoursesController {
                     return 'https://www.youtube.com/embed/' . $videoId . '?rel=0&modestbranding=1';
                 }
             }
+            
             // Vimeo
             if (preg_match('#vimeo\.com/(\d+)#', $url, $m)) {
                 return 'https://player.vimeo.com/video/' . $m[1];
             }
+            
+            // For external content type, detect iframe-blocking sites
+            if ($type === 'external') {
+                // List of known iframe-blocking domains
+                $blockingDomains = [
+                    'linkedin.com',
+                    'udemy.com',
+                    'coursera.org',
+                    'edx.org',
+                    'facebook.com',
+                    'twitter.com',
+                    'instagram.com',
+                    'tiktok.com',
+                    'reddit.com',
+                    'medium.com',
+                    'github.com',
+                    'stackoverflow.com',
+                    'quora.com',
+                    'wikipedia.org'
+                ];
+                
+                $urlDomain = parse_url($url, PHP_URL_HOST);
+                if ($urlDomain) {
+                    foreach ($blockingDomains as $blockingDomain) {
+                        if (strpos($urlDomain, $blockingDomain) !== false) {
+                            // Mark this as a potentially blocking site
+                            $GLOBALS['iframe_blocking_site'] = true;
+                            error_log("Detected potentially iframe-blocking site: $urlDomain");
+                            break;
+                        }
+                    }
+                }
+                
+                return $url;
+            }
+            
             return $url;
         }
+        
         // Site-root absolute path
         if ($url[0] === '/') {
             return $url;
         }
+        
         // Relative path within project
         return UrlHelper::url($url);
     }

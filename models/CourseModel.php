@@ -837,7 +837,7 @@ class CourseModel
                         break;
                     }
                     case 'external': {
-                        $q = $this->conn->prepare("SELECT title, course_url, video_url, article_url, audio_url FROM external_content WHERE id = ? AND (is_deleted = 0 OR is_deleted IS NULL)");
+                        $q = $this->conn->prepare("SELECT title, course_url, video_url, article_url, audio_url, audio_source, audio_file FROM external_content WHERE id = ? AND (is_deleted = 0 OR is_deleted IS NULL)");
                         $q->execute([$contentId]);
                         $data = $q->fetch(PDO::FETCH_ASSOC);
                         if ($data) {
@@ -846,7 +846,23 @@ class CourseModel
                                 $row['title'] = $data['title'];
                             }
                             
-                            $url = $data['course_url'] ?: ($data['video_url'] ?: ($data['article_url'] ?: ($data['audio_url'] ?? null)));
+                            // Handle different content types and their URLs
+                            $url = null;
+                            
+                            // For audio content, check if it's uploaded file or external URL
+                            if ($data['audio_source'] === 'upload' && !empty($data['audio_file'])) {
+                                // Audio file was uploaded - construct file path
+                                $audioFile = $data['audio_file'];
+                                if (preg_match('#^(https?://|/)#i', $audioFile) || strpos($audioFile, 'uploads/') === 0) {
+                                    $url = $audioFile;
+                                } else {
+                                    $url = 'uploads/external/audio/' . $audioFile;
+                                }
+                            } else {
+                                // Check other URL fields in order of priority
+                                $url = $data['course_url'] ?: ($data['video_url'] ?: ($data['article_url'] ?: ($data['audio_url'] ?? null)));
+                            }
+                            
                             if ($url) {
                                 $row['external_content_url'] = $url;
                             }
