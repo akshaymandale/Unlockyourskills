@@ -23,7 +23,222 @@
     .btn-primary:hover { background: #efe6f7; }
     .btn-success { border-color: #28a745; color: #28a745; }
     .btn-success:hover { background: #f8fff9; }
+    .btn-secondary { border-color: #6c757d; color: #6c757d; background: #f8f9fa; }
+    .btn-secondary:hover { background: #e9ecef; }
     .viewer-frame { width: 100%; height: calc(100vh - 48px); border: 0; }
+    
+    /* External content styles */
+    .external-content-container {
+      position: relative;
+      width: 100%;
+      height: calc(100vh - 48px);
+    }
+    
+    /* Header button styles for external content */
+    .viewer-header .btn-success {
+      padding: 8px 16px;
+      font-size: 13px;
+      font-weight: 500;
+      border-radius: 6px;
+      transition: all 0.3s ease;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    
+    .viewer-header .btn-success:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+    }
+    
+    .viewer-header .btn-success:disabled {
+      opacity: 0.7;
+      cursor: not-allowed;
+      transform: none;
+    }
+    
+    .viewer-header .btn-secondary {
+      border-color: #6c757d;
+      color: #6c757d;
+      background: #f8f9fa;
+    }
+    
+    .viewer-header .btn-secondary:hover {
+      background: #e9ecef;
+      transform: none;
+    }
+    
+    /* Iframe fallback styles */
+    .iframe-fallback {
+      background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+      border-radius: 12px;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+    }
+    
+    .iframe-fallback .btn-primary {
+      background: #007bff;
+      color: white;
+      border: none;
+      transition: all 0.3s ease;
+    }
+    
+    .iframe-fallback .btn-primary:hover {
+      background: #0056b3;
+      transform: translateY(-2px);
+      box-shadow: 0 6px 20px rgba(0,123,255,0.3);
+    }
+    
+    .iframe-fallback i {
+      transition: all 0.3s ease;
+    }
+    
+    .iframe-fallback:hover i {
+      transform: scale(1.1);
+    }
+    
+    /* External completion notification styles */
+    .external-completion-notification {
+      position: fixed;
+      top: 48px;
+      left: 0;
+      right: 0;
+      z-index: 10000;
+      background: #d4edda;
+      border: 1px solid #c3e6cb;
+      border-radius: 0 0 8px 8px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+      transform: translateY(-100%);
+      transition: all 0.3s ease;
+      opacity: 0;
+    }
+    
+    .external-completion-notification.show {
+      transform: translateY(0);
+      opacity: 1;
+    }
+    
+    .notification-content {
+      display: flex;
+      align-items: center;
+      padding: 16px 20px;
+      gap: 16px;
+    }
+    
+    .notification-icon {
+      font-size: 24px;
+      color: #155724;
+      flex-shrink: 0;
+    }
+    
+    .notification-text {
+      flex: 1;
+      color: #155724;
+    }
+    
+    .notification-title {
+      font-size: 16px;
+      font-weight: 600;
+      margin-bottom: 4px;
+    }
+    
+    .notification-message {
+      font-size: 14px;
+      margin-bottom: 4px;
+    }
+    
+    .notification-time {
+      font-size: 12px;
+      opacity: 0.8;
+      font-style: italic;
+    }
+    
+    .notification-close {
+      background: none;
+      border: none;
+      color: #155724;
+      font-size: 16px;
+      cursor: pointer;
+      padding: 8px;
+      border-radius: 4px;
+      transition: background-color 0.2s ease;
+      flex-shrink: 0;
+    }
+    
+    .notification-close:hover {
+      background: rgba(21, 87, 36, 0.1);
+    }
+    
+    /* Generic notification styles for other notification types */
+    .resume-notification, .audio-completion-notification {
+      position: fixed;
+      top: 60px;
+      right: 20px;
+      z-index: 9999;
+      background: #fff;
+      border: 1px solid #ddd;
+      border-radius: 8px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+      min-width: 300px;
+      max-width: 400px;
+      animation: slideInRight 0.3s ease;
+    }
+    
+    .resume-notification.success, .audio-completion-notification.success {
+      background: #d4edda;
+      border-color: #c3e6cb;
+      color: #155724;
+    }
+    
+    .resume-notification.error, .audio-completion-notification.error {
+      background: #f8d7da;
+      border-color: #f5c6cb;
+      color: #721c24;
+    }
+    
+    .resume-notification.info, .audio-completion-notification.info {
+      background: #d1ecf1;
+      border-color: #bee5eb;
+      color: #0c5460;
+    }
+    
+    .resume-notification .notification-content, 
+    .audio-completion-notification .notification-content {
+      display: flex;
+      align-items: flex-start;
+      padding: 12px 16px;
+      gap: 12px;
+    }
+    
+    .resume-notification .notification-icon, 
+    .audio-completion-notification .notification-icon {
+      font-size: 18px;
+      margin-top: 2px;
+      flex-shrink: 0;
+    }
+    
+    .resume-notification .notification-text, 
+    .audio-completion-notification .notification-text {
+      flex: 1;
+      font-size: 14px;
+      line-height: 1.4;
+    }
+    
+    .resume-notification .notification-text small, 
+    .audio-completion-notification .notification-text small {
+      display: block;
+      margin-top: 4px;
+      opacity: 0.7;
+      font-size: 12px;
+    }
+    
+    @keyframes slideInRight {
+      from {
+        transform: translateX(100%);
+        opacity: 0;
+      }
+      to {
+        transform: translateX(0);
+        opacity: 1;
+      }
+    }
     
     /* Resume modal styles */
     .resume-modal-overlay {
@@ -183,7 +398,11 @@
         <button class="btn btn-info" onclick="captureSCORMDataFromIframe()"><i class="fas fa-sync"></i> Capture Data</button>
         <button class="btn btn-warning" onclick="forceCaptureAllSCORMData()"><i class="fas fa-exclamation-triangle"></i> Force Capture</button>
         <button class="btn btn-success" onclick="saveSCORMProgress()"><i class="fas fa-save"></i> Save Progress</button>
-    <?php endif; ?>
+      <?php elseif (($type ?? '') === 'external'): ?>
+        <button id="markCompleteBtn" class="btn btn-success" style="box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+          <i class="fas fa-check-circle me-1"></i>Mark as Complete
+        </button>
+      <?php endif; ?>
     </div>
     <?php if (!empty($src ?? '')): ?>
       <?php if (($type ?? '') !== 'video' && ($type ?? '') !== 'audio'): ?>
@@ -287,6 +506,81 @@
             <i class="fas fa-eye me-1"></i>Image Viewed
           </div>
         </div>
+      <?php elseif (($type ?? '') === 'external'): ?>
+        <div class="external-content-container">
+          <?php if (!empty($src)): ?>
+            <?php if (($GLOBALS['iframe_blocking_site'] ?? false) === true): ?>
+              <!-- Show fallback immediately for known blocking sites -->
+              <div class="iframe-fallback" style="height: calc(100vh - 48px); display: flex; align-items: center; justify-content: center; background: #f8f9fa;">
+                <div style="text-align: center; max-width: 600px; padding: 40px;">
+                  <i class="fas fa-shield-alt" style="font-size: 64px; color: #dc3545; margin-bottom: 30px;"></i>
+                  <h3 style="color: #495057; margin-bottom: 20px;">External Content</h3>
+                  <p style="color: #6c757d; margin-bottom: 30px; line-height: 1.6;">
+                    This website cannot be embedded due to security restrictions. 
+                    Please click the button below to open it in a new tab.
+                  </p>
+                  <div style="margin-bottom: 30px;">
+                    <a href="<?= htmlspecialchars($src) ?>" 
+                       target="_blank" 
+                       class="btn btn-primary btn-lg"
+                       style="padding: 15px 30px; font-size: 16px; text-decoration: none;">
+                      <i class="fas fa-external-link-alt me-2"></i>Open in New Tab
+                    </a>
+                  </div>
+                  <p style="color: #6c757d; font-size: 14px;">
+                    <i class="fas fa-info-circle me-1"></i>
+                    You can mark this content as complete after viewing it in the new tab.
+                  </p>
+                </div>
+              </div>
+            <?php else: ?>
+              <!-- Try iframe first, fallback to direct link if blocked -->
+              <iframe class="viewer-frame" 
+                      src="<?= htmlspecialchars($src) ?>" 
+                      allowfullscreen 
+                      referrerpolicy="no-referrer-when-downgrade"
+                      frameborder="0"
+                      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                      style="width: 100%; height: 100%; border: none;"
+                      onload="handleIframeLoad(this)"
+                      onerror="handleIframeError(this)"></iframe>
+              
+                            <!-- Fallback content for blocked iframes -->
+              <div id="iframeFallback" class="iframe-fallback" style="display: none; height: calc(100vh - 48px); display: flex; align-items: center; justify-content: center; background: #f8f9fa;">
+                <div style="text-align: center; max-width: 600px; padding: 40px;">
+                  <i class="fas fa-external-link-alt" style="font-size: 64px; color: #6c757d; margin-bottom: 30px;"></i>
+                  <h3 style="color: #495057; margin-bottom: 20px;">External Content</h3>
+                  <p style="color: #6c757d; margin-bottom: 30px; line-height: 1.6;">
+                    This content cannot be displayed directly due to security restrictions. 
+                    Please click the button below to open it in a new tab.
+                  </p>
+                  <div style="margin-bottom: 30px;">
+                    <a href="<?= htmlspecialchars($src) ?>" 
+                       target="_blank" 
+                       class="btn btn-primary btn-lg"
+                       style="padding: 15px 30px; font-size: 16px; text-decoration: none;">
+                      <i class="fas fa-external-link-alt me-2"></i>Open in New Tab
+                    </a>
+                  </div>
+                  <p style="color: #6c757d; font-size: 14px;">
+                    <i class="fas fa-info-circle me-1"></i>
+                    You can mark this content as complete after viewing it in the new tab.
+                  </p>
+                </div>
+              </div>
+            <?php endif; ?>
+            <?php else: ?>
+            <div style="height: calc(100vh - 48px); display: flex; align-items: center; justify-content: center; color: #777; font-family: system-ui;">
+              <div style="text-align: center;">
+                <i class="fas fa-exclamation-triangle" style="font-size: 48px; color: #ffc107; margin-bottom: 20px;"></i>
+                <h3>External Content Error</h3>
+                <p>No source URL provided for external content.</p>
+                <p>Please check the course configuration.</p>
+              </div>
+            </div>
+          <?php endif; ?>
+
+        </div>
       <?php else: ?>
         <iframe class="viewer-frame" src="<?= htmlspecialchars($src) ?>" allowfullscreen referrerpolicy="no-referrer-when-downgrade"></iframe>
       <?php endif; ?>
@@ -298,6 +592,7 @@
   <script src="/Unlockyourskills/public/js/audio-progress.js"></script>
   <script src="/Unlockyourskills/public/js/video-progress.js"></script>
   <script src="/Unlockyourskills/public/js/image-progress.js"></script>
+  <script src="/Unlockyourskills/public/js/external-progress.js"></script>
   <script>
   
   <?php
@@ -358,6 +653,9 @@
           } else if (contentType === 'image') {
             localStorage.setItem('image_closed_' + contentId, Date.now().toString());
             console.log('Image close flag set for:', contentId);
+          } else if (contentType === 'external') {
+            localStorage.setItem('external_closed_' + contentId, Date.now().toString());
+            console.log('External content close flag set for:', contentId);
           } else {
             localStorage.setItem('document_closed_' + contentId, Date.now().toString());
             console.log('Document close flag set for:', contentId);
@@ -2288,6 +2586,142 @@
       }, 300);
     }, 3000);
   }
+
+  // External Content Progress Tracking
+  <?php if (($type ?? '') === 'external'): ?>
+  document.addEventListener('DOMContentLoaded', function() {
+    console.log('External content viewer loaded');
+    console.log('Type:', '<?= $type ?? 'NOT SET' ?>');
+    console.log('Source:', '<?= $src ?? 'NOT SET' ?>');
+    console.log('Title:', '<?= $title ?? 'NOT SET' ?>');
+    
+    const markCompleteBtn = document.getElementById('markCompleteBtn');
+    const courseId = '<?= $GLOBALS['course_id'] ?? '' ?>';
+    const moduleId = '<?= $GLOBALS['module_id'] ?? '' ?>';
+    const contentId = '<?= $GLOBALS['content_id'] ?? '' ?>';
+    const clientId = '<?= $GLOBALS['client_id'] ?? '' ?>';
+    const userId = '<?= $_SESSION['user']['id'] ?? '' ?>';
+    
+    console.log('External content parameters:', {
+      courseId: courseId,
+      moduleId: moduleId,
+      contentId: contentId,
+      clientId: clientId,
+      userId: userId
+    });
+    
+    // Check iframe loading
+    const iframe = document.querySelector('.viewer-frame');
+    if (iframe) {
+      console.log('Iframe found:', iframe);
+      console.log('Iframe src:', iframe.src);
+      
+      // Monitor iframe load events
+      iframe.addEventListener('load', function() {
+        console.log('Iframe loaded successfully');
+        // Hide fallback content when iframe loads successfully
+        const fallback = document.getElementById('iframeFallback');
+        if (fallback) {
+          fallback.style.display = 'none';
+        }
+      });
+      
+      iframe.addEventListener('error', function() {
+        console.error('Iframe failed to load');
+        showIframeFallback();
+      });
+      
+      // Set a timeout to detect blocked iframes
+      setTimeout(function() {
+        if (iframe.contentWindow && iframe.contentWindow.location.href === 'about:blank') {
+          console.log('Iframe blocked - showing fallback');
+          showIframeFallback();
+        }
+      }, 3000);
+    } else {
+      console.error('Iframe not found');
+    }
+    
+    // Function to show iframe fallback
+    function showIframeFallback() {
+      const iframe = document.querySelector('.viewer-frame');
+      const fallback = document.getElementById('iframeFallback');
+      
+      if (iframe && fallback) {
+        iframe.style.display = 'none';
+        fallback.style.display = 'flex';
+        console.log('Showing iframe fallback content');
+      }
+    }
+    
+    // Global functions for iframe event handling
+    window.handleIframeLoad = function(iframeElement) {
+      console.log('Iframe loaded successfully');
+      const fallback = document.getElementById('iframeFallback');
+      if (fallback) {
+        fallback.style.display = 'none';
+      }
+    };
+    
+    window.handleIframeError = function(iframeElement) {
+      console.error('Iframe failed to load');
+      showIframeFallback();
+    };
+
+    if (markCompleteBtn && courseId && moduleId && contentId && clientId && userId) {
+      // Initialize external progress tracker
+      const tracker = new ExternalProgressTracker({
+        courseId: courseId,
+        contentId: contentId,
+        externalPackageId: contentId, // Using contentId as external package ID
+        clientId: clientId,
+        userId: userId,
+        contentType: 'external',
+        autoMarkCompleted: false
+      });
+
+      // Handle mark as complete button click
+      markCompleteBtn.addEventListener('click', function() {
+        // Mark as completed
+        tracker.markAsViewed();
+        
+        // Update button state
+        markCompleteBtn.innerHTML = '<i class="fas fa-check-circle me-1"></i>Completed';
+        markCompleteBtn.classList.remove('btn-success');
+        markCompleteBtn.classList.add('btn-secondary');
+        markCompleteBtn.disabled = true;
+        
+        // Show success notification using the external progress tracker
+        // The tracker will show its own styled notification
+        
+        // Store completion status in localStorage
+        localStorage.setItem(`external_completed_${contentId}`, 'true');
+        
+        console.log('External content marked as completed:', {
+          courseId: courseId,
+          contentId: contentId,
+          moduleId: moduleId
+        });
+      });
+
+      // Check if already completed
+      if (localStorage.getItem(`external_completed_${contentId}`) === 'true') {
+        markCompleteBtn.innerHTML = '<i class="fas fa-check-circle me-1"></i>Completed';
+        markCompleteBtn.classList.remove('btn-success');
+        markCompleteBtn.classList.add('btn-secondary');
+        markCompleteBtn.disabled = true;
+      }
+
+      console.log('External content progress tracker initialized:', {
+        courseId: courseId,
+        contentId: contentId,
+        moduleId: moduleId,
+        clientId: clientId,
+        userId: userId
+      });
+    }
+  });
+  <?php endif; ?>
   </script>
 </body>
 </html>

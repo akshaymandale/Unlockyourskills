@@ -127,6 +127,19 @@ Router::get('/users/autocomplete', 'UserManagementController@getUserEmailsForAut
     Router::post('/image-progress/update-progress', 'ImageProgressController@updateProgress');
 
     // ===================================
+    // EXTERNAL CONTENT PROGRESS TRACKING
+    // ===================================
+    Router::post('/external-progress/record-visit', 'ExternalProgressController@recordVisit');
+    Router::post('/external-progress/update-time-spent', 'ExternalProgressController@updateTimeSpent');
+    Router::post('/external-progress/mark-completed', 'ExternalProgressController@markCompleted');
+    Router::get('/external-progress/statistics', 'ExternalProgressController@getStatistics');
+    Router::get('/external-progress/course-progress', 'ExternalProgressController@getCourseProgress');
+    Router::post('/external-progress/update-progress', 'ExternalProgressController@updateProgress');
+    Router::get('/external-progress/completion-rate', 'ExternalProgressController@getCompletionRate');
+    Router::get('/external-progress/content-type-progress', 'ExternalProgressController@getContentTypeProgress');
+    Router::post('/external-progress/batch-update', 'ExternalProgressController@batchUpdate');
+
+    // ===================================
     // ASSESSMENT PLAYER
     // ===================================
     Router::get('/assessment-player', 'AssessmentPlayerController@start');

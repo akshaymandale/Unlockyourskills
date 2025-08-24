@@ -40,6 +40,9 @@ require_once __DIR__ . '/../../config/Localization.php';
         
         <!-- ✅ Image Progress CSS -->
         <link rel="stylesheet" href="<?= UrlHelper::url('public/css/image-progress.css') ?>">
+        
+        <!-- ✅ External Content Progress CSS -->
+        <link rel="stylesheet" href="<?= UrlHelper::url('public/css/external-progress.css') ?>">
 
         <!-- ✅ JavaScript Translations -->
         <script>

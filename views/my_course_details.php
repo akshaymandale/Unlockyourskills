@@ -321,6 +321,176 @@ function getImageProgressData($courseId, $contentId, $userId) {
         font-size: 0.75rem;
     }
     
+    /* Document Progress Status Styles */
+    .document-progress-status {
+        padding: 8px 12px;
+        border-radius: 6px;
+        background: #f8f9fa;
+        border-left: 3px solid #dee2e6;
+    }
+    
+    .document-progress-status .text-success {
+        color: #198754 !important;
+        font-weight: 500;
+    }
+    
+    .document-progress-status .text-warning {
+        color: #fd7e14 !important;
+        font-weight: 500;
+    }
+    
+    .document-progress-status .text-muted {
+        color: #6c757d !important;
+    }
+    
+    .document-completed-badge {
+        margin-top: 8px;
+    }
+    
+    .document-completed-badge .badge {
+        font-size: 0.875rem;
+        padding: 6px 12px;
+    }
+    
+    .document-progress-status small {
+        font-size: 0.75rem;
+    }
+    
+    /* External Content Progress Status Styles */
+    .external-progress-status {
+        padding: 8px 12px;
+        border-radius: 6px;
+        background: #f8f9fa;
+        border-left: 3px solid #dee2e6;
+    }
+    
+    .external-progress-status .text-success {
+        color: #198754 !important;
+        font-weight: 500;
+    }
+    
+    .external-progress-status .text-warning {
+        color: #fd7e14 !important;
+        font-weight: 500;
+    }
+    
+    .external-progress-status .text-muted {
+        color: #6c757d !important;
+    }
+    
+    .external-completed-badge {
+        margin-top: 8px;
+    }
+    
+    .external-completed-badge .badge {
+        font-size: 0.875rem;
+        padding: 6px 12px;
+    }
+    
+    .external-progress-status small {
+        font-size: 0.75rem;
+    }
+    
+    /* Image Progress Status Styles */
+    .image-progress-status {
+        padding: 8px 12px;
+        border-radius: 6px;
+        background: #f8f9fa;
+        border-left: 3px solid #dee2e6;
+    }
+    
+    .image-progress-status .text-success {
+        color: #198754 !important;
+        font-weight: 500;
+    }
+    
+    .image-progress-status .text-muted {
+        color: #6c757d !important;
+    }
+    
+    .image-completed-badge {
+        margin-top: 8px;
+    }
+    
+    .image-completed-badge .badge {
+        font-size: 0.875rem;
+        padding: 6px 12px;
+    }
+    
+    .image-progress-status small {
+        font-size: 0.75rem;
+    }
+    
+    /* Video Progress Status Styles */
+    .video-progress-status {
+        padding: 8px 12px;
+        border-radius: 6px;
+        background: #f8f9fa;
+        border-left: 3px solid #dee2e6;
+    }
+    
+    .video-progress-status .text-success {
+        color: #198754 !important;
+        font-weight: 500;
+    }
+    
+    .video-progress-status .text-warning {
+        color: #fd7e14 !important;
+        font-weight: 500;
+    }
+    
+    .video-progress-status .text-muted {
+        color: #6c757d !important;
+    }
+    
+    .video-completed-badge {
+        margin-top: 8px;
+    }
+    
+    .video-completed-badge .badge {
+        font-size: 0.875rem;
+        padding: 6px 12px;
+    }
+    
+    .video-progress-status small {
+        font-size: 0.75rem;
+    }
+    
+    /* Audio Progress Status Styles */
+    .audio-progress-status {
+        padding: 8px 12px;
+        border-radius: 6px;
+        background: #f8f9fa;
+        border-left: 3px solid #dee2e6;
+    }
+    
+    .audio-progress-status .text-success {
+        color: #198754 !important;
+        font-weight: 500;
+    }
+    
+    .audio-progress-status .text-warning {
+        color: #fd7e14 !important;
+        font-weight: 500;
+    }
+    
+    .audio-progress-status .text-muted {
+        color: #6c757d !important;
+    }
+    
+    .audio-completed-badge {
+        margin-top: 8px;
+    }
+    
+    .audio-completed-badge .badge {
+        font-size: 0.875rem;
+        padding: 6px 12px;
+    }
+    
+    .audio-progress-status small {
+        font-size: 0.75rem;
+    }
+    
 
     
     /* Enhanced Progress Bar Styles */
@@ -575,6 +745,11 @@ function getImageProgressData($courseId, $contentId, $userId) {
                                 $progress = getAssessmentProgressStatus($courseId, $contentId, $userId);
                                 break;
                                 
+                            case 'external':
+                                // Get external content progress
+                                $progress = getExternalProgressStatus($courseId, $contentId, $userId);
+                                break;
+                                
                             default:
                                 // For other content types, check if they have any progress
                                 $stmt = $db->prepare("
@@ -654,6 +829,67 @@ function getImageProgressData($courseId, $contentId, $userId) {
                     
                 } catch (Exception $e) {
                     error_log("Error getting assessment progress status: " . $e->getMessage());
+                    return 0;
+                }
+            }
+        }
+        
+        // Helper to get external content progress status
+        if (!function_exists('getExternalProgressStatus')) {
+            function getExternalProgressStatus($courseId, $contentId, $userId) {
+                try {
+                    // Validate inputs
+                    if (empty($courseId) || empty($contentId) || empty($userId)) {
+                        return 0;
+                    }
+                    
+                    // Get database connection
+                    $db = new PDO(
+                        'mysql:unix_socket=/Applications/XAMPP/xamppfiles/var/mysql/mysql.sock;dbname=unlockyourskills',
+                        'root',
+                        ''
+                    );
+                    $db->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+                    
+                    // Get client_id from session
+                    $clientId = $_SESSION['user']['client_id'] ?? null;
+                    
+                    // Get the external content package ID from course_module_content
+                    $stmt = $db->prepare("
+                        SELECT content_id 
+                        FROM course_module_content 
+                        WHERE id = ? AND content_type = 'external'
+                    ");
+                    $stmt->execute([$contentId]);
+                    $contentData = $stmt->fetch(PDO::FETCH_ASSOC);
+                    
+                    if (!$contentData) {
+                        return 0;
+                    }
+                    
+                    $externalPackageId = $contentData['content_id'];
+                    
+                    // Check external_progress table for completion status
+                    $stmt = $db->prepare("
+                        SELECT is_completed, visit_count, time_spent
+                        FROM external_progress 
+                        WHERE user_id = ? AND course_id = ? AND content_id = ? AND client_id = ?
+                    ");
+                    $stmt->execute([$userId, $courseId, $contentId, $clientId]);
+                    $progress = $stmt->fetch(PDO::FETCH_ASSOC);
+                    
+                    if ($progress) {
+                        if ($progress['is_completed']) {
+                            return 100; // Completed
+                        } elseif ($progress['visit_count'] > 0 || $progress['time_spent'] > 0) {
+                            return 50; // Visited/In progress
+                        }
+                    }
+                    
+                    return 0; // Not started
+                    
+                } catch (Exception $e) {
+                    error_log("Error getting external progress status: " . $e->getMessage());
                     return 0;
                 }
             }
@@ -1026,6 +1262,159 @@ function getImageProgressData($courseId, $contentId, $userId) {
                     return ['status' => 'not_started', 'text' => 'Not Started'];
                 } catch (Exception $e) {
                     error_log("Error getting document completion status: " . $e->getMessage());
+                    return ['status' => 'error', 'text' => 'Error'];
+                }
+            }
+        }
+        
+        // Helper to get external content progress data (similar to document progress)
+        if (!function_exists('getExternalProgressData')) {
+            function getExternalProgressData($courseId, $contentId, $userId) {
+                try {
+                    // Validate inputs
+                    if (empty($courseId) || empty($contentId) || empty($userId)) {
+                        return [
+                            'progress' => 0,
+                            'status' => ['status' => 'not_started', 'text' => 'Not Started'],
+                            'last_visited_at' => null
+                        ];
+                    }
+                    
+                    // Get database connection
+                    $db = new PDO(
+                        'mysql:unix_socket=/Applications/XAMPP/xamppfiles/var/mysql/mysql.sock;dbname=unlockyourskills',
+                        'root',
+                        ''
+                    );
+                    $db->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+                    
+                    // Get client_id from session
+                    $clientId = $_SESSION['user']['client_id'] ?? null;
+                    
+                    // Query external progress with all needed data
+                    $sql = "SELECT is_completed, visit_count, time_spent, last_visited_at 
+                            FROM external_progress 
+                            WHERE content_id = :content_id AND user_id = :user_id AND course_id = :course_id";
+                    
+                    if ($clientId) {
+                        $sql .= " AND client_id = :client_id";
+                    }
+                    
+                    $stmt = $db->prepare($sql);
+                    $params = [
+                        ':content_id' => $contentId,
+                        ':user_id' => $userId,
+                        ':course_id' => $courseId
+                    ];
+                    
+                    if ($clientId) {
+                        $params[':client_id'] = $clientId;
+                    }
+                    
+                    $stmt->execute($params);
+                    $result = $stmt->fetch(PDO::FETCH_ASSOC);
+                    
+                    if ($result) {
+                        // Calculate progress
+                        $progress = 0;
+                        if ($result['is_completed']) {
+                            $progress = 100;
+                        } elseif ($result['visit_count'] > 0) {
+                            // If visited but not completed, show partial progress
+                            $progress = 50;
+                        }
+                        
+                        // Get status
+                        $status = getExternalCompletionStatus($courseId, $contentId, $userId);
+                        
+                        return [
+                            'progress' => $progress,
+                            'status' => $status,
+                            'last_visited_at' => $result['last_visited_at']
+                        ];
+                    }
+                    
+                    return [
+                        'progress' => 0,
+                        'status' => ['status' => 'not_started', 'text' => 'Not Started'],
+                        'last_visited_at' => null
+                    ];
+                    
+                } catch (Exception $e) {
+                    error_log("Error getting external progress data: " . $e->getMessage());
+                    return [
+                        'progress' => 0,
+                        'status' => ['status' => 'error', 'text' => 'Error'],
+                        'last_visited_at' => null
+                    ];
+                }
+            }
+        }
+        
+        // Helper to get external completion status
+        if (!function_exists('getExternalCompletionStatus')) {
+            function getExternalCompletionStatus($courseId, $contentId, $userId) {
+                try {
+                    // Validate inputs
+                    if (empty($courseId) || empty($contentId) || empty($userId)) {
+                        return ['status' => 'not_started', 'text' => 'Not Started'];
+                    }
+                    
+                    // Check if PDO is available
+                    if (!class_exists('PDO')) {
+                        error_log("PDO class not available");
+                        return ['status' => 'error', 'text' => 'Database Error'];
+                    }
+                    
+                    // Get database connection
+                    $db = new PDO(
+                        'mysql:unix_socket=/Applications/XAMPP/xamppfiles/var/mysql/mysql.sock;dbname=unlockyourskills',
+                        'root',
+                        ''
+                    );
+                    
+                    // Set error mode with fallback
+                    if (defined('PDO::ERRMODE_EXCEPTION')) {
+                        $db->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+                    }
+                    
+                    // Get client_id from session
+                    $clientId = $_SESSION['user']['client_id'] ?? null;
+                    
+                    // Query external progress status
+                    $sql = "SELECT is_completed, visit_count, time_spent 
+                            FROM external_progress 
+                            WHERE content_id = :content_id AND user_id = :user_id AND course_id = :course_id";
+                    
+                    if ($clientId) {
+                        $sql .= " AND client_id = :client_id";
+                    }
+                    
+                    $stmt = $db->prepare($sql);
+                    $params = [
+                        ':content_id' => $contentId,
+                        ':user_id' => $userId,
+                        ':course_id' => $courseId
+                    ];
+                    
+                    if ($clientId) {
+                        $params[':client_id'] = $clientId;
+                    }
+                    
+                    $stmt->execute($params);
+                    $result = $stmt->fetch(PDO::FETCH_ASSOC);
+                    
+                    if ($result) {
+                        if ($result['is_completed']) {
+                            return ['status' => 'completed', 'text' => 'Completed'];
+                        } elseif ($result['visit_count'] > 0) {
+                            return ['status' => 'in_progress', 'text' => 'In Progress'];
+                        }
+                    }
+                    
+                    return ['status' => 'not_started', 'text' => 'Not Started'];
+                } catch (Exception $e) {
+                    error_log("Error getting external completion status: " . $e->getMessage());
                     return ['status' => 'error', 'text' => 'Error'];
                 }
             }
@@ -1567,6 +1956,9 @@ function getImageProgressData($courseId, $contentId, $userId) {
                                                                 // Get image progress from image_progress table
                                                                 $imageProgressData = getImageProgressData($GLOBALS['course']['id'], $content['id'], $_SESSION['user']['id']);
                                                                 $progressPercentage = $imageProgressData['progress'];
+                                                            } elseif ($content['type'] === 'external') {
+                                                                // Get external content progress
+                                                                $progressPercentage = getExternalProgressStatus($GLOBALS['course']['id'], $content['id'], $_SESSION['user']['id']);
                                                             } else {
                                                                 $progressPercentage = intval($content['progress'] ?? 0);
                                                             }
@@ -1797,8 +2189,51 @@ function getImageProgressData($courseId, $contentId, $userId) {
                                                                     $extUrl = $content['external_content_url'] ?? '';
                                                                     if ($extUrl) {
                                                                         $resolved = resolveContentUrl($extUrl);
+                                                                        
+                                                                        // Get external content progress and status
+                                                                        $externalProgressData = getExternalProgressData($GLOBALS['course']['id'], $content['id'], $_SESSION['user']['id']);
+                                                                        $externalProgress = $externalProgressData['progress'];
+                                                                        $externalStatus = $externalProgressData['status'];
+                                                                        $lastVisitedAt = $externalProgressData['last_visited_at'];
+                                                                        
+                                                                        // Build status exactly like other content types
+                                                                        $statusHtml .= "<div class='external-progress-status mb-2'>";
+                                                                        if ($externalProgress > 0) {
+                                                                            $statusClass = $externalStatus['status'] === 'completed' ? 'text-success' : 'text-warning';
+                                                                            $statusIcon = $externalStatus['status'] === 'completed' ? 'fa-check-circle' : 'fa-clock';
+                                                                            $statusHtml .= "<div class='{$statusClass}'><i class='fas {$statusIcon} me-1'></i>" . ucfirst($externalStatus['status']);
+                                                                            if ($externalProgress > 0) {
+                                                                                $statusHtml .= " - Progress: {$externalProgress}%";
+                                                                            }
+                                                                            // Add last visited date like other content types
+                                                                            if ($lastVisitedAt) {
+                                                                                $lastVisited = date('M j, Y', strtotime($lastVisitedAt));
+                                                                                $statusHtml .= " <small class='text-muted'>(Last: {$lastVisited})</small>";
+                                                                            }
+                                                                            $statusHtml .= "</div>";
+                                                                        } else {
+                                                                            $statusHtml .= "<div class='text-muted'><i class='fas fa-circle me-1'></i>Not started</div>";
+                                                                        }
+                                                                        $statusHtml .= "</div>";
+                                                                        
                                                                         $viewer = UrlHelper::url('my-courses/view-content') . '?type=external&title=' . urlencode($content['title']) . '&src=' . urlencode($resolved) . '&course_id=' . $GLOBALS['course']['id'] . '&module_id=' . $module['id'] . '&content_id=' . $content['id'];
-                                                                        $actionsHtml .= "<a href='" . htmlspecialchars($viewer) . "' target='_blank' class='postrequisite-action-btn btn-info launch-content-btn' data-module-id='" . $module['id'] . "' data-content-id='" . $content['id'] . "' data-type='external'><i class='fas fa-external-link-alt me-1'></i>Open Link</a>";
+                                                                        
+                                                                        // Add progress tracking attributes
+                                                                        $progressAttrs = "data-external-content='true' " .
+                                                                                       "data-course-id='" . $GLOBALS['course']['id'] . "' " .
+                                                                                       "data-content-id='" . $content['id'] . "' " .
+                                                                                       "data-external-package-id='" . $content['content_id'] . "' " .
+                                                                                       "data-client-id='" . ($_SESSION['user']['client_id'] ?? '') . "' " .
+                                                                                       "data-user-id='" . ($_SESSION['user']['id'] ?? '') . "' " .
+                                                                                       "data-content-type='external' " .
+                                                                                       "data-auto-complete='false'";
+                                                                        
+                                                                        // Show completed badge if external content is completed
+                                                                        if ($externalStatus['status'] === 'completed') {
+                                                                            $statusHtml .= "<div class='external-completed-badge'><span class='badge bg-success'><i class='fas fa-check-circle me-1'></i>External Content Completed</span></div>";
+                                                                        } else {
+                                                                            $actionsHtml .= "<a href='" . htmlspecialchars($viewer) . "' target='_blank' class='postrequisite-action-btn btn-info launch-content-btn external-content-launch' " . $progressAttrs . " data-module-id='" . $module['id'] . "' data-content-id='" . $content['id'] . "' data-type='external'><i class='fas fa-external-link-alt me-1'></i>Open Link</a>";
+                                                                        }
                                                                     } else {
                                                                         $statusHtml .= "<span class='content-error'><i class='fas fa-exclamation-triangle me-1'></i>No external link</span>";
                                                                     }
