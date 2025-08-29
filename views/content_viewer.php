@@ -1856,10 +1856,25 @@
       const courseId = urlParams.get('course_id');
       const moduleId = urlParams.get('module_id');
       const contentId = urlParams.get('content_id');
+      const contentType = urlParams.get('type');
       
       if (courseId && moduleId && contentId) {
-        localStorage.setItem('document_closed_' + contentId, Date.now().toString());
-        console.log('Document close flag set via event listener for:', contentId);
+        if (contentType === 'video') {
+          localStorage.setItem('video_closed_' + contentId, Date.now().toString());
+          console.log('Video close flag set via event listener for:', contentId);
+        } else if (contentType === 'image') {
+          localStorage.setItem('image_closed_' + contentId, Date.now().toString());
+          console.log('Image close flag set via event listener for:', contentId);
+        } else if (contentType === 'external') {
+          localStorage.setItem('external_closed_' + contentId, Date.now().toString());
+          console.log('External content close flag set via event listener for:', contentId);
+        } else if (contentType === 'audio') {
+          localStorage.setItem('audio_closed_' + contentId, Date.now().toString());
+          console.log('Audio close flag set via event listener for:', contentId);
+        } else {
+          localStorage.setItem('document_closed_' + contentId, Date.now().toString());
+          console.log('Document close flag set via event listener for:', contentId);
+        }
       }
     } catch (error) {
       console.error('Error setting document close flag via event listener:', error);
@@ -1906,10 +1921,13 @@
       }
     }
     
-    // Set audio close flag for audio content
+    // Set close flags for different content types
     const contentType = new URLSearchParams(window.location.search).get('type');
     if (contentType === 'audio') {
       setAudioCloseFlag();
+    } else if (contentType === 'video') {
+      // Video content will be handled by setDocumentCloseFlag() in the event listeners
+      // No need to call it here as it's already handled by beforeunload, pagehide, and unload
     }
   });
 

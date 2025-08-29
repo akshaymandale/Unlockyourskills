@@ -94,7 +94,7 @@ class AssessmentPlayerModel
     }
 
     // Check if user can take this assessment
-    public function canUserTakeAssessment($assessmentId, $userId, $clientId = null)
+    public function canUserTakeAssessment($assessmentId, $userId, $clientId = null, $courseId = null)
     {
         $db = $this->conn;
 
@@ -104,18 +104,15 @@ class AssessmentPlayerModel
         // 3. User exists and is active
         // 4. User hasn't exceeded maximum attempts
         
+        // First, check if the assessment exists and is accessible
         $sql = "
             SELECT COUNT(*) as count
             FROM assessment_package ap
-            JOIN user_profiles up ON up.client_id = ap.client_id
             WHERE ap.id = ? 
-            AND up.id = ? 
-            AND ap.is_deleted = 0 
-            AND up.is_deleted = 0
-            AND up.user_status = 'Active'
+            AND ap.is_deleted = 0
         ";
         
-        $params = [$assessmentId, $userId];
+        $params = [$assessmentId];
         
         if ($clientId) {
             $sql .= " AND ap.client_id = ?";
@@ -130,8 +127,25 @@ class AssessmentPlayerModel
             return false;
         }
         
-        // Check if user has exceeded maximum attempts
-        return !$this->hasExceededMaxAttempts($assessmentId, $userId, $clientId);
+        // Then check if the user exists and is active
+        $sql = "
+            SELECT COUNT(*) as count
+            FROM user_profiles up
+            WHERE up.id = ? 
+            AND up.is_deleted = 0
+            AND up.user_status = 'Active'
+        ";
+        
+        $stmt = $db->prepare($sql);
+        $stmt->execute([$userId]);
+        $result = $stmt->fetch(PDO::FETCH_ASSOC);
+        
+        if ($result['count'] == 0) {
+            return false;
+        }
+        
+        // Finally check if user has exceeded maximum attempts (course-specific if courseId provided)
+        return !$this->hasExceededMaxAttempts($assessmentId, $userId, $clientId, $courseId);
     }
 
     // Create or get existing attempt
@@ -139,8 +153,8 @@ class AssessmentPlayerModel
     {
         $db = $this->conn;
 
-        // Check if user has exceeded maximum attempts
-        if ($this->hasExceededMaxAttempts($assessmentId, $userId, $clientId)) {
+        // Check if user has exceeded maximum attempts (course-specific if courseId provided)
+        if ($this->hasExceededMaxAttempts($assessmentId, $userId, $clientId, $courseId)) {
             throw new Exception('Maximum attempts exceeded for this assessment');
         }
 
@@ -532,7 +546,7 @@ class AssessmentPlayerModel
     }
 
     // Check if user has exceeded maximum attempts for an assessment
-    public function hasExceededMaxAttempts($assessmentId, $userId, $clientId = null)
+    public function hasExceededMaxAttempts($assessmentId, $userId, $clientId = null, $courseId = null)
     {
         $db = $this->conn;
 
@@ -550,19 +564,33 @@ class AssessmentPlayerModel
 
         $maxAttempts = intval($assessment['num_attempts']);
         
-        // Count only completed user attempts
-        $stmt = $db->prepare("
-            SELECT COUNT(*) as attempt_count 
-            FROM assessment_attempts 
-            WHERE assessment_id = ? 
-            AND user_id = ? 
-            AND status = 'completed'
-            AND is_deleted = 0
-        ");
+        // Count attempts based on whether course_id is provided
+        if ($courseId) {
+            // Course-specific attempt counting
+            $stmt = $db->prepare("
+                SELECT COUNT(*) as attempt_count 
+                FROM assessment_attempts 
+                WHERE assessment_id = ? 
+                AND user_id = ? 
+                AND course_id = ?
+                AND status = 'completed'
+                AND is_deleted = 0
+            ");
+            $stmt->execute([$assessmentId, $userId, $courseId]);
+        } else {
+            // Global attempt counting (fallback for backward compatibility)
+            $stmt = $db->prepare("
+                SELECT COUNT(*) as attempt_count 
+                FROM assessment_attempts 
+                WHERE assessment_id = ? 
+                AND user_id = ? 
+                AND status = 'completed'
+                AND is_deleted = 0
+            ");
+            $stmt->execute([$assessmentId, $userId]);
+        }
         
-        $stmt->execute([$assessmentId, $userId]);
         $result = $stmt->fetch(PDO::FETCH_ASSOC);
-        
         $attemptCount = intval($result['attempt_count']);
         return $attemptCount >= $maxAttempts;
     }
@@ -615,6 +643,33 @@ class AssessmentPlayerModel
         ");
         
         $stmt->execute([':assessment_id' => $assessmentId, ':user_id' => $userId]);
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
+
+    // Get user's completed assessment attempts for a specific assessment and course
+    public function getUserCompletedAssessmentAttemptsForCourse($assessmentId, $userId, $courseId, $clientId = null)
+    {
+        $db = $this->conn;
+
+        $stmt = $db->prepare("
+            SELECT 
+                aa.id,
+                aa.attempt_number,
+                aa.status,
+                aa.started_at,
+                aa.completed_at,
+                aa.created_at,
+                aa.updated_at
+            FROM assessment_attempts aa
+            WHERE aa.assessment_id = :assessment_id 
+            AND aa.user_id = :user_id 
+            AND aa.course_id = :course_id
+            AND aa.status = 'completed'
+            AND aa.is_deleted = 0
+            ORDER BY aa.attempt_number DESC, aa.created_at DESC
+        ");
+        
+        $stmt->execute([':assessment_id' => $assessmentId, ':user_id' => $userId, ':course_id' => $courseId]);
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
 

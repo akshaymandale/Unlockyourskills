@@ -695,7 +695,7 @@ function getImageProgressData($courseId, $contentId, $userId) {
                     
                     // Get all content items in the module
                     $stmt = $db->prepare("
-                        SELECT id, content_type 
+                        SELECT id, content_type, content_id, content_order 
                         FROM course_module_content 
                         WHERE module_id = ? AND (deleted_at IS NULL OR deleted_at = '0000-00-00 00:00:00')
                         ORDER BY content_order ASC
@@ -711,45 +711,80 @@ function getImageProgressData($courseId, $contentId, $userId) {
                     $totalItems = count($contentItems);
                     
                     foreach ($contentItems as $content) {
-                        $contentId = $content['id'];
+                        $junctionId = $content['id']; // This is course_module_content.id
+                        $actualContentId = $content['content_id']; // This is the actual content ID from source tables
                         $contentType = $content['content_type'];
                         $progress = 0;
                         
+                        // Try both junction ID and actual content ID to find progress
+                        // First try with junction ID (where progress is likely stored)
                         switch ($contentType) {
                             case 'audio':
-                                $audioProgressData = getAudioProgressData($courseId, $contentId, $userId);
+                                $audioProgressData = getAudioProgressData($courseId, $junctionId, $userId);
                                 $progress = $audioProgressData['progress'];
+                                // If no progress found with junction ID, try actual content ID
+                                if ($progress == 0) {
+                                    $audioProgressData = getAudioProgressData($courseId, $actualContentId, $userId);
+                                    $progress = $audioProgressData['progress'];
+                                }
                                 break;
                                 
                             case 'video':
-                                $videoProgressData = getVideoProgressData($courseId, $contentId, $userId);
+                                $videoProgressData = getVideoProgressData($courseId, $junctionId, $userId);
                                 $progress = $videoProgressData['progress'];
+                                // If no progress found with junction ID, try actual content ID
+                                if ($progress == 0) {
+                                    $videoProgressData = getVideoProgressData($courseId, $actualContentId, $userId);
+                                    $progress = $videoProgressData['progress'];
+                                }
                                 break;
                                 
                             case 'image':
-                                $imageProgressData = getImageProgressData($courseId, $contentId, $userId);
+                                $imageProgressData = getImageProgressData($courseId, $junctionId, $userId);
                                 $progress = $imageProgressData['progress'];
+                                // If no progress found with junction ID, try actual content ID
+                                if ($progress == 0) {
+                                    $imageProgressData = getImageProgressData($courseId, $actualContentId, $userId);
+                                    $progress = $imageProgressData['progress'];
+                                }
                                 break;
                                 
                             case 'document':
-                                $progress = getDocumentProgressStatus($courseId, $contentId, $userId);
+                                $progress = getDocumentProgressStatus($courseId, $junctionId, $userId);
+                                // If no progress found with junction ID, try actual content ID
+                                if ($progress == 0) {
+                                    $progress = getDocumentProgressStatus($courseId, $actualContentId, $userId);
+                                }
                                 break;
                                 
                             case 'scorm':
-                                $scormProgress = getScormProgressStatus($courseId, $contentId, $userId);
+                                $scormProgress = getScormProgressStatus($courseId, $junctionId, $userId);
                                 $progress = $scormProgress['progress_percentage'];
+                                // If no progress found with junction ID, try actual content ID
+                                if ($progress == 0) {
+                                    $scormProgress = getScormProgressStatus($courseId, $actualContentId, $userId);
+                                    $progress = $scormProgress['progress_percentage'];
+                                }
                                 break;
                                 
                             case 'assessment':
                                 // Get assessment progress using the same logic as CourseModel
-                                $progress = getAssessmentProgressStatus($courseId, $contentId, $userId);
+                                $progress = getAssessmentProgressStatus($courseId, $junctionId, $userId);
+                                // If no progress found with junction ID, try actual content ID
+                                if ($progress == 0) {
+                                    $progress = getAssessmentProgressStatus($courseId, $actualContentId, $userId);
+                                }
                                 break;
                                 
                             case 'external':
                                 // Get external content progress
-                                $progress = getExternalProgressStatus($courseId, $contentId, $userId);
+                                $progress = getExternalProgressStatus($courseId, $junctionId, $userId);
+                                // If no progress found with junction ID, try actual content ID
+                                if ($progress == 0) {
+                                    $progress = getExternalProgressStatus($courseId, $actualContentId, $userId);
+                                }
                                 break;
-                                
+                            
                             default:
                                 // For other content types, check if they have any progress
                                 $stmt = $db->prepare("
@@ -758,19 +793,29 @@ function getImageProgressData($courseId, $contentId, $userId) {
                                     JOIN course_enrollments ce ON cp.enrollment_id = ce.id
                                     WHERE cp.content_id = ? AND ce.user_id = ?
                                 ");
-                                $stmt->execute([$contentId, $userId]);
+                                $stmt->execute([$junctionId, $userId]);
                                 $genProgress = $stmt->fetch(PDO::FETCH_ASSOC);
                                 
                                 if ($genProgress) {
                                     $progress = intval($genProgress['completion_percentage'] ?? 0);
+                                } else {
+                                    // Try with actual content ID
+                                    $stmt->execute([$actualContentId, $userId]);
+                                    $genProgress = $stmt->fetch(PDO::FETCH_ASSOC);
+                                    if ($genProgress) {
+                                        $progress = intval($genProgress['completion_percentage'] ?? 0);
+                                    }
                                 }
                                 break;
                         }
                         
+
                         $totalProgress += $progress;
                     }
                     
-                    return $totalItems > 0 ? round($totalProgress / $totalItems) : 0;
+                    $finalProgress = $totalItems > 0 ? round($totalProgress / $totalItems) : 0;
+                    
+                    return $finalProgress;
                     
                 } catch (Exception $e) {
                     error_log("Error calculating module real progress: " . $e->getMessage());
@@ -905,37 +950,19 @@ function getImageProgressData($courseId, $contentId, $userId) {
                 foreach ($modules as $module) {
                     // Check if module has content and if all content is completed
                     if (!empty($module['content'])) {
-                        // Use real_progress if available, fallback to module_progress
-                        $progress = intval($module['real_progress'] ?? $module['module_progress'] ?? 0);
-                        if ($progress < 100) {
-                            return false;
-                        }
-                    }
-                }
-                
-                return true;
-            }
-        }
-        
-        // Helper to check if all modules are completed
-        if (!function_exists('areModulesCompleted')) {
-            function areModulesCompleted($modules) {
-                if (empty($modules)) {
-                    return true; // No modules means all are completed
-                }
-                
-                foreach ($modules as $module) {
-                    // Check if module has content and if all content is completed
-                    if (!empty($module['content'])) {
                         // Calculate real progress including audio progress
                         $realProgress = calculateModuleRealProgress($module['id'], $GLOBALS['course']['id'], $_SESSION['user']['id']);
-                        $progress = intval($realProgress ?? $module['real_progress'] ?? $module['module_progress'] ?? 0);
+                        
+                        // Use the real-time calculated progress, not the stored values
+                        $progress = intval($realProgress);
+                        
                         if ($progress < 100) {
                             return false;
                         }
+                    } else {
+                        // Module has no content - consider it completed
                     }
                 }
-                
                 return true;
             }
         }
@@ -2375,43 +2402,7 @@ function getImageProgressData($courseId, $contentId, $userId) {
         // Check if both prerequisites and modules are completed
         $modulesCompleted = areModulesCompleted($course['modules'] ?? []);
         $canAccessPostRequisites = $prerequisitesCompleted && $modulesCompleted;
-        
-        // Debug information to help troubleshoot
-        if (isset($_GET['debug']) && $_GET['debug'] === 'true'): ?>
-            <div class="alert alert-info mb-4">
-                <h6><i class="fas fa-bug me-2"></i>Debug Information</h6>
-                <div class="row">
-                    <div class="col-md-6">
-                        <strong>Prerequisites:</strong><br>
-                        <small class="text-muted">
-                            Status: <?= $prerequisitesCompleted ? 'Completed' : 'Not Completed' ?><br>
-                            Count: <?= count($course['prerequisites'] ?? []) ?><br>
-                            <?php if (!empty($course['prerequisites'])): ?>
-                                <?php foreach ($course['prerequisites'] as $pre): ?>
-                                    - <?= $pre['prerequisite_type'] ?>: <?= $pre['prerequisite_id'] ?><br>
-                                <?php endforeach; ?>
-                            <?php endif; ?>
-                        </small>
-                    </div>
-                    <div class="col-md-6">
-                        <strong>Modules:</strong><br>
-                        <small class="text-muted">
-                            Status: <?= $modulesCompleted ? 'Completed' : 'Not Completed' ?><br>
-                            Count: <?= count($course['modules'] ?? []) ?><br>
-                            <?php if (!empty($course['modules'])): ?>
-                                <?php foreach ($course['modules'] as $module): ?>
-                                                                         - Module <?= $module['id'] ?>: <?= calculateModuleRealProgress($module['id'], $course['id'], $_SESSION['user']['id']) ?>%<br>
-                                <?php endforeach; ?>
-                            <?php endif; ?>
-                        </small>
-                    </div>
-                </div>
-                <div class="mt-2">
-                    <strong>Post-requisites Access:</strong> <?= $canAccessPostRequisites ? 'Yes' : 'No' ?><br>
-                    <strong>Post-requisites Count:</strong> <?= count($course['post_requisites'] ?? []) ?>
-                </div>
-            </div>
-        <?php endif; ?>
+        ?>
         
         <?php if (!empty($course['post_requisites']) && $canAccessPostRequisites): ?>
         <div class="card mb-4 p-4 shadow-sm border-0" style="background: linear-gradient(135deg, #fff8f9 0%, #ffffff 100%); border-left: 4px solid #20c997 !important;">
@@ -2660,6 +2651,8 @@ function getImageProgressData($courseId, $contentId, $userId) {
         <?php endif; ?>
     </div>
 </div>
+
+
 
 <!-- Content Player Modal (kept for legacy triggers) -->
 <div class="modal fade" id="contentPlayerModal" tabindex="-1" aria-labelledby="contentPlayerModalLabel" aria-hidden="true">
@@ -3286,7 +3279,11 @@ function startDocumentCloseMonitoring() {
     const imageButtons = document.querySelectorAll('.launch-content-btn[data-type="image"]');
     const imageIds = Array.from(imageButtons).map(btn => btn.dataset.contentId);
     
-    if (documentIds.length === 0 && audioIds.length === 0 && videoIds.length === 0 && imageIds.length === 0) {
+    // Get all external content IDs from the page
+    const externalButtons = document.querySelectorAll('.launch-content-btn[data-type="external"]');
+    const externalIds = Array.from(externalButtons).map(btn => btn.dataset.contentId);
+    
+    if (documentIds.length === 0 && audioIds.length === 0 && videoIds.length === 0 && imageIds.length === 0 && externalIds.length === 0) {
         return; // No content to monitor
     }
     
@@ -3294,6 +3291,7 @@ function startDocumentCloseMonitoring() {
     console.log('Monitoring audio close events for:', audioIds);
     console.log('Monitoring video close events for:', videoIds);
     console.log('Monitoring image close events for:', imageIds);
+    console.log('Monitoring external close events for:', externalIds);
     
     // Mark monitoring as active
     window.documentCloseMonitoringActive = true;
@@ -3448,6 +3446,39 @@ function startDocumentCloseMonitoring() {
             }
         }
         
+        // Check external close flags
+        for (let i = 0; i < externalIds.length && !shouldRefresh; i++) {
+            const contentId = externalIds[i];
+            if (contentId) {
+                const closeFlag = localStorage.getItem('external_closed_' + contentId);
+                if (closeFlag) {
+                    console.log('External content close detected for:', contentId);
+                    
+                    // Check if this content was already processed recently
+                    const processedKey = `processed_external_${contentId}`;
+                    const lastProcessed = sessionStorage.getItem(processedKey);
+                    const now = Date.now();
+                    
+                    if (lastProcessed && (now - parseInt(lastProcessed)) < 5000) {
+                        console.log('External content already processed recently, skipping...');
+                        localStorage.removeItem('external_closed_' + contentId);
+                        continue;
+                    }
+                    
+                    // Mark as processed
+                    sessionStorage.setItem(processedKey, now.toString());
+                    
+                    // Remove the flag immediately to prevent duplicate detection
+                    localStorage.removeItem('external_closed_' + contentId);
+                    shouldRefresh = true;
+                    closedContentType = 'External';
+                    closedContentId = contentId;
+                    // Break out of the loop once we find a flag
+                    break;
+                }
+            }
+        }
+        
         if (shouldRefresh) {
             // Mark refresh as in progress to prevent duplicates
             window.pageRefreshInProgress = true;
@@ -3561,7 +3592,7 @@ function startDocumentCloseMonitoring() {
             const keysToRemove = [];
             for (let i = 0; i < sessionStorage.length; i++) {
                 const key = sessionStorage.key(i);
-                if (key && (key.startsWith('processed_audio_') || key.startsWith('processed_document_') || key.startsWith('processed_video_') || key.startsWith('processed_image_'))) {
+                if (key && (key.startsWith('processed_audio_') || key.startsWith('processed_document_') || key.startsWith('processed_video_') || key.startsWith('processed_image_') || key.startsWith('processed_external_'))) {
                     keysToRemove.push(key);
                 }
             }

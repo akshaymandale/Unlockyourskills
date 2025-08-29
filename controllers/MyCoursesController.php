@@ -125,7 +125,8 @@ class MyCoursesController {
                         foreach ($module['content'] as $content) {
                             if ($content['content_type'] === 'assessment') {
                                 $assessmentId = $content['content_id'];
-                                $attempts = $assessmentModel->getUserCompletedAssessmentAttempts($assessmentId, $userId, $clientId);
+                                // For module content, only count attempts from THIS course
+                                $attempts = $assessmentModel->getUserCompletedAssessmentAttemptsForCourse($assessmentId, $userId, $course['id'], $clientId);
                                 $assessmentAttempts[$assessmentId] = $attempts;
                                 
                                 // Get assessment details including num_attempts
@@ -146,7 +147,8 @@ class MyCoursesController {
                 foreach ($course['prerequisites'] as $pre) {
                     if ($pre['prerequisite_type'] === 'assessment') {
                         $assessmentId = $pre['prerequisite_id'];
-                        $attempts = $assessmentModel->getUserCompletedAssessmentAttempts($assessmentId, $userId, $clientId);
+                        // For prerequisites, only count attempts from THIS course
+                        $attempts = $assessmentModel->getUserCompletedAssessmentAttemptsForCourse($assessmentId, $userId, $course['id'], $clientId);
                         $assessmentAttempts[$assessmentId] = $attempts;
                         
                         // Get assessment details including num_attempts
@@ -163,7 +165,8 @@ class MyCoursesController {
                 foreach ($course['post_requisites'] as $post) {
                     if ($post['content_type'] === 'assessment') {
                         $assessmentId = $post['content_id'];
-                        $attempts = $assessmentModel->getUserCompletedAssessmentAttempts($assessmentId, $userId, $clientId);
+                        // For post-requisites, only count attempts from THIS course
+                        $attempts = $assessmentModel->getUserCompletedAssessmentAttemptsForCourse($assessmentId, $userId, $course['id'], $clientId);
                         $assessmentAttempts[$assessmentId] = $attempts;
                         
                         // Get assessment details including num_attempts
@@ -458,34 +461,34 @@ class MyCoursesController {
                 if ($payload) {
                     error_log("Assessment data loaded successfully");
                     
-                    // For assessments, we need to create an attempt and handle user permissions
-                    // Load the AssessmentPlayerModel to handle this properly
-                    require_once 'models/AssessmentPlayerModel.php';
-                    $assessmentModel = new AssessmentPlayerModel();
-                    error_log("AssessmentPlayerModel loaded successfully");
-                    
-                    $userId = $_SESSION['user']['id'];
-                    $clientId = $_SESSION['user']['client_id'] ?? null;
-                    error_log("User ID: {$userId}, Client ID: {$clientId}");
-                    
-                    // Check if user can take this assessment
-                    error_log("Checking if user can take assessment...");
-                    if (!$assessmentModel->canUserTakeAssessment($id, $userId, $clientId)) {
-                        error_log("ERROR: User cannot take this assessment, redirecting to my-courses");
-                        UrlHelper::redirect('my-courses');
-                        return;
-                    }
-                    error_log("User can take assessment");
-                    
-                    // Get course_id from URL parameters
-                    $courseId = $_GET['course_id'] ?? null;
-                    error_log("Course ID from URL: {$courseId}");
-                    
-                    if (!$courseId) {
-                        error_log("ERROR: No course_id provided, redirecting to my-courses");
-                        UrlHelper::redirect('my-courses');
-                        return;
-                    }
+                                    // For assessments, we need to create an attempt and handle user permissions
+                // Load the AssessmentPlayerModel to handle this properly
+                require_once 'models/AssessmentPlayerModel.php';
+                $assessmentModel = new AssessmentPlayerModel();
+                error_log("AssessmentPlayerModel loaded successfully");
+                
+                $userId = $_SESSION['user']['id'];
+                $clientId = $_SESSION['user']['client_id'] ?? null;
+                error_log("User ID: {$userId}, Client ID: {$clientId}");
+                
+                // Get course_id from URL parameters FIRST
+                $courseId = $_GET['course_id'] ?? null;
+                error_log("Course ID from URL: {$courseId}");
+                
+                if (!$courseId) {
+                    error_log("ERROR: No course_id provided, redirecting to my-courses");
+                    UrlHelper::redirect('my-courses');
+                    return;
+                }
+                
+                // Check if user can take this assessment (course-specific)
+                error_log("Checking if user can take assessment...");
+                if (!$assessmentModel->canUserTakeAssessment($id, $userId, $clientId, $courseId)) {
+                    error_log("ERROR: User cannot take this assessment, redirecting to my-courses");
+                    UrlHelper::redirect('my-courses');
+                    return;
+                }
+                error_log("User can take assessment");
                     
                     // Create or get existing attempt with course_id
                     error_log("Creating/getting assessment attempt with course_id: {$courseId}...");
