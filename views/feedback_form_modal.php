@@ -27,24 +27,23 @@
         
         <div class="card mb-4">
             <div class="card-header">
-                <h6 class="mb-0">
-                    <i class="fas fa-check-circle text-success me-2"></i>
-                    Your Previous Feedback
-                </h6>
-            </div>
-            <div class="card-body">
-                <div class="row">
-                    <div class="col-md-6">
-                        <button type="button" class="btn btn-warning btn-sm" id="resubmitFeedback">
-                            <i class="fas fa-edit me-1"></i>Submit New Feedback
-                        </button>
-                    </div>
-                    <div class="col-md-6 text-end">
+                <?php 
+                    $submittedAt = '';
+                    if (!empty($existingResponses) && isset($existingResponses[0]['submitted_at'])) {
+                        $submittedAt = date('M j, Y \a\t g:i A', strtotime($existingResponses[0]['submitted_at']));
+                    }
+                ?>
+                <h6 class="mb-0 d-flex justify-content-between align-items-center">
+                    <span>
+                        <i class="fas fa-check-circle text-success me-2"></i>
+                        Your Previous Feedback
+                    </span>
+                    <?php if ($submittedAt): ?>
                         <small class="text-muted">
-                            Submitted: <?= date('M j, Y \a\t g:i A') ?>
+                            Submitted: <?= $submittedAt ?>
                         </small>
-                    </div>
-                </div>
+                    <?php endif; ?>
+                </h6>
             </div>
         </div>
     <?php endif; ?>
@@ -61,11 +60,23 @@
             </small>
         </div>
         <div class="card-body">
+            <?php
+            // Map existing responses by question_id for quick lookup
+            $responsesByQuestion = [];
+            if (!empty($existingResponses) && is_array($existingResponses)) {
+                foreach ($existingResponses as $resp) {
+                    if (isset($resp['question_id'])) {
+                        $responsesByQuestion[$resp['question_id']] = $resp;
+                    }
+                }
+            }
+            ?>
             <form id="feedbackForm" method="POST">
                 <input type="hidden" name="course_id" value="<?= IdEncryption::encrypt($course['id']) ?>">
                 <input type="hidden" name="feedback_package_id" value="<?= IdEncryption::encrypt($feedbackPackage['id']) ?>">
                 
                 <?php foreach ($feedbackPackage['questions'] as $index => $question): ?>
+                    <?php $saved = $responsesByQuestion[$question['id']] ?? null; ?>
                     <div class="feedback-question-card mb-4" data-question-id="<?= $question['id'] ?>">
                         <div class="feedback-question-title">
                             <span class="question-number"><?= $index + 1 ?>.</span>
@@ -106,14 +117,17 @@
                             case 'rating': ?>
                                 <div class="rating-response">
                                     <div class="modal-rating-stars">
-                                        <?php for ($i = 1; $i <= ($question['rating_scale'] ?? 5); $i++): ?>
-                                            <span class="modal-rating-star" data-rating="<?= $i ?>">
+                                        <?php 
+                                            $savedRating = isset($saved['rating_value']) ? (int)$saved['rating_value'] : 0;
+                                            $maxRating = (int)($question['rating_scale'] ?? 5);
+                                            for ($i = 1; $i <= $maxRating; $i++): ?>
+                                            <span class="modal-rating-star<?= ($savedRating >= $i ? ' active' : '') ?>" data-rating="<?= $i ?>">
                                                 <i class="fas fa-star"></i>
                                             </span>
                                         <?php endfor; ?>
                                     </div>
                                     <input type="hidden" name="responses[<?= $question['id'] ?>][type]" value="rating">
-                                    <input type="hidden" name="responses[<?= $question['id'] ?>][value]" value="" class="rating-input" required>
+                                    <input type="hidden" name="responses[<?= $question['id'] ?>][value]" value="<?= $savedRating ?: '' ?>" class="rating-input" required>
                                     <small class="text-muted d-block mt-2">
                                         Click on a star to rate (1-<?= $question['rating_scale'] ?? 5 ?>)
                                     </small>
@@ -123,17 +137,22 @@
                             <?php case 'multi_choice': ?>
                                 <div class="choice-response">
                                     <div class="choice-options">
-                                        <?php foreach ($question['options'] as $option): ?>
-                                            <div class="modal-choice-option">
-                                                <input type="radio" 
-                                                       name="responses[<?= $question['id'] ?>][value]" 
-                                                       value="<?= $option['id'] ?>" 
-                                                       id="option_<?= $option['id'] ?>" 
-                                                       required>
-                                                <label for="option_<?= $option['id'] ?>">
-                                                    <?= htmlspecialchars($option['text']) ?>
-                                                </label>
-                                            </div>
+                                        <?php 
+                                            $savedChoice = isset($saved['choice_response']) ? (string)$saved['choice_response'] : '';
+                                            foreach ($question['options'] as $option): 
+                                                $isChecked = ($savedChoice !== '' && (string)$option['id'] === $savedChoice);
+                                        ?>
+                                        <div class="modal-choice-option">
+                                            <input type="radio" 
+                                                   name="responses[<?= $question['id'] ?>][value]" 
+                                                   value="<?= $option['id'] ?>" 
+                                                   id="option_<?= $option['id'] ?>" 
+                                                   <?= $isChecked ? 'checked' : '' ?>
+                                                   required>
+                                            <label for="option_<?= $option['id'] ?>">
+                                                <?= htmlspecialchars($option['text']) ?>
+                                            </label>
+                                        </div>
                                         <?php endforeach; ?>
                                     </div>
                                     <input type="hidden" name="responses[<?= $question['id'] ?>][type]" value="multi_choice">
@@ -143,16 +162,23 @@
                             <?php case 'checkbox': ?>
                                 <div class="checkbox-response">
                                     <div class="choice-options">
-                                        <?php foreach ($question['options'] as $option): ?>
-                                            <div class="modal-choice-option">
-                                                <input type="checkbox" 
-                                                       name="responses[<?= $question['id'] ?>][value][]" 
-                                                       value="<?= $option['id'] ?>" 
-                                                       id="checkbox_<?= $option['id'] ?>">
-                                                <label for="checkbox_<?= $option['id'] ?>">
-                                                    <?= htmlspecialchars($option['text']) ?>
-                                                </label>
-                                            </div>
+                                        <?php 
+                                            $savedChoices = [];
+                                            if (!empty($saved['choice_response'])) {
+                                                $savedChoices = array_filter(array_map('trim', explode(',', (string)$saved['choice_response'])));
+                                            }
+                                            foreach ($question['options'] as $option): 
+                                                $isChecked = in_array((string)$option['id'], $savedChoices, true);
+                                        ?>
+                                        <div class="modal-choice-option">
+                                            <input type="checkbox" 
+                                                   name="responses[<?= $question['id'] ?>][value][]" 
+                                                   value="<?= $option['id'] ?>" 
+                                                   id="checkbox_<?= $option['id'] ?>" <?= $isChecked ? 'checked' : '' ?>>
+                                            <label for="checkbox_<?= $option['id'] ?>">
+                                                <?= htmlspecialchars($option['text']) ?>
+                                            </label>
+                                        </div>
                                         <?php endforeach; ?>
                                     </div>
                                     <input type="hidden" name="responses[<?= $question['id'] ?>][type]" value="checkbox">
@@ -161,10 +187,11 @@
 
                             <?php case 'dropdown': ?>
                                 <div class="dropdown-response">
+                                    <?php $savedChoice = isset($saved['choice_response']) ? (string)$saved['choice_response'] : ''; ?>
                                     <select name="responses[<?= $question['id'] ?>][value]" class="form-select" required>
                                         <option value="">Select an option</option>
                                         <?php foreach ($question['options'] as $option): ?>
-                                            <option value="<?= $option['id'] ?>">
+                                            <option value="<?= $option['id'] ?>" <?= ($savedChoice !== '' && (string)$option['id'] === $savedChoice) ? 'selected' : '' ?> >
                                                 <?= htmlspecialchars($option['text']) ?>
                                             </option>
                                         <?php endforeach; ?>
@@ -179,6 +206,7 @@
                                            name="responses[<?= $question['id'] ?>][value]" 
                                            class="form-control" 
                                            placeholder="Enter your answer" 
+                                           value="<?= isset($saved['text_response']) ? htmlspecialchars($saved['text_response']) : '' ?>"
                                            required>
                                     <input type="hidden" name="responses[<?= $question['id'] ?>][type]" value="short_answer">
                                 </div>
@@ -189,7 +217,7 @@
                                     <textarea name="responses[<?= $question['id'] ?>][value]" 
                                               class="modal-textarea" 
                                               placeholder="Enter your detailed feedback" 
-                                              required></textarea>
+                                              required><?= isset($saved['text_response']) ? htmlspecialchars($saved['text_response']) : '' ?></textarea>
                                     <input type="hidden" name="responses[<?= $question['id'] ?>][type]" value="long_answer">
                                 </div>
                                 <?php break; ?>
@@ -230,13 +258,6 @@
                         <i class="fas fa-paper-plane me-2"></i>
                         Submit Feedback
                     </button>
-                    
-                    <?php if ($hasSubmitted): ?>
-                        <button type="button" class="btn btn-outline-secondary ms-2" id="deleteFeedback">
-                            <i class="fas fa-trash me-2"></i>
-                            Delete Previous Feedback
-                        </button>
-                    <?php endif; ?>
                 </div>
             </form>
         </div>
