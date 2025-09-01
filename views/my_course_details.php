@@ -1717,9 +1717,18 @@ function getImageProgressData($courseId, $contentId, $userId) {
                                         'class' => 'btn-secondary'
                                     ];
                                     
-                                    echo "<a class='prerequisite-action-btn {$config['class']}' target='_blank' href='" . UrlHelper::url('my-courses/start') . '?type=' . urlencode($pre['prerequisite_type']) . '&id=' . urlencode($encryptedPrereqId) . '&course_id=' . $GLOBALS['course']['id'] . "'>";
-                                    echo "<i class='fas {$config['icon']} me-1'></i>{$config['label']}";
-                                    echo "</a>";
+                                    // Handle different prerequisite types with appropriate actions
+                                    if ($pre['prerequisite_type'] === 'feedback') {
+                                        // For feedback prerequisites, open modal popup
+                                        echo "<a class='prerequisite-action-btn {$config['class']}' href='#' onclick='openFeedbackModal(\"" . addslashes($encryptedPrereqId) . "\", \"" . addslashes(IdEncryption::encrypt($GLOBALS['course']['id'])) . "\")'>";
+                                        echo "<i class='fas {$config['icon']} me-1'></i>{$config['label']}";
+                                        echo "</a>";
+                                    } else {
+                                        // For other prerequisite types, use the existing start method
+                                        echo "<a class='prerequisite-action-btn {$config['class']}' target='_blank' href='" . UrlHelper::url('my-courses/start') . '?type=' . urlencode($pre['prerequisite_type']) . '&id=' . urlencode($encryptedPrereqId) . '&course_id=' . $GLOBALS['course']['id'] . "'>";
+                                        echo "<i class='fas {$config['icon']} me-1'></i>{$config['label']}";
+                                        echo "</a>";
+                                    }
                                 }
                                 ?>
                             <?php else: ?>
@@ -2580,15 +2589,19 @@ function getImageProgressData($courseId, $contentId, $userId) {
                                     'class' => 'btn-secondary'
                                 ];
                                 
-                                // Handle SCORM content differently - use the new SCORM launcher
+                                // Handle different content types with appropriate actions
                                 if ($post['content_type'] === 'scorm') {
-                                    // For SCORM content, we need to get the actual content details to launch properly
-                                    // Since this is postrequisite content, we'll need to construct the launch URL differently
+                                    // For SCORM content, use the SCORM launcher
                                     echo "<a class='postrequisite-action-btn {$config['class']}' href='#' onclick='launchPostrequisiteSCORM(event, \"" . addslashes($encryptedPostreqId) . "\", \"" . addslashes($post['content_type']) . "\")'>";
                                     echo "<i class='fas {$config['icon']} me-1'></i>{$config['label']}";
                                     echo "</a>";
+                                } elseif ($post['content_type'] === 'feedback') {
+                                    // For feedback content, open modal popup
+                                    echo "<a class='postrequisite-action-btn {$config['class']}' href='#' onclick='openFeedbackModal(\"" . addslashes($encryptedPostreqId) . "\", \"" . addslashes(IdEncryption::encrypt($GLOBALS['course']['id'])) . "\")'>";
+                                    echo "<i class='fas {$config['icon']} me-1'></i>{$config['label']}";
+                                    echo "</a>";
                                 } else {
-                                    // For non-SCORM content, use the existing start method
+                                    // For other content types, use the existing start method
                                     echo "<a class='postrequisite-action-btn {$config['class']}' target='_blank' href='" . UrlHelper::url('my-courses/start') . '?type=' . urlencode($post['content_type']) . '&id=' . urlencode($encryptedPostreqId) . '&course_id=' . $GLOBALS['course']['id'] . "'>";
                                     echo "<i class='fas {$config['icon']} me-1'></i>{$config['label']}";
                                     echo "</a>";
@@ -3722,6 +3735,201 @@ function refreshVideoProgress(contentId) {
 
 // Global function for external access
 window.refreshVideoProgress = refreshVideoProgress;
+
+// Feedback Modal Functions
+function openFeedbackModal(feedbackId, courseId) {
+    console.log('🔍 openFeedbackModal called with:', { feedbackId, courseId });
+    
+    // Show loading state
+    const modal = document.getElementById('feedbackModal');
+    const modalBody = modal.querySelector('.modal-body');
+    modalBody.innerHTML = '<div class="text-center"><div class="spinner-border" role="status"><span class="visually-hidden">Loading...</span></div><p class="mt-2">Loading feedback form...</p></div>';
+    
+    // Show modal
+    const bootstrapModal = new bootstrap.Modal(modal);
+    bootstrapModal.show();
+    
+    // Fetch feedback form data with encrypted IDs (they will be decrypted on the server)
+    fetch(`/Unlockyourskills/feedback-response/form-data?course_id=${encodeURIComponent(courseId)}&feedback_id=${encodeURIComponent(feedbackId)}`)
+        .then(response => {
+            console.log('📡 Response status:', response.status);
+            return response.json();
+        })
+        .then(data => {
+            console.log('📦 Response data:', data);
+            if (data.success) {
+                modalBody.innerHTML = data.html;
+                initializeFeedbackForm();
+            } else {
+                modalBody.innerHTML = `<div class="alert alert-danger">${data.message || 'Failed to load feedback form'}</div>`;
+            }
+        })
+        .catch(error => {
+            console.error('❌ Error loading feedback form:', error);
+            modalBody.innerHTML = '<div class="alert alert-danger">Failed to load feedback form. Please try again.</div>';
+        });
+}
+
+function initializeFeedbackForm() {
+    console.log('🔧 Initializing feedback form...');
+    
+    // Initialize rating stars
+    const ratingInputs = document.querySelectorAll('.rating-input');
+    console.log('⭐ Found rating inputs:', ratingInputs.length);
+    
+    ratingInputs.forEach((input, index) => {
+        const stars = input.parentElement.querySelectorAll('.rating-star');
+        const value = input.value;
+        console.log(`⭐ Rating input ${index}: value=${value}, stars=${stars.length}`);
+        
+        stars.forEach((star, starIndex) => {
+            star.classList.toggle('active', starIndex < value);
+        });
+        
+        stars.forEach((star, starIndex) => {
+            star.addEventListener('click', () => {
+                input.value = starIndex + 1;
+                stars.forEach((s, i) => s.classList.toggle('active', i <= starIndex));
+                console.log(`⭐ Star ${starIndex + 1} clicked, new value: ${input.value}`);
+            });
+        });
+    });
+    
+    // Handle form submission
+    const form = document.getElementById('feedbackForm');
+    if (form) {
+        console.log('✅ Feedback form found, adding submit listener');
+        console.log('Form action:', form.action);
+        console.log('Form method:', form.method);
+        console.log('Form elements count:', form.elements.length);
+        
+        // Check all form elements
+        for (let i = 0; i < form.elements.length; i++) {
+            const element = form.elements[i];
+            console.log(`Form element ${i}:`, element.name, element.type, element.required, element.value);
+        }
+        
+        form.addEventListener('submit', handleFeedbackSubmission);
+        
+        // Check submit button
+        const submitBtn = form.querySelector('button[type="submit"]');
+        if (submitBtn) {
+            console.log('✅ Submit button found:', submitBtn.disabled, submitBtn.innerHTML);
+        } else {
+            console.log('❌ Submit button not found');
+        }
+    } else {
+        console.log('❌ Feedback form not found');
+    }
+}
+
+function handleFeedbackSubmission(event) {
+    event.preventDefault();
+    
+    const form = event.target;
+    const submitBtn = form.querySelector('button[type="submit"]');
+    const originalText = submitBtn.innerHTML;
+    
+    // Show loading state
+    submitBtn.disabled = true;
+    submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>Submitting...';
+    
+    // Collect form data
+    const formData = new FormData(form);
+    
+    // Debug: Log form data
+    console.log('🔍 Form submission debug:');
+    console.log('Form element:', form);
+    console.log('Form action:', form.action);
+    console.log('Form method:', form.method);
+    
+    // Log all form data
+    for (let [key, value] of formData.entries()) {
+        console.log(`Form data: ${key} = ${value}`);
+    }
+    
+    // Submit feedback
+    fetch('/Unlockyourskills/feedback-response/submit', {
+        method: 'POST',
+        body: formData
+    })
+    .then(response => {
+        console.log('📡 Response status:', response.status);
+        console.log('📡 Response headers:', response.headers);
+        return response.json();
+    })
+    .then(data => {
+        console.log('📦 Response data:', data);
+        if (data.success) {
+            // Show success message
+            const modal = document.getElementById('feedbackModal');
+            const modalBody = modal.querySelector('.modal-body');
+            modalBody.innerHTML = `
+                <div class="text-center">
+                    <div class="text-success mb-3">
+                        <i class="fas fa-check-circle fa-3x"></i>
+                    </div>
+                    <h5 class="text-success">Feedback Submitted Successfully!</h5>
+                    <p class="text-muted">Thank you for your feedback. It has been recorded.</p>
+                    <button type="button" class="btn btn-primary" data-bs-dismiss="modal">Close</button>
+                </div>
+            `;
+            
+            // Close modal after 3 seconds
+            setTimeout(() => {
+                bootstrap.Modal.getInstance(modal).hide();
+            }, 3000);
+        } else {
+            // Show error message
+            const modal = document.getElementById('feedbackModal');
+            const modalBody = modal.querySelector('.modal-body');
+            modalBody.innerHTML = `
+                <div class="alert alert-danger">
+                    <h5>Error</h5>
+                    <p>${data.message || 'Failed to submit feedback. Please try again.'}</p>
+                    <button type="button" class="btn btn-secondary" onclick="openFeedbackModal('${formData.get('feedback_package_id')}', '${formData.get('course_id')}')">Try Again</button>
+                </div>
+            `;
+        }
+    })
+    .catch(error => {
+        console.error('Error submitting feedback:', error);
+        const modal = document.getElementById('feedbackModal');
+        const modalBody = modal.querySelector('.modal-body');
+        modalBody.innerHTML = `
+            <div class="alert alert-danger">
+                <h5>Error</h5>
+                <p>Failed to submit feedback. Please try again.</p>
+                <button type="button" class="btn btn-secondary" onclick="openFeedbackModal('${formData.get('feedback_package_id')}', '${formData.get('course_id')}')">Try Again</button>
+            </div>
+        `;
+    })
+    .finally(() => {
+        // Reset button state
+        submitBtn.disabled = false;
+        submitBtn.innerHTML = originalText;
+    });
+}
+
+// Global function for external access
+window.openFeedbackModal = openFeedbackModal;
 </script>
+
+<!-- Feedback Modal -->
+<div class="modal fade" id="feedbackModal" tabindex="-1" aria-labelledby="feedbackModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="feedbackModalLabel">
+                    <i class="fas fa-comment-dots me-2"></i>Course Feedback
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <!-- Feedback form will be loaded here -->
+            </div>
+        </div>
+    </div>
+</div>
 
 <?php include 'includes/footer.php'; ?> 

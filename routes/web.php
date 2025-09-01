@@ -446,6 +446,17 @@ Router::get('/users/autocomplete', 'UserManagementController@getUserEmailsForAut
     Router::post('/feedback/import', 'FeedbackQuestionController@import');
 
     // ===================================
+    // FEEDBACK RESPONSES (Course Feedback)
+    // ===================================
+
+    // Feedback Response Management
+    Router::get('/feedback-response/form', 'FeedbackResponseController@showFeedbackForm');
+    Router::post('/feedback-response/submit', 'FeedbackResponseController@submitFeedback');
+    Router::get('/feedback-response/form-data', 'FeedbackResponseController@getFeedbackForm');
+    Router::get('/feedback-response/status', 'FeedbackResponseController@checkFeedbackStatus');
+    Router::post('/feedback-response/delete', 'FeedbackResponseController@deleteFeedback');
+
+    // ===================================
     // OPINION POLLS
     // ===================================
 

@@ -7875,3 +7875,352 @@ body select:focus,
         margin-left: 0 !important;
     }
 }
+
+/* =====================================================
+   FEEDBACK FORM STYLES
+   ===================================================== */
+
+.feedback-question {
+    border: 1px solid #e9ecef;
+    border-radius: 8px;
+    padding: 20px;
+    background-color: #fff;
+    transition: all 0.3s ease;
+}
+
+.feedback-question:hover {
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.feedback-question.is-invalid {
+    border-color: #dc3545;
+    background-color: #fff5f5;
+}
+
+.question-header {
+    border-bottom: 2px solid #f8f9fa;
+    padding-bottom: 15px;
+}
+
+.question-number {
+    background-color: #ffc107;
+    color: #000;
+    padding: 4px 8px;
+    border-radius: 50%;
+    font-size: 0.8em;
+    font-weight: bold;
+    margin-right: 10px;
+}
+
+.question-media {
+    text-align: center;
+}
+
+.question-media img,
+.question-media video,
+.question-media audio {
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+/* Rating Stars */
+.rating-response {
+    text-align: center;
+}
+
+.rating-stars {
+    display: inline-flex;
+    flex-direction: row-reverse;
+    gap: 5px;
+}
+
+.rating-input {
+    display: none;
+}
+
+.rating-label {
+    font-size: 2rem;
+    color: #e9ecef;
+    cursor: pointer;
+    transition: color 0.2s ease;
+}
+
+.rating-label:hover,
+.rating-label.hover {
+    color: #ffc107;
+}
+
+.rating-label.active {
+    color: #ffc107;
+}
+
+.rating-input:checked ~ .rating-label {
+    color: #ffc107;
+}
+
+/* Choice Responses */
+.choice-response,
+.checkbox-response {
+    max-height: 300px;
+    overflow-y: auto;
+}
+
+.form-check {
+    margin-bottom: 10px;
+    padding: 10px;
+    border: 1px solid #e9ecef;
+    border-radius: 6px;
+    transition: all 0.2s ease;
+}
+
+.form-check:hover {
+    background-color: #f8f9fa;
+    border-color: #ffc107;
+}
+
+.form-check-input:checked + .form-check-label {
+    font-weight: bold;
+    color: #ffc107;
+}
+
+/* Text Responses */
+.text-response textarea {
+    resize: vertical;
+    min-height: 100px;
+}
+
+/* File Upload */
+.file-response {
+    border: 2px dashed #dee2e6;
+    border-radius: 8px;
+    padding: 20px;
+    text-align: center;
+    transition: all 0.3s ease;
+}
+
+.file-response:hover {
+    border-color: #ffc107;
+    background-color: #fff9e6;
+}
+
+/* Form Actions */
+.form-actions {
+    border-top: 2px solid #f8f9fa;
+    padding-top: 20px;
+    text-align: center;
+}
+
+/* Invalid Feedback */
+.invalid-feedback {
+    color: #dc3545;
+    font-size: 0.875em;
+    margin-top: 5px;
+    font-weight: 500;
+}
+
+/* Toast Notifications */
+.toast-container {
+    z-index: 9999;
+}
+
+.toast {
+    min-width: 300px;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+    .feedback-question {
+        padding: 15px;
+    }
+    
+    .rating-stars {
+        gap: 3px;
+    }
+    
+    .rating-label {
+        font-size: 1.5rem;
+    }
+    
+    .form-actions .btn {
+        width: 100%;
+        margin-bottom: 10px;
+    }
+    
+    .form-actions .btn:last-child {
+        margin-bottom: 0;
+    }
+}
+
+/* Animation for form submission */
+.feedback-form-submitting {
+    opacity: 0.7;
+    pointer-events: none;
+}
+
+.feedback-form-submitting .btn {
+    position: relative;
+}
+
+.feedback-form-submitting .btn::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 20px;
+    height: 20px;
+    margin: -10px 0 0 -10px;
+    border: 2px solid transparent;
+    border-top: 2px solid currentColor;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+/* =====================================================
+   FEEDBACK MODAL STYLES
+   ===================================================== */
+
+#feedbackModal .modal-dialog {
+    max-width: 800px;
+}
+
+#feedbackModal .modal-body {
+    max-height: 70vh;
+    overflow-y: auto;
+}
+
+.feedback-question-card {
+    background: #f8f9fa;
+    border: 1px solid #dee2e6;
+    border-radius: 8px;
+    padding: 20px;
+    margin-bottom: 20px;
+    transition: all 0.3s ease;
+}
+
+.feedback-question-card:hover {
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    transform: translateY(-2px);
+}
+
+.feedback-question-title {
+    font-weight: 600;
+    color: #495057;
+    margin-bottom: 15px;
+    font-size: 1.1rem;
+}
+
+.feedback-question-required {
+    color: #dc3545;
+    font-size: 0.9rem;
+    margin-left: 5px;
+}
+
+/* Modal-specific rating stars */
+.modal-rating-stars {
+    display: flex;
+    gap: 5px;
+}
+
+.modal-rating-star {
+    font-size: 24px;
+    color: #dee2e6;
+    cursor: pointer;
+    transition: color 0.2s ease;
+}
+
+.modal-rating-star:hover,
+.modal-rating-star.active {
+    color: #ffc107;
+}
+
+/* Modal choice options */
+.modal-choice-option {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px;
+    border: 1px solid #dee2e6;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.modal-choice-option:hover {
+    background-color: #f8f9fa;
+    border-color: #007bff;
+}
+
+.modal-choice-option input[type="radio"],
+.modal-choice-option input[type="checkbox"] {
+    margin: 0;
+}
+
+.modal-choice-option label {
+    margin: 0;
+    cursor: pointer;
+    flex: 1;
+}
+
+/* Modal text areas */
+.modal-textarea {
+    width: 100%;
+    min-height: 100px;
+    padding: 12px;
+    border: 1px solid #ced4da;
+    border-radius: 6px;
+    resize: vertical;
+    transition: border-color 0.2s ease;
+}
+
+.modal-textarea:focus {
+    outline: none;
+    border-color: #007bff;
+    box-shadow: 0 0 0 0.2rem rgba(0,123,255,0.25);
+}
+
+/* Modal submit button */
+.modal-submit-btn {
+    background: linear-gradient(135deg, #007bff 0%, #0056b3 100%);
+    border: none;
+    color: white;
+    padding: 12px 30px;
+    border-radius: 25px;
+    font-weight: 600;
+    transition: all 0.3s ease;
+}
+
+.modal-submit-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0,123,255,0.3);
+}
+
+.modal-submit-btn:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+    transform: none;
+}
+
+/* Modal responsive design */
+@media (max-width: 768px) {
+    #feedbackModal .modal-dialog {
+        margin: 10px;
+        max-width: calc(100% - 20px);
+    }
+    
+    .feedback-question-card {
+        padding: 15px;
+    }
+    
+    .modal-rating-stars {
+        gap: 3px;
+    }
+    
+    .modal-rating-star {
+        font-size: 20px;
+    }
+}
