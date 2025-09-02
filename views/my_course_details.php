@@ -3773,25 +3773,51 @@ function openFeedbackModal(feedbackId, courseId) {
 function initializeFeedbackForm() {
     console.log('🔧 Initializing feedback form...');
     
-    // Initialize rating stars
-    const ratingInputs = document.querySelectorAll('.rating-input');
-    console.log('⭐ Found rating inputs:', ratingInputs.length);
+    // Initialize rating stars - use modal-specific selectors
+    const ratingStars = document.querySelectorAll('.modal-rating-star');
+    console.log('⭐ Found rating stars:', ratingStars.length);
     
-    ratingInputs.forEach((input, index) => {
-        const stars = input.parentElement.querySelectorAll('.rating-star');
-        const value = input.value;
-        console.log(`⭐ Rating input ${index}: value=${value}, stars=${stars.length}`);
-        
-        stars.forEach((star, starIndex) => {
-            star.classList.toggle('active', starIndex < value);
+    ratingStars.forEach(star => {
+        // Click event
+        star.addEventListener('click', function() {
+            const rating = this.dataset.rating;
+            const questionCard = this.closest('.feedback-question-card');
+            const ratingInput = questionCard.querySelector('.rating-input');
+            const allStars = questionCard.querySelectorAll('.modal-rating-star');
+            
+            // Update hidden input value
+            ratingInput.value = rating;
+            
+            // Update star display
+            allStars.forEach((s, index) => {
+                s.classList.toggle('active', index < rating);
+            });
+            
+            console.log(`⭐ Star ${rating} clicked, new value: ${ratingInput.value}`);
         });
         
-        stars.forEach((star, starIndex) => {
-            star.addEventListener('click', () => {
-                input.value = starIndex + 1;
-                stars.forEach((s, i) => s.classList.toggle('active', i <= starIndex));
-                console.log(`⭐ Star ${starIndex + 1} clicked, new value: ${input.value}`);
+        // Hover events
+        star.addEventListener('mouseenter', function() {
+            const rating = parseInt(this.dataset.rating);
+            const questionCard = this.closest('.feedback-question-card');
+            const allStars = questionCard.querySelectorAll('.modal-rating-star');
+            
+            // Add hover effect to stars up to current hover
+            allStars.forEach((s, index) => {
+                if (index < rating) {
+                    s.classList.add('hover');
+                } else {
+                    s.classList.remove('hover');
+                }
             });
+        });
+        
+        star.addEventListener('mouseleave', function() {
+            const questionCard = this.closest('.feedback-question-card');
+            const allStars = questionCard.querySelectorAll('.modal-rating-star');
+            
+            // Remove hover effects
+            allStars.forEach(s => s.classList.remove('hover'));
         });
     });
     
@@ -3823,12 +3849,126 @@ function initializeFeedbackForm() {
     }
 }
 
+function validateFeedbackForm(form) {
+    let isValid = true;
+    let firstInvalidElement = null;
+    
+    // Clear previous validation states
+    const allInputs = form.querySelectorAll('input, textarea, select');
+    allInputs.forEach(input => {
+        input.classList.remove('is-invalid');
+        const feedback = input.parentNode.querySelector('.invalid-feedback');
+        if (feedback) feedback.remove();
+    });
+    
+    // Validate each question
+    const questions = form.querySelectorAll('.feedback-question-card');
+    questions.forEach(question => {
+        const questionId = question.dataset.questionId;
+        const responseType = question.querySelector('input[name^="responses"][name$="[type]"]')?.value;
+        const responseValue = getResponseValue(question, responseType);
+        
+        // Check if response is required and provided
+        if (isResponseRequired(question) && !responseValue) {
+            markQuestionAsInvalid(question, 'This question requires a response.');
+            if (!firstInvalidElement) {
+                firstInvalidElement = question;
+            }
+            isValid = false;
+        } else {
+            markQuestionAsValid(question);
+        }
+    });
+    
+    // Scroll to first invalid question if any
+    if (firstInvalidElement) {
+        firstInvalidElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+    
+    return isValid;
+}
+
+function getResponseValue(question, responseType) {
+    switch (responseType) {
+        case 'rating':
+            const ratingInput = question.querySelector('.rating-input');
+            return ratingInput ? ratingInput.value : null;
+            
+        case 'multi_choice':
+            const choiceInput = question.querySelector('input[name^="responses"][name$="[value]"]:checked');
+            return choiceInput ? choiceInput.value : null;
+            
+        case 'checkbox':
+            const checkboxInputs = question.querySelectorAll('input[name^="responses"][name$="[value][]"]:checked');
+            return checkboxInputs.length > 0 ? Array.from(checkboxInputs).map(cb => cb.value).join(',') : null;
+            
+        case 'dropdown':
+            const dropdownInput = question.querySelector('select[name^="responses"][name$="[value]"]');
+            return dropdownInput ? dropdownInput.value : null;
+            
+        case 'short_answer':
+        case 'long_answer':
+            const textInput = question.querySelector('input[name^="responses"][name$="[value]"], textarea[name^="responses"][name$="[value]"]');
+            return textInput ? textInput.value.trim() : null;
+            
+        case 'file':
+            const fileInput = question.querySelector('input[type="file"]');
+            return fileInput && fileInput.files.length > 0 ? fileInput.files[0].name : null;
+            
+        default:
+            return null;
+    }
+}
+
+function isResponseRequired(question) {
+    // For now, all questions are required
+    // This can be enhanced based on question metadata
+    return true;
+}
+
+function markQuestionAsInvalid(question, message) {
+    // Find the input element within the question
+    const input = question.querySelector('input, textarea, select');
+    if (input) {
+        input.classList.add('is-invalid');
+        
+        // Remove existing error message
+        const existingError = input.parentNode.querySelector('.invalid-feedback');
+        if (existingError) {
+            existingError.remove();
+        }
+        
+        // Add error message
+        const errorDiv = document.createElement('div');
+        errorDiv.className = 'invalid-feedback d-block';
+        errorDiv.textContent = message;
+        input.parentNode.appendChild(errorDiv);
+    }
+}
+
+function markQuestionAsValid(question) {
+    // Find the input element within the question
+    const input = question.querySelector('input, textarea, select');
+    if (input) {
+        input.classList.remove('is-invalid');
+        const existingError = input.parentNode.querySelector('.invalid-feedback');
+        if (existingError) {
+            existingError.remove();
+        }
+    }
+}
+
 function handleFeedbackSubmission(event) {
     event.preventDefault();
     
     const form = event.target;
     const submitBtn = form.querySelector('button[type="submit"]');
     const originalText = submitBtn.innerHTML;
+    
+    // Validate form before submission
+    if (!validateFeedbackForm(form)) {
+        return; // Stop submission if validation fails
+    }
     
     // Show loading state
     submitBtn.disabled = true;

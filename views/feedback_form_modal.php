@@ -127,7 +127,7 @@
                                         <?php endfor; ?>
                                     </div>
                                     <input type="hidden" name="responses[<?= $question['id'] ?>][type]" value="rating">
-                                    <input type="hidden" name="responses[<?= $question['id'] ?>][value]" value="<?= $savedRating ?: '' ?>" class="rating-input" required>
+                                    <input type="hidden" name="responses[<?= $question['id'] ?>][value]" value="<?= $savedRating ?: '' ?>" class="rating-input">
                                     <small class="text-muted d-block mt-2">
                                         Click on a star to rate (1-<?= $question['rating_scale'] ?? 5 ?>)
                                     </small>
@@ -147,8 +147,7 @@
                                                    name="responses[<?= $question['id'] ?>][value]" 
                                                    value="<?= $option['id'] ?>" 
                                                    id="option_<?= $option['id'] ?>" 
-                                                   <?= $isChecked ? 'checked' : '' ?>
-                                                   required>
+                                                   <?= $isChecked ? 'checked' : '' ?>>
                                             <label for="option_<?= $option['id'] ?>">
                                                 <?= htmlspecialchars($option['text']) ?>
                                             </label>
@@ -188,7 +187,7 @@
                             <?php case 'dropdown': ?>
                                 <div class="dropdown-response">
                                     <?php $savedChoice = isset($saved['choice_response']) ? (string)$saved['choice_response'] : ''; ?>
-                                    <select name="responses[<?= $question['id'] ?>][value]" class="form-select" required>
+                                    <select name="responses[<?= $question['id'] ?>][value]" class="form-select">
                                         <option value="">Select an option</option>
                                         <?php foreach ($question['options'] as $option): ?>
                                             <option value="<?= $option['id'] ?>" <?= ($savedChoice !== '' && (string)$option['id'] === $savedChoice) ? 'selected' : '' ?> >
@@ -206,8 +205,7 @@
                                            name="responses[<?= $question['id'] ?>][value]" 
                                            class="form-control" 
                                            placeholder="Enter your answer" 
-                                           value="<?= isset($saved['text_response']) ? htmlspecialchars($saved['text_response']) : '' ?>"
-                                           required>
+                                           value="<?= isset($saved['text_response']) ? htmlspecialchars($saved['text_response']) : '' ?>">
                                     <input type="hidden" name="responses[<?= $question['id'] ?>][type]" value="short_answer">
                                 </div>
                                 <?php break; ?>
@@ -216,8 +214,7 @@
                                 <div class="text-response">
                                     <textarea name="responses[<?= $question['id'] ?>][value]" 
                                               class="modal-textarea" 
-                                              placeholder="Enter your detailed feedback" 
-                                              required><?= isset($saved['text_response']) ? htmlspecialchars($saved['text_response']) : '' ?></textarea>
+                                              placeholder="Enter your detailed feedback"><?= isset($saved['text_response']) ? htmlspecialchars($saved['text_response']) : '' ?></textarea>
                                     <input type="hidden" name="responses[<?= $question['id'] ?>][type]" value="long_answer">
                                 </div>
                                 <?php break; ?>
@@ -244,8 +241,7 @@
                                 <div class="text-response">
                                     <textarea name="responses[<?= $question['id'] ?>][value]" 
                                               class="modal-textarea" 
-                                              placeholder="Enter your feedback" 
-                                              required></textarea>
+                                              placeholder="Enter your feedback"></textarea>
                                     <input type="hidden" name="responses[<?= $question['id'] ?>][type]" value="text">
                                 </div>
                         <?php endswitch; ?>
@@ -265,27 +261,8 @@
 </div>
 
 <script>
-// Initialize rating stars for this modal form
+// File upload styling for modal form
 document.addEventListener('DOMContentLoaded', function() {
-    // Rating stars functionality
-    const ratingStars = document.querySelectorAll('.modal-rating-star');
-    ratingStars.forEach(star => {
-        star.addEventListener('click', function() {
-            const rating = this.dataset.rating;
-            const questionCard = this.closest('.feedback-question-card');
-            const ratingInput = questionCard.querySelector('.rating-input');
-            const allStars = questionCard.querySelectorAll('.modal-rating-star');
-            
-            // Update hidden input value
-            ratingInput.value = rating;
-            
-            // Update star display
-            allStars.forEach((s, index) => {
-                s.classList.toggle('active', index < rating);
-            });
-        });
-    });
-    
     // File upload styling
     const fileInputs = document.querySelectorAll('.file-input');
     fileInputs.forEach(input => {
