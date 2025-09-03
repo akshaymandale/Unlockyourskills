@@ -20,34 +20,65 @@
 
     <?php if ($hasSubmitted): ?>
         <!-- Show existing feedback submission -->
-        <div class="alert alert-info">
-            <i class="fas fa-info-circle me-2"></i>
-            You have already submitted feedback for this course. You can view your responses below or submit new feedback.
+        <div class="alert alert-success">
+            <i class="fas fa-check-circle me-2"></i>
+            You have already submitted feedback for this course. Thank you for your feedback!
         </div>
         
-        <div class="card mb-4">
-            <div class="card-header">
-                <?php 
-                    $submittedAt = '';
-                    if (!empty($existingResponses) && isset($existingResponses[0]['submitted_at'])) {
-                        $submittedAt = date('M j, Y \a\t g:i A', strtotime($existingResponses[0]['submitted_at']));
-                    }
-                ?>
-                <h6 class="mb-0 d-flex justify-content-between align-items-center">
-                    <span>
-                        <i class="fas fa-check-circle text-success me-2"></i>
-                        Your Previous Feedback
-                    </span>
-                    <?php if ($submittedAt): ?>
+        <!-- Show existing responses -->
+        <div class="mt-4">
+            <h5>Your Responses:</h5>
+            <div class="responses-container">
+                <?php foreach ($existingResponses as $response): ?>
+                    <div class="response-item mb-3 p-3 border rounded">
+                        <h6><?= htmlspecialchars($response['question_title']) ?></h6>
+                        <div class="response-value">
+                            <?php
+                            switch ($response['response_type']) {
+                                case 'rating':
+                                    echo '<span class="badge bg-primary">Rating: ' . $response['rating_value'] . '</span>';
+                                    break;
+                                case 'text':
+                                case 'short_answer':
+                                case 'long_answer':
+                                    echo '<p class="mb-0">' . htmlspecialchars($response['text_response']) . '</p>';
+                                    break;
+                                case 'choice':
+                                case 'multi_choice':
+                                case 'dropdown':
+                                    echo '<span class="badge bg-secondary">' . htmlspecialchars($response['option_text']) . '</span>';
+                                    break;
+                                case 'checkbox':
+                                    // For checkbox, display all selected options
+                                    if (isset($response['checkbox_options']) && is_array($response['checkbox_options'])) {
+                                        foreach ($response['checkbox_options'] as $optionText) {
+                                            echo '<span class="badge bg-info me-1 mb-1">' . htmlspecialchars($optionText) . '</span>';
+                                        }
+                                    } elseif (isset($response['option_text'])) {
+                                        echo '<span class="badge bg-info">' . htmlspecialchars($response['option_text']) . '</span>';
+                                    } else {
+                                        echo '<span class="badge bg-warning">No options selected</span>';
+                                    }
+                                    break;
+                                case 'file':
+                                    echo '<a href="' . htmlspecialchars($response['file_response']) . '" target="_blank" class="btn btn-sm btn-outline-primary">
+                                            <i class="fas fa-download me-1"></i>Download File
+                                          </a>';
+                                    break;
+                                default:
+                                    echo '<span class="text-muted">Response submitted</span>';
+                                    break;
+                            }
+                            ?>
+                        </div>
                         <small class="text-muted">
-                            Submitted: <?= $submittedAt ?>
+                            Submitted: <?= date('M j, Y g:i A', strtotime($response['submitted_at'])) ?>
                         </small>
-                    <?php endif; ?>
-                </h6>
+                    </div>
+                <?php endforeach; ?>
             </div>
         </div>
-    <?php endif; ?>
-
+    <?php else: ?>
     <!-- Feedback Form -->
     <div class="card" id="feedbackFormCard">
         <div class="card-header">
@@ -281,3 +312,4 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 });
 </script>
+<?php endif; ?>

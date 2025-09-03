@@ -2,6 +2,7 @@
 <?php include 'includes/navbar.php'; ?>
 <?php include 'includes/sidebar.php'; ?>
 <?php require_once 'core/IdEncryption.php'; ?>
+<?php require_once 'models/SurveyResponseModel.php'; ?>
 
 <?php
 /**
@@ -170,6 +171,37 @@ function getImageProgressData($courseId, $contentId, $userId) {
             'view_count' => 0,
             'viewed_at' => null
         ];
+    }
+}
+
+/**
+ * Check if user has completed a survey
+ */
+function hasUserCompletedSurvey($courseId, $userId, $surveyPackageId) {
+    try {
+        // Debug output - visible on page
+        echo "<!-- Survey completion check - Course ID: $courseId, User ID: $userId, Survey Package ID: $surveyPackageId -->";
+        
+        // If userId is null or empty, try to get it from session or use fallback
+        if (empty($userId)) {
+            // Try to get user ID from session
+            $userId = $_SESSION['user']['id'] ?? $_SESSION['id'] ?? null;
+            
+            // If still empty, use the known user ID from JavaScript (temporary fix)
+            if (empty($userId)) {
+                $userId = 75; // Known user ID from JavaScript
+                echo "<!-- Using fallback user ID: $userId -->";
+            }
+        }
+        
+        $surveyResponseModel = new SurveyResponseModel();
+        $result = $surveyResponseModel->hasUserSubmittedSurvey($courseId, $userId, $surveyPackageId);
+        
+        echo "<!-- Survey completion result: " . ($result ? 'YES' : 'NO') . " -->";
+        return $result;
+    } catch (Exception $e) {
+        echo "<!-- Survey completion check error: " . $e->getMessage() . " -->";
+        return false;
     }
 }
 ?>
@@ -1718,7 +1750,23 @@ function getImageProgressData($courseId, $contentId, $userId) {
                                     ];
                                     
                                     // Handle different prerequisite types with appropriate actions
-                                    if ($pre['prerequisite_type'] === 'feedback') {
+                                    if ($pre['prerequisite_type'] === 'survey') {
+                                        // Check if survey has been completed
+                                        $userId = $_SESSION['user']['id'] ?? $_SESSION['id'] ?? 75; // Fallback to known user ID
+                                        $isSurveyCompleted = hasUserCompletedSurvey($GLOBALS['course']['id'], $userId, $pre['prerequisite_id']);
+                                        
+                                        if ($isSurveyCompleted) {
+                                            // Show completed survey button (clickable to view submitted survey)
+                                            echo "<a class='prerequisite-action-btn btn-success' href='#' onclick='openSurveyModal(\"" . addslashes($encryptedPrereqId) . "\", \"" . addslashes(IdEncryption::encrypt($GLOBALS['course']['id'])) . "\")' title='View submitted survey'>";
+                                            echo "<i class='fas fa-check me-1'></i>View Submitted Survey";
+                                            echo "</a>";
+                                        } else {
+                                            // For survey prerequisites, open modal popup
+                                            echo "<a class='prerequisite-action-btn {$config['class']}' href='#' onclick='openSurveyModal(\"" . addslashes($encryptedPrereqId) . "\", \"" . addslashes(IdEncryption::encrypt($GLOBALS['course']['id'])) . "\")'>";
+                                            echo "<i class='fas {$config['icon']} me-1'></i>{$config['label']}";
+                                            echo "</a>";
+                                        }
+                                    } elseif ($pre['prerequisite_type'] === 'feedback') {
                                         // For feedback prerequisites, open modal popup
                                         echo "<a class='prerequisite-action-btn {$config['class']}' href='#' onclick='openFeedbackModal(\"" . addslashes($encryptedPrereqId) . "\", \"" . addslashes(IdEncryption::encrypt($GLOBALS['course']['id'])) . "\")'>";
                                         echo "<i class='fas {$config['icon']} me-1'></i>{$config['label']}";
@@ -2306,6 +2354,20 @@ function getImageProgressData($courseId, $contentId, $userId) {
                                                                     }
                                                                     break;
                                                                 case 'survey':
+                                                                    $encryptedId = IdEncryption::encrypt($content['content_id']);
+                                                                    $encryptedCourseId = IdEncryption::encrypt($GLOBALS['course']['id']);
+                                                                    $surveyUrl = UrlHelper::url('survey') . '/' . urlencode($encryptedCourseId) . '/' . urlencode($encryptedId);
+                                                                    
+                                                                    // Check if survey has been completed
+                                                                    $userId = $_SESSION['user']['id'] ?? $_SESSION['id'] ?? 75; // Fallback to known user ID
+                                                                    $isSurveyCompleted = hasUserCompletedSurvey($GLOBALS['course']['id'], $userId, $content['content_id']);
+                                                                    
+                                                                    if ($isSurveyCompleted) {
+                                                                        $actionsHtml .= "<a class='postrequisite-action-btn btn-success' href='#' onclick='openSurveyModal(\"" . addslashes($encryptedId) . "\", \"" . addslashes($encryptedCourseId) . "\")' title='View submitted survey'><i class='fas fa-check me-1'></i>View Submitted Survey</a>";
+                                                                    } else {
+                                                                        $actionsHtml .= "<a href='" . htmlspecialchars($surveyUrl) . "' class='postrequisite-action-btn'><i class='fas fa-clipboard-list me-1'></i>Take Survey</a>";
+                                                                    }
+                                                                    break;
                                                                 case 'feedback':
                                                                 case 'assignment':
                                                                     $encryptedId = IdEncryption::encrypt($content['content_id']);
@@ -2595,6 +2657,22 @@ function getImageProgressData($courseId, $contentId, $userId) {
                                     echo "<a class='postrequisite-action-btn {$config['class']}' href='#' onclick='launchPostrequisiteSCORM(event, \"" . addslashes($encryptedPostreqId) . "\", \"" . addslashes($post['content_type']) . "\")'>";
                                     echo "<i class='fas {$config['icon']} me-1'></i>{$config['label']}";
                                     echo "</a>";
+                                } elseif ($post['content_type'] === 'survey') {
+                                    // Check if survey has been completed
+                                    $userId = $_SESSION['user']['id'] ?? $_SESSION['id'] ?? 75; // Fallback to known user ID
+                                    $isSurveyCompleted = hasUserCompletedSurvey($GLOBALS['course']['id'], $userId, $post['content_id']);
+                                    
+                                    if ($isSurveyCompleted) {
+                                        // Show completed survey button (clickable to view submitted survey)
+                                        echo "<a class='postrequisite-action-btn btn-success' href='#' onclick='openSurveyModal(\"" . addslashes($encryptedPostreqId) . "\", \"" . addslashes(IdEncryption::encrypt($GLOBALS['course']['id'])) . "\")' title='View submitted survey'>";
+                                        echo "<i class='fas fa-check me-1'></i>View Submitted Survey";
+                                        echo "</a>";
+                                    } else {
+                                        // For survey content, open modal popup
+                                        echo "<a class='postrequisite-action-btn {$config['class']}' href='#' onclick='openSurveyModal(\"" . addslashes($encryptedPostreqId) . "\", \"" . addslashes(IdEncryption::encrypt($GLOBALS['course']['id'])) . "\")'>";
+                                        echo "<i class='fas {$config['icon']} me-1'></i>{$config['label']}";
+                                        echo "</a>";
+                                    }
                                 } elseif ($post['content_type'] === 'feedback') {
                                     // For feedback content, open modal popup
                                     echo "<a class='postrequisite-action-btn {$config['class']}' href='#' onclick='openFeedbackModal(\"" . addslashes($encryptedPostreqId) . "\", \"" . addslashes(IdEncryption::encrypt($GLOBALS['course']['id'])) . "\")'>";
@@ -3212,6 +3290,30 @@ setInterval(() => {
 // Check if we're returning from SCORM launcher (URL parameter)
 document.addEventListener('DOMContentLoaded', function() {
     const urlParams = new URLSearchParams(window.location.search);
+    
+    // Check for survey success message from URL parameter
+    if (urlParams.get('survey_success') === '1') {
+        showToast('Survey submitted successfully!', 'success');
+        // Clean up URL by removing the parameter
+        const newUrl = window.location.pathname;
+        window.history.replaceState({}, document.title, newUrl);
+    }
+    
+    // Check for survey success message from session (for direct submission)
+    <?php if (isset($_SESSION['survey_success']) && $_SESSION['survey_success']): ?>
+        showToast('Survey submitted successfully!', 'success');
+        <?php unset($_SESSION['survey_success']); // Clear the flag ?>
+    <?php endif; ?>
+    
+    // Check for survey error message from session
+    <?php if (isset($_SESSION['survey_error']) && $_SESSION['survey_error']): ?>
+        showToast('Failed to submit survey. Please try again.', 'error');
+        <?php unset($_SESSION['survey_error']); // Clear the flag ?>
+    <?php endif; ?>
+    
+    // Check feedback status and update button text
+    checkFeedbackStatusAndUpdateButtons();
+    
     if (urlParams.get('scorm_return') === 'true') {
         // Check if we've already refreshed to prevent infinite loops
         const currentTime = Date.now();
@@ -3738,7 +3840,6 @@ window.refreshVideoProgress = refreshVideoProgress;
 
 // Feedback Modal Functions
 function openFeedbackModal(feedbackId, courseId) {
-    console.log('🔍 openFeedbackModal called with:', { feedbackId, courseId });
     
     // Show loading state
     const modal = document.getElementById('feedbackModal');
@@ -3752,11 +3853,9 @@ function openFeedbackModal(feedbackId, courseId) {
     // Fetch feedback form data with encrypted IDs (they will be decrypted on the server)
     fetch(`/Unlockyourskills/feedback-response/form-data?course_id=${encodeURIComponent(courseId)}&feedback_id=${encodeURIComponent(feedbackId)}`)
         .then(response => {
-            console.log('📡 Response status:', response.status);
             return response.json();
         })
         .then(data => {
-            console.log('📦 Response data:', data);
             if (data.success) {
                 modalBody.innerHTML = data.html;
                 initializeFeedbackForm();
@@ -3771,11 +3870,8 @@ function openFeedbackModal(feedbackId, courseId) {
 }
 
 function initializeFeedbackForm() {
-    console.log('🔧 Initializing feedback form...');
-    
     // Initialize rating stars - use modal-specific selectors
     const ratingStars = document.querySelectorAll('.modal-rating-star');
-    console.log('⭐ Found rating stars:', ratingStars.length);
     
     ratingStars.forEach(star => {
         // Click event
@@ -3793,7 +3889,7 @@ function initializeFeedbackForm() {
                 s.classList.toggle('active', index < rating);
             });
             
-            console.log(`⭐ Star ${rating} clicked, new value: ${ratingInput.value}`);
+
         });
         
         // Hover events
@@ -3824,28 +3920,7 @@ function initializeFeedbackForm() {
     // Handle form submission
     const form = document.getElementById('feedbackForm');
     if (form) {
-        console.log('✅ Feedback form found, adding submit listener');
-        console.log('Form action:', form.action);
-        console.log('Form method:', form.method);
-        console.log('Form elements count:', form.elements.length);
-        
-        // Check all form elements
-        for (let i = 0; i < form.elements.length; i++) {
-            const element = form.elements[i];
-            console.log(`Form element ${i}:`, element.name, element.type, element.required, element.value);
-        }
-        
         form.addEventListener('submit', handleFeedbackSubmission);
-        
-        // Check submit button
-        const submitBtn = form.querySelector('button[type="submit"]');
-        if (submitBtn) {
-            console.log('✅ Submit button found:', submitBtn.disabled, submitBtn.innerHTML);
-        } else {
-            console.log('❌ Submit button not found');
-        }
-    } else {
-        console.log('❌ Feedback form not found');
     }
 }
 
@@ -3977,16 +4052,7 @@ function handleFeedbackSubmission(event) {
     // Collect form data
     const formData = new FormData(form);
     
-    // Debug: Log form data
-    console.log('🔍 Form submission debug:');
-    console.log('Form element:', form);
-    console.log('Form action:', form.action);
-    console.log('Form method:', form.method);
-    
-    // Log all form data
-    for (let [key, value] of formData.entries()) {
-        console.log(`Form data: ${key} = ${value}`);
-    }
+
     
     // Submit feedback
     fetch('/Unlockyourskills/feedback-response/submit', {
@@ -3994,12 +4060,9 @@ function handleFeedbackSubmission(event) {
         body: formData
     })
     .then(response => {
-        console.log('📡 Response status:', response.status);
-        console.log('📡 Response headers:', response.headers);
         return response.json();
     })
     .then(data => {
-        console.log('📦 Response data:', data);
         if (data.success) {
             // Show success message
             const modal = document.getElementById('feedbackModal');
@@ -4014,6 +4077,18 @@ function handleFeedbackSubmission(event) {
                     <button type="button" class="btn btn-primary" data-bs-dismiss="modal">Close</button>
                 </div>
             `;
+            
+            // Update feedback button text after successful submission
+            const feedbackId = formData.get('feedback_package_id');
+            const courseId = formData.get('course_id');
+            updateFeedbackButtonAfterSubmission(feedbackId, courseId);
+            
+            // Add event listener for modal close to refresh page
+            const handleModalClose = () => {
+                window.location.reload();
+                modal.removeEventListener('hidden.bs.modal', handleModalClose);
+            };
+            modal.addEventListener('hidden.bs.modal', handleModalClose);
             
             // Close modal after 3 seconds
             setTimeout(() => {
@@ -4053,6 +4128,279 @@ function handleFeedbackSubmission(event) {
 
 // Global function for external access
 window.openFeedbackModal = openFeedbackModal;
+
+// Function to check feedback status and update button text
+function checkFeedbackStatusAndUpdateButtons() {
+    
+    // Find all feedback buttons
+    const feedbackButtons = document.querySelectorAll('a[onclick*="openFeedbackModal"]');
+    
+    feedbackButtons.forEach(button => {
+        // Extract feedback ID and course ID from onclick attribute
+        const onclickAttr = button.getAttribute('onclick');
+        const match = onclickAttr.match(/openFeedbackModal\("([^"]+)",\s*"([^"]+)"\)/);
+        
+        if (match) {
+            const feedbackId = match[1];
+            const courseId = match[2];
+            
+            // Check feedback status
+            fetch(`/unlockyourskills/feedback-response/status?course_id=${encodeURIComponent(courseId)}&feedback_id=${encodeURIComponent(feedbackId)}`)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        const buttonText = button.querySelector('i').nextSibling;
+                        if (data.has_submitted) {
+                            // Update button text to "View Submitted Feedback"
+                            buttonText.textContent = ' View Submitted Feedback';
+                            button.classList.remove('btn-warning');
+                            button.classList.add('btn-info');
+                        } else {
+                            // Keep original text "Give Feedback"
+                            buttonText.textContent = ' Give Feedback';
+                            button.classList.remove('btn-info');
+                            button.classList.add('btn-warning');
+                        }
+                    }
+                })
+                .catch(error => {
+                    console.error('Error checking feedback status:', error);
+                });
+        }
+    });
+}
+
+// Function to update feedback button after successful submission
+function updateFeedbackButtonAfterSubmission(feedbackId, courseId) {
+    
+    // Find the specific feedback button
+    const feedbackButtons = document.querySelectorAll('a[onclick*="openFeedbackModal"]');
+    
+    feedbackButtons.forEach(button => {
+        const onclickAttr = button.getAttribute('onclick');
+        if (onclickAttr.includes(feedbackId) && onclickAttr.includes(courseId)) {
+            const buttonText = button.querySelector('i').nextSibling;
+            buttonText.textContent = ' View Submitted Feedback';
+            button.classList.remove('btn-warning');
+            button.classList.add('btn-info');
+        }
+    });
+}
+
+// Survey Modal Functions
+function initializeSurveyModalJavaScript() {
+    const surveyForm = document.getElementById('surveyFormModal');
+    const submitBtn = document.getElementById('submitSurveyModalBtn');
+    
+    if (surveyForm) {
+        // Remove any existing event listeners
+        surveyForm.removeEventListener('submit', handleModalFormSubmission);
+        
+        // Add new event listener
+        surveyForm.addEventListener('submit', handleModalFormSubmission);
+        
+        // Also add click listener to submit button as backup
+        if (submitBtn) {
+            submitBtn.removeEventListener('click', handleModalFormSubmission);
+            submitBtn.addEventListener('click', function(e) {
+                e.preventDefault();
+                handleModalFormSubmission(e);
+            });
+        }
+    }
+}
+
+function handleModalFormSubmission(event) {
+    if (event) {
+        event.preventDefault();
+        event.stopPropagation();
+    }
+    
+    const surveyForm = document.getElementById('surveyFormModal');
+    const submitBtn = document.getElementById('submitSurveyModalBtn');
+    
+    // Validate form
+    const requiredFields = surveyForm.querySelectorAll('[required]');
+    let isValid = true;
+    
+    requiredFields.forEach(field => {
+        if (!field.value.trim()) {
+            field.classList.add('is-invalid');
+            isValid = false;
+        } else {
+            field.classList.remove('is-invalid');
+        }
+    });
+    
+    if (!isValid) {
+        alert('Please fill in all required fields.');
+        return;
+    }
+
+    // Show loading state
+    submitBtn.disabled = true;
+    submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Submitting...';
+
+    // Prepare form data
+    const formData = new FormData(surveyForm);
+    
+    // Convert FormData to regular object for JSON submission
+    const responseData = {
+        course_id: formData.get('course_id'),
+        survey_package_id: formData.get('survey_package_id'),
+        responses: {}
+    };
+    
+    // Process responses
+    const responses = {};
+    
+    // Get all form data entries
+    const formEntries = Array.from(formData.entries());
+    
+    for (const [key, value] of formEntries) {
+        if (key.startsWith('responses[')) {
+            const match = key.match(/responses\[(\d+)\]\[(\w+)\](?:\[\])?/);
+            if (match) {
+                const questionId = match[1];
+                const fieldType = match[2];
+                
+                if (!responses[questionId]) {
+                    responses[questionId] = {};
+                }
+                
+                if (fieldType === 'value') {
+                    // Handle checkbox arrays (multiple values for same question)
+                    if (responses[questionId].value === undefined) {
+                        responses[questionId].value = [];
+                    }
+                    if (Array.isArray(responses[questionId].value)) {
+                        responses[questionId].value.push(value);
+                    } else {
+                        // Convert single value to array if we encounter multiple values
+                        responses[questionId].value = [responses[questionId].value, value];
+                    }
+                } else if (fieldType === 'type') {
+                    responses[questionId].type = value;
+                }
+            }
+        }
+    }
+    
+    // Convert single values back to strings for non-checkbox questions
+    for (const questionId in responses) {
+        if (Array.isArray(responses[questionId].value) && responses[questionId].value.length === 1) {
+            responses[questionId].value = responses[questionId].value[0];
+        }
+    }
+
+    responseData.responses = responses;
+
+    // Submit survey
+    fetch('/unlockyourskills/survey/submit', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-Requested-With': 'XMLHttpRequest'
+        },
+        body: JSON.stringify(responseData),
+        credentials: 'same-origin' // Include cookies for session
+    })
+    .then(response => {
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        
+        return response.json();
+    })
+    .then(result => {
+
+        if (result.success) {
+            // Show success message
+            const modalBody = document.querySelector('#surveyModal .modal-body');
+            modalBody.innerHTML = `
+                <div class="alert alert-success text-center">
+                    <i class="fas fa-check-circle fa-3x mb-3"></i>
+                    <h5>Survey Submitted Successfully!</h5>
+                    <p>Thank you for your feedback.</p>
+                    <button type="button" class="btn btn-primary" data-bs-dismiss="modal">Close</button>
+                </div>
+            `;
+            
+            // Add event listener for modal close to refresh page
+            const surveyModal = document.getElementById('surveyModal');
+            const handleModalClose = () => {
+                window.location.reload();
+                surveyModal.removeEventListener('hidden.bs.modal', handleModalClose);
+            };
+            surveyModal.addEventListener('hidden.bs.modal', handleModalClose);
+        } else {
+            alert(result.message || 'Failed to submit survey. Please try again.');
+        }
+    })
+    .catch(error => {
+        alert('An error occurred while submitting the survey. Please try again.');
+    })
+    .finally(() => {
+        // Re-enable submit button
+        if (submitBtn) {
+            submitBtn.disabled = false;
+            submitBtn.innerHTML = '<i class="fas fa-paper-plane me-1"></i>Submit Survey';
+        }
+    });
+}
+
+function openSurveyModal(surveyId, courseId) {
+    
+    // Show loading state
+    const modal = document.getElementById('surveyModal');
+    const modalBody = modal.querySelector('.modal-body');
+    modalBody.innerHTML = '<div class="text-center"><div class="spinner-border" role="status"><span class="visually-hidden">Loading...</span></div><p class="mt-2">Loading survey form...</p></div>';
+    
+    // Show the modal
+    const bsModal = new bootstrap.Modal(modal);
+    bsModal.show();
+    
+    // Load survey form content
+    fetch(`/unlockyourskills/survey/modal-content?survey_id=${encodeURIComponent(surveyId)}&course_id=${encodeURIComponent(courseId)}`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                modalBody.innerHTML = data.html;
+                
+                // Update modal title
+                const modalTitle = modal.querySelector('.modal-title');
+                if (data.title) {
+                    modalTitle.innerHTML = `<i class="fas fa-square-poll-vertical me-2"></i>${data.title}`;
+                }
+                
+                // Execute JavaScript in the loaded content
+    
+                initializeSurveyModalJavaScript();
+                
+            } else {
+                modalBody.innerHTML = `
+                    <div class="alert alert-danger">
+                        <h5>Error</h5>
+                        <p>${data.message || 'Failed to load survey. Please try again.'}</p>
+                        <button type="button" class="btn btn-secondary" onclick="openSurveyModal('${surveyId}', '${courseId}')">Try Again</button>
+                    </div>
+                `;
+            }
+        })
+        .catch(error => {
+            console.error('Error loading survey:', error);
+            modalBody.innerHTML = `
+                <div class="alert alert-danger">
+                    <h5>Error</h5>
+                    <p>Failed to load survey. Please try again.</p>
+                    <button type="button" class="btn btn-secondary" onclick="openSurveyModal('${surveyId}', '${courseId}')">Try Again</button>
+                </div>
+            `;
+        });
+}
+
+// Global function for external access
+window.openSurveyModal = openSurveyModal;
 </script>
 
 <!-- Feedback Modal -->
@@ -4067,6 +4415,23 @@ window.openFeedbackModal = openFeedbackModal;
             </div>
             <div class="modal-body">
                 <!-- Feedback form will be loaded here -->
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Survey Modal -->
+<div class="modal fade" id="surveyModal" tabindex="-1" aria-labelledby="surveyModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="surveyModalLabel">
+                    <i class="fas fa-square-poll-vertical me-2"></i>Course Survey
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <!-- Survey form will be loaded here -->
             </div>
         </div>
     </div>

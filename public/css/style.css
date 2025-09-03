@@ -1,5 +1,413 @@
 /* Unlock Your Skills - Complete Navbar, Sidebar, and Manage Portal CSS */
 
+/* ===== SURVEY FORM STYLES ===== */
+.survey-form {
+    max-width: 100%;
+}
+
+.question-item {
+    background: #fff;
+    border: 1px solid #e0e0e0;
+    border-radius: 8px;
+    transition: all 0.3s ease;
+    margin-bottom: 1.5rem;
+}
+
+.question-item:hover {
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    border-color: #007bff;
+}
+
+.question-item.has-error {
+    border-color: #dc3545;
+    box-shadow: 0 0 0 0.2rem rgba(220, 53, 69, 0.25);
+}
+
+.question-header {
+    border-bottom: 1px solid #f0f0f0;
+    padding-bottom: 1rem;
+    margin-bottom: 1rem;
+}
+
+.question-title {
+    color: #333;
+    font-weight: 600;
+    margin-bottom: 0.5rem;
+}
+
+.question-number {
+    background: #007bff;
+    color: white;
+    border-radius: 50%;
+    width: 30px;
+    height: 30px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.9rem;
+    font-weight: bold;
+    margin-right: 0.75rem;
+}
+
+.question-media {
+    text-align: center;
+    margin: 1rem 0;
+}
+
+.question-media img {
+    max-width: 100%;
+    height: auto;
+    border-radius: 6px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.question-media video {
+    border-radius: 6px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+/* Rating Response Styles */
+.rating-response {
+    padding: 1rem 0;
+}
+
+.rating-scale {
+    font-size: 0.9rem;
+    color: #666;
+    margin-bottom: 1rem;
+}
+
+.rating-options {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1rem;
+    align-items: center;
+}
+
+.rating-options .form-check {
+    margin-bottom: 0;
+}
+
+.rating-options .form-check-input {
+    width: 1.2rem;
+    height: 1.2rem;
+    margin-top: 0;
+}
+
+.rating-options .form-check-label {
+    font-size: 1.1rem;
+    padding-left: 0.5rem;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.rating-options .form-check-label:hover {
+    color: #007bff;
+    transform: scale(1.1);
+}
+
+.rating-options .form-check-label.text-primary {
+    color: #007bff !important;
+    font-weight: bold;
+}
+
+/* Choice Response Styles */
+.choice-response {
+    padding: 0.5rem 0;
+}
+
+.choice-response .form-check {
+    padding: 0.75rem;
+    border: 1px solid #e9ecef;
+    border-radius: 6px;
+    margin-bottom: 0.5rem;
+    transition: all 0.2s ease;
+}
+
+.choice-response .form-check:hover {
+    background-color: #f8f9fa;
+    border-color: #007bff;
+}
+
+.choice-response .form-check-input:checked + .form-check-label {
+    color: #007bff;
+    font-weight: 600;
+}
+
+.choice-response .form-check-input:checked ~ .form-check {
+    background-color: #e7f3ff;
+    border-color: #007bff;
+}
+
+.option-media {
+    margin-top: 0.5rem;
+}
+
+.option-media img {
+    border-radius: 4px;
+    border: 1px solid #dee2e6;
+}
+
+/* Text Response Styles */
+.text-response textarea {
+    border-radius: 6px;
+    border: 1px solid #ced4da;
+    transition: border-color 0.2s ease;
+}
+
+.text-response textarea:focus {
+    border-color: #007bff;
+    box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
+}
+
+/* File Response Styles */
+.file-response {
+    padding: 1rem 0;
+}
+
+.file-response input[type="file"] {
+    border: 2px dashed #ced4da;
+    border-radius: 6px;
+    padding: 1rem;
+    background-color: #f8f9fa;
+    transition: all 0.2s ease;
+}
+
+.file-response input[type="file"]:hover {
+    border-color: #007bff;
+    background-color: #e7f3ff;
+}
+
+.file-info {
+    margin-top: 1rem;
+}
+
+/* Response Item Styles (for submitted surveys) */
+.response-item {
+    background: #f8f9fa;
+    border-left: 4px solid #28a745;
+}
+
+.response-item h6 {
+    color: #333;
+    font-weight: 600;
+    margin-bottom: 0.75rem;
+}
+
+.response-value {
+    margin-bottom: 0.5rem;
+}
+
+.response-value .badge {
+    font-size: 0.9rem;
+    padding: 0.5rem 0.75rem;
+}
+
+/* Form Actions */
+.form-actions {
+    border-top: 1px solid #e0e0e0;
+    padding-top: 2rem;
+    margin-top: 2rem;
+}
+
+/* Survey Header Styles */
+.survey-header {
+    background: linear-gradient(135deg, #007bff 0%, #0056b3 100%);
+    color: white;
+    border-radius: 8px;
+    margin-bottom: 2rem;
+}
+
+.survey-header .card-header {
+    background: transparent;
+    border: none;
+}
+
+/* Loading States */
+.btn:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+/* Toast Container */
+.toast-container {
+    z-index: 1055;
+}
+
+/* Auto-save Indicator */
+.autosave-indicator {
+    z-index: 1050;
+}
+
+/* Progress Indicator */
+.survey-progress {
+    background: #e9ecef;
+    border-radius: 10px;
+    height: 8px;
+    margin-bottom: 2rem;
+    overflow: hidden;
+}
+
+.survey-progress-bar {
+    background: linear-gradient(90deg, #007bff, #28a745);
+    height: 100%;
+    transition: width 0.3s ease;
+    border-radius: 10px;
+}
+
+/* Mobile Responsiveness */
+@media (max-width: 768px) {
+    .question-item {
+        margin-bottom: 1rem;
+        padding: 1rem;
+    }
+    
+    .rating-options {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 0.5rem;
+    }
+    
+    .form-actions {
+        flex-direction: column;
+        gap: 1rem;
+    }
+    
+    .form-actions .btn {
+        width: 100%;
+    }
+    
+    .question-number {
+        width: 25px;
+        height: 25px;
+        font-size: 0.8rem;
+        margin-right: 0.5rem;
+    }
+}
+
+/* Dark Mode Support */
+@media (prefers-color-scheme: dark) {
+    .question-item {
+        background: #2d3748;
+        border-color: #4a5568;
+        color: #e2e8f0;
+    }
+    
+    .question-title {
+        color: #e2e8f0;
+    }
+    
+    .choice-response .form-check {
+        background-color: #4a5568;
+        border-color: #718096;
+    }
+    
+    .choice-response .form-check:hover {
+        background-color: #2d3748;
+    }
+    
+    .response-item {
+        background: #4a5568;
+        color: #e2e8f0;
+    }
+}
+
+/* Animation for form submission */
+@keyframes fadeInUp {
+    from {
+        opacity: 0;
+        transform: translateY(30px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.question-item {
+    animation: fadeInUp 0.5s ease-out;
+}
+
+.question-item:nth-child(1) { animation-delay: 0.1s; }
+.question-item:nth-child(2) { animation-delay: 0.2s; }
+.question-item:nth-child(3) { animation-delay: 0.3s; }
+.question-item:nth-child(4) { animation-delay: 0.4s; }
+.question-item:nth-child(5) { animation-delay: 0.5s; }
+
+/* ===== SURVEY MODAL SPECIFIC STYLES ===== */
+#surveyModal .modal-dialog {
+    max-width: 800px;
+}
+
+#surveyModal .question-item {
+    margin-bottom: 1rem;
+    padding: 1rem;
+}
+
+#surveyModal .question-title {
+    font-size: 1rem;
+    margin-bottom: 0.5rem;
+}
+
+#surveyModal .question-number {
+    width: 25px;
+    height: 25px;
+    font-size: 0.8rem;
+    margin-right: 0.5rem;
+}
+
+#surveyModal .rating-options {
+    flex-wrap: wrap;
+    gap: 0.5rem;
+}
+
+#surveyModal .rating-options .form-check {
+    margin-bottom: 0.25rem;
+}
+
+#surveyModal .choice-response .form-check {
+    margin-bottom: 0.5rem;
+}
+
+#surveyModal .form-actions {
+    border-top: 1px solid #e0e0e0;
+    padding-top: 1rem;
+    margin-top: 1rem;
+}
+
+#surveyModal .response-item {
+    margin-bottom: 0.75rem;
+    padding: 0.75rem;
+}
+
+#surveyModal .response-item h6 {
+    font-size: 0.9rem;
+    margin-bottom: 0.5rem;
+}
+
+/* Modal scrollable content */
+#surveyModal .modal-body {
+    max-height: 70vh;
+    overflow-y: auto;
+}
+
+/* Responsive adjustments for modal */
+@media (max-width: 768px) {
+    #surveyModal .modal-dialog {
+        margin: 0.5rem;
+        max-width: calc(100% - 1rem);
+    }
+    
+    #surveyModal .question-item {
+        padding: 0.75rem;
+    }
+    
+    #surveyModal .rating-options {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+}
+
 /* ✅ Fix Body Layout */
 body {
     background-color: #f4f4f4;
@@ -8250,4 +8658,20 @@ body select:focus,
     .modal-rating-star {
         font-size: 20px;
     }
+}
+
+/* ===== SURVEY OPTION MEDIA STYLES ===== */
+#surveyModal .option-media,
+.survey-form .option-media {
+    pointer-events: auto;
+}
+#surveyModal .option-media video,
+.survey-form .option-media video {
+    pointer-events: auto;
+    cursor: pointer;
+}
+#surveyModal .option-media img,
+.survey-form .option-media img {
+    pointer-events: auto;
+    cursor: pointer;
 }

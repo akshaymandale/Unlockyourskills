@@ -97,10 +97,51 @@ class FeedbackResponseModel {
             $stmt = $this->conn->prepare($sql);
             $stmt->execute($params);
             
-            return $stmt->fetchAll(PDO::FETCH_ASSOC);
+            $responses = $stmt->fetchAll(PDO::FETCH_ASSOC);
+            
+            // Process checkbox responses to get actual option texts
+            foreach ($responses as &$response) {
+                if ($response['response_type'] === 'checkbox' && !empty($response['response_data'])) {
+                    $selectedOptionIds = json_decode($response['response_data'], true);
+                    
+                    // Handle both single values and arrays
+                    if (!is_array($selectedOptionIds)) {
+                        // Single value - convert to array
+                        $selectedOptionIds = [$selectedOptionIds];
+                    }
+                    
+                    if (is_array($selectedOptionIds)) {
+                        $optionTexts = [];
+                        foreach ($selectedOptionIds as $optionId) {
+                            $optionText = $this->getOptionTextById($optionId);
+                            if ($optionText) {
+                                $optionTexts[] = $optionText;
+                            }
+                        }
+                        $response['checkbox_options'] = $optionTexts;
+                    }
+                }
+            }
+            
+            return $responses;
         } catch (PDOException $e) {
-            error_log("Error getting feedback responses: " . $e->getMessage());
             return [];
+        }
+    }
+
+    /**
+     * Get option text by option ID
+     */
+    public function getOptionTextById($optionId) {
+        try {
+            $sql = "SELECT option_text FROM feedback_question_options WHERE id = ?";
+            $stmt = $this->conn->prepare($sql);
+            $stmt->execute([$optionId]);
+            $result = $stmt->fetch(PDO::FETCH_ASSOC);
+            return $result ? $result['option_text'] : null;
+        } catch (PDOException $e) {
+            error_log("Error getting feedback option text: " . $e->getMessage());
+            return null;
         }
     }
 

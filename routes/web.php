@@ -429,6 +429,18 @@ Router::get('/users/autocomplete', 'UserManagementController@getUserEmailsForAut
     Router::post('/surveys/import', 'SurveyQuestionController@import');
     
     // ===================================
+    // SURVEY RESPONSES
+    // ===================================
+    
+    // Survey Response Routes
+    Router::get('/survey/{courseId}/{surveyId}', 'SurveyResponseController@showSurvey');
+    Router::get('/survey/modal-content', 'SurveyResponseController@getModalContent');
+    Router::post('/survey/submit', 'SurveyResponseController@submitSurvey');
+    Router::get('/survey/responses', 'SurveyResponseController@getResponses');
+    Router::get('/survey/check-submission', 'SurveyResponseController@checkSubmission');
+    Router::get('/survey/course-surveys', 'SurveyResponseController@getCourseSurveys');
+    
+    // ===================================
     // FEEDBACK QUESTIONS
     // ===================================
 

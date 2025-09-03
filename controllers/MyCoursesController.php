@@ -92,6 +92,14 @@ class MyCoursesController {
         if (!$courseId) {
             UrlHelper::redirect('my-courses');
         }
+
+        // Handle survey submission if present in GET parameters
+        $surveySubmitted = false;
+        if (isset($_GET['responses']) && isset($_GET['course_id']) && isset($_GET['survey_package_id'])) {
+            $this->handleSurveySubmission();
+            $surveySubmitted = true;
+            // Don't return - continue processing the page
+        }
         require_once 'models/CourseModel.php';
         $courseModel = new CourseModel();
         $clientId = $_SESSION['user']['client_id'] ?? null;
@@ -619,4 +627,114 @@ class MyCoursesController {
         // Relative path within project
         return UrlHelper::url($url);
     }
+
+    /**
+     * Handle survey submission from GET parameters
+     */
+    private function handleSurveySubmission() {
+
+        
+        try {
+            // Get survey submission data from GET parameters
+            $courseId = $_GET['course_id'] ?? '';
+            $surveyPackageId = $_GET['survey_package_id'] ?? '';
+            $responses = $_GET['responses'] ?? [];
+            
+
+
+            if (empty($courseId) || empty($surveyPackageId) || empty($responses)) {
+
+                return;
+            }
+
+            // Decrypt IDs
+            $courseId = IdEncryption::decrypt($courseId);
+            $surveyPackageId = IdEncryption::decrypt($surveyPackageId);
+
+            if (!$courseId || !$surveyPackageId) {
+
+                return;
+            }
+
+
+
+            // Get the correct client_id from the course data to ensure consistency
+            require_once 'models/CourseModel.php';
+            $courseModel = new CourseModel();
+            $course = $courseModel->getCourseById($courseId);
+            
+            if (!$course) {
+
+                return;
+            }
+            
+            // Use the course's client_id to ensure data consistency
+            $clientId = $course['client_id'];
+            $userId = $_SESSION['id'];
+            
+
+
+            // Initialize survey model
+            require_once 'models/SurveyResponseModel.php';
+            $surveyResponseModel = new SurveyResponseModel();
+
+
+
+            // Process each response
+            foreach ($responses as $questionId => $responseData) {
+                $responseType = $responseData['type'] ?? '';
+                $responseValue = $responseData['value'] ?? '';
+
+                // Prepare data for database
+                $data = [
+                    'client_id' => $clientId,
+                    'course_id' => $courseId,
+                    'user_id' => $userId,
+                    'survey_package_id' => $surveyPackageId,
+                    'question_id' => $questionId,
+                    'response_type' => $responseType,
+                    'rating_value' => null,
+                    'text_response' => null,
+                    'choice_response' => null,
+                    'file_response' => null,
+                    'response_data' => null
+                ];
+
+                // Map response types to database fields
+                switch ($responseType) {
+                    case 'rating':
+                        $data['rating_value'] = intval($responseValue);
+                        break;
+                    case 'text':
+                        $data['text_response'] = $responseValue;
+                        break;
+                    case 'choice':
+                        $data['choice_response'] = $responseValue;
+                        break;
+                    case 'file':
+                        $data['file_response'] = $responseValue;
+                        break;
+                    default:
+                        $data['response_data'] = json_encode($responseValue);
+                        break;
+                }
+
+                // Save response
+                $surveyResponseModel->saveResponse($data);
+            }
+
+            // Set success flag in session instead of redirecting
+            $_SESSION['survey_success'] = true;
+            error_log("Survey submission completed successfully");
+            error_log("Session ID: " . ($_SESSION['id'] ?? 'NOT SET'));
+            error_log("Session user: " . (isset($_SESSION['user']) ? 'SET' : 'NOT SET'));
+
+        } catch (Exception $e) {
+            // Silent error handling - set error flag
+            $_SESSION['survey_error'] = true;
+            error_log("Survey submission error: " . $e->getMessage());
+        }
+    }
+
+
 } 
