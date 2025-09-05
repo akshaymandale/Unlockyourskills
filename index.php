@@ -34,6 +34,11 @@ if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
 
+// Debug session state
+error_log('[INDEX.PHP] Session ID: ' . session_id());
+error_log('[INDEX.PHP] Session status: ' . session_status());
+error_log('[INDEX.PHP] Session data: ' . json_encode($_SESSION));
+
 // ✅ Preserve user session (Avoid logging out on language change)
 $previousLang = $_SESSION['lang'] ?? 'en';
 

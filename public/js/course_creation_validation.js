@@ -298,8 +298,21 @@
         // Add state data to form data
         if (window.courseManagerState) {
             formData.append('modules', JSON.stringify(window.courseManagerState.modules || []));
-            formData.append('prerequisites', JSON.stringify(window.courseManagerState.prerequisites || []));
-            formData.append('post_requisites', JSON.stringify(window.courseManagerState.post_requisites || []));
+            
+            // Filter out title field from prerequisites since we're no longer storing it in the database
+            const prerequisitesForServer = (window.courseManagerState.prerequisites || []).map(item => {
+                const { title, ...itemWithoutTitle } = item;
+                return itemWithoutTitle;
+            });
+            formData.append('prerequisites', JSON.stringify(prerequisitesForServer));
+            
+            // Filter out title field from post_requisites since we're no longer storing it in the database
+            const postRequisitesForServer = (window.courseManagerState.post_requisites || []).map(item => {
+                const { title, ...itemWithoutTitle } = item;
+                return itemWithoutTitle;
+            });
+            formData.append('post_requisites', JSON.stringify(postRequisitesForServer));
+            
             formData.append('tags', JSON.stringify(window.courseManagerState.tags || []));
             formData.append('learning_objectives', JSON.stringify(window.courseManagerState.learningObjectives || []));
         }

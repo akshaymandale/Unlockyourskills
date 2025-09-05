@@ -163,6 +163,16 @@ document.addEventListener("DOMContentLoaded", function () {
         button.addEventListener("click", function () {
             const assessmentData = JSON.parse(this.dataset.assessment);
 
+            // Check if assessment is assigned to applicable courses and show warning
+            if (assessmentData.is_assigned_to_applicable_courses) {
+                if (typeof showSimpleToast === 'function') {
+                    showSimpleToast('Cannot edit assessment: Assessment is assigned to courses that are applicable to users and cannot be modified.', 'error');
+                } else {
+                    alert('Cannot edit assessment: Assessment is assigned to courses that are applicable to users and cannot be modified.');
+                }
+                return;
+            }
+
             /*assessmentTitle.value = assessmentData.title;
             numAttempts.value = assessmentData.num_attempts;
             passingPercentage.value = assessmentData.passing_percentage;
@@ -200,16 +210,12 @@ document.addEventListener("DOMContentLoaded", function () {
 
         const assessmentId = assessmentData.id;
     
-        fetch(`/unlockyourskills/vlr/assessment-packages/${assessmentId}`)
+        fetch(`vlr/assessment-packages/${assessmentId}`)
             .then(response => response.json())
             .then(assessmentData => {
-<<<<<<< HEAD
                 console.log('Assessment data received:', assessmentData);
                 console.log('Selected questions:', assessmentData.selected_questions);
                 console.log('Questions count:', assessmentData.selected_questions?.length || 0);
-=======
-                console.log(assessmentData);
->>>>>>> af75b4fbe579979a6b31bc9dbf713ea5cddebe83
 
                 // Add hidden input for assessment ID (crucial for update vs insert logic)
                 let assessmentIdInput = document.getElementById('assessmentId');
@@ -312,6 +318,10 @@ document.addEventListener("DOMContentLoaded", function () {
             assessmentModal.show();
         });
     });
+
+    // Delete Assessment Logic - Now handled by VLRConfirmations class
+    // The delete button click events are handled globally by vlr_confirmations.js
+    // which checks for assessment attempts and shows appropriate messages
 
     document.querySelector('button[data-bs-dismiss="modal"]').addEventListener('click', function () {
         assessmentForm.reset();

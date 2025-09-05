@@ -31,11 +31,12 @@ class CourseApplicabilityController {
     // Fetch applicability rules for a course (AJAX)
     public function getApplicability() {
         $courseId = $_GET['course_id'] ?? null;
+        $clientId = $_SESSION['user']['client_id'] ?? null;
         if (!$courseId) {
             echo json_encode(['success' => false, 'message' => 'Course ID required']);
             exit;
         }
-        $rules = $this->applicabilityModel->getApplicability($courseId);
+        $rules = $this->applicabilityModel->getApplicability($courseId, $clientId);
         $course = $this->courseModel->getCourseById($courseId);
         $courseName = $course['name'] ?? '';
         foreach ($rules as &$rule) {
@@ -50,6 +51,8 @@ class CourseApplicabilityController {
         $courseId = $_POST['course_id'] ?? null;
         $type = $_POST['applicability_type'] ?? null;
         $data = $_POST;
+        $clientId = $_SESSION['user']['client_id'] ?? null;
+        
         if (!$courseId) {
             echo json_encode(['success' => false, 'message' => 'Please select a course.']);
             exit;
@@ -58,7 +61,11 @@ class CourseApplicabilityController {
             echo json_encode(['success' => false, 'message' => 'Missing data']);
             exit;
         }
-        $result = $this->applicabilityModel->assignApplicability($courseId, $type, $data);
+        if (!$clientId) {
+            echo json_encode(['success' => false, 'message' => 'Client ID not found in session']);
+            exit;
+        }
+        $result = $this->applicabilityModel->assignApplicability($courseId, $type, $data, $clientId);
         if ($result === 'duplicate') {
             echo json_encode(['success' => false, 'message' => 'This applicability rule already exists for the selected course.']);
             exit;
@@ -70,11 +77,12 @@ class CourseApplicabilityController {
     // Remove applicability (AJAX)
     public function remove() {
         $id = $_POST['id'] ?? null;
+        $clientId = $_SESSION['user']['client_id'] ?? null;
         if (!$id) {
             echo json_encode(['success' => false, 'message' => 'Missing ID']);
             exit;
         }
-        $result = $this->applicabilityModel->removeApplicability($id);
+        $result = $this->applicabilityModel->removeApplicability($id, $clientId);
         echo json_encode(['success' => $result]);
         exit;
     }

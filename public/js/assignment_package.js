@@ -127,7 +127,7 @@ class AssignmentPackageManager {
         submitBtn.textContent = 'Saving...';
         submitBtn.disabled = true;
 
-        fetch('/unlockyourskills/vlr/assignment', {
+        fetch('vlr/assignment', {
             method: 'POST',
             body: formData
         })

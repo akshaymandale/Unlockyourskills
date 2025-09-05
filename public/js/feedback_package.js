@@ -139,7 +139,7 @@ document.addEventListener("DOMContentLoaded", function () {
             }
             feedbackIdInput.value = feedbackId;
 
-            fetch(`/unlockyourskills/vlr/feedback/${feedbackId}`)
+            fetch(`vlr/feedback/${feedbackId}`)
                 .then(response => response.json())
                 .then(data => {
                     console.log(data);

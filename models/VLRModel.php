@@ -11,6 +11,60 @@ class VLRModel
         $this->conn = $database->connect();
     }
 
+    // ✅ Get SCORM Package by ID
+    public function getScormPackageById($id, $clientId = null)
+    {
+        try {
+            $sql = "SELECT * FROM scorm_packages WHERE id = ? AND is_deleted = 0";
+            $params = [$id];
+
+            if ($clientId !== null) {
+                $sql .= " AND client_id = ?";
+                $params[] = $clientId;
+            }
+
+            $stmt = $this->conn->prepare($sql);
+            $stmt->execute($params);
+            $package = $stmt->fetch(PDO::FETCH_ASSOC);
+
+            if ($package) {
+                error_log("VLRModel getScormPackageById - Found package: " . json_encode($package));
+                return $package;
+            } else {
+                error_log("VLRModel getScormPackageById - No package found for ID: {$id}, Client ID: " . ($clientId ?? 'null'));
+                return null;
+            }
+        } catch (Exception $e) {
+            error_log("Error fetching SCORM package by ID: " . $e->getMessage());
+            return null;
+        }
+    }
+
+    // ✅ Get SCORM Package by Content ID (from course_module_content)
+    public function getScormPackageByContentId($contentId, $clientId)
+    {
+        try {
+            $sql = "SELECT sp.* FROM scorm_packages sp
+                    INNER JOIN course_module_content cmc ON cmc.content_id = sp.id AND cmc.content_type = 'scorm'
+                    WHERE cmc.id = ? AND sp.client_id = ? AND sp.is_deleted = 0";
+            
+            $stmt = $this->conn->prepare($sql);
+            $stmt->execute([$contentId, $clientId]);
+            $package = $stmt->fetch(PDO::FETCH_ASSOC);
+
+            if ($package) {
+                error_log("VLRModel getScormPackageByContentId - Found package for content {$contentId}: " . json_encode($package));
+                return $package;
+            } else {
+                error_log("VLRModel getScormPackageByContentId - No package found for content {$contentId}, Client ID: {$clientId}");
+                return null;
+            }
+        } catch (Exception $e) {
+            error_log("Error fetching SCORM package by content ID: " . $e->getMessage());
+            return null;
+        }
+    }
+
     // ✅ Insert SCORM Package
     public function insertScormPackage($data)
     {
@@ -191,8 +245,17 @@ class VLRModel
     public function updateExternalContent($id, $data, $clientId = null)
     {
         try {
-            // Ensure audio_file exists in data
-            $audioFile = isset($data['audio_file']) ? $data['audio_file'] : null;
+            // Handle audio_file - preserve existing if not provided during edit
+            $audioFile = null;
+            if (isset($data['audio_file'])) {
+                $audioFile = $data['audio_file'];
+            } else {
+                // No audio_file provided, preserve existing value
+                $existingContent = $this->getExternalContentById($id, $clientId);
+                if ($existingContent && isset($existingContent['audio_file'])) {
+                    $audioFile = $existingContent['audio_file'];
+                }
+            }
 
             $sql = "UPDATE external_content SET
                 title = :title,
@@ -249,6 +312,27 @@ class VLRModel
             return true;
         } catch (PDOException $e) {
             error_log("Update Error: " . $e->getMessage());
+            return false;
+        }
+    }
+
+    // Get External Content by ID
+    public function getExternalContentById($id, $clientId = null)
+    {
+        try {
+            $sql = "SELECT * FROM external_content WHERE id = ? AND is_deleted = 0";
+            $params = [$id];
+
+            if ($clientId !== null) {
+                $sql .= " AND client_id = ?";
+                $params[] = $clientId;
+            }
+
+            $stmt = $this->conn->prepare($sql);
+            $stmt->execute($params);
+            return $stmt->fetch(PDO::FETCH_ASSOC);
+        } catch (PDOException $e) {
+            error_log("Get External Content by ID Error: " . $e->getMessage());
             return false;
         }
     }
@@ -704,8 +788,17 @@ class VLRModel
             return $data;
         }
         foreach ($data as &$package) {
-            $package['can_edit'] = (canEdit('vlr') && ($currentUser['system_role'] === 'super_admin' || $package['created_by'] == $currentUser['id'])) ? 1 : 0;
-            $package['can_delete'] = (canDelete('vlr') && ($currentUser['system_role'] === 'super_admin' || $package['created_by'] == $currentUser['id'])) ? 1 : 0;
+            // Check if assessment is assigned to courses with applicability rules
+            $isAssignedToApplicableCourses = $this->isAssessmentAssignedToApplicableCourses($package['id']);
+            $package['is_assigned_to_applicable_courses'] = $isAssignedToApplicableCourses;
+            
+            // Also keep the old check for backward compatibility
+            $hasAttempts = $this->hasAssessmentAttempts($package['id']);
+            $package['has_attempts'] = $hasAttempts;
+            
+            // Determine permissions based on user role only (keep buttons enabled)
+            $package['can_edit'] = canEdit('vlr') && ($currentUser['system_role'] === 'super_admin' || $package['created_by'] == $currentUser['id']) ? 1 : 0;
+            $package['can_delete'] = canDelete('vlr') && ($currentUser['system_role'] === 'super_admin' || $package['created_by'] == $currentUser['id']) ? 1 : 0;
         }
         unset($package);
 
@@ -803,6 +896,70 @@ class VLRModel
             $this->conn->rollBack();
             error_log("Assessment Deletion Error: " . $e->getMessage());
             return false;
+        }
+    }
+
+    /**
+     * Check if an assessment has any user attempts
+     * @param int $assessmentId
+     * @return bool
+     */
+    public function hasAssessmentAttempts($assessmentId)
+    {
+        try {
+            $stmt = $this->conn->prepare("SELECT COUNT(*) as count FROM assessment_attempts WHERE assessment_id = ?");
+            $stmt->execute([$assessmentId]);
+            $result = $stmt->fetch(PDO::FETCH_ASSOC);
+            $count = (int)$result['count'];
+            
+            return $count > 0;
+        } catch (Exception $e) {
+            error_log("Error checking assessment attempts: " . $e->getMessage());
+            return true; // Assume has attempts if error occurs (safer approach)
+        }
+    }
+
+    /**
+     * Check if an assessment is assigned to courses that have applicability rules
+     * This is the correct logic for preventing edit/delete based on course applicability
+     * @param int $assessmentId
+     * @return bool
+     */
+    public function isAssessmentAssignedToApplicableCourses($assessmentId)
+    {
+        try {
+            // Check if assessment is assigned to any course that has applicability rules
+            $stmt = $this->conn->prepare("
+                SELECT COUNT(DISTINCT c.id) as course_count
+                FROM assessment_package ap
+                LEFT JOIN course_prerequisites cp ON ap.id = cp.prerequisite_id 
+                    AND cp.prerequisite_type = 'assessment' 
+                    AND cp.deleted_at IS NULL
+                LEFT JOIN course_module_content cmc ON ap.id = cmc.content_id 
+                    AND cmc.content_type = 'assessment' 
+                    AND (cmc.deleted_at IS NULL OR cmc.deleted_at = '0000-00-00 00:00:00')
+                LEFT JOIN course_post_requisites cpr ON ap.id = cpr.content_id 
+                    AND cpr.content_type = 'assessment' 
+                    AND cpr.is_deleted = 0
+                LEFT JOIN courses c ON (
+                    cp.course_id = c.id 
+                    OR cmc.module_id IN (SELECT id FROM course_modules WHERE course_id = c.id) 
+                    OR cpr.course_id = c.id
+                )
+                LEFT JOIN course_applicability ca ON c.id = ca.course_id
+                WHERE ap.id = ? 
+                AND ap.is_deleted = 0 
+                AND c.id IS NOT NULL 
+                AND ca.id IS NOT NULL
+            ");
+            $stmt->execute([$assessmentId]);
+            $result = $stmt->fetch(PDO::FETCH_ASSOC);
+            $courseCount = (int)$result['course_count'];
+            
+            return $courseCount > 0;
+        } catch (Exception $e) {
+            error_log("Error checking assessment course applicability: " . $e->getMessage());
+            return true; // Assume is assigned if error occurs (safer approach)
         }
     }
 

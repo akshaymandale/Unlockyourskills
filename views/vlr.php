@@ -151,7 +151,7 @@ $canAccessVLR = canAccess('vlr');
                                                         <span class="text-muted" id="zipOptional" style="display: none;">(Optional - leave empty to keep existing file)</span>
                                                     </label>
                                                     <input type="file" class="form-control" id="zipFile" name="zipFile" accept=".zip,.rar,.7z">
-                                                    <small class="text-muted">Max size: 50MB. Formats: ZIP, RAR, 7Z files</small>
+                                                    <small class="text-muted">Max size: 100MB. Formats: ZIP, RAR, 7Z files</small>
                                                     <div id="scormZipPreview" class="mt-2"></div>
                                                 </div>
                                             </div>
@@ -1056,8 +1056,9 @@ $canAccessVLR = canAccess('vlr');
                                                     <div class="form-group mb-3">
                                                         <label for="assessment_timeLimit" class="form-label">
                                                             <?= Localization::translate('assessment.field.time_limit'); ?>
+                                                            <span class="text-danger">*</span>
                                                         </label>
-                                                        <input type="text" class="form-control"
+                                                        <input type="text" class="form-control" 
                                                             id="assessment_timeLimit" name="time_limit">
                                                     </div>
                                                 </div>
@@ -1324,8 +1325,13 @@ $canAccessVLR = canAccess('vlr');
                                                             title="<?= Localization::translate('edit'); ?>"></i>
                                                     </a>
                                                     <?php endif; ?>
+                                                    
                                                     <?php if (!empty($assessment['can_delete'])): ?>
-                                                    <a href="#" class="delete-assessment" data-id="<?= $assessment['id'] ?>" data-title="<?= htmlspecialchars($assessment['title']) ?>">
+                                                    <a href="#" class="delete-assessment" 
+                                                       data-id="<?= $assessment['id'] ?>" 
+                                                       data-title="<?= htmlspecialchars($assessment['title']) ?>"
+                                                       data-type="assessment"
+                                                       data-assessment='<?= json_encode($assessment); ?>'>
                                                         <i class="fas fa-trash-alt delete-icon"
                                                             title="<?= Localization::translate('delete'); ?>"></i>
                                                     </a>
@@ -2486,6 +2492,9 @@ $canAccessVLR = canAccess('vlr');
                                                         (MP3/WAV) <span class="text-danger">*</span></label>
                                                     <input type="file" class="form-control" id="audioFile"
                                                         name="audio_file" accept=".mp3, .wav">
+                                                    <small class="text-muted">Max size: 5MB. Formats: MP3, WAV files</small>
+                                                    <input type="hidden" id="existing_audio_file" name="existing_audio_file">
+                                                    <div id="audioFilePreview" class="mt-2"></div>
                                                 </div>
                                                 <div class="form-group">
                                                     <label
@@ -3910,6 +3919,175 @@ $canAccessVLR = canAccess('vlr');
 
 
 <?php require_once __DIR__ . '/../core/UrlHelper.php'; ?>
+
+        <!-- Assessment Validation Translations -->
+        <script>
+        window.translations = {
+            'assessment.validation.title_required': '<?= Localization::translate('assessment.validation.title_required') ?>',
+            'assessment.validation.time_limit_required': '<?= Localization::translate('assessment.validation.time_limit_required') ?>',
+            'assessment.validation.time_limit_invalid': '<?= Localization::translate('assessment.validation.time_limit_invalid') ?>',
+            'assessment.validation.num_questions_required': '<?= Localization::translate('assessment.validation.num_questions_required') ?>',
+            'assessment.validation.num_questions_exceeds': '<?= Localization::translate('assessment.validation.num_questions_exceeds') ?>',
+            'assessment.validation.passing_percentage_invalid': '<?= Localization::translate('assessment.validation.passing_percentage_invalid') ?>',
+            'assessment.validation.negative_percentage_required': '<?= Localization::translate('assessment.validation.negative_percentage_required') ?>',
+            'assessment.validation.tags_required': '<?= Localization::translate('assessment.validation.tags_required') ?>',
+            'assessment.validation.questions_required': '<?= Localization::translate('assessment.validation.questions_required') ?>',
+            
+            // External Content Validation Translations
+            'validation.required.title': '<?= Localization::translate('validation.required.title') ?>',
+            'validation.required.content_type': '<?= Localization::translate('validation.required.content_type') ?>',
+            'validation.required.version': '<?= Localization::translate('validation.required.version') ?>',
+            'validation.required.tags': '<?= Localization::translate('validation.required.tags') ?>',
+            'validation.required.url': '<?= Localization::translate('validation.required.url') ?>',
+            'validation.required.field': '<?= Localization::translate('validation.required.field') ?>',
+            'validation.required.audio_file': '<?= Localization::translate('validation.required.audio_file') ?>',
+            'validation.required.thumbnail': '<?= Localization::translate('validation.required.thumbnail') ?>',
+            'validation.invalid.url': '<?= Localization::translate('validation.invalid.url') ?>',
+            'validation.invalid.audio_file': '<?= Localization::translate('validation.invalid.audio_file') ?>',
+            'validation.invalid.thumbnail': '<?= Localization::translate('validation.invalid.thumbnail') ?>',
+            'validation.file_size_exceeded': '<?= Localization::translate('validation.file_size_exceeded') ?>',
+            
+            // SCORM Validation Translations
+            'validation.scorm_title_required': '<?= Localization::translate('validation.scorm_title_required') ?>',
+            'validation.scorm_zip_required': '<?= Localization::translate('validation.scorm_zip_required') ?>',
+            'validation.version_required': '<?= Localization::translate('validation.version_required') ?>',
+            'validation.scorm_category_required': '<?= Localization::translate('validation.scorm_category_required') ?>',
+            
+            // Non-SCORM Validation Translations
+            'js.validation.title_required': '<?= Localization::translate('js.validation.title_required') ?>',
+            'js.validation.title_min_length': '<?= Localization::translate('js.validation.title_min_length') ?>',
+            'js.validation.content_type_required': '<?= Localization::translate('js.validation.content_type_required') ?>',
+            'js.validation.version_required': '<?= Localization::translate('js.validation.version_required') ?>',
+            'js.validation.tags_required': '<?= Localization::translate('js.validation.tags_required') ?>',
+            'js.validation.time_limit_numeric': '<?= Localization::translate('js.validation.time_limit_numeric') ?>',
+            'js.validation.invalid_url': '<?= Localization::translate('js.validation.invalid_url') ?>',
+            'js.validation.invalid_flash_version': '<?= Localization::translate('js.validation.invalid_flash_version') ?>',
+            'js.validation.invalid_unity_version': '<?= Localization::translate('js.validation.invalid_unity_version') ?>',
+            'js.validation.invalid_os_version': '<?= Localization::translate('js.validation.invalid_os_version') ?>',
+            
+            // Client Validation Translations
+            'js.validation.client_name_required': '<?= Localization::translate('js.validation.client_name_required') ?>',
+            'js.validation.client_code_required': '<?= Localization::translate('js.validation.client_code_required') ?>',
+            'js.validation.client_code_format': '<?= Localization::translate('js.validation.client_code_format') ?>',
+            'js.validation.max_users_required': '<?= Localization::translate('js.validation.max_users_required') ?>',
+            'js.validation.max_users_numeric': '<?= Localization::translate('js.validation.max_users_numeric') ?>',
+            'js.validation.max_users_minimum': '<?= Localization::translate('js.validation.max_users_minimum') ?>',
+            'js.validation.admin_role_limit_required': '<?= Localization::translate('js.validation.admin_role_limit_required') ?>',
+            'js.validation.admin_role_limit_numeric': '<?= Localization::translate('js.validation.admin_role_limit_numeric') ?>',
+            'js.validation.admin_role_limit_minimum': '<?= Localization::translate('js.validation.admin_role_limit_minimum') ?>',
+            'js.validation.client_logo_required': '<?= Localization::translate('js.validation.client_logo_required') ?>',
+            'js.validation.logo_format_invalid': '<?= Localization::translate('js.validation.logo_format_invalid') ?>',
+            'js.validation.logo_size_exceeded': '<?= Localization::translate('js.validation.logo_size_exceeded') ?>',
+            
+            // Audio Validation Translations
+            'js.validation.audio_title_required': '<?= Localization::translate('js.validation.audio_title_required') ?>',
+            'js.validation.audio_file_required': '<?= Localization::translate('js.validation.audio_file_required') ?>',
+            'js.validation.audio_file_size_exceeded': '<?= Localization::translate('js.validation.audio_file_size_exceeded') ?>',
+            
+            // Video Validation Translations
+            'js.validation.video_title_required': '<?= Localization::translate('js.validation.video_title_required') ?>',
+            'js.validation.video_file_required': '<?= Localization::translate('js.validation.video_file_required') ?>',
+            'js.validation.video_file_size_exceeded': '<?= Localization::translate('js.validation.video_file_size_exceeded') ?>',
+            
+            // Document Validation Translations
+            'validation.document_title_required': '<?= Localization::translate('validation.document_title_required') ?>',
+            'validation.document_category_required': '<?= Localization::translate('validation.document_category_required') ?>',
+            'validation.document_file_required': '<?= Localization::translate('validation.document_file_required') ?>',
+            'validation.invalid_file_format': '<?= Localization::translate('validation.invalid_file_format') ?>',
+            'validation.file_size_exceeded': '<?= Localization::translate('validation.file_size_exceeded') ?>',
+            
+            // Image Validation Translations
+            'js.validation.image_title_required': '<?= Localization::translate('js.validation.image_title_required') ?>',
+            'js.validation.image_file_required': '<?= Localization::translate('js.validation.image_file_required') ?>',
+            'js.validation.image_file_size_exceeded': '<?= Localization::translate('js.validation.image_file_size_exceeded') ?>',
+            
+            // Interactive Validation Translations
+            'js.validation.interactive_title_required': '<?= Localization::translate('js.validation.interactive_title_required') ?>',
+            'js.validation.interactive_content_type_required': '<?= Localization::translate('js.validation.interactive_content_type_required') ?>',
+            'js.validation.interactive_version_required': '<?= Localization::translate('js.validation.interactive_version_required') ?>',
+            'js.validation.interactive_version_numeric': '<?= Localization::translate('js.validation.interactive_version_numeric') ?>',
+            'js.validation.interactive_tags_required': '<?= Localization::translate('js.validation.interactive_tags_required') ?>',
+            'js.validation.interactive_url_invalid': '<?= Localization::translate('js.validation.interactive_url_invalid') ?>',
+            
+            // Survey Validation Translations
+            'js.validation.survey_title_required': '<?= Localization::translate('js.validation.survey_title_required') ?>',
+            'js.validation.survey_question_title_required': '<?= Localization::translate('js.validation.survey_question_title_required') ?>',
+            'js.validation.survey_questions_required': '<?= Localization::translate('js.validation.survey_questions_required') ?>',
+            
+            // Feedback Validation Translations
+            'js.validation.feedback_title_required': '<?= Localization::translate('js.validation.feedback_title_required') ?>',
+            'js.validation.feedback_question_title_required': '<?= Localization::translate('js.validation.feedback_question_title_required') ?>',
+            'js.validation.questions_required': '<?= Localization::translate('js.validation.questions_required') ?>',
+            
+            // Social Feed Validation Translations
+            'js.validation.post_title_required': '<?= Localization::translate('js.validation.post_title_required') ?>',
+            'js.validation.post_content_required': '<?= Localization::translate('js.validation.post_content_required') ?>',
+            'js.validation.post_title_too_long': '<?= Localization::translate('js.validation.post_title_too_long') ?>',
+            'js.validation.post_content_too_long': '<?= Localization::translate('js.validation.post_content_too_long') ?>',
+            'js.validation.category_required': '<?= Localization::translate('js.validation.category_required') ?>',
+            'js.validation.visibility_required': '<?= Localization::translate('js.validation.visibility_required') ?>',
+            'js.validation.report_reason_required': '<?= Localization::translate('js.validation.report_reason_required') ?>',
+            'js.validation.report_description_required': '<?= Localization::translate('js.validation.report_description_required') ?>',
+            'js.validation.report_description_too_long': '<?= Localization::translate('js.validation.report_description_too_long') ?>',
+            'js.validation.poll_minimum_options': '<?= Localization::translate('js.validation.poll_minimum_options') ?>',
+            'js.validation.poll_option_required': '<?= Localization::translate('js.validation.poll_option_required') ?>',
+            'js.validation.file_too_large': '<?= Localization::translate('js.validation.file_too_large') ?>',
+            'js.validation.invalid_file_type': '<?= Localization::translate('js.validation.invalid_file_type') ?>',
+            'js.validation.tag_too_long': '<?= Localization::translate('js.validation.tag_too_long') ?>',
+            'js.validation.too_many_tags': '<?= Localization::translate('js.validation.too_many_tags') ?>',
+            'js.validation.schedule_date_required': '<?= Localization::translate('js.validation.schedule_date_required') ?>',
+            'js.validation.schedule_date_future': '<?= Localization::translate('js.validation.schedule_date_future') ?>',
+            
+            // Custom Field Validation Translations
+            'js.validation.field_name_format': '<?= Localization::translate('js.validation.field_name_format') ?>',
+            'js.validation.field_label_exists': '<?= Localization::translate('js.validation.field_label_exists') ?>',
+            'js.validation.field_options_required': '<?= Localization::translate('js.validation.field_options_required') ?>',
+            'js.validation.field_options_one_required': '<?= Localization::translate('js.validation.field_options_one_required') ?>',
+            'js.validation.field_options_two_required': '<?= Localization::translate('js.validation.field_options_two_required') ?>',
+            'js.validation.field_required': '<?= Localization::translate('js.validation.field_required') ?>',
+            'js.validation.field_label_min_length': '<?= Localization::translate('js.validation.field_label_min_length') ?>',
+            'js.validation.fix_errors_before_submit': '<?= Localization::translate('js.validation.fix_errors_before_submit') ?>',
+            
+            // Common Validation Translations
+            'js.validation.option_empty': '<?= Localization::translate('js.validation.option_empty') ?>',
+            'js.validation.option_required': '<?= Localization::translate('js.validation.option_required') ?>',
+            
+            // Assignment Validation Translations
+            'assignment.validation.title_required': '<?= Localization::translate('assignment.validation.title_required') ?>',
+            'assignment.validation.title_min_length': '<?= Localization::translate('assignment.validation.title_min_length') ?>',
+            'assignment.validation.title_max_length': '<?= Localization::translate('assignment.validation.title_max_length') ?>',
+            'assignment.validation.file_required': '<?= Localization::translate('assignment.validation.file_required') ?>',
+            'assignment.validation.file_type_invalid': '<?= Localization::translate('assignment.validation.file_type_invalid') ?>',
+            'assignment.validation.file_size_exceeded': '<?= Localization::translate('assignment.validation.file_size_exceeded') ?>',
+            'assignment.validation.version_positive': '<?= Localization::translate('assignment.validation.version_positive') ?>',
+            'assignment.validation.version_max': '<?= Localization::translate('assignment.validation.version_max') ?>',
+            'assignment.validation.time_limit_positive': '<?= Localization::translate('assignment.validation.time_limit_positive') ?>',
+            'assignment.validation.time_limit_max': '<?= Localization::translate('assignment.validation.time_limit_max') ?>',
+            'assignment.validation.duration_positive': '<?= Localization::translate('assignment.validation.duration_positive') ?>',
+            'assignment.validation.duration_max': '<?= Localization::translate('assignment.validation.duration_max') ?>',
+            'assignment.validation.max_attempts_positive': '<?= Localization::translate('assignment.validation.max_attempts_positive') ?>',
+            'assignment.validation.max_attempts_max': '<?= Localization::translate('assignment.validation.max_attempts_max') ?>',
+            'assignment.validation.passing_score_range': '<?= Localization::translate('assignment.validation.passing_score_range') ?>',
+            'assignment.validation.passing_score_max': '<?= Localization::translate('assignment.validation.passing_score_max') ?>',
+            'assignment.validation.penalty_range': '<?= Localization::translate('assignment.validation.penalty_range') ?>',
+            'assignment.validation.penalty_max': '<?= Localization::translate('assignment.validation.penalty_max') ?>',
+            'assignment.validation.tags_duplicate': '<?= Localization::translate('assignment.validation.tags_duplicate') ?>',
+            'assignment.validation.tags_min_length': '<?= Localization::translate('assignment.validation.tags_min_length') ?>',
+            'assignment.validation.tags_max_length': '<?= Localization::translate('assignment.validation.tags_max_length') ?>',
+            
+            // Common Validation Translations
+            'validation.tags_required': '<?= Localization::translate('validation.tags_required') ?>',
+            'validation.version_required': '<?= Localization::translate('validation.version_required') ?>'
+        };
+        
+        // Add confirmation translations
+        window.translations['confirmation.delete.title'] = '<?= Localization::translate('confirmation.delete.title') ?>';
+        window.translations['confirmation.delete.message'] = '<?= Localization::translate('confirmation.delete.message') ?>';
+        window.translations['confirmation.delete.subtext'] = '<?= Localization::translate('confirmation.delete.subtext') ?>';
+        window.translations['confirmation.delete.button'] = '<?= Localization::translate('confirmation.delete.button') ?>';
+        window.translations['confirmation.cancel.button'] = '<?= Localization::translate('confirmation.cancel.button') ?>';
+        </script>
+
 <script src="<?= UrlHelper::url('public/js/scorm_validation.js') ?>"></script>
 <script src="<?= UrlHelper::url('public/js/scorm_package.js') ?>"></script>
 <script src="<?= UrlHelper::url('public/js/assessment_validation.js') ?>"></script>
@@ -3942,7 +4120,7 @@ $canAccessVLR = canAccess('vlr');
 <!-- ✅ VLR Tab Management System -->
 <script src="<?= UrlHelper::url('public/js/vlr_tabs.js') ?>"></script>
 <!-- ✅ VLR Delete Confirmations -->
-<!-- Removed: vlr_confirmations.js is loaded dynamically by confirmation_loader.js -->
+<!-- Manually loading vlr_confirmations.js for reliable delete confirmations -->
 
 <!-- ✅ Universal Preview Modal -->
 <div class="modal fade" id="previewModal" tabindex="-1" aria-labelledby="previewModalLabel" aria-hidden="true">

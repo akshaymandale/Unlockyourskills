@@ -94,7 +94,7 @@ document.addEventListener("DOMContentLoaded", function () {
         });
 
         try {
-            const response = await fetch(`/unlockyourskills/vlr/assessment-packages/questions?${params}`, {
+            const response = await fetch(`vlr/assessment-packages/questions?${params}`, {
                 headers: {
                     'X-Requested-With': 'XMLHttpRequest'
                 }
@@ -153,7 +153,7 @@ document.addEventListener("DOMContentLoaded", function () {
     }
 
     async function loadFilterOptions() {
-        const response = await fetch(`/unlockyourskills/vlr/assessment-packages/filter-options`, {
+        const response = await fetch(`vlr/assessment-packages/filter-options`, {
             headers: {
                 'X-Requested-With': 'XMLHttpRequest'
             }
@@ -180,7 +180,7 @@ document.addEventListener("DOMContentLoaded", function () {
         }
 
         try {
-            const response = await fetch(`/unlockyourskills/vlr/assessment-packages/selected-questions`, {
+            const response = await fetch(`vlr/assessment-packages/selected-questions`, {
                 method: "POST",
                 headers: { 
                     "Content-Type": "application/json",

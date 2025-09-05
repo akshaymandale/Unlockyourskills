@@ -1,7 +1,8 @@
 // My Courses Page JS
 
 document.addEventListener('DOMContentLoaded', function() {
-    const tabs = document.querySelectorAll('#myCoursesTabs .nav-link');
+    try {
+        const tabs = document.querySelectorAll('#myCoursesTabs .nav-link');
     const searchInput = document.getElementById('myCoursesSearch');
     const toggleViewBtn = document.getElementById('toggleViewBtn');
     const coursesList = document.getElementById('myCoursesList');
@@ -78,7 +79,7 @@ document.addEventListener('DOMContentLoaded', function() {
         const moduleInfo = course.module_count ? `<span class='small text-muted ms-2'><i class='fas fa-layer-group me-1'></i>${course.module_count} Modules</span>` : '';
         const statusBadge = renderStatusBadge(course.user_course_status);
         const courseUrl = `/Unlockyourskills/my-courses/details/${course.encrypted_id}`;
-        console.log(`[renderCourseCard] Creating link for course "${course.name}" with URL: ${courseUrl}`); // DEBUG LOG
+        console.log(`[renderCourseCard] Creating link for course "${course.name}" with URL: ${courseUrl}`);
         return `<div class="col-md-6 col-lg-4 col-xl-3">
             <div class="card course-card h-100 shadow-lg border-0 animate-pop position-relative">
                 <div class="card-img-top course-thumb position-relative">
@@ -102,7 +103,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     </div>
                     <div class="mb-2 text-end small text-purple fw-bold">${progress}% Complete</div>
                     <div class="d-flex justify-content-between align-items-center">
-                        <a href="${courseUrl}" class="btn theme-btn-primary animate-btn">Start</a>
+                        <a href="${courseUrl}" class="btn theme-btn-primary animate-btn">${getActionText(course.user_course_status)}</a>
                         <i class="fas fa-arrow-right text-purple"></i>
                     </div>
                 </div>
@@ -136,7 +137,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 </div>
             </div>
             <div class="course-actions">
-                <a href="${courseUrl}" class="btn theme-btn-primary animate-btn">Start</a>
+                <a href="${courseUrl}" class="btn theme-btn-primary animate-btn">${getActionText(course.user_course_status)}</a>
             </div>
         </div>`;
     }
@@ -184,12 +185,16 @@ document.addEventListener('DOMContentLoaded', function() {
     // Initial load
     fetchCourses();
 
-    // Add a delegated event listener to the parent container for robust click handling
-    document.getElementById('myCoursesList').addEventListener('click', function(e) {
-        const startButton = e.target.closest('.animate-btn');
-        if (startButton) {
-            console.log(`[Event Listener] Start button clicked! Href: ${startButton.href}`);
-            // e.preventDefault(); // Uncomment this line to stop navigation for debugging
+    // Add simple debugging to see if clicks are being detected
+    document.addEventListener('click', function(e) {
+        if (e.target.closest('.animate-btn')) {
+            console.log('Start button clicked!', e.target);
+            console.log('Button href:', e.target.href);
+            console.log('Button text:', e.target.textContent);
         }
     });
+    } catch (error) {
+        alert('JavaScript Error: ' + error.message);
+        console.error('My Courses JavaScript Error:', error);
+    }
 }); 

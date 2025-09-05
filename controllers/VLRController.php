@@ -136,6 +136,17 @@ class VLRController extends BaseController
 
             // Handle file upload (only required for new SCORM or if replacing)
             $zipFileName = $_POST['existing_zip'] ?? null;
+            $launchPath = null; // Initialize launch_path variable
+            
+            // If editing existing SCORM package, get the current launch_path
+            if ($scormId) {
+                $existingScorm = $this->VLRModel->getScormPackageById($scormId, $clientId);
+                if ($existingScorm && !empty($existingScorm['launch_path'])) {
+                    $launchPath = $existingScorm['launch_path'];
+                    error_log('[SCORM] Using existing launch_path: ' . $launchPath);
+                }
+            }
+            
             if (!empty($_FILES['zipFile']['name'])) {
                 $uploadDir = "uploads/scorm/";
 
@@ -169,10 +180,10 @@ class VLRController extends BaseController
                     return;
                 }
 
-                // Validate file size (50MB limit)
-                $maxSize = 50 * 1024 * 1024; // 50MB
+                // Validate file size (100MB limit)
+                $maxSize = 100 * 1024 * 1024; // 100MB
                 if ($_FILES['zipFile']['size'] > $maxSize) {
-                    $this->toastError('File size too large. Maximum size is 50MB.', '/unlockyourskills/vlr?tab=scorm');
+                    $this->toastError('File size too large. Maximum size is 100MB.', '/unlockyourskills/vlr?tab=scorm');
                     return;
                 }
 
@@ -307,19 +318,48 @@ class VLRController extends BaseController
                 'assessment' => trim($_POST['assessment']),
                 'created_by' => $_SESSION['id']  // Store logged-in user
             ];
-            // If launch_path was set during upload, add it to $data
-            if (isset($data['launch_path']) || (isset($launchPath) && $launchPath)) {
-                $data['launch_path'] = $data['launch_path'] ?? $launchPath;
-                error_log('[SCORM] launch_path to be saved: ' . $data['launch_path']);
-            } else if (!isset($data['launch_path'])) {
+            
+            // Ensure zip_file is not empty when editing (use existing if no new upload)
+            if (empty($zipFileName) && $scormId) {
+                $existingScorm = $this->VLRModel->getScormPackageById($scormId, $clientId);
+                if ($existingScorm && !empty($existingScorm['zip_file'])) {
+                    $data['zip_file'] = $existingScorm['zip_file'];
+                    error_log('[SCORM] Preserving existing zip_file: ' . $existingScorm['zip_file']);
+                }
+            }
+            
+            // Set launch_path: use new one from upload if available, otherwise preserve existing
+            if (isset($data['launch_path']) && !empty($data['launch_path'])) {
+                // New launch_path from file upload
+                error_log('[SCORM] Using new launch_path from upload: ' . $data['launch_path']);
+            } elseif (!empty($launchPath)) {
+                // Use existing launch_path (when editing without new upload)
+                $data['launch_path'] = $launchPath;
+                error_log('[SCORM] Preserving existing launch_path: ' . $launchPath);
+            } else {
+                // No launch_path available
                 $data['launch_path'] = null;
-                error_log('[SCORM] launch_path is not set, saving as null.');
+                error_log('[SCORM] No launch_path available, saving as null.');
+            }
+            
+            // Final validation: ensure launch_path is not null if we have a zip_file
+            if (empty($data['launch_path']) && !empty($data['zip_file']) && $scormId) {
+                error_log('[SCORM] WARNING: launch_path is empty but zip_file exists. This might indicate an issue.');
+                // Try to get the existing launch_path one more time
+                $existingScorm = $this->VLRModel->getScormPackageById($scormId, $clientId);
+                if ($existingScorm && !empty($existingScorm['launch_path'])) {
+                    $data['launch_path'] = $existingScorm['launch_path'];
+                    error_log('[SCORM] Recovered launch_path from database: ' . $existingScorm['launch_path']);
+                }
             }
 
             if ($scormId) {
                 // Update existing SCORM package (with client validation)
                 $currentUser = $_SESSION['user'] ?? null;
                 $filterClientId = ($currentUser && $currentUser['system_role'] === 'admin') ? $clientId : null;
+
+                // Log the data being sent to update
+                error_log('[SCORM] Update data for package ' . $scormId . ': ' . json_encode($data));
 
                 $result = $this->VLRModel->updateScormPackage($scormId, $data, $filterClientId);
                 if ($result) {
@@ -342,7 +382,7 @@ class VLRController extends BaseController
     }
 
     // Delete SCROM Package
-    public function delete()
+    public function delete($id = null)
     {
         // Validate session (ensure user is logged in)
         if (!isset($_SESSION['id']) || !isset($_SESSION['user']['client_id'])) {
@@ -353,8 +393,13 @@ class VLRController extends BaseController
         $clientId = $_SESSION['user']['client_id'];
         $currentUser = $_SESSION['user'] ?? null;
 
-        if (isset($_GET['id'])) {
-            $id = $_GET['id'];
+        // Extract ID from URL path parameter
+        if ($id === null) {
+            // Fallback: try to get from GET parameter (for backward compatibility)
+            $id = $_GET['id'] ?? null;
+        }
+        
+        if ($id) {
             error_log("📦 Deleting SCORM package with ID: " . $id);
 
             // Determine client filtering based on user role
@@ -446,6 +491,10 @@ class VLRController extends BaseController
                 if ($audioSource === "upload" && empty($_FILES['audio_file']['name']) && !$isEdit) {
                     $errors[] = "Audio file is required.";
                 }
+                // For edit mode with upload source, allow existing audio file to be preserved
+                if ($audioSource === "upload" && $isEdit && empty($_FILES['audio_file']['name'])) {
+                    // This is fine - existing file will be preserved
+                }
             }
 
             // ✅ Thumbnail Upload Handling (NEW)
@@ -520,6 +569,11 @@ class VLRController extends BaseController
                         $errors[] = "Failed to upload audio file.";
                     }
                 }
+            } elseif ($isEdit && $audioSource === "upload") {
+                // ✅ Preserve existing audio file if no new one is uploaded during edit
+                // For now, we'll let the update proceed and the database will keep the existing value
+                // This is similar to how SCORM handles existing files
+                error_log('[External Content] Edit mode with upload source - existing audio file will be preserved');
             }
 
             // ✅ If errors exist, redirect with toast notification
@@ -552,9 +606,21 @@ class VLRController extends BaseController
                 'updated_by' => $modifiedBy,
             ];
 
-            // ✅ Include uploaded files if present (thumbnail already set in main array)
-            if ($audioFile)
+            // ✅ Include audio file in data - preserve existing if no new file uploaded
+            if ($audioFile) {
                 $data['audio_file'] = $audioFile;
+                error_log('[External Content] Using new audio file: ' . $audioFile);
+            } elseif ($isEdit && $audioSource === "upload") {
+                // Don't set audio_file - let the database keep the existing value
+                // This prevents overwriting the existing audio file with null
+                error_log('[External Content] Edit mode - preserving existing audio file in database');
+            }
+            
+            // Debug logging for edit operations
+            if ($isEdit) {
+                error_log('[External Content] Edit operation - ID: ' . $id . ', Content Type: ' . $contentType . ', Audio Source: ' . $audioSource);
+                error_log('[External Content] Audio file in data: ' . ($data['audio_file'] ?? 'NOT SET'));
+            }
 
             // Insert or update the database
             if ($isEdit) {
@@ -842,6 +908,8 @@ class VLRController extends BaseController
             $errors[] = "Number of attempts must be greater than 0.";
         if ($passingPercentage < 0 || $passingPercentage > 100)
             $errors[] = "Passing percentage must be between 0 and 100.";
+        if (empty($timeLimit) || $timeLimit <= 0)
+            $errors[] = "Time limit is required and must be greater than 0.";
         if ($negativeMarking === 'Yes' && empty($negativeMarkingPercentage))
             $errors[] = "Negative marking percentage required.";
         if ($assessmentType === 'Dynamic') {
@@ -878,6 +946,12 @@ class VLRController extends BaseController
 
         // Insert or update logic
         if (!empty($assessmentId)) {
+            // Check if assessment has any user attempts before allowing edit
+            if ($this->VLRModel->hasAssessmentAttempts($assessmentId)) {
+                $this->toastError('Cannot edit assessment: Assessment has been started by users and cannot be modified.', '/unlockyourskills/vlr?tab=assessment');
+                return;
+            }
+            
             $result = $this->VLRModel->updateAssessmentWithQuestions($data, $assessmentId);
             if ($result) {
                 $this->toastSuccess('Assessment updated successfully!', '/unlockyourskills/vlr?tab=assessment');
@@ -904,6 +978,12 @@ class VLRController extends BaseController
 
         if (!$id) {
             $this->toastError('Invalid request.', '/unlockyourskills/vlr?tab=assessment');
+            return;
+        }
+
+        // Check if assessment is assigned to courses with applicability rules
+        if ($this->VLRModel->isAssessmentAssignedToApplicableCourses($id)) {
+            $this->toastError('Cannot delete assessment: Assessment is assigned to courses that are applicable to users and cannot be deleted.', '/unlockyourskills/vlr?tab=assessment');
             return;
         }
 

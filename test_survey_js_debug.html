@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Survey JS Debug Test</title>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+</head>
+<body>
+    <h1>Survey JavaScript Debug Test</h1>
+    
+    <h2>Test Form</h2>
+    <form id="testSurveyForm" method="POST" action="javascript:void(0);">
+        <input type="hidden" name="course_id" value="test_course_id">
+        <input type="hidden" name="survey_package_id" value="test_survey_id">
+        
+        <div class="question-item">
+            <h5>Test Question 1</h5>
+            <textarea name="responses[1][value]" required>Test response</textarea>
+            <input type="hidden" name="responses[1][type]" value="text">
+        </div>
+        
+        <button type="submit" id="testSubmitBtn">Submit Test Survey</button>
+    </form>
+    
+    <div id="test-result"></div>
+    
+    <script>
+    console.log('🔍 Test JavaScript loaded');
+    
+    document.addEventListener('DOMContentLoaded', function() {
+        console.log('🔍 DOM Content Loaded');
+        
+        const form = document.getElementById('testSurveyForm');
+        const submitBtn = document.getElementById('testSubmitBtn');
+        
+        console.log('🔍 Form element:', form);
+        console.log('🔍 Submit button:', submitBtn);
+        
+        if (form) {
+            console.log('🔍 Adding submit event listener');
+            form.addEventListener('submit', function(e) {
+                console.log('🔍 Form submit event triggered');
+                e.preventDefault();
+                
+                // Test the form data processing
+                const formData = new FormData(form);
+                const responseData = {
+                    course_id: formData.get('course_id'),
+                    survey_package_id: formData.get('survey_package_id'),
+                    responses: {}
+                };
+                
+                            // Process responses
+            const responses = {};
+            
+            // Get all form data entries
+            const formEntries = Array.from(formData.entries());
+            console.log('🔍 All form entries:', formEntries);
+            
+            for (const [key, value] of formEntries) {
+                if (key.startsWith('responses[')) {
+                    const match = key.match(/responses\[(\d+)\]\[(\w+)\](?:\[\])?/);
+                    if (match) {
+                        const questionId = match[1];
+                        const fieldType = match[2];
+                        
+                        if (!responses[questionId]) {
+                            responses[questionId] = {};
+                        }
+                        
+                        if (fieldType === 'value') {
+                            // Handle checkbox arrays (multiple values for same question)
+                            if (responses[questionId].value === undefined) {
+                                responses[questionId].value = [];
+                            }
+                            if (Array.isArray(responses[questionId].value)) {
+                                responses[questionId].value.push(value);
+                            } else {
+                                // Convert single value to array if we encounter multiple values
+                                responses[questionId].value = [responses[questionId].value, value];
+                            }
+                        } else if (fieldType === 'type') {
+                            responses[questionId].type = value;
+                        }
+                    }
+                }
+            }
+            
+            // Convert single values back to strings for non-checkbox questions
+            for (const questionId in responses) {
+                if (Array.isArray(responses[questionId].value) && responses[questionId].value.length === 1) {
+                    responses[questionId].value = responses[questionId].value[0];
+                }
+            }
+                
+                responseData.responses = responses;
+                
+                console.log('🔍 Processed data:', responseData);
+                
+                // Test the fetch request
+                fetch('/unlockyourskills/survey/submit', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-Requested-With': 'XMLHttpRequest'
+                    },
+                    body: JSON.stringify(responseData),
+                    credentials: 'same-origin' // Include cookies for session
+                })
+                .then(response => {
+                    console.log('🔍 Response status:', response.status);
+                    return response.json();
+                })
+                .then(result => {
+                    console.log('🔍 Response result:', result);
+                    document.getElementById('test-result').innerHTML = '<p style="color: green;">✓ Test successful: ' + JSON.stringify(result) + '</p>';
+                })
+                .catch(error => {
+                    console.error('🔍 Test error:', error);
+                    document.getElementById('test-result').innerHTML = '<p style="color: red;">✗ Test failed: ' + error.message + '</p>';
+                });
+            });
+        }
+        
+        // Also add click listener to button
+        if (submitBtn) {
+            submitBtn.addEventListener('click', function(e) {
+                console.log('🔍 Submit button clicked');
+                e.preventDefault();
+                form.dispatchEvent(new Event('submit'));
+            });
+        }
+    });
+    </script>
+</body>
+</html>

@@ -6,8 +6,6 @@
 
 class AssessmentPlayer {
     constructor() {
-        console.log('AssessmentPlayer constructor called');
-        
         // Check if we're resuming an existing session
         this.checkForExistingSession();
         
@@ -29,20 +27,6 @@ class AssessmentPlayer {
         this.recoveryAttempts = 0;
         this.maxRecoveryAttempts = 3;
         
-        console.log('AssessmentPlayer initialized with:', {
-            currentQuestion: this.currentQuestion,
-            totalQuestions: this.totalQuestions,
-            attemptId: this.attemptId,
-            timeRemaining: this.timeRemaining
-        });
-        
-        // Debug assessment data
-        console.log('Full assessment data:', window.assessmentData.assessment);
-        console.log('Questions count:', window.assessmentData.assessment.selected_questions?.length || 0);
-        if (window.assessmentData.assessment.selected_questions) {
-            console.log('First question sample:', window.assessmentData.assessment.selected_questions[0]);
-        }
-        
         this.init();
     }
 
@@ -55,50 +39,49 @@ class AssessmentPlayer {
                     <div class="modal-content">
                         <div class="modal-header bg-primary text-white">
                             <h5 class="modal-title" id="assessmentSafetyModalLabel">
-                                <i class="fas fa-shield-alt me-2"></i>Assessment Safety Features
+                                <i class="fas fa-shield-alt me-2"></i>${window.assessmentData.translations.assessment_safety_features}
                             </h5>
                             <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
                         </div>
                         <div class="modal-body">
                             <div class="alert alert-info">
                                 <i class="fas fa-info-circle me-2"></i>
-                                <strong>Your assessment progress is automatically protected!</strong>
+                                <strong>${window.assessmentData.translations.progress_automatically_protected}</strong>
                             </div>
                             
                             <h6 class="text-primary mb-3">
-                                <i class="fas fa-wifi me-2"></i>Internet Connection Issues
+                                <i class="fas fa-wifi me-2"></i>${window.assessmentData.translations.internet_connection_issues}
                             </h6>
                             <ul class="list-unstyled mb-4">
-                                <li><i class="fas fa-check text-success me-2"></i>Your answers are saved locally every 30 seconds</li>
-                                <li><i class="fas fa-check text-success me-2"></i>Offline mode automatically activates when connection is lost</li>
-                                <li><i class="fas fa-check text-success me-2"></i>Answers sync automatically when connection is restored</li>
-                                <li><i class="fas fa-check text-success me-2"></i>No data loss during temporary disconnections</li>
+                                <li><i class="fas fa-check text-success me-2"></i>${window.assessmentData.translations.answers_saved_locally}</li>
+                                <li><i class="fas fa-check text-success me-2"></i>${window.assessmentData.translations.offline_mode_activates}</li>
+                                <li><i class="fas fa-check text-success me-2"></i>${window.assessmentData.translations.answers_sync_automatically}</li>
+                                <li><i class="fas fa-check text-success me-2"></i>${window.assessmentData.translations.no_data_loss}</li>
                             </ul>
 
                             <h6 class="text-primary mb-3">
-                                <i class="fas fa-bolt me-2"></i>Power Outages & System Crashes
+                                <i class="fas fa-bolt me-2"></i>${window.assessmentData.translations.power_outages_system_crashes}
                             </h6>
                             <ul class="list-unstyled mb-4">
-                                <li><i class="fas fa-check text-success me-2"></i>Progress is saved to your browser's secure storage</li>
-                                <li><i class="fas fa-check text-success me-2"></i>Session recovery available for up to 24 hours</li>
-                                <li><i class="fas fa-check text-success me-2"></i>Resume exactly where you left off</li>
-                                <li><i class="fas fa-check text-success me-2"></i>All answers and progress are preserved</li>
+                                <li><i class="fas fa-check text-success me-2"></i>${window.assessmentData.translations.progress_saved_browser}</li>
+                                <li><i class="fas fa-check text-success me-2"></i>${window.assessmentData.translations.session_recovery_available}</li>
+                                <li><i class="fas fa-check text-success me-2"></i>${window.assessmentData.translations.resume_exactly_where}</li>
+                                <li><i class="fas fa-check text-success me-2"></i>${window.assessmentData.translations.all_answers_preserved}</li>
                             </ul>
 
                             <h6 class="text-primary mb-3">
-                                <i class="fas fa-window-close me-2"></i>Accidentally Closing Tabs/Browser
+                                <i class="fas fa-window-close me-2"></i>${window.assessmentData.translations.accidentally_closing_tabs}
                             </h6>
                             <ul class="list-unstyled mb-4">
-                                <li><i class="fas fa-check text-success me-2"></i>Warning popup prevents accidental closure</li>
-                                <li><i class="fas fa-check text-success me-2"></i>Progress automatically saves when switching tabs</li>
-                                <li><i class="fas fa-check text-success me-2"></i>Return to the same question when you come back</li>
-                                <li><i class="fas fa-check text-success me-2"></i>Timer continues from where it left off</li>
+                                <li><i class="fas fa-check text-success me-2"></i>${window.assessmentData.translations.warning_popup_prevents}</li>
+                                <li><i class="fas fa-check text-success me-2"></i>${window.assessmentData.translations.progress_auto_saves_tabs}</li>
+                                <li><i class="fas fa-check text-success me-2"></i>${window.assessmentData.translations.return_same_question}</li>
+                                <li><i class="fas fa-check text-success me-2"></i>${window.assessmentData.translations.timer_continues}</li>
                             </ul>
 
                             <div class="alert alert-warning">
                                 <i class="fas fa-exclamation-triangle me-2"></i>
-                                <strong>Important:</strong> Always ensure you have a stable internet connection before starting the assessment. 
-                                While your progress is protected, it's best to complete the assessment in one session.
+                                <strong>Important:</strong> ${window.assessmentData.translations.important_stable_connection}
                             </div>
 
                             <div class="row mt-4">
@@ -106,8 +89,8 @@ class AssessmentPlayer {
                                     <div class="card border-success">
                                         <div class="card-body text-center">
                                             <i class="fas fa-save fa-2x text-success mb-2"></i>
-                                            <h6 class="card-title">Auto-Save</h6>
-                                            <small class="text-muted">Every 30 seconds</small>
+                                            <h6 class="card-title">${window.assessmentData.translations.auto_save}</h6>
+                                            <small class="text-muted">${window.assessmentData.translations.every_30_seconds}</small>
                                         </div>
                                     </div>
                                 </div>
@@ -115,8 +98,8 @@ class AssessmentPlayer {
                                     <div class="card border-info">
                                         <div class="card-body text-center">
                                             <i class="fas fa-undo fa-2x text-info mb-2"></i>
-                                            <h6 class="card-title">Session Recovery</h6>
-                                            <small class="text-muted">Up to 24 hours</small>
+                                            <h6 class="card-title">${window.assessmentData.translations.session_recovery}</h6>
+                                            <small class="text-muted">${window.assessmentData.translations.up_to_24_hours}</small>
                                         </div>
                                     </div>
                                 </div>
@@ -124,7 +107,7 @@ class AssessmentPlayer {
                         </div>
                         <div class="modal-footer">
                             <button type="button" class="btn btn-primary" data-bs-dismiss="modal">
-                                <i class="fas fa-check me-2"></i>I Understand
+                                <i class="fas fa-check me-2"></i>${window.assessmentData.translations.i_understand}
                             </button>
                         </div>
                     </div>
@@ -156,7 +139,7 @@ class AssessmentPlayer {
                 
                 // Session is valid if less than 24 hours old
                 if (sessionAge < 24 * 60 * 60 * 1000) {
-                    console.log('Recovering existing session:', sessionData);
+            
                     this.answers = sessionData.answers || {};
                     this.currentQuestion = sessionData.currentQuestion || 1;
                     this.timeRemaining = sessionData.timeRemaining || this.timeRemaining;
@@ -219,18 +202,13 @@ class AssessmentPlayer {
     }
 
     init() {
-        console.log('AssessmentPlayer init() called');
-        console.log('About to setup event listeners...');
         this.setupEventListeners();
         
         // Don't initialize assessment content yet - wait for user to click start
-        console.log('AssessmentPlayer init() completed - waiting for user to start');
     }
 
     // Start the actual assessment
     startAssessment() {
-        console.log('Starting assessment...');
-        
         // Check if user has existing session
         const hasExistingSession = this.hasUnsavedChanges();
         
@@ -256,7 +234,11 @@ class AssessmentPlayer {
         this.startPeriodicSync();
         this.monitorConnection();
         
-        console.log('Assessment started successfully');
+        // Show exit assessment button after assessment starts
+        const exitAssessmentBtn = document.getElementById('exit-assessment');
+        if (exitAssessmentBtn) {
+            exitAssessmentBtn.style.display = 'block';
+        }
     }
 
     // Show session recovery popup
@@ -365,13 +347,39 @@ class AssessmentPlayer {
             confirmSubmitBtn.addEventListener('click', () => this.submitAssessment());
         }
         
+        // Exit assessment button (shown only after assessment starts)
+        const exitAssessmentBtn = document.getElementById('exit-assessment');
+        if (exitAssessmentBtn) {
+            exitAssessmentBtn.addEventListener('click', () => {
+                if (confirm('Are you sure you want to exit this assessment? Your progress will be saved and you can resume later.')) {
+                    // Close the current tab/window
+                    window.close();
+                    
+                    // If window.close() doesn't work (due to browser security), redirect to courses
+                    // This happens when the tab was not opened by JavaScript
+                    setTimeout(() => {
+                        // Use redirect URL from server if available, otherwise default to my-courses
+                        const redirectUrl = window.assessmentData.redirect_url || '/unlockyourskills/my-courses';
+                        window.location.href = redirectUrl;
+                    }, 100);
+                }
+            });
+        }
+        
         // Back to courses
         const backToCoursesBtn = document.getElementById('back-to-courses');
         if (backToCoursesBtn) {
             backToCoursesBtn.addEventListener('click', () => {
-                // Use redirect URL from server if available, otherwise default to my-courses
-                const redirectUrl = window.assessmentData.redirect_url || '/unlockyourskills/my-courses';
-                window.location.href = redirectUrl;
+                // Close the current tab/window
+                window.close();
+                
+                // If window.close() doesn't work (due to browser security), redirect to courses
+                // This happens when the tab was not opened by JavaScript
+                setTimeout(() => {
+                    // Use redirect URL from server if available, otherwise default to my-courses
+                    const redirectUrl = window.assessmentData.redirect_url || '/unlockyourskills/my-courses';
+                    window.location.href = redirectUrl;
+                }, 100);
             });
         }
 
@@ -423,7 +431,6 @@ class AssessmentPlayer {
 
         // Handle online/offline events
         window.addEventListener('online', () => {
-            console.log('Connection restored');
             this.offlineMode = false;
             this.removeOfflineNotification();
             if (this.currentQuestion > 0) {
@@ -432,7 +439,6 @@ class AssessmentPlayer {
         });
 
         window.addEventListener('offline', () => {
-            console.log('Connection lost');
             this.offlineMode = true;
             if (this.currentQuestion > 0) {
                 this.showOfflineNotification();
@@ -441,17 +447,13 @@ class AssessmentPlayer {
     }
 
     generateQuestionNavigator() {
-        console.log('generateQuestionNavigator called');
         const grid = document.getElementById('question-grid');
-        console.log('Question grid element:', grid);
         
         if (!grid) {
-            console.error('Question grid element not found!');
             return;
         }
         
         grid.innerHTML = '';
-        console.log('Generating navigator for', this.totalQuestions, 'questions');
 
         for (let i = 1; i <= this.totalQuestions; i++) {
             const btn = document.createElement('button');
@@ -459,9 +461,7 @@ class AssessmentPlayer {
             btn.textContent = i;
             btn.setAttribute('data-question', i);
             grid.appendChild(btn);
-            console.log('Added question button', i);
         }
-        console.log('Question navigator generated successfully');
     }
 
     loadQuestion(questionNumber) {
@@ -489,7 +489,7 @@ class AssessmentPlayer {
         console.log('Total questions:', this.totalQuestions);
         
         const question = window.assessmentData.assessment.selected_questions[this.currentQuestion - 1];
-        console.log('Current question data:', question);
+
         
         if (!question) {
             container.innerHTML = '<div class="alert alert-danger">Question not found</div>';
@@ -498,16 +498,16 @@ class AssessmentPlayer {
 
         let optionsHtml = '';
         const questionType = question.type?.toLowerCase() || '';
-        console.log('Question type:', question.type, 'Normalized type:', questionType);
+
         
         if (questionType === 'objective' && question.options) {
-            console.log('Rendering objective question with', question.options.length, 'options');
+
             const savedAnswer = this.answers[question.id];
-            console.log(`Saved answer for question ${question.id}:`, savedAnswer);
+
             
             optionsHtml = question.options.map(option => {
                 const isSelected = savedAnswer && savedAnswer.toString() === option.id.toString();
-                console.log(`Option ${option.id}: isSelected = ${isSelected}, savedAnswer = ${savedAnswer}, option.id = ${option.id}`);
+
                 
                 return `
                     <div class="option-item ${isSelected ? 'selected' : ''}" 
@@ -519,33 +519,33 @@ class AssessmentPlayer {
                 `;
             }).join('');
         } else if (questionType === 'subjective') {
-            console.log('Rendering subjective question with textarea');
+
             const savedAnswer = this.answers[question.id] || '';
             const charCount = savedAnswer.length;
             optionsHtml = `
                 <div class="form-group">
-                    <textarea class="form-control" rows="4" placeholder="Enter your answer here..."
+                    <textarea class="form-control" rows="4" placeholder="${window.assessmentData.translations.enter_answer_placeholder}"
                               oninput="window.assessmentPlayer.updateCharCount(this, '${question.id}')"
                               onblur="window.assessmentPlayer.saveAnswer('${question.id}', this.value)">${savedAnswer}</textarea>
                     <div class="char-counter mt-2">
                         <small class="text-muted">
-                            Characters: <span class="char-count">${charCount}</span>
+                            ${window.assessmentData.translations.characters}: <span class="char-count">${charCount}</span>
                         </small>
                     </div>
                 </div>
             `;
         } else {
-            console.log('Unknown question type:', question.type, 'Defaulting to textarea');
+
             const savedAnswer = this.answers[question.id] || '';
             const charCount = savedAnswer.length;
             optionsHtml = `
                 <div class="form-group">
-                    <textarea class="form-control" rows="4" placeholder="Enter your answer here..."
+                    <textarea class="form-control" rows="4" placeholder="${window.assessmentData.translations.enter_answer_placeholder}"
                               oninput="window.assessmentPlayer.updateCharCount(this, '${question.id}')"
                               onblur="window.assessmentPlayer.saveAnswer('${question.id}', this.value)">${savedAnswer}</textarea>
                     <div class="char-counter mt-2">
                         <small class="text-muted">
-                            Characters: <span class="char-count">${charCount}</span>
+                            ${window.assessmentData.translations.characters}: <span class="char-count">${charCount}</span>
                         </small>
                     </div>
                 </div>
@@ -553,13 +553,13 @@ class AssessmentPlayer {
         }
 
         const metaItems = [];
-        if (question.marks) metaItems.push(`<span class="meta-item">Marks: ${question.marks}</span>`);
-        if (question.difficulty_level) metaItems.push(`<span class="meta-item">Difficulty: ${question.difficulty_level}</span>`);
-        if (question.skills) metaItems.push(`<span class="meta-item">Skills: ${question.skills}</span>`);
+        if (question.marks) metaItems.push(`<span class="meta-item">${window.assessmentData.translations.marks}: ${question.marks}</span>`);
+        if (question.difficulty_level) metaItems.push(`<span class="meta-item">${window.assessmentData.translations.difficulty}: ${question.difficulty_level}</span>`);
+        if (question.skills) metaItems.push(`<span class="meta-item">${window.assessmentData.translations.skills}: ${question.skills}</span>`);
 
         container.innerHTML = `
             <div class="question-header fade-in">
-                <div class="question-number">Question ${this.currentQuestion}</div>
+                <div class="question-number">${window.assessmentData.translations.question} ${this.currentQuestion}</div>
                 <div class="question-text">${this.escapeHtml(question.title)}</div>
                 ${metaItems.length > 0 ? `<div class="question-meta">${metaItems.join('')}</div>` : ''}
             </div>
@@ -571,18 +571,12 @@ class AssessmentPlayer {
         // Update question counter
         document.getElementById('question-counter').textContent = `${this.currentQuestion} / ${this.totalQuestions}`;
         
-        // Debug: Log the final HTML being set
-        console.log('Final question HTML set:', container.innerHTML);
-        console.log('Current answers object:', this.answers);
-        console.log('Answer for current question:', this.answers[question.id]);
+
     }
 
     selectOption(questionId, optionId) {
-        console.log(`selectOption called for question ${questionId}, option ${optionId}`);
-        
         // Find all option items for this question
         const optionItems = document.querySelectorAll(`.option-item[onclick*="${questionId}"]`);
-        console.log(`Found ${optionItems.length} option items for question ${questionId}`);
         
         // Remove selected class from all options
         optionItems.forEach(item => {
@@ -935,6 +929,21 @@ class AssessmentPlayer {
             window.assessmentData.redirect_url = results.redirect_url;
             console.log('Stored redirect URL:', window.assessmentData.redirect_url);
         }
+
+        // Store assessment completion flag in localStorage for parent page refresh
+        const assessmentKey = `assessment_completed_${this.attemptId}`;
+        const completionData = {
+            attemptId: this.attemptId,
+            assessmentId: window.assessmentData.assessmentId,
+            courseId: window.assessmentData.courseId,
+            completedAt: new Date().toISOString(),
+            score: results.score,
+            maxScore: results.max_score,
+            percentage: results.percentage,
+            passed: results.passed
+        };
+        localStorage.setItem(assessmentKey, JSON.stringify(completionData));
+        console.log('Stored assessment completion flag:', completionData);
 
         // Show results modal safely
         try {

@@ -1,0 +1,483 @@
+/**
+ * External Content Progress Tracking CSS
+ * Styles for external content progress indicators, notifications, and UI components
+ */
+
+/* External Progress Container */
+.external-progress-container {
+    background: linear-gradient(135deg, #f8f9fa 0%, #ffffff 100%);
+    border: 1px solid #e9ecef;
+    border-radius: 12px;
+    padding: 20px;
+    margin-bottom: 20px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+}
+
+/* External Progress Header */
+.external-progress-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 15px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid #e9ecef;
+}
+
+.external-progress-title {
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: #495057;
+    margin: 0;
+    display: flex;
+    align-items: center;
+}
+
+.external-progress-title i {
+    margin-right: 8px;
+    color: #17a2b8;
+}
+
+/* External Progress Stats */
+.external-progress-stats {
+    display: flex;
+    gap: 20px;
+    flex-wrap: wrap;
+    margin-bottom: 15px;
+}
+
+.external-stat-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    min-width: 80px;
+}
+
+.external-stat-value {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: #17a2b8;
+    margin-bottom: 2px;
+}
+
+.external-stat-label {
+    font-size: 0.8rem;
+    color: #6c757d;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+/* External Progress Bar */
+.external-progress-bar-container {
+    margin-bottom: 15px;
+}
+
+.external-progress-bar {
+    height: 12px;
+    background-color: #e9ecef;
+    border-radius: 6px;
+    overflow: hidden;
+    position: relative;
+}
+
+.external-progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, #17a2b8 0%, #20c997 100%);
+    border-radius: 6px;
+    transition: width 0.6s ease;
+    position: relative;
+}
+
+.external-progress-fill.completed {
+    background: linear-gradient(90deg, #28a745 0%, #20c997 100%);
+}
+
+.external-progress-fill::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: linear-gradient(
+        90deg,
+        transparent 0%,
+        rgba(255, 255, 255, 0.3) 50%,
+        transparent 100%
+    );
+    animation: shimmer 2s infinite;
+}
+
+@keyframes shimmer {
+    0% { transform: translateX(-100%); }
+    100% { transform: translateX(100%); }
+}
+
+.external-progress-text {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 5px;
+    font-size: 0.85rem;
+    color: #6c757d;
+}
+
+.external-progress-percentage {
+    font-weight: 600;
+    color: #17a2b8;
+}
+
+.external-progress-percentage.completed {
+    color: #28a745;
+}
+
+/* External Content Status Badge */
+.external-status-badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 6px 12px;
+    border-radius: 20px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-left: 10px;
+}
+
+.external-status-badge i {
+    margin-right: 5px;
+}
+
+.external-status-badge.not-started {
+    background-color: #f8f9fa;
+    color: #6c757d;
+    border: 1px solid #dee2e6;
+}
+
+.external-status-badge.in-progress {
+    background-color: #fff3cd;
+    color: #856404;
+    border: 1px solid #ffeaa7;
+}
+
+.external-status-badge.completed {
+    background-color: #d4edda;
+    color: #155724;
+    border: 1px solid #c3e6cb;
+}
+
+/* External Progress Actions */
+.external-progress-actions {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    flex-wrap: wrap;
+}
+
+.external-action-btn {
+    display: inline-flex;
+    align-items: center;
+    padding: 8px 16px;
+    border: none;
+    border-radius: 6px;
+    font-size: 0.85rem;
+    font-weight: 500;
+    text-decoration: none;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.external-action-btn i {
+    margin-right: 6px;
+}
+
+.external-action-btn.btn-primary {
+    background-color: #17a2b8;
+    color: white;
+}
+
+.external-action-btn.btn-primary:hover {
+    background-color: #138496;
+    transform: translateY(-1px);
+}
+
+.external-action-btn.btn-success {
+    background-color: #28a745;
+    color: white;
+}
+
+.external-action-btn.btn-success:hover {
+    background-color: #218838;
+    transform: translateY(-1px);
+}
+
+.external-action-btn.btn-outline-secondary {
+    background-color: transparent;
+    color: #6c757d;
+    border: 1px solid #6c757d;
+}
+
+.external-action-btn.btn-outline-secondary:hover {
+    background-color: #6c757d;
+    color: white;
+}
+
+.external-action-btn:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+    transform: none !important;
+}
+
+/* External Content Timer */
+.external-timer {
+    display: inline-flex;
+    align-items: center;
+    font-family: 'Courier New', monospace;
+    font-size: 0.9rem;
+    color: #495057;
+    background-color: #f8f9fa;
+    padding: 4px 8px;
+    border-radius: 4px;
+    border: 1px solid #dee2e6;
+}
+
+.external-timer i {
+    margin-right: 5px;
+    color: #17a2b8;
+}
+
+.external-timer.active {
+    background-color: #fff3cd;
+    border-color: #ffeaa7;
+    color: #856404;
+}
+
+.external-timer.active i {
+    color: #856404;
+    animation: pulse 1.5s infinite;
+}
+
+@keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.5; }
+}
+
+/* External Completion Alert */
+.external-completion-alert {
+    border-left: 4px solid #28a745 !important;
+    background: linear-gradient(135deg, #d4edda 0%, #f8fff9 100%);
+    border-color: #c3e6cb !important;
+}
+
+.external-completion-alert .alert-heading {
+    color: #155724;
+    font-weight: 600;
+}
+
+.external-completion-alert i {
+    color: #28a745;
+    font-size: 1.2rem;
+}
+
+/* External Progress Notifications */
+.external-notification {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    max-width: 350px;
+    z-index: 1050;
+    animation: slideInRight 0.3s ease;
+}
+
+@keyframes slideInRight {
+    from {
+        transform: translateX(100%);
+        opacity: 0;
+    }
+    to {
+        transform: translateX(0);
+        opacity: 1;
+    }
+}
+
+.external-notification.fade-out {
+    animation: slideOutRight 0.3s ease;
+}
+
+@keyframes slideOutRight {
+    from {
+        transform: translateX(0);
+        opacity: 1;
+    }
+    to {
+        transform: translateX(100%);
+        opacity: 0;
+    }
+}
+
+/* External Content Card Integration */
+.content-item-card.external-content {
+    border-left: 4px solid #17a2b8;
+}
+
+.content-item-card.external-content.completed {
+    border-left-color: #28a745;
+    background-color: #f8fff9;
+}
+
+.content-item-card.external-content .content-progress-info {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.external-visit-count {
+    font-size: 0.75rem;
+    color: #6c757d;
+    display: flex;
+    align-items: center;
+}
+
+.external-visit-count i {
+    margin-right: 3px;
+}
+
+/* External Content Modal */
+.external-progress-modal .modal-header {
+    background: linear-gradient(135deg, #17a2b8 0%, #20c997 100%);
+    color: white;
+}
+
+.external-progress-modal .modal-body {
+    padding: 30px;
+}
+
+.external-progress-chart {
+    max-width: 300px;
+    margin: 0 auto 20px;
+}
+
+/* External Content Responsive Design */
+@media (max-width: 768px) {
+    .external-progress-stats {
+        justify-content: center;
+    }
+    
+    .external-stat-item {
+        min-width: 70px;
+    }
+    
+    .external-stat-value {
+        font-size: 1.2rem;
+    }
+    
+    .external-progress-actions {
+        justify-content: center;
+    }
+    
+    .external-action-btn {
+        font-size: 0.8rem;
+        padding: 6px 12px;
+    }
+    
+    .external-notification {
+        left: 10px;
+        right: 10px;
+        max-width: none;
+    }
+}
+
+@media (max-width: 480px) {
+    .external-progress-container {
+        padding: 15px;
+        margin-bottom: 15px;
+    }
+    
+    .external-progress-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 10px;
+    }
+    
+    .external-progress-stats {
+        gap: 15px;
+    }
+    
+    .external-progress-actions {
+        width: 100%;
+    }
+    
+    .external-action-btn {
+        flex: 1;
+        justify-content: center;
+    }
+}
+
+/* External Content Loading States */
+.external-progress-loading {
+    opacity: 0.6;
+    pointer-events: none;
+    position: relative;
+}
+
+.external-progress-loading::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(255, 255, 255, 0.8);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.external-progress-loading::before {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 20px;
+    height: 20px;
+    margin: -10px 0 0 -10px;
+    border: 2px solid #17a2b8;
+    border-top-color: transparent;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+    z-index: 1;
+}
+
+@keyframes spin {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+/* External Content Accessibility */
+.external-progress-container:focus-within {
+    outline: 2px solid #17a2b8;
+    outline-offset: 2px;
+}
+
+.external-action-btn:focus {
+    outline: 2px solid #17a2b8;
+    outline-offset: 2px;
+}
+
+/* External Content Print Styles */
+@media print {
+    .external-progress-container {
+        break-inside: avoid;
+        box-shadow: none;
+        border: 1px solid #000;
+    }
+    
+    .external-action-btn {
+        display: none;
+    }
+    
+    .external-notification {
+        display: none;
+    }
+}

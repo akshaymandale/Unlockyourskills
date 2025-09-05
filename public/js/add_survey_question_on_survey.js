@@ -143,7 +143,7 @@ document.addEventListener("DOMContentLoaded", function () {
 
     async function loadFilterOptions() {
         try {
-            const response = await fetch(`/unlockyourskills/vlr/surveys/filter-options`);
+            const response = await fetch(`vlr/surveys/filter-options`);
             const data = await response.json();
             filterType.innerHTML = `<option value="">All Types</option>`;
             (data.types || []).forEach(type => {
@@ -161,7 +161,7 @@ document.addEventListener("DOMContentLoaded", function () {
         }
 
         try {
-            const response = await fetch(`/unlockyourskills/vlr/surveys/selected-questions`, {
+            const response = await fetch(`vlr/surveys/selected-questions`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ ids: Array.from(temporarySelections) })

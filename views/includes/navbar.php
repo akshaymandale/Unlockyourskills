@@ -64,8 +64,8 @@ echo '<!-- SESSION_USER: ' . print_r($_SESSION['user'] ?? [], true) . ' -->';
 <nav class="navbar">
     <div class="navbar-left">
         <button class="sidebar-toggle" id="sidebarToggle"><i class="fas fa-bars"></i></button>
-        <a class="navbar-brand" href="#">
-            <img src="public/images/UYSlogo.png" alt="<?= Localization::translate('client_logo'); ?>">
+        <a class="navbar-brand" href="<?= UrlHelper::url('') ?>">
+            <img src="<?= UrlHelper::url('public/images/UYSlogo.png') ?>" alt="<?= Localization::translate('client_logo'); ?>">
         </a>
     </div>
     
@@ -139,6 +139,9 @@ echo '<!-- SESSION_USER: ' . print_r($_SESSION['user'] ?? [], true) . ' -->';
                     <i class="fas fa-user-edit"></i> <?= Localization::translate('edit_profile'); ?>
                 </a>
                 <?php endif; ?>
+                <a class="dropdown-item" href="<?= UrlHelper::url('organizational-hierarchy') ?>">
+                    <i class="fas fa-sitemap"></i> <?= Localization::translate('organizational_hierarchy_title'); ?>
+                </a>
                 <a class="dropdown-item" href="<?= UrlHelper::url('settings') ?>">
                     <i class="fas fa-cog"></i> <?= Localization::translate('settings'); ?>
                 </a>

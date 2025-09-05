@@ -58,6 +58,17 @@ Router::middleware(['Auth'])->group(function() {
     Router::post('/users/ajax/search', 'UserManagementController@ajaxSearch');
     Router::post('/users/ajax/toggle-status', 'UserManagementController@toggleStatus');
     Router::post('/users/import', 'UserManagementController@import');
+    
+
+// Original autocomplete route
+Router::get('/users/emails/autocomplete', 'UserManagementController@getUserEmailsForAutocomplete');
+
+// Simpler autocomplete route (like your previous working code)
+Router::get('/users/autocomplete', 'UserManagementController@getUserEmailsForAutocomplete');
+
+
+    Router::get('/organizational-hierarchy', 'UserManagementController@showOrganizationalHierarchy');
+    Router::get('/organizational-hierarchy/data', 'UserManagementController@getOrganizationalHierarchyData');
 
     // User Management Routes
     Router::get('/users', 'UserManagementController@index');
@@ -80,13 +91,55 @@ Router::middleware(['Auth'])->group(function() {
     // ===================================
     Router::get('/my-courses', 'MyCoursesController@index');
     Router::get('/my-courses/list', 'MyCoursesController@getUserCourses');
+    Router::get('/my-courses/count', 'MyCoursesController@getUserCoursesCount');
     Router::get('/manage-portal', 'ManagePortalController@index');
     Router::get('/my-courses/details/{id}', 'MyCoursesController@details');
     Router::get('/my-courses/view-content', 'MyCoursesController@viewContent');
     Router::get('/my-courses/start', 'MyCoursesController@start');
 
     // ===================================
-<<<<<<< HEAD
+    // AUDIO PROGRESS TRACKING
+    // ===================================
+    Router::post('/audio-progress/update', 'AudioProgressController@updateProgress');
+    Router::get('/audio-progress/get', 'AudioProgressController@getProgress');
+    Router::post('/audio-progress/complete', 'AudioProgressController@markCompleted');
+    Router::post('/audio-progress/status', 'AudioProgressController@updateStatus');
+    Router::post('/audio-progress/playback-status', 'AudioProgressController@updatePlaybackStatus');
+    Router::get('/audio-progress/resume-position', 'AudioProgressController@getResumePosition');
+    Router::get('/audio-progress/summary', 'AudioProgressController@getSummary');
+    Router::get('/api/audio-content-info', 'AudioProgressController@getContentInfo');
+    
+    // Hybrid approach routes
+    Router::post('/audio-progress/immediate-save', 'AudioProgressController@immediateSave');
+    Router::post('/audio-progress/beacon-save', 'AudioProgressController@beaconSave');
+    Router::post('/audio-progress/batch-update', 'AudioProgressController@batchUpdate');
+
+    // Video progress routes
+    Router::post('/video-progress/immediate-save', 'VideoProgressController@immediateSave');
+    Router::post('/video-progress/beacon-save', 'VideoProgressController@beaconSave');
+    Router::post('/video-progress/batch-update', 'VideoProgressController@batchUpdate');
+    Router::get('/video-progress/resume-position', 'VideoProgressController@getResumePosition');
+    Router::get('/video-progress/stats', 'VideoProgressController@getVideoStats');
+
+    // Image progress tracking routes
+    Router::post('/image-progress/mark-as-viewed', 'ImageProgressController@markAsViewed');
+    Router::get('/image-progress/get-progress', 'ImageProgressController@getProgress');
+    Router::post('/image-progress/update-progress', 'ImageProgressController@updateProgress');
+
+    // ===================================
+    // EXTERNAL CONTENT PROGRESS TRACKING
+    // ===================================
+    Router::post('/external-progress/record-visit', 'ExternalProgressController@recordVisit');
+    Router::post('/external-progress/update-time-spent', 'ExternalProgressController@updateTimeSpent');
+    Router::post('/external-progress/mark-completed', 'ExternalProgressController@markCompleted');
+    Router::get('/external-progress/statistics', 'ExternalProgressController@getStatistics');
+    Router::get('/external-progress/course-progress', 'ExternalProgressController@getCourseProgress');
+    Router::post('/external-progress/update-progress', 'ExternalProgressController@updateProgress');
+    Router::get('/external-progress/completion-rate', 'ExternalProgressController@getCompletionRate');
+    Router::get('/external-progress/content-type-progress', 'ExternalProgressController@getContentTypeProgress');
+    Router::post('/external-progress/batch-update', 'ExternalProgressController@batchUpdate');
+
+    // ===================================
     // ASSESSMENT PLAYER
     // ===================================
     Router::get('/assessment-player', 'AssessmentPlayerController@start');
@@ -98,8 +151,7 @@ Router::middleware(['Auth'])->group(function() {
     Router::get('/assessment-player/health-check', 'AssessmentPlayerController@healthCheck');
 
     // ===================================
-=======
->>>>>>> af75b4fbe579979a6b31bc9dbf713ea5cddebe83
+
     // COURSE CATEGORIES
     // ===================================
     
@@ -248,7 +300,29 @@ Router::middleware(['Auth'])->group(function() {
     Router::get('/vlr/scorm', 'VLRController@scormIndex');
     Router::post('/vlr/scorm', 'VLRController@addOrEditScormPackage');
     Router::delete('/vlr/scorm/{id}', 'VLRController@delete');
+
+    // SCORM Launcher
+    Router::get('/scorm/launch', 'SCORMController@launch');
+    Router::post('/scorm/progress', 'SCORMController@getProgress');
+    Router::post('/scorm/update', 'SCORMController@updateProgress');
+    Router::post('/scorm/complete', 'SCORMController@complete');
+    Router::get('/scorm/resume', 'SCORMController@getResume');
     
+    // Module Progress API
+    Router::get('/module-progress', 'MyCoursesController@getModuleProgress');
+    
+    // Document Progress API
+    Router::post('/api/document-progress/start', 'DocumentProgressController@startTracking');
+    Router::post('/api/document-progress/update', 'DocumentProgressController@updateProgress');
+    Router::post('/api/document-progress/complete', 'DocumentProgressController@markComplete');
+    Router::get('/api/document-progress/get', 'DocumentProgressController@getProgress');
+    Router::post('/api/document-progress/bookmark', 'DocumentProgressController@saveBookmark');
+    Router::post('/api/document-progress/notes', 'DocumentProgressController@saveNotes');
+    Router::get('/api/document-progress/debug', 'DocumentProgressController@debug');
+    
+    // Debug route for testing
+    Router::get('/api/debug', 'MyCoursesController@debug');
+
     // External Content
     Router::get('/vlr/external', 'VLRController@externalIndex');
     Router::post('/vlr/external', 'VLRController@addOrEditExternalContent');
@@ -311,6 +385,7 @@ Router::middleware(['Auth'])->group(function() {
     Router::post('/vlr/surveys/selected-questions', 'SurveyQuestionController@getSelectedQuestions');
     // Parameterized routes (MUST come after specific routes)
     Router::get('/vlr/surveys/{id}', 'VLRController@getSurveyById');
+    Router::delete('/vlr/surveys/{id}', 'VLRController@deleteSurvey');
     
     // Feedback Packages
     Router::get('/vlr/feedback', 'VLRController@feedbackIndex');
@@ -354,6 +429,18 @@ Router::middleware(['Auth'])->group(function() {
     Router::post('/surveys/import', 'SurveyQuestionController@import');
     
     // ===================================
+    // SURVEY RESPONSES
+    // ===================================
+    
+    // Survey Response Routes
+    Router::get('/survey/{courseId}/{surveyId}', 'SurveyResponseController@showSurvey');
+    Router::get('/survey/modal-content', 'SurveyResponseController@getModalContent');
+    Router::post('/survey/submit', 'SurveyResponseController@submitSurvey');
+    Router::get('/survey/responses', 'SurveyResponseController@getResponses');
+    Router::get('/survey/check-submission', 'SurveyResponseController@checkSubmission');
+    Router::get('/survey/course-surveys', 'SurveyResponseController@getCourseSurveys');
+    
+    // ===================================
     // FEEDBACK QUESTIONS
     // ===================================
 
@@ -369,6 +456,29 @@ Router::middleware(['Auth'])->group(function() {
     // Feedback AJAX operations
     Router::post('/feedback/ajax/search', 'FeedbackQuestionController@ajaxSearch');
     Router::post('/feedback/import', 'FeedbackQuestionController@import');
+
+    // ===================================
+    // FEEDBACK RESPONSES (Course Feedback)
+    // ===================================
+
+    // Feedback Response Management
+    Router::get('/feedback-response/form', 'FeedbackResponseController@showFeedbackForm');
+    Router::post('/feedback-response/submit', 'FeedbackResponseController@submitFeedback');
+    Router::get('/feedback-response/form-data', 'FeedbackResponseController@getFeedbackForm');
+    Router::get('/feedback-response/status', 'FeedbackResponseController@checkFeedbackStatus');
+    Router::post('/feedback-response/delete', 'FeedbackResponseController@deleteFeedback');
+
+    // ===================================
+    // ASSIGNMENT SUBMISSIONS
+    // ===================================
+
+    // Assignment Submission Management
+    Router::get('/assignment-submission/{courseId}/{assignmentId}', 'AssignmentSubmissionController@showAssignment');
+    Router::get('/assignment-submission/modal-content', 'AssignmentSubmissionController@getAssignmentModalContent');
+    Router::post('/assignment-submission/submit', 'AssignmentSubmissionController@submitAssignment');
+    Router::get('/assignment-submission/submissions', 'AssignmentSubmissionController@getSubmissions');
+    Router::get('/assignment-submission/check-status', 'AssignmentSubmissionController@checkSubmissionStatus');
+    Router::get('/assignment-submission/course-assignments', 'AssignmentSubmissionController@getCourseAssignments');
 
     // ===================================
     // OPINION POLLS
@@ -536,6 +646,30 @@ Router::get('/course-applicability/getUsersByCustomField', 'CourseApplicabilityC
 // Course Applicability AJAX user search
 Router::get('/course-applicability/search-users', 'CourseApplicabilityController@searchUsers');
 Router::get('/course-applicability/getApplicableUsers', 'CourseApplicabilityController@getApplicableUsers');
+
+// Progress Tracking routes
+Router::post('/progress/initialize', 'ProgressTrackingController@initializeProgress');
+Router::get('/progress/get', 'ProgressTrackingController@getProgress');
+Router::post('/progress/update', 'ProgressTrackingController@updateProgress');
+Router::post('/progress/module/update', 'ProgressTrackingController@updateModuleProgress');
+Router::post('/progress/content/update', 'ProgressTrackingController@updateContentProgress');
+Router::get('/progress/content/get', 'ProgressTrackingController@getContentProgress');
+
+// Content-specific progress tracking
+Router::post('/progress/scorm/update', 'ProgressTrackingController@updateScormProgress');
+Router::post('/progress/video/update', 'ProgressTrackingController@updateVideoProgress');
+Router::post('/progress/audio/update', 'ProgressTrackingController@updateAudioProgress');
+Router::post('/progress/document/update', 'ProgressTrackingController@updateDocumentProgress');
+Router::post('/progress/interactive/update', 'ProgressTrackingController@updateInteractiveProgress');
+Router::post('/progress/external/update', 'ProgressTrackingController@updateExternalProgress');
+
+// Resume functionality
+Router::get('/progress/resume/get', 'ProgressTrackingController@getResumePosition');
+Router::post('/progress/resume/set', 'ProgressTrackingController@setResumePosition');
+
+// Progress calculation and summary
+Router::get('/progress/calculate', 'ProgressTrackingController@calculateProgress');
+Router::get('/progress/summary', 'ProgressTrackingController@getUserProgressSummary');
 // My Courses
 Router::get('/my-courses', 'MyCoursesController@index');
 Router::get('/my-courses/list', 'MyCoursesController@getUserCourses');

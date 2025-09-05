@@ -162,8 +162,8 @@ class Router
         $matchedRoute = self::findRoute($method, $uri);
 
         if (!$matchedRoute) {
-            error_log('[ROUTER] FAILED: No route found for ' . $method . ' ' . $uri);
-            error_log('[ROUTER] All available routes: ' . print_r(self::$routes, true));
+           // error_log('[ROUTER] FAILED: No route found for ' . $method . ' ' . $uri);
+        //error_log('[ROUTER] All available routes: ' . print_r(self::$routes, true));
             self::handleNotFound();
             return;
         }

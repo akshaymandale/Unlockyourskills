@@ -19,10 +19,16 @@
 if (typeof VLRConfirmations === 'undefined') {
 class VLRConfirmations {
     constructor() {
+        this.initialized = false;
         this.init();
     }
 
     init() {
+        // Prevent multiple initializations
+        if (this.initialized) {
+            return;
+        }
+        
         // VLR-specific delete confirmations
         document.addEventListener('click', (e) => {
             const target = e.target.closest(this.getVLRSelectors());
@@ -31,6 +37,8 @@ class VLRConfirmations {
                 this.handleVLRDelete(target);
             }
         });
+        
+        this.initialized = true;
     }
 
     // Helper function to get translation with fallback
@@ -51,25 +59,9 @@ class VLRConfirmations {
 
     // Get translated item name for VLR packages
     getTranslatedItemName(data) {
-        const typeMap = {
-            'SCORM package': 'item.scorm_package',
-            'non-SCORM package': 'item.non_scorm_package',
-            'assessment': 'item.assessment',
-            'assignment': 'item.assignment',
-            'audio package': 'item.audio_package',
-            'video package': 'item.video_package',
-            'image package': 'item.image_package',
-            'document': 'item.document',
-            'external content': 'item.external_content',
-            'interactive content': 'item.interactive_content',
-            'survey': 'item.survey',
-            'feedback': 'item.feedback'
-        };
-
-        const translationKey = typeMap[data.type] || 'item.scorm_package';
-        const replacements = { title: data.title };
-
-        return this.getTranslation(translationKey, replacements) || `${data.type} "${data.title}"`;
+        // Use the actual package title instead of trying to translate the type
+        // This ensures the confirmation shows the real package name
+        return `${data.type} "${data.title}"`;
     }
 
     getVLRSelectors() {
@@ -95,6 +87,28 @@ class VLRConfirmations {
         if (!data.id) {
             console.error('VLR delete button missing ID:', button);
             return;
+        }
+
+        // Special handling for assessment packages - check if they are assigned to applicable courses
+        if (data.type === 'assessment') {
+            const assessmentData = button.dataset.assessment;
+            if (assessmentData) {
+                try {
+                    const parsedData = JSON.parse(assessmentData);
+                    if (parsedData.is_assigned_to_applicable_courses) {
+                        // Assessment is assigned to applicable courses, show toaster and don't proceed
+                        console.log('VLRConfirmations: Showing toast for assessment', data.id);
+                        if (typeof showSimpleToast === 'function') {
+                            showSimpleToast('Cannot delete assessment: Assessment is assigned to courses that are applicable to users and cannot be deleted.', 'error');
+                        } else {
+                            alert('Cannot delete assessment: Assessment is assigned to courses that are applicable to users and cannot be deleted.');
+                        }
+                        return; // Stop here, don't show confirmation
+                    }
+                } catch (e) {
+                    console.error('Error parsing assessment data:', e);
+                }
+            }
         }
 
         this.showVLRConfirmation(data);
@@ -280,31 +294,23 @@ class VLRConfirmations {
     }
 
     static getStaticTranslatedItemName(type, title) {
-        const typeMap = {
-            'scorm': 'item.scorm_package',
-            'non-scorm': 'item.non_scorm_package',
-            'assessment': 'item.assessment',
-            'assignment': 'item.assignment',
-            'audio': 'item.audio_package',
-            'video': 'item.video_package',
-            'image': 'item.image_package',
-            'document': 'item.document',
-            'external': 'item.external_content',
-            'interactive': 'item.interactive_content',
-            'survey': 'item.survey',
-            'feedback': 'item.feedback'
-        };
-
-        const translationKey = typeMap[type] || 'item.scorm_package';
-        const replacements = { title: title };
-
-        return VLRConfirmations.getStaticTranslation(translationKey, replacements) || `${type} package "${title}"`;
+        // Use the actual package title instead of trying to translate the type
+        // This ensures the confirmation shows the real package name
+        return `${type} package "${title}"`;
     }
 }
 
-// Initialize VLR confirmations
-if (document.readyState !== 'loading') {
-    window.vlrConfirmationsInstance = new VLRConfirmations();
+// Initialize VLR confirmations (prevent multiple instances)
+if (!window.vlrConfirmationsInstance) {
+    if (document.readyState !== 'loading') {
+        window.vlrConfirmationsInstance = new VLRConfirmations();
+    } else {
+        document.addEventListener('DOMContentLoaded', function() {
+            if (!window.vlrConfirmationsInstance) {
+                window.vlrConfirmationsInstance = new VLRConfirmations();
+            }
+        });
+    }
 }
 
 // Global VLR helper function
