@@ -2,10 +2,10 @@
 // views/includes/sidebar.php
 require_once 'core/UrlHelper.php';
 
-// Debug: Check what the current URI contains
-echo "<!-- Debug: REQUEST_URI = " . $_SERVER['REQUEST_URI'] . " -->";
-echo "<!-- Debug: Base Path = " . UrlHelper::getBasePath() . " -->";
-echo "<!-- Debug: isCurrentPage('manage-portal') = " . (isCurrentPage('manage-portal') ? 'true' : 'false') . " -->";
+// Debug: Check what the current URI contains (commented out for production)
+// echo "<!-- Debug: REQUEST_URI = " . $_SERVER['REQUEST_URI'] . " -->";
+// echo "<!-- Debug: Base Path = " . UrlHelper::getBasePath() . " -->";
+// echo "<!-- Debug: isCurrentPage('manage-portal') = " . (isCurrentPage('manage-portal') ? 'true' : 'false') . " -->";
 
 // Helper function to check if current page matches a route
 function isCurrentPage($route) {
@@ -20,6 +20,30 @@ function isCurrentPage($route) {
     // Clean up the URI
     $currentUri = trim($currentUri, '/');
     $route = trim($route, '/');
+    
+    // Special handling for manage-portal sub-pages
+    if ($route === 'manage-portal') {
+        $managePortalSubPages = [
+            'manage-portal',
+            'course-applicability',
+            'course-management',
+            'user-management',
+            'course-categories',
+            'course-subcategories',
+            'vlr',
+            'feed',
+            'events',
+            'opinion-polls',
+            'announcements'
+        ];
+        
+        foreach ($managePortalSubPages as $subPage) {
+            if ($currentUri === $subPage || strpos($currentUri, $subPage . '/') === 0) {
+                return true;
+            }
+        }
+        return false;
+    }
     
     // Check if current URI starts with the route
     return $currentUri === $route || strpos($currentUri, $route . '/') === 0;

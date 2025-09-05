@@ -43,6 +43,7 @@ class EventController extends BaseController {
         ];
 
         // Check permissions for global events
+        $systemRole = $_SESSION['user']['system_role'] ?? 'user';
         $canCreateGlobal = in_array($systemRole, ['super_admin', 'admin']);
 
         require_once 'views/events.php';

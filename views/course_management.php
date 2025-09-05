@@ -672,7 +672,7 @@ function displayCourses(courses) {
             <td>
                 <div class="btn-group" role="group">
                     <?php if ($canEditCourse): ?>
-                    <button type="button" class="btn btn-sm btn-outline-primary" onclick="editCourse(${course.id})" title="Edit Course" data-action-permission="course_management:edit">
+                    <button type="button" class="btn btn-sm btn-outline-primary" onclick="editCourse(${course.id})" title="Edit Course" data-action-permission="course_management:edit" data-course-data='${JSON.stringify(course)}'>
                         <i class="fas fa-edit"></i>
                     </button>
                     <?php endif; ?>
@@ -680,7 +680,7 @@ function displayCourses(courses) {
                         <i class="fas fa-eye"></i>
                     </button>
                     <?php if ($canDeleteCourse): ?>
-                    <button type="button" class="btn btn-sm btn-outline-danger" onclick="deleteCourse(${course.id}, '${course.name}')" title="Delete Course" data-action-permission="course_management:delete">
+                    <button type="button" class="btn btn-sm btn-outline-danger" onclick="deleteCourse(${course.id}, '${course.name}')" title="Delete Course" data-action-permission="course_management:delete" data-course-data='${JSON.stringify(course)}'>
                         <i class="fas fa-trash"></i>
                     </button>
                     <?php endif; ?>
@@ -784,7 +784,25 @@ function updateSearchResultsInfo(total, filtered) {
 }
 
 function editCourse(courseId) {
-    console.log('[DEBUG] editCourse() called with courseId:', courseId);
+    // Check if course has applicability rules
+    const editButton = document.querySelector(`button[onclick="editCourse(${courseId})"]`);
+    if (editButton) {
+        const courseDataString = editButton.dataset.courseData || '{}';
+        try {
+            const courseData = JSON.parse(courseDataString);
+            if (courseData.has_applicability_rules) {
+                if (typeof showSimpleToast === 'function') {
+                    showSimpleToast('Cannot edit course: Course is applicable to users and cannot be modified.', 'error');
+                } else {
+                    alert('Cannot edit course: Course is applicable to users and cannot be modified.');
+                }
+                return;
+            }
+        } catch (e) {
+            console.error('Error parsing course data:', e);
+        }
+    }
+    
     // Load edit course modal content
     fetch(`index.php?controller=CourseCreationController&action=editCourse&id=${courseId}`, {
         method: 'GET',
@@ -884,6 +902,25 @@ function previewCourse(courseId) {
 }
 
 function deleteCourse(courseId, courseName) {
+    // Check if course has applicability rules
+    const deleteButton = document.querySelector(`button[onclick="deleteCourse(${courseId}, '${courseName}')"]`);
+    if (deleteButton) {
+        const courseDataString = deleteButton.dataset.courseData || '{}';
+        try {
+            const courseData = JSON.parse(courseDataString);
+            if (courseData.has_applicability_rules) {
+                if (typeof showSimpleToast === 'function') {
+                    showSimpleToast('Cannot delete course: Course is applicable to users and cannot be deleted.', 'error');
+                } else {
+                    alert('Cannot delete course: Course is applicable to users and cannot be deleted.');
+                }
+                return;
+            }
+        } catch (e) {
+            console.error('Error parsing course data:', e);
+        }
+    }
+    
     document.getElementById('deleteCourseName').textContent = courseName;
     const modal = new bootstrap.Modal(document.getElementById('deleteCourseModal'));
     modal.show();

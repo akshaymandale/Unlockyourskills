@@ -82,6 +82,16 @@ document.addEventListener("DOMContentLoaded", function () {
         button.addEventListener("click", function () {
             const scormData = JSON.parse(this.dataset.scorm); // Get data from button attribute
 
+            // Check if SCORM package is assigned to applicable courses and show warning
+            if (scormData.is_assigned_to_applicable_courses) {
+                if (typeof showSimpleToast === 'function') {
+                    showSimpleToast('Cannot edit SCORM package: Package is assigned to courses that are applicable to users and cannot be modified.', 'error');
+                } else {
+                    alert('Cannot edit SCORM package: Package is assigned to courses that are applicable to users and cannot be modified.');
+                }
+                return;
+            }
+
             scormId.value = scormData.id; // Set ID for edit
             scormTitle.value = scormData.title;
             version.value = scormData.version;

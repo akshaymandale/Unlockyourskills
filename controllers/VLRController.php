@@ -402,6 +402,12 @@ class VLRController extends BaseController
         if ($id) {
             error_log("📦 Deleting SCORM package with ID: " . $id);
 
+            // Check if SCORM package is assigned to courses with applicability rules
+            if ($this->VLRModel->isScormAssignedToApplicableCourses($id)) {
+                $this->toastError('Cannot delete SCORM package: Package is assigned to courses that are applicable to users and cannot be deleted.', '/unlockyourskills/vlr?tab=scorm');
+                return;
+            }
+
             // Determine client filtering based on user role
             $filterClientId = ($currentUser && $currentUser['system_role'] === 'admin') ? $clientId : null;
 
@@ -667,6 +673,12 @@ class VLRController extends BaseController
             return;
         }
 
+        // Check if External content is assigned to courses with applicability rules
+        if ($this->VLRModel->isExternalAssignedToApplicableCourses($id)) {
+            $this->toastError('Cannot delete External content: Content is assigned to courses that are applicable to users and cannot be deleted.', '/unlockyourskills/vlr?tab=external');
+            return;
+        }
+
         // Determine client filtering based on user role
         $filterClientId = ($currentUser && $currentUser['system_role'] === 'admin') ? $clientId : null;
 
@@ -843,6 +855,12 @@ class VLRController extends BaseController
 
         if (!$id) {
             $this->toastError('Invalid request.', '/unlockyourskills/vlr?tab=document');
+            return;
+        }
+
+        // Check if Document is assigned to courses with applicability rules
+        if ($this->VLRModel->isDocumentAssignedToApplicableCourses($id)) {
+            $this->toastError('Cannot delete Document: Document is assigned to courses that are applicable to users and cannot be deleted.', '/unlockyourskills/vlr?tab=document');
             return;
         }
 
@@ -1123,6 +1141,12 @@ public function deleteAudioPackage($id = null)
         return;
     }
 
+    // Check if Audio package is assigned to courses with applicability rules
+    if ($this->VLRModel->isAudioAssignedToApplicableCourses($id)) {
+        $this->toastError('Cannot delete Audio package: Package is assigned to courses that are applicable to users and cannot be deleted.', '/unlockyourskills/vlr?tab=audio');
+        return;
+    }
+
     $success = $this->VLRModel->deleteAudioPackage($id);
 
     if ($success) {
@@ -1260,6 +1284,12 @@ public function deleteVideoPackage($id = null)
         return;
     }
 
+    // Check if Video package is assigned to courses with applicability rules
+    if ($this->VLRModel->isVideoAssignedToApplicableCourses($id)) {
+        $this->toastError('Cannot delete Video package: Package is assigned to courses that are applicable to users and cannot be deleted.', '/unlockyourskills/vlr?tab=video');
+        return;
+    }
+
     $success = $this->VLRModel->deleteVideoPackage($id);
 
     if ($success) {
@@ -1388,6 +1418,12 @@ public function deleteImagePackage($id = null)
         return;
     }
 
+    // Check if Image package is assigned to courses with applicability rules
+    if ($this->VLRModel->isImageAssignedToApplicableCourses($id)) {
+        $this->toastError('Cannot delete Image package: Package is assigned to courses that are applicable to users and cannot be deleted.', '/unlockyourskills/vlr?tab=image');
+        return;
+    }
+
     $success = $this->VLRModel->deleteImagePackage($id);
 
     if ($success) {
@@ -1485,6 +1521,12 @@ public function deleteImagePackage($id = null)
         
         if (!$id) {
             $this->toastError('Invalid request.', '/unlockyourskills/vlr?tab=survey');
+            return;
+        }
+
+        // Check if Survey is assigned to courses with applicability rules
+        if ($this->VLRModel->isSurveyAssignedToApplicableCourses($id)) {
+            $this->toastError('Cannot delete Survey: Survey is assigned to courses that are applicable to users and cannot be deleted.', '/unlockyourskills/vlr?tab=survey');
             return;
         }
 
@@ -1610,6 +1652,13 @@ public function deleteImagePackage($id = null)
         }
 
         $id = intval($id);
+
+        // Check if Feedback is assigned to courses with applicability rules
+        if ($this->VLRModel->isFeedbackAssignedToApplicableCourses($id)) {
+            $this->toastError('Cannot delete Feedback: Feedback is assigned to courses that are applicable to users and cannot be deleted.', '/unlockyourskills/vlr?tab=feedback');
+            return;
+        }
+
         $result = $this->VLRModel->deleteFeedback($id);
 
         if ($result) {
@@ -1806,6 +1855,12 @@ public function deleteImagePackage($id = null)
             return;
         }
 
+        // Check if Interactive content is assigned to courses with applicability rules
+        if ($this->VLRModel->isInteractiveAssignedToApplicableCourses($id)) {
+            $this->toastError('Cannot delete Interactive content: Content is assigned to courses that are applicable to users and cannot be deleted.', '/unlockyourskills/vlr?tab=interactive');
+            return;
+        }
+
         // Determine client filtering based on user role
         $filterClientId = ($currentUser && $currentUser['system_role'] === 'admin') ? $clientId : null;
 
@@ -1933,6 +1988,12 @@ public function deleteImagePackage($id = null)
         
         if (!$id) {
             $this->toastError('Invalid request.', '/unlockyourskills/vlr?tab=non-scorm');
+            return;
+        }
+
+        // Check if Non-SCORM package is assigned to courses with applicability rules
+        if ($this->VLRModel->isNonScormAssignedToApplicableCourses($id)) {
+            $this->toastError('Cannot delete Non-SCORM package: Package is assigned to courses that are applicable to users and cannot be deleted.', '/unlockyourskills/vlr?tab=non-scorm');
             return;
         }
 
@@ -2302,6 +2363,12 @@ public function deleteImagePackage($id = null)
         
         if (!$id) {
             $this->toastError('Invalid request.', '/unlockyourskills/vlr?tab=assignment');
+            return;
+        }
+
+        // Check if Assignment package is assigned to courses with applicability rules
+        if ($this->VLRModel->isAssignmentAssignedToApplicableCourses($id)) {
+            $this->toastError('Cannot delete Assignment package: Package is assigned to courses that are applicable to users and cannot be deleted.', '/unlockyourskills/vlr?tab=assignment');
             return;
         }
 

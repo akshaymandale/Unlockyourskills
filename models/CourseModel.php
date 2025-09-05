@@ -516,7 +516,15 @@ class CourseModel
 
         $stmt = $this->conn->prepare($sql);
         $stmt->execute($params);
-        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+        $courses = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        
+        // Add course applicability flag to each course
+        foreach ($courses as &$course) {
+            $course['has_applicability_rules'] = $this->hasCourseApplicabilityRules($course['id']);
+        }
+        unset($course);
+        
+        return $courses;
     }
 
     /**
@@ -1481,8 +1489,15 @@ class CourseModel
             
             $stmt = $this->conn->prepare($sql);
             $stmt->execute([$clientId]);
+            $courses = $stmt->fetchAll(PDO::FETCH_ASSOC);
             
-            return $stmt->fetchAll(PDO::FETCH_ASSOC);
+            // Add course applicability flag to each course
+            foreach ($courses as &$course) {
+                $course['has_applicability_rules'] = $this->hasCourseApplicabilityRules($course['id']);
+            }
+            unset($course);
+            
+            return $courses;
         } catch (PDOException $e) {
             error_log("Error getting all courses: " . $e->getMessage());
             return [];
@@ -1815,6 +1830,30 @@ class CourseModel
         } catch (Exception $e) {
             error_log("Error getting content progress: " . $e->getMessage());
             return 0;
+        }
+    }
+
+    /**
+     * Check if a course has applicability rules
+     * @param int $courseId
+     * @return bool
+     */
+    public function hasCourseApplicabilityRules($courseId)
+    {
+        try {
+            $stmt = $this->conn->prepare("
+                SELECT COUNT(*) as count 
+                FROM course_applicability 
+                WHERE course_id = ?
+            ");
+            $stmt->execute([$courseId]);
+            $result = $stmt->fetch(PDO::FETCH_ASSOC);
+            $count = (int)$result['count'];
+            
+            return $count > 0;
+        } catch (Exception $e) {
+            error_log("Error checking course applicability rules: " . $e->getMessage());
+            return true; // Assume has applicability rules if error occurs (safer approach)
         }
     }
 } 
