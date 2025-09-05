@@ -48,6 +48,7 @@ class CourseManagementManager {
         window.publishCourse = (courseId) => this.publishCourse(courseId);
         window.unpublishCourse = (courseId) => this.unpublishCourse(courseId);
         window.deleteCourse = (courseId) => this.deleteCourse(courseId);
+        window.editCourse = (courseId) => this.editCourse(courseId);
     }
 
     setupSearch() {
@@ -158,7 +159,7 @@ class CourseManagementManager {
                             </button>
                             <ul class="dropdown-menu">
                                 <li>
-                                    <a class="dropdown-item" href="/course-edit/${course.id}">
+                                    <a class="dropdown-item" href="#" onclick="courseManager.editCourse(${course.id}); return false;">
                                         <i class="fas fa-edit me-2"></i>
                                         Edit
                                     </a>
@@ -356,7 +357,26 @@ class CourseManagementManager {
         );
     }
 
+    editCourse(courseId) {
+        // Find the course data to check applicability
+        const course = this.courses.find(c => c.id == courseId);
+        if (course && course.has_applicability_rules) {
+            this.showToast('Cannot edit course: Course is applicable to users and cannot be modified.', 'error');
+            return;
+        }
+
+        // Redirect to edit course page
+        window.location.href = `/course-edit/${courseId}`;
+    }
+
     async deleteCourse(courseId) {
+        // Find the course data to check applicability
+        const course = this.courses.find(c => c.id == courseId);
+        if (course && course.has_applicability_rules) {
+            this.showToast('Cannot delete course: Course is applicable to users and cannot be deleted.', 'error');
+            return;
+        }
+
         this.showConfirmationModal(
             'Delete Course',
             'Are you sure you want to delete this course? This action cannot be undone and will remove all associated data.',

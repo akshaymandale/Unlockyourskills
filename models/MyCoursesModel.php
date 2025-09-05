@@ -18,7 +18,7 @@ class MyCoursesModel {
      */
     public function isCourseStarted($courseId, $userId, $clientId) {
         try {
-            // Check prerequisites activity
+            // First check if prerequisites are met
             $prereqStmt = $this->conn->prepare("
                 SELECT COUNT(*) as count
                 FROM course_prerequisites cp
@@ -55,8 +55,49 @@ class MyCoursesModel {
             ]);
             $prereqResult = $prereqStmt->fetch(PDO::FETCH_ASSOC);
             
+            // If there are prerequisites and they are not met, course is not started
             if ($prereqResult['count'] > 0) {
-                return true;
+                // There are prerequisites, check if they are met
+                $prereqMetStmt = $this->conn->prepare("
+                    SELECT COUNT(*) as count
+                    FROM course_prerequisites cp
+                    WHERE cp.course_id = ? AND cp.deleted_at IS NULL
+                    AND (
+                        (cp.prerequisite_type = 'assessment' AND EXISTS (
+                            SELECT 1 FROM assessment_attempts aa 
+                            WHERE aa.assessment_id = cp.prerequisite_id 
+                            AND aa.user_id = ? AND (aa.client_id = ? OR aa.client_id IS NULL)
+                        ))
+                        OR (cp.prerequisite_type = 'survey' AND EXISTS (
+                            SELECT 1 FROM course_survey_responses csr 
+                            WHERE csr.survey_package_id = cp.prerequisite_id 
+                            AND csr.user_id = ? AND csr.client_id = ?
+                        ))
+                        OR (cp.prerequisite_type = 'feedback' AND EXISTS (
+                            SELECT 1 FROM course_feedback_responses cfr 
+                            WHERE cfr.feedback_package_id = cp.prerequisite_id 
+                            AND cfr.user_id = ? AND cfr.client_id = ?
+                        ))
+                        OR (cp.prerequisite_type = 'assignment' AND EXISTS (
+                            SELECT 1 FROM assignment_submissions asub 
+                            WHERE asub.assignment_package_id = cp.prerequisite_id 
+                            AND asub.user_id = ? AND asub.course_id = ? AND asub.client_id = ?
+                        ))
+                        OR (cp.prerequisite_type = 'external')
+                    )
+                ");
+                $prereqMetStmt->execute([
+                    $courseId, $userId, $clientId, // assessment
+                    $userId, $clientId, // survey
+                    $userId, $clientId, // feedback
+                    $userId, $courseId, $clientId  // assignment
+                ]);
+                $prereqMetResult = $prereqMetStmt->fetch(PDO::FETCH_ASSOC);
+                
+                // If prerequisites are not met, course is not started
+                if ($prereqMetResult['count'] == 0) {
+                    return false;
+                }
             }
             
             // Check module content activity
@@ -86,57 +127,62 @@ class MyCoursesModel {
                         WHERE asub.assignment_package_id = cmc.content_id 
                         AND asub.user_id = ? AND asub.course_id = ? AND asub.client_id = ?
                     ))
+                    OR (cmc.content_type = 'scorm' AND EXISTS (
+                        SELECT 1 FROM scorm_progress sp 
+                        WHERE sp.content_id = cmc.id 
+                        AND sp.user_id = ? AND sp.client_id = ? AND sp.course_id = ?
+                    ))
+                    OR (cmc.content_type = 'document' AND EXISTS (
+                        SELECT 1 FROM document_progress dp 
+                        WHERE dp.content_id = cmc.id 
+                        AND dp.user_id = ? AND dp.client_id = ? AND dp.course_id = ?
+                    ))
+                    OR (cmc.content_type = 'video' AND EXISTS (
+                        SELECT 1 FROM video_progress vp 
+                        WHERE vp.content_id = cmc.id 
+                        AND vp.user_id = ? AND vp.client_id = ? AND vp.course_id = ?
+                    ))
+                    OR (cmc.content_type = 'audio' AND EXISTS (
+                        SELECT 1 FROM audio_progress ap 
+                        WHERE ap.content_id = cmc.id 
+                        AND ap.user_id = ? AND ap.client_id = ? AND ap.course_id = ?
+                    ))
+                    OR (cmc.content_type = 'image' AND EXISTS (
+                        SELECT 1 FROM image_progress ip 
+                        WHERE ip.content_id = cmc.id 
+                        AND ip.user_id = ? AND ip.client_id = ? AND ip.course_id = ?
+                    ))
+                    OR (cmc.content_type = 'external' AND EXISTS (
+                        SELECT 1 FROM external_progress ep 
+                        WHERE ep.content_id = cmc.id 
+                        AND ep.user_id = ? AND ep.client_id = ? AND ep.course_id = ?
+                    ))
                 )
             ");
             $moduleStmt->execute([
                 $courseId, $userId, $clientId, // assessment
                 $userId, $clientId, // survey
                 $userId, $clientId, // feedback
-                $userId, $courseId, $clientId  // assignment
+                $userId, $courseId, $clientId, // assignment
+                $userId, $clientId, $courseId, // scorm
+                $userId, $clientId, $courseId, // document
+                $userId, $clientId, $courseId, // video
+                $userId, $clientId, $courseId, // audio
+                $userId, $clientId, $courseId, // image
+                $userId, $clientId, $courseId  // external
             ]);
             $moduleResult = $moduleStmt->fetch(PDO::FETCH_ASSOC);
             
+            // If user has interacted with module content, course is started
             if ($moduleResult['count'] > 0) {
                 return true;
             }
             
-            // Check post-requisites activity
-            $postreqStmt = $this->conn->prepare("
-                SELECT COUNT(*) as count
-                FROM course_post_requisites cpr
-                WHERE cpr.course_id = ? AND cpr.is_deleted = 0
-                AND (
-                    (cpr.content_type = 'assessment' AND EXISTS (
-                        SELECT 1 FROM assessment_attempts aa 
-                        WHERE aa.assessment_id = cpr.content_id 
-                        AND aa.user_id = ? AND (aa.client_id = ? OR aa.client_id IS NULL)
-                    ))
-                    OR (cpr.content_type = 'survey' AND EXISTS (
-                        SELECT 1 FROM course_survey_responses csr 
-                        WHERE csr.survey_package_id = cpr.content_id 
-                        AND csr.user_id = ? AND csr.client_id = ?
-                    ))
-                    OR (cpr.content_type = 'feedback' AND EXISTS (
-                        SELECT 1 FROM course_feedback_responses cfr 
-                        WHERE cfr.feedback_package_id = cpr.content_id 
-                        AND cfr.user_id = ? AND cfr.client_id = ?
-                    ))
-                    OR (cpr.content_type = 'assignment' AND EXISTS (
-                        SELECT 1 FROM assignment_submissions asub 
-                        WHERE asub.assignment_package_id = cpr.content_id 
-                        AND asub.user_id = ? AND asub.course_id = ? AND asub.client_id = ?
-                    ))
-                )
-            ");
-            $postreqStmt->execute([
-                $courseId, $userId, $clientId, // assessment
-                $userId, $clientId, // survey
-                $userId, $clientId, // feedback
-                $userId, $courseId, $clientId  // assignment
-            ]);
-            $postreqResult = $postreqStmt->fetch(PDO::FETCH_ASSOC);
+            // Note: Post-requisites are not checked for "started" status
+            // They should only be used for "completed" status
             
-            return $postreqResult['count'] > 0;
+            // If prerequisites are met but no course content interaction, course is not started
+            return false;
             
         } catch (Exception $e) {
             error_log("Error checking if course is started: " . $e->getMessage());
@@ -347,7 +393,7 @@ class MyCoursesModel {
                 if (isset($module['content']) && is_array($module['content'])) {
                     foreach ($module['content'] as $content) {
                         $totalItems++;
-                        $contentProgress = $this->getContentProgress($content, $userId, $clientId);
+                        $contentProgress = $this->getContentProgress($content, $userId, $clientId, $courseId);
                         $totalProgress += $contentProgress;
                         
                         if ($contentProgress >= 100) {
@@ -460,19 +506,19 @@ class MyCoursesModel {
      * @param int $clientId
      * @return int
      */
-    private function getContentProgress($content, $userId, $clientId) {
+    private function getContentProgress($content, $userId, $clientId, $courseId) {
         $contentType = $content['content_type'];
         $contentId = $content['content_item_id'] ?? $content['content_id'];
         
         switch ($contentType) {
             case 'assessment':
-                return $this->getAssessmentProgress($contentId, $userId, $clientId);
+                return $this->getAssessmentProgress($contentId, $userId, $clientId, $courseId);
             case 'assignment':
-                return $this->getAssignmentProgress($contentId, $userId, $clientId);
+                return $this->getAssignmentProgress($contentId, $userId, $clientId, $courseId);
             case 'scorm':
-                return $this->getScormProgress($content['id'], $userId, $clientId);
+                return $this->getScormProgress($content['id'], $userId, $clientId, $courseId);
             case 'document':
-                return $this->getDocumentProgress($content['id'], $userId, $clientId);
+                return $this->getDocumentProgress($content['id'], $userId, $clientId, $courseId);
             case 'video':
             case 'audio':
             case 'image':
@@ -480,7 +526,7 @@ class MyCoursesModel {
             case 'non_scorm':
             case 'external':
                 // For these content types, check if there's actual progress, otherwise consider completed by default
-                $progress = $this->getGeneralContentProgress($contentId, $userId, $clientId);
+                $progress = $this->getGeneralContentProgress($contentId, $userId, $clientId, $courseId);
                 return $progress > 0 ? $progress : 100; // Default to 100% if no progress tracking
             default:
                 return 0;
@@ -501,13 +547,13 @@ class MyCoursesModel {
         
         switch ($prereqType) {
             case 'assessment':
-                return $this->getAssessmentProgress($prereqId, $userId, $clientId);
+                return $this->getAssessmentProgress($prereqId, $userId, $clientId, $courseId);
             case 'assignment':
-                return $this->getAssignmentProgress($prereqId, $userId, $clientId);
+                return $this->getAssignmentProgress($prereqId, $userId, $clientId, $courseId);
             case 'survey':
-                return $this->getSurveyProgress($prereqId, $userId, $clientId);
+                return $this->getSurveyProgress($prereqId, $userId, $clientId, $courseId);
             case 'feedback':
-                return $this->getFeedbackProgress($prereqId, $userId, $clientId);
+                return $this->getFeedbackProgress($prereqId, $userId, $clientId, $courseId);
             case 'external':
                 return 100; // External prerequisites are considered completed by default
             default:
@@ -522,8 +568,9 @@ class MyCoursesModel {
      * @param int $clientId
      * @return int
      */
-    private function getAssessmentProgress($assessmentId, $userId, $clientId) {
+    private function getAssessmentProgress($assessmentId, $userId, $clientId, $courseId) {
         try {
+            // Check if user has attempted this assessment (regardless of which course context)
             $stmt = $this->conn->prepare("
                 SELECT COUNT(*) as count FROM assessment_attempts 
                 WHERE assessment_id = ? AND user_id = ? AND (client_id = ? OR client_id IS NULL)
@@ -532,7 +579,7 @@ class MyCoursesModel {
             $result = $stmt->fetch(PDO::FETCH_ASSOC);
             
             if ($result['count'] > 0) {
-                // Check if passed
+                // Check if passed (regardless of which course context)
                 $stmt = $this->conn->prepare("
                     SELECT COUNT(*) as count FROM assessment_results 
                     WHERE assessment_id = ? AND user_id = ? AND (client_id = ? OR client_id IS NULL) AND passed = 1
@@ -557,13 +604,13 @@ class MyCoursesModel {
      * @param int $clientId
      * @return int
      */
-    private function getAssignmentProgress($assignmentId, $userId, $clientId) {
+    private function getAssignmentProgress($assignmentId, $userId, $clientId, $courseId) {
         try {
             $stmt = $this->conn->prepare("
                 SELECT COUNT(*) as count FROM assignment_submissions 
-                WHERE assignment_package_id = ? AND user_id = ? AND client_id = ?
+                WHERE assignment_package_id = ? AND user_id = ? AND client_id = ? AND course_id = ?
             ");
-            $stmt->execute([$assignmentId, $userId, $clientId]);
+            $stmt->execute([$assignmentId, $userId, $clientId, $courseId]);
             $result = $stmt->fetch(PDO::FETCH_ASSOC);
             
             return $result['count'] > 0 ? 100 : 0;
@@ -580,13 +627,13 @@ class MyCoursesModel {
      * @param int $clientId
      * @return int
      */
-    private function getSurveyProgress($surveyId, $userId, $clientId) {
+    private function getSurveyProgress($surveyId, $userId, $clientId, $courseId) {
         try {
             $stmt = $this->conn->prepare("
                 SELECT COUNT(*) as count FROM course_survey_responses 
-                WHERE survey_package_id = ? AND user_id = ? AND client_id = ?
+                WHERE survey_package_id = ? AND user_id = ? AND client_id = ? AND course_id = ?
             ");
-            $stmt->execute([$surveyId, $userId, $clientId]);
+            $stmt->execute([$surveyId, $userId, $clientId, $courseId]);
             $result = $stmt->fetch(PDO::FETCH_ASSOC);
             
             return $result['count'] > 0 ? 100 : 0;
@@ -603,13 +650,13 @@ class MyCoursesModel {
      * @param int $clientId
      * @return int
      */
-    private function getFeedbackProgress($feedbackId, $userId, $clientId) {
+    private function getFeedbackProgress($feedbackId, $userId, $clientId, $courseId) {
         try {
             $stmt = $this->conn->prepare("
                 SELECT COUNT(*) as count FROM course_feedback_responses 
-                WHERE feedback_package_id = ? AND user_id = ? AND client_id = ?
+                WHERE feedback_package_id = ? AND user_id = ? AND client_id = ? AND course_id = ?
             ");
-            $stmt->execute([$feedbackId, $userId, $clientId]);
+            $stmt->execute([$feedbackId, $userId, $clientId, $courseId]);
             $result = $stmt->fetch(PDO::FETCH_ASSOC);
             
             return $result['count'] > 0 ? 100 : 0;
@@ -626,13 +673,13 @@ class MyCoursesModel {
      * @param int $clientId
      * @return int
      */
-    private function getScormProgress($contentId, $userId, $clientId) {
+    private function getScormProgress($contentId, $userId, $clientId, $courseId) {
         try {
             $stmt = $this->conn->prepare("
                 SELECT lesson_status, score_raw, score_max FROM scorm_progress 
-                WHERE content_id = ? AND user_id = ? AND client_id = ?
+                WHERE content_id = ? AND user_id = ? AND client_id = ? AND course_id = ?
             ");
-            $stmt->execute([$contentId, $userId, $clientId]);
+            $stmt->execute([$contentId, $userId, $clientId, $courseId]);
             $result = $stmt->fetch(PDO::FETCH_ASSOC);
             
             if ($result) {
@@ -662,13 +709,13 @@ class MyCoursesModel {
      * @param int $clientId
      * @return int
      */
-    private function getDocumentProgress($contentId, $userId, $clientId) {
+    private function getDocumentProgress($contentId, $userId, $clientId, $courseId) {
         try {
             $stmt = $this->conn->prepare("
                 SELECT viewed_percentage, is_completed FROM document_progress 
-                WHERE content_id = ? AND user_id = ? AND client_id = ?
+                WHERE content_id = ? AND user_id = ? AND client_id = ? AND course_id = ?
             ");
-            $stmt->execute([$contentId, $userId, $clientId]);
+            $stmt->execute([$contentId, $userId, $clientId, $courseId]);
             $result = $stmt->fetch(PDO::FETCH_ASSOC);
             
             if ($result) {
@@ -693,14 +740,14 @@ class MyCoursesModel {
      * @param int $clientId
      * @return int
      */
-    private function getGeneralContentProgress($contentId, $userId, $clientId) {
+    private function getGeneralContentProgress($contentId, $userId, $clientId, $courseId) {
         try {
             // Check audio progress specifically
             $stmt = $this->conn->prepare("
                 SELECT listened_percentage, is_completed FROM audio_progress 
-                WHERE content_id = ? AND user_id = ? AND client_id = ?
+                WHERE content_id = ? AND user_id = ? AND client_id = ? AND course_id = ?
             ");
-            $stmt->execute([$contentId, $userId, $clientId]);
+            $stmt->execute([$contentId, $userId, $clientId, $courseId]);
             $audioProgress = $stmt->fetch(PDO::FETCH_ASSOC);
             
             if ($audioProgress) {

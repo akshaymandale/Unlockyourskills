@@ -35,6 +35,8 @@
     margin-bottom: 0.5rem;
 }
 
+/* General question number style - not for assessment player */
+.question-item .question-number,
 .question-number {
     background: #007bff;
     color: white;
@@ -277,6 +279,7 @@
         width: 100%;
     }
     
+    .question-item .question-number,
     .question-number {
         width: 25px;
         height: 25px;
@@ -349,6 +352,7 @@
     margin-bottom: 0.5rem;
 }
 
+#surveyModal .question-item .question-number,
 #surveyModal .question-number {
     width: 25px;
     height: 25px;
@@ -667,7 +671,7 @@ html, body {
     display: none;
 }
 .sidebar ul li:hover {
-    background: #5a0bab;
+    background: #4b0082; /* Theme matching dark purple */
 }
 
 /* ✅ Fix Dashboard Content (Avoid Overlapping with Sidebar) */
@@ -1458,8 +1462,9 @@ html, body {
     transition: background 0.3s ease-in-out, color 0.3s ease-in-out;
 }
 
-/* ✅ Hover & Active State */
-.list-group-item:hover, .list-group-item.active {
+/* ✅ Hover & Active State - Sidebar specific */
+#sidebar .list-group-item:hover, 
+#sidebar .list-group-item.active {
     background-color: #4b0082 !important; /* Darker shade for hover */
     color: #fff !important;
 }
@@ -6099,10 +6104,31 @@ body select:focus,
     border: none;
 }
 
-/* Override Bootstrap .list-group-item hover for theme consistency */
-.list-group-item:hover, .list-group-item:focus {
+/* Override Bootstrap .list-group-item hover for theme consistency - exclude sidebar and autocomplete dropdowns */
+.list-group-item:hover:not(#sidebar .list-group-item):not(.autocomplete-dropdown .list-group-item), 
+.list-group-item:focus:not(#sidebar .list-group-item):not(.autocomplete-dropdown .list-group-item) {
     background: #f7f2fa !important;
     color: #222 !important;
+}
+
+/* Autocomplete dropdown specific styling */
+.autocomplete-dropdown .list-group-item {
+    background: #fff !important;
+    color: #333 !important;
+    border: none !important;
+    padding: 8px 12px !important;
+    cursor: pointer !important;
+}
+
+.autocomplete-dropdown .list-group-item:hover {
+    background: #f8f9fa !important;
+    color: #333 !important;
+}
+
+.autocomplete-dropdown .list-group-item:focus {
+    background: #e9ecef !important;
+    color: #333 !important;
+    outline: none !important;
 }
 
 .badge-purple {
@@ -8309,15 +8335,7 @@ body select:focus,
     padding-bottom: 15px;
 }
 
-.question-number {
-    background-color: #ffc107;
-    color: #000;
-    padding: 4px 8px;
-    border-radius: 50%;
-    font-size: 0.8em;
-    font-weight: bold;
-    margin-right: 10px;
-}
+/* Removed conflicting question-number style - handled by assessment_player.css */
 
 .question-media {
     text-align: center;

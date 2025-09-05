@@ -89,29 +89,69 @@ class VLRConfirmations {
             return;
         }
 
-        // Special handling for assessment packages - check if they are assigned to applicable courses
-        if (data.type === 'assessment') {
-            const assessmentData = button.dataset.assessment;
-            if (assessmentData) {
-                try {
-                    const parsedData = JSON.parse(assessmentData);
-                    if (parsedData.is_assigned_to_applicable_courses) {
-                        // Assessment is assigned to applicable courses, show toaster and don't proceed
-                        console.log('VLRConfirmations: Showing toast for assessment', data.id);
-                        if (typeof showSimpleToast === 'function') {
-                            showSimpleToast('Cannot delete assessment: Assessment is assigned to courses that are applicable to users and cannot be deleted.', 'error');
-                        } else {
-                            alert('Cannot delete assessment: Assessment is assigned to courses that are applicable to users and cannot be deleted.');
-                        }
-                        return; // Stop here, don't show confirmation
-                    }
-                } catch (e) {
-                    console.error('Error parsing assessment data:', e);
-                }
+        // Special handling for all package types - check if they are assigned to applicable courses
+        const packageData = this.getPackageData(button, data.type);
+        if (packageData && packageData.is_assigned_to_applicable_courses) {
+            console.log(`VLRConfirmations: Showing toast for ${data.type}`, data.id);
+            const packageType = this.getPackageTypeName(data.type);
+            if (typeof showSimpleToast === 'function') {
+                showSimpleToast(`Cannot delete ${packageType}: ${packageType} is assigned to courses that are applicable to users and cannot be deleted.`, 'error');
+            } else {
+                alert(`Cannot delete ${packageType}: ${packageType} is assigned to courses that are applicable to users and cannot be deleted.`);
             }
+            return; // Stop here, don't show confirmation
         }
 
         this.showVLRConfirmation(data);
+    }
+
+    getPackageData(button, type) {
+        // Get the appropriate dataset attribute based on package type
+        const datasetMap = {
+            'SCORM package': 'scorm',
+            'non-SCORM package': 'nonScorm',
+            'assessment': 'assessment',
+            'assignment': 'assignment',
+            'audio': 'audio',
+            'video': 'video',
+            'image': 'image',
+            'document': 'document',
+            'external': 'external',
+            'interactive': 'interactive',
+            'survey': 'survey',
+            'feedback': 'feedback'
+        };
+
+        const datasetKey = datasetMap[type];
+        if (!datasetKey) return null;
+
+        const dataString = button.dataset[datasetKey];
+        if (!dataString) return null;
+
+        try {
+            return JSON.parse(dataString);
+        } catch (e) {
+            console.error(`Error parsing ${type} data:`, e);
+            return null;
+        }
+    }
+
+    getPackageTypeName(type) {
+        const typeMap = {
+            'SCORM package': 'SCORM package',
+            'non-SCORM package': 'Non-SCORM package',
+            'assessment': 'Assessment',
+            'assignment': 'Assignment',
+            'audio': 'Audio package',
+            'video': 'Video package',
+            'image': 'Image package',
+            'document': 'Document',
+            'external': 'External content',
+            'interactive': 'Interactive content',
+            'survey': 'Survey',
+            'feedback': 'Feedback'
+        };
+        return typeMap[type] || type;
     }
 
     extractVLRData(button) {

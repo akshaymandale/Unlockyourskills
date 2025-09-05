@@ -159,6 +159,11 @@ class VLRModel
             return $data;
         }
         foreach ($data as &$package) {
+            // Check if SCORM package is assigned to courses with applicability rules
+            $isAssignedToApplicableCourses = $this->isScormAssignedToApplicableCourses($package['id']);
+            $package['is_assigned_to_applicable_courses'] = $isAssignedToApplicableCourses;
+            
+            // Determine permissions based on user role only (keep buttons enabled)
             $package['can_edit'] = (canEdit('vlr') && ($currentUser['system_role'] === 'super_admin' || $package['created_by'] == $currentUser['id'])) ? 1 : 0;
             $package['can_delete'] = (canDelete('vlr') && ($currentUser['system_role'] === 'super_admin' || $package['created_by'] == $currentUser['id'])) ? 1 : 0;
         }
@@ -371,6 +376,11 @@ class VLRModel
             return $data;
         }
         foreach ($data as &$package) {
+            // Check if External content is assigned to courses with applicability rules
+            $isAssignedToApplicableCourses = $this->isExternalAssignedToApplicableCourses($package['id']);
+            $package['is_assigned_to_applicable_courses'] = $isAssignedToApplicableCourses;
+            
+            // Determine permissions based on user role only (keep buttons enabled)
             $package['can_edit'] = (canEdit('vlr') && ($currentUser['system_role'] === 'super_admin' || $package['created_by'] == $currentUser['id'])) ? 1 : 0;
             $package['can_delete'] = (canDelete('vlr') && ($currentUser['system_role'] === 'super_admin' || $package['created_by'] == $currentUser['id'])) ? 1 : 0;
         }
@@ -429,6 +439,11 @@ class VLRModel
             return $data;
         }
         foreach ($data as &$package) {
+            // Check if Document is assigned to courses with applicability rules
+            $isAssignedToApplicableCourses = $this->isDocumentAssignedToApplicableCourses($package['id']);
+            $package['is_assigned_to_applicable_courses'] = $isAssignedToApplicableCourses;
+            
+            // Determine permissions based on user role only (keep buttons enabled)
             $package['can_edit'] = (canEdit('vlr') && ($currentUser['system_role'] === 'super_admin' || $package['created_by'] == $currentUser['id'])) ? 1 : 0;
             $package['can_delete'] = (canDelete('vlr') && ($currentUser['system_role'] === 'super_admin' || $package['created_by'] == $currentUser['id'])) ? 1 : 0;
         }
@@ -963,6 +978,436 @@ class VLRModel
         }
     }
 
+    /**
+     * Check if a SCORM package is assigned to courses that have applicability rules
+     * @param int $scormId
+     * @return bool
+     */
+    public function isScormAssignedToApplicableCourses($scormId)
+    {
+        try {
+            $stmt = $this->conn->prepare("
+                SELECT COUNT(DISTINCT c.id) as course_count
+                FROM scorm_packages sp
+                LEFT JOIN course_prerequisites cp ON sp.id = cp.prerequisite_id 
+                    AND cp.prerequisite_type = 'scorm' 
+                    AND cp.deleted_at IS NULL
+                LEFT JOIN course_module_content cmc ON sp.id = cmc.content_id 
+                    AND cmc.content_type = 'scorm' 
+                    AND (cmc.deleted_at IS NULL OR cmc.deleted_at = '0000-00-00 00:00:00')
+                LEFT JOIN courses c ON (
+                    cp.course_id = c.id 
+                    OR cmc.module_id IN (SELECT id FROM course_modules WHERE course_id = c.id)
+                )
+                LEFT JOIN course_applicability ca ON c.id = ca.course_id
+                WHERE sp.id = ? 
+                AND sp.is_deleted = 0 
+                AND c.id IS NOT NULL 
+                AND ca.id IS NOT NULL
+            ");
+            $stmt->execute([$scormId]);
+            $result = $stmt->fetch(PDO::FETCH_ASSOC);
+            $courseCount = (int)$result['course_count'];
+            
+            return $courseCount > 0;
+        } catch (Exception $e) {
+            error_log("Error checking SCORM course applicability: " . $e->getMessage());
+            return true;
+        }
+    }
+
+    /**
+     * Check if a Non-SCORM package is assigned to courses that have applicability rules
+     * @param int $nonScormId
+     * @return bool
+     */
+    public function isNonScormAssignedToApplicableCourses($nonScormId)
+    {
+        try {
+            $stmt = $this->conn->prepare("
+                SELECT COUNT(DISTINCT c.id) as course_count
+                FROM non_scorm_package nsp
+                LEFT JOIN course_prerequisites cp ON nsp.id = cp.prerequisite_id 
+                    AND cp.prerequisite_type = 'non_scorm' 
+                    AND cp.deleted_at IS NULL
+                LEFT JOIN course_module_content cmc ON nsp.id = cmc.content_id 
+                    AND cmc.content_type = 'non_scorm' 
+                    AND (cmc.deleted_at IS NULL OR cmc.deleted_at = '0000-00-00 00:00:00')
+                LEFT JOIN courses c ON (
+                    cp.course_id = c.id 
+                    OR cmc.module_id IN (SELECT id FROM course_modules WHERE course_id = c.id)
+                )
+                LEFT JOIN course_applicability ca ON c.id = ca.course_id
+                WHERE nsp.id = ? 
+                AND nsp.is_deleted = 0 
+                AND c.id IS NOT NULL 
+                AND ca.id IS NOT NULL
+            ");
+            $stmt->execute([$nonScormId]);
+            $result = $stmt->fetch(PDO::FETCH_ASSOC);
+            $courseCount = (int)$result['course_count'];
+            
+            return $courseCount > 0;
+        } catch (Exception $e) {
+            error_log("Error checking Non-SCORM course applicability: " . $e->getMessage());
+            return true;
+        }
+    }
+
+    /**
+     * Check if an assignment package is assigned to courses that have applicability rules
+     * @param int $assignmentId
+     * @return bool
+     */
+    public function isAssignmentAssignedToApplicableCourses($assignmentId)
+    {
+        try {
+            $stmt = $this->conn->prepare("
+                SELECT COUNT(DISTINCT c.id) as course_count
+                FROM assignment_package ap
+                LEFT JOIN course_prerequisites cp ON ap.id = cp.prerequisite_id 
+                    AND cp.prerequisite_type = 'assignment' 
+                    AND cp.deleted_at IS NULL
+                LEFT JOIN course_module_content cmc ON ap.id = cmc.content_id 
+                    AND cmc.content_type = 'assignment' 
+                    AND (cmc.deleted_at IS NULL OR cmc.deleted_at = '0000-00-00 00:00:00')
+                LEFT JOIN course_post_requisites cpr ON ap.id = cpr.content_id 
+                    AND cpr.content_type = 'assignment' 
+                    AND cpr.is_deleted = 0
+                LEFT JOIN courses c ON (
+                    cp.course_id = c.id 
+                    OR cmc.module_id IN (SELECT id FROM course_modules WHERE course_id = c.id) 
+                    OR cpr.course_id = c.id
+                )
+                LEFT JOIN course_applicability ca ON c.id = ca.course_id
+                WHERE ap.id = ? 
+                AND ap.is_deleted = 0 
+                AND c.id IS NOT NULL 
+                AND ca.id IS NOT NULL
+            ");
+            $stmt->execute([$assignmentId]);
+            $result = $stmt->fetch(PDO::FETCH_ASSOC);
+            $courseCount = (int)$result['course_count'];
+            
+            return $courseCount > 0;
+        } catch (Exception $e) {
+            error_log("Error checking assignment course applicability: " . $e->getMessage());
+            return true;
+        }
+    }
+
+    /**
+     * Check if an audio package is assigned to courses that have applicability rules
+     * @param int $audioId
+     * @return bool
+     */
+    public function isAudioAssignedToApplicableCourses($audioId)
+    {
+        try {
+            $stmt = $this->conn->prepare("
+                SELECT COUNT(DISTINCT c.id) as course_count
+                FROM audio_package ap
+                LEFT JOIN course_prerequisites cp ON ap.id = cp.prerequisite_id 
+                    AND cp.prerequisite_type = 'audio' 
+                    AND cp.deleted_at IS NULL
+                LEFT JOIN course_module_content cmc ON ap.id = cmc.content_id 
+                    AND cmc.content_type = 'audio' 
+                    AND (cmc.deleted_at IS NULL OR cmc.deleted_at = '0000-00-00 00:00:00')
+                LEFT JOIN courses c ON (
+                    cp.course_id = c.id 
+                    OR cmc.module_id IN (SELECT id FROM course_modules WHERE course_id = c.id)
+                )
+                LEFT JOIN course_applicability ca ON c.id = ca.course_id
+                WHERE ap.id = ? 
+                AND ap.is_deleted = 0 
+                AND c.id IS NOT NULL 
+                AND ca.id IS NOT NULL
+            ");
+            $stmt->execute([$audioId]);
+            $result = $stmt->fetch(PDO::FETCH_ASSOC);
+            $courseCount = (int)$result['course_count'];
+            
+            return $courseCount > 0;
+        } catch (Exception $e) {
+            error_log("Error checking audio course applicability: " . $e->getMessage());
+            return true;
+        }
+    }
+
+    /**
+     * Check if a video package is assigned to courses that have applicability rules
+     * @param int $videoId
+     * @return bool
+     */
+    public function isVideoAssignedToApplicableCourses($videoId)
+    {
+        try {
+            $stmt = $this->conn->prepare("
+                SELECT COUNT(DISTINCT c.id) as course_count
+                FROM video_package vp
+                LEFT JOIN course_prerequisites cp ON vp.id = cp.prerequisite_id 
+                    AND cp.prerequisite_type = 'video' 
+                    AND cp.deleted_at IS NULL
+                LEFT JOIN course_module_content cmc ON vp.id = cmc.content_id 
+                    AND cmc.content_type = 'video' 
+                    AND (cmc.deleted_at IS NULL OR cmc.deleted_at = '0000-00-00 00:00:00')
+                LEFT JOIN courses c ON (
+                    cp.course_id = c.id 
+                    OR cmc.module_id IN (SELECT id FROM course_modules WHERE course_id = c.id)
+                )
+                LEFT JOIN course_applicability ca ON c.id = ca.course_id
+                WHERE vp.id = ? 
+                AND vp.is_deleted = 0 
+                AND c.id IS NOT NULL 
+                AND ca.id IS NOT NULL
+            ");
+            $stmt->execute([$videoId]);
+            $result = $stmt->fetch(PDO::FETCH_ASSOC);
+            $courseCount = (int)$result['course_count'];
+            
+            return $courseCount > 0;
+        } catch (Exception $e) {
+            error_log("Error checking video course applicability: " . $e->getMessage());
+            return true;
+        }
+    }
+
+    /**
+     * Check if a document package is assigned to courses that have applicability rules
+     * @param int $documentId
+     * @return bool
+     */
+    public function isDocumentAssignedToApplicableCourses($documentId)
+    {
+        try {
+            $stmt = $this->conn->prepare("
+                SELECT COUNT(DISTINCT c.id) as course_count
+                FROM documents d
+                LEFT JOIN course_prerequisites cp ON d.id = cp.prerequisite_id 
+                    AND cp.prerequisite_type = 'document' 
+                    AND cp.deleted_at IS NULL
+                LEFT JOIN course_module_content cmc ON d.id = cmc.content_id 
+                    AND cmc.content_type = 'document' 
+                    AND (cmc.deleted_at IS NULL OR cmc.deleted_at = '0000-00-00 00:00:00')
+                LEFT JOIN courses c ON (
+                    cp.course_id = c.id 
+                    OR cmc.module_id IN (SELECT id FROM course_modules WHERE course_id = c.id)
+                )
+                LEFT JOIN course_applicability ca ON c.id = ca.course_id
+                WHERE d.id = ? 
+                AND d.is_deleted = 0 
+                AND c.id IS NOT NULL 
+                AND ca.id IS NOT NULL
+            ");
+            $stmt->execute([$documentId]);
+            $result = $stmt->fetch(PDO::FETCH_ASSOC);
+            $courseCount = (int)$result['course_count'];
+            
+            return $courseCount > 0;
+        } catch (Exception $e) {
+            error_log("Error checking document course applicability: " . $e->getMessage());
+            return true;
+        }
+    }
+
+    /**
+     * Check if an image package is assigned to courses that have applicability rules
+     * @param int $imageId
+     * @return bool
+     */
+    public function isImageAssignedToApplicableCourses($imageId)
+    {
+        try {
+            $stmt = $this->conn->prepare("
+                SELECT COUNT(DISTINCT c.id) as course_count
+                FROM image_package ip
+                LEFT JOIN course_prerequisites cp ON ip.id = cp.prerequisite_id 
+                    AND cp.prerequisite_type = 'image' 
+                    AND cp.deleted_at IS NULL
+                LEFT JOIN course_module_content cmc ON ip.id = cmc.content_id 
+                    AND cmc.content_type = 'image' 
+                    AND (cmc.deleted_at IS NULL OR cmc.deleted_at = '0000-00-00 00:00:00')
+                LEFT JOIN courses c ON (
+                    cp.course_id = c.id 
+                    OR cmc.module_id IN (SELECT id FROM course_modules WHERE course_id = c.id)
+                )
+                LEFT JOIN course_applicability ca ON c.id = ca.course_id
+                WHERE ip.id = ? 
+                AND ip.is_deleted = 0 
+                AND c.id IS NOT NULL 
+                AND ca.id IS NOT NULL
+            ");
+            $stmt->execute([$imageId]);
+            $result = $stmt->fetch(PDO::FETCH_ASSOC);
+            $courseCount = (int)$result['course_count'];
+            
+            return $courseCount > 0;
+        } catch (Exception $e) {
+            error_log("Error checking image course applicability: " . $e->getMessage());
+            return true;
+        }
+    }
+
+    /**
+     * Check if an external content package is assigned to courses that have applicability rules
+     * @param int $externalId
+     * @return bool
+     */
+    public function isExternalAssignedToApplicableCourses($externalId)
+    {
+        try {
+            $stmt = $this->conn->prepare("
+                SELECT COUNT(DISTINCT c.id) as course_count
+                FROM external_content ec
+                LEFT JOIN course_prerequisites cp ON ec.id = cp.prerequisite_id 
+                    AND cp.prerequisite_type = 'external' 
+                    AND cp.deleted_at IS NULL
+                LEFT JOIN course_module_content cmc ON ec.id = cmc.content_id 
+                    AND cmc.content_type = 'external' 
+                    AND (cmc.deleted_at IS NULL OR cmc.deleted_at = '0000-00-00 00:00:00')
+                LEFT JOIN courses c ON (
+                    cp.course_id = c.id 
+                    OR cmc.module_id IN (SELECT id FROM course_modules WHERE course_id = c.id)
+                )
+                LEFT JOIN course_applicability ca ON c.id = ca.course_id
+                WHERE ec.id = ? 
+                AND ec.is_deleted = 0 
+                AND c.id IS NOT NULL 
+                AND ca.id IS NOT NULL
+            ");
+            $stmt->execute([$externalId]);
+            $result = $stmt->fetch(PDO::FETCH_ASSOC);
+            $courseCount = (int)$result['course_count'];
+            
+            return $courseCount > 0;
+        } catch (Exception $e) {
+            error_log("Error checking external course applicability: " . $e->getMessage());
+            return true;
+        }
+    }
+
+    /**
+     * Check if an interactive package is assigned to courses that have applicability rules
+     * @param int $interactiveId
+     * @return bool
+     */
+    public function isInteractiveAssignedToApplicableCourses($interactiveId)
+    {
+        try {
+            $stmt = $this->conn->prepare("
+                SELECT COUNT(DISTINCT c.id) as course_count
+                FROM interactive_ai_content_package ip
+                LEFT JOIN course_prerequisites cp ON ip.id = cp.prerequisite_id 
+                    AND cp.prerequisite_type = 'interactive' 
+                    AND cp.deleted_at IS NULL
+                LEFT JOIN course_module_content cmc ON ip.id = cmc.content_id 
+                    AND cmc.content_type = 'interactive' 
+                    AND (cmc.deleted_at IS NULL OR cmc.deleted_at = '0000-00-00 00:00:00')
+                LEFT JOIN courses c ON (
+                    cp.course_id = c.id 
+                    OR cmc.module_id IN (SELECT id FROM course_modules WHERE course_id = c.id)
+                )
+                LEFT JOIN course_applicability ca ON c.id = ca.course_id
+                WHERE ip.id = ? 
+                AND ip.is_deleted = 0 
+                AND c.id IS NOT NULL 
+                AND ca.id IS NOT NULL
+            ");
+            $stmt->execute([$interactiveId]);
+            $result = $stmt->fetch(PDO::FETCH_ASSOC);
+            $courseCount = (int)$result['course_count'];
+            
+            return $courseCount > 0;
+        } catch (Exception $e) {
+            error_log("Error checking interactive course applicability: " . $e->getMessage());
+            return true;
+        }
+    }
+
+    /**
+     * Check if a survey package is assigned to courses that have applicability rules
+     * @param int $surveyId
+     * @return bool
+     */
+    public function isSurveyAssignedToApplicableCourses($surveyId)
+    {
+        try {
+            $stmt = $this->conn->prepare("
+                SELECT COUNT(DISTINCT c.id) as course_count
+                FROM survey_package sp
+                LEFT JOIN course_prerequisites cp ON sp.id = cp.prerequisite_id 
+                    AND cp.prerequisite_type = 'survey' 
+                    AND cp.deleted_at IS NULL
+                LEFT JOIN course_module_content cmc ON sp.id = cmc.content_id 
+                    AND cmc.content_type = 'survey' 
+                    AND (cmc.deleted_at IS NULL OR cmc.deleted_at = '0000-00-00 00:00:00')
+                LEFT JOIN course_post_requisites cpr ON sp.id = cpr.content_id 
+                    AND cpr.content_type = 'survey' 
+                    AND cpr.is_deleted = 0
+                LEFT JOIN courses c ON (
+                    cp.course_id = c.id 
+                    OR cmc.module_id IN (SELECT id FROM course_modules WHERE course_id = c.id) 
+                    OR cpr.course_id = c.id
+                )
+                LEFT JOIN course_applicability ca ON c.id = ca.course_id
+                WHERE sp.id = ? 
+                AND sp.is_deleted = 0 
+                AND c.id IS NOT NULL 
+                AND ca.id IS NOT NULL
+            ");
+            $stmt->execute([$surveyId]);
+            $result = $stmt->fetch(PDO::FETCH_ASSOC);
+            $courseCount = (int)$result['course_count'];
+            
+            return $courseCount > 0;
+        } catch (Exception $e) {
+            error_log("Error checking survey course applicability: " . $e->getMessage());
+            return true;
+        }
+    }
+
+    /**
+     * Check if a feedback package is assigned to courses that have applicability rules
+     * @param int $feedbackId
+     * @return bool
+     */
+    public function isFeedbackAssignedToApplicableCourses($feedbackId)
+    {
+        try {
+            $stmt = $this->conn->prepare("
+                SELECT COUNT(DISTINCT c.id) as course_count
+                FROM feedback_package fp
+                LEFT JOIN course_prerequisites cp ON fp.id = cp.prerequisite_id 
+                    AND cp.prerequisite_type = 'feedback' 
+                    AND cp.deleted_at IS NULL
+                LEFT JOIN course_module_content cmc ON fp.id = cmc.content_id 
+                    AND cmc.content_type = 'feedback' 
+                    AND (cmc.deleted_at IS NULL OR cmc.deleted_at = '0000-00-00 00:00:00')
+                LEFT JOIN course_post_requisites cpr ON fp.id = cpr.content_id 
+                    AND cpr.content_type = 'feedback' 
+                    AND cpr.is_deleted = 0
+                LEFT JOIN courses c ON (
+                    cp.course_id = c.id 
+                    OR cmc.module_id IN (SELECT id FROM course_modules WHERE course_id = c.id) 
+                    OR cpr.course_id = c.id
+                )
+                LEFT JOIN course_applicability ca ON c.id = ca.course_id
+                WHERE fp.id = ? 
+                AND fp.is_deleted = 0 
+                AND c.id IS NOT NULL 
+                AND ca.id IS NOT NULL
+            ");
+            $stmt->execute([$feedbackId]);
+            $result = $stmt->fetch(PDO::FETCH_ASSOC);
+            $courseCount = (int)$result['course_count'];
+            
+            return $courseCount > 0;
+        } catch (Exception $e) {
+            error_log("Error checking feedback course applicability: " . $e->getMessage());
+            return true;
+        }
+    }
+
 
 // ✅ Insert Audio Package
 public function insertAudioPackage($data)
@@ -1055,6 +1500,11 @@ public function getAudioPackages()
         return $data;
     }
     foreach ($data as &$package) {
+        // Check if Audio package is assigned to courses with applicability rules
+        $isAssignedToApplicableCourses = $this->isAudioAssignedToApplicableCourses($package['id']);
+        $package['is_assigned_to_applicable_courses'] = $isAssignedToApplicableCourses;
+        
+        // Determine permissions based on user role only (keep buttons enabled)
         $package['can_edit'] = (canEdit('vlr') && ($currentUser['system_role'] === 'super_admin' || $package['created_by'] == $currentUser['id'])) ? 1 : 0;
         $package['can_delete'] = (canDelete('vlr') && ($currentUser['system_role'] === 'super_admin' || $package['created_by'] == $currentUser['id'])) ? 1 : 0;
     }
@@ -1161,6 +1611,11 @@ public function getVideoPackages()
         return $data;
     }
     foreach ($data as &$package) {
+        // Check if Video package is assigned to courses with applicability rules
+        $isAssignedToApplicableCourses = $this->isVideoAssignedToApplicableCourses($package['id']);
+        $package['is_assigned_to_applicable_courses'] = $isAssignedToApplicableCourses;
+        
+        // Determine permissions based on user role only (keep buttons enabled)
         $package['can_edit'] = (canEdit('vlr') && ($currentUser['system_role'] === 'super_admin' || $package['created_by'] == $currentUser['id'])) ? 1 : 0;
         $package['can_delete'] = (canDelete('vlr') && ($currentUser['system_role'] === 'super_admin' || $package['created_by'] == $currentUser['id'])) ? 1 : 0;
     }
@@ -1264,6 +1719,11 @@ public function getImagePackages()
         return $data;
     }
     foreach ($data as &$package) {
+        // Check if Image package is assigned to courses with applicability rules
+        $isAssignedToApplicableCourses = $this->isImageAssignedToApplicableCourses($package['id']);
+        $package['is_assigned_to_applicable_courses'] = $isAssignedToApplicableCourses;
+        
+        // Determine permissions based on user role only (keep buttons enabled)
         $package['can_edit'] = (canEdit('vlr') && ($currentUser['system_role'] === 'super_admin' || $package['created_by'] == $currentUser['id'])) ? 1 : 0;
         $package['can_delete'] = (canDelete('vlr') && ($currentUser['system_role'] === 'super_admin' || $package['created_by'] == $currentUser['id'])) ? 1 : 0;
     }
@@ -1372,6 +1832,11 @@ public function deleteImagePackage($id)
             return $data;
         }
         foreach ($data as &$package) {
+            // Check if Survey package is assigned to courses with applicability rules
+            $isAssignedToApplicableCourses = $this->isSurveyAssignedToApplicableCourses($package['id']);
+            $package['is_assigned_to_applicable_courses'] = $isAssignedToApplicableCourses;
+            
+            // Determine permissions based on user role only (keep buttons enabled)
             $package['can_edit'] = (canEdit('vlr') && ($currentUser['system_role'] === 'super_admin' || $package['created_by'] == $currentUser['id'])) ? 1 : 0;
             $package['can_delete'] = (canDelete('vlr') && ($currentUser['system_role'] === 'super_admin' || $package['created_by'] == $currentUser['id'])) ? 1 : 0;
         }
@@ -1445,6 +1910,11 @@ public function deleteImagePackage($id)
             return $data;
         }
         foreach ($data as &$package) {
+            // Check if Feedback package is assigned to courses with applicability rules
+            $isAssignedToApplicableCourses = $this->isFeedbackAssignedToApplicableCourses($package['id']);
+            $package['is_assigned_to_applicable_courses'] = $isAssignedToApplicableCourses;
+            
+            // Determine permissions based on user role only (keep buttons enabled)
             $package['can_edit'] = (canEdit('vlr') && ($currentUser['system_role'] === 'super_admin' || $package['created_by'] == $currentUser['id'])) ? 1 : 0;
             $package['can_delete'] = (canDelete('vlr') && ($currentUser['system_role'] === 'super_admin' || $package['created_by'] == $currentUser['id'])) ? 1 : 0;
         }
@@ -1725,6 +2195,11 @@ public function deleteImagePackage($id)
             return $data;
         }
         foreach ($data as &$package) {
+            // Check if Interactive content is assigned to courses with applicability rules
+            $isAssignedToApplicableCourses = $this->isInteractiveAssignedToApplicableCourses($package['id']);
+            $package['is_assigned_to_applicable_courses'] = $isAssignedToApplicableCourses;
+            
+            // Determine permissions based on user role only (keep buttons enabled)
             $package['can_edit'] = (canEdit('vlr') && ($currentUser['system_role'] === 'super_admin' || $package['created_by'] == $currentUser['id'])) ? 1 : 0;
             $package['can_delete'] = (canDelete('vlr') && ($currentUser['system_role'] === 'super_admin' || $package['created_by'] == $currentUser['id'])) ? 1 : 0;
         }
@@ -1920,6 +2395,11 @@ public function deleteImagePackage($id)
                 return $data;
             }
             foreach ($data as &$package) {
+                // Check if Non-SCORM package is assigned to courses with applicability rules
+                $isAssignedToApplicableCourses = $this->isNonScormAssignedToApplicableCourses($package['id']);
+                $package['is_assigned_to_applicable_courses'] = $isAssignedToApplicableCourses;
+                
+                // Determine permissions based on user role only (keep buttons enabled)
                 $package['can_edit'] = (canEdit('vlr') && ($currentUser['system_role'] === 'super_admin' || $package['created_by'] == $currentUser['id'])) ? 1 : 0;
                 $package['can_delete'] = (canDelete('vlr') && ($currentUser['system_role'] === 'super_admin' || $package['created_by'] == $currentUser['id'])) ? 1 : 0;
             }
@@ -2093,6 +2573,11 @@ public function deleteImagePackage($id)
                 return $data;
             }
             foreach ($data as &$package) {
+                // Check if Assignment package is assigned to courses with applicability rules
+                $isAssignedToApplicableCourses = $this->isAssignmentAssignedToApplicableCourses($package['id']);
+                $package['is_assigned_to_applicable_courses'] = $isAssignedToApplicableCourses;
+                
+                // Determine permissions based on user role only (keep buttons enabled)
                 $package['can_edit'] = (canEdit('vlr') && ($currentUser['system_role'] === 'super_admin' || $package['created_by'] == $currentUser['id'])) ? 1 : 0;
                 $package['can_delete'] = (canDelete('vlr') && ($currentUser['system_role'] === 'super_admin' || $package['created_by'] == $currentUser['id'])) ? 1 : 0;
             }
