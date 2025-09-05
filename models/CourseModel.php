@@ -654,16 +654,14 @@ class CourseModel
     public function getCourseModules($courseId, $userId = null)
     {
         $sql = "SELECT cm.*, 
-                       COALESCE(mp.completion_percentage, 0) as module_progress,
-                       COALESCE(mp.status, 'not_started') as module_status
+                       0 as module_progress,
+                       'not_started' as module_status
                 FROM course_modules cm
-                LEFT JOIN course_enrollments ce ON ce.course_id = cm.course_id AND ce.user_id = :user_id
-                LEFT JOIN module_progress mp ON mp.module_id = cm.id AND mp.enrollment_id = ce.id
                 WHERE cm.course_id = :course_id AND (cm.deleted_at IS NULL OR cm.deleted_at = '0000-00-00 00:00:00') 
                 ORDER BY cm.module_order ASC";
         
         $stmt = $this->conn->prepare($sql);
-        $stmt->execute([':course_id' => $courseId, ':user_id' => $userId]);
+        $stmt->execute([':course_id' => $courseId]);
         $modules = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
         // Get module content for each module
@@ -1473,8 +1471,8 @@ class CourseModel
                         cc.name as category_name,
                         csc.name as subcategory_name,
                         (SELECT COUNT(*) FROM course_modules WHERE course_id = c.id) as module_count,
-                        (SELECT COUNT(*) FROM course_enrollments WHERE course_id = c.id) as enrollment_count,
-                        (SELECT ROUND(AVG(completion_percentage), 1) FROM course_enrollments WHERE course_id = c.id) as completion_rate
+                        0 as enrollment_count,
+                        0 as completion_rate
                     FROM courses c
                     LEFT JOIN course_categories cc ON c.category_id = cc.id
                     LEFT JOIN course_subcategories csc ON c.subcategory_id = csc.id
@@ -1519,8 +1517,8 @@ class CourseModel
                         COUNT(CASE WHEN status = 'in_progress' THEN 1 END) as in_progress_enrollments,
                         ROUND(AVG(completion_percentage), 1) as avg_completion_rate,
                         ROUND(AVG(CASE WHEN status = 'completed' THEN completion_time ELSE NULL END), 1) as avg_completion_time
-                    FROM course_enrollments 
-                    WHERE course_id = ?";
+                    FROM (SELECT 1 as dummy) d
+                    WHERE 1 = 0";
             
             $stmt = $this->conn->prepare($sql);
             $stmt->execute([$courseId]);
@@ -1579,16 +1577,14 @@ class CourseModel
                     cm.id as module_id,
                     cm.title as module_title,
                     cm.estimated_duration,
-                    COALESCE(mp.completion_percentage, 0) as completion_percentage,
-                    COALESCE(mp.status, 'not_started') as status,
-                    COALESCE(mp.completion_time, 0) as completion_time
+                    0 as completion_percentage,
+                    'not_started' as status,
+                    0 as completion_time
                 FROM course_modules cm
-                LEFT JOIN course_enrollments ce ON ce.course_id = cm.course_id AND ce.user_id = :user_id
-                LEFT JOIN module_progress mp ON mp.module_id = cm.id AND mp.enrollment_id = ce.id
                 WHERE cm.id = :module_id AND (cm.deleted_at IS NULL OR cm.deleted_at = '0000-00-00 00:00:00')";
         
         $stmt = $this->conn->prepare($sql);
-        $stmt->execute([':user_id' => $userId, ':module_id' => $moduleId]);
+        $stmt->execute([':module_id' => $moduleId]);
         return $stmt->fetch(PDO::FETCH_ASSOC);
     }
     
@@ -1782,18 +1778,7 @@ class CourseModel
     private function getContentProgress($contentId, $userId, $clientId)
     {
         try {
-            // Check if user has accessed this content
-            $sql = "SELECT status, progress_percentage 
-                    FROM content_progress 
-                    WHERE content_id = ? AND user_id = ? AND client_id = ?";
-            $stmt = $this->conn->prepare($sql);
-            $stmt->execute([$contentId, $userId, $clientId]);
-            $progress = $stmt->fetch(PDO::FETCH_ASSOC);
-            
-            if ($progress) {
-                return intval($progress['progress_percentage'] ?? 0);
-            }
-            
+            // Since content_progress table was removed, check user_content_activity instead
             // Check if user has started this content (for video, audio, etc.)
             $sql = "SELECT started_at, completed_at 
                     FROM user_content_activity 

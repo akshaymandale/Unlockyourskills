@@ -163,12 +163,12 @@ document.addEventListener("DOMContentLoaded", function () {
         button.addEventListener("click", function () {
             const assessmentData = JSON.parse(this.dataset.assessment);
 
-            // Check if assessment has attempts and cannot be edited
-            if (assessmentData.has_attempts) {
+            // Check if assessment is assigned to applicable courses and show warning
+            if (assessmentData.is_assigned_to_applicable_courses) {
                 if (typeof showSimpleToast === 'function') {
-                    showSimpleToast('Cannot edit assessment: Assessment has been started by users and cannot be modified.', 'error');
+                    showSimpleToast('Cannot edit assessment: Assessment is assigned to courses that are applicable to users and cannot be modified.', 'error');
                 } else {
-                    alert('Cannot edit assessment: Assessment has been started by users and cannot be modified.');
+                    alert('Cannot edit assessment: Assessment is assigned to courses that are applicable to users and cannot be modified.');
                 }
                 return;
             }

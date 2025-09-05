@@ -788,11 +788,15 @@ class VLRModel
             return $data;
         }
         foreach ($data as &$package) {
-            // Check if assessment has any user attempts
+            // Check if assessment is assigned to courses with applicability rules
+            $isAssignedToApplicableCourses = $this->isAssessmentAssignedToApplicableCourses($package['id']);
+            $package['is_assigned_to_applicable_courses'] = $isAssignedToApplicableCourses;
+            
+            // Also keep the old check for backward compatibility
             $hasAttempts = $this->hasAssessmentAttempts($package['id']);
             $package['has_attempts'] = $hasAttempts;
             
-            // Determine permissions based on user role (buttons remain enabled)
+            // Determine permissions based on user role only (keep buttons enabled)
             $package['can_edit'] = canEdit('vlr') && ($currentUser['system_role'] === 'super_admin' || $package['created_by'] == $currentUser['id']) ? 1 : 0;
             $package['can_delete'] = canDelete('vlr') && ($currentUser['system_role'] === 'super_admin' || $package['created_by'] == $currentUser['id']) ? 1 : 0;
         }
@@ -912,6 +916,50 @@ class VLRModel
         } catch (Exception $e) {
             error_log("Error checking assessment attempts: " . $e->getMessage());
             return true; // Assume has attempts if error occurs (safer approach)
+        }
+    }
+
+    /**
+     * Check if an assessment is assigned to courses that have applicability rules
+     * This is the correct logic for preventing edit/delete based on course applicability
+     * @param int $assessmentId
+     * @return bool
+     */
+    public function isAssessmentAssignedToApplicableCourses($assessmentId)
+    {
+        try {
+            // Check if assessment is assigned to any course that has applicability rules
+            $stmt = $this->conn->prepare("
+                SELECT COUNT(DISTINCT c.id) as course_count
+                FROM assessment_package ap
+                LEFT JOIN course_prerequisites cp ON ap.id = cp.prerequisite_id 
+                    AND cp.prerequisite_type = 'assessment' 
+                    AND cp.deleted_at IS NULL
+                LEFT JOIN course_module_content cmc ON ap.id = cmc.content_id 
+                    AND cmc.content_type = 'assessment' 
+                    AND (cmc.deleted_at IS NULL OR cmc.deleted_at = '0000-00-00 00:00:00')
+                LEFT JOIN course_post_requisites cpr ON ap.id = cpr.content_id 
+                    AND cpr.content_type = 'assessment' 
+                    AND cpr.is_deleted = 0
+                LEFT JOIN courses c ON (
+                    cp.course_id = c.id 
+                    OR cmc.module_id IN (SELECT id FROM course_modules WHERE course_id = c.id) 
+                    OR cpr.course_id = c.id
+                )
+                LEFT JOIN course_applicability ca ON c.id = ca.course_id
+                WHERE ap.id = ? 
+                AND ap.is_deleted = 0 
+                AND c.id IS NOT NULL 
+                AND ca.id IS NOT NULL
+            ");
+            $stmt->execute([$assessmentId]);
+            $result = $stmt->fetch(PDO::FETCH_ASSOC);
+            $courseCount = (int)$result['course_count'];
+            
+            return $courseCount > 0;
+        } catch (Exception $e) {
+            error_log("Error checking assessment course applicability: " . $e->getMessage());
+            return true; // Assume is assigned if error occurs (safer approach)
         }
     }
 

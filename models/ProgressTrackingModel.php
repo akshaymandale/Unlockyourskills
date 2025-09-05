@@ -138,53 +138,18 @@ class ProgressTrackingModel {
      * Initialize progress for a single module
      */
     private function initializeSingleModuleProgress($userId, $courseId, $moduleId, $clientId) {
-        try {
-            $stmt = $this->conn->prepare("
-                INSERT IGNORE INTO module_progress 
-                (user_id, course_id, module_id, client_id, status, completion_percentage)
-                VALUES (?, ?, ?, ?, 'not_started', 0.00)
-            ");
-            return $stmt->execute([$userId, $courseId, $moduleId, $clientId]);
-        } catch (PDOException $e) {
-            error_log("ProgressTrackingModel::initializeSingleModuleProgress error: " . $e->getMessage());
-            return false;
-        }
+        // Module progress tracking removed - no longer using module_progress table
+        error_log("ProgressTrackingModel::initializeSingleModuleProgress - module_progress table removed, skipping initialization");
+        return true;
     }
 
     /**
      * Update module progress
      */
     public function updateModuleProgress($userId, $courseId, $moduleId, $clientId, $data) {
-        try {
-            $fields = [];
-            $values = [];
-            
-            foreach ($data as $key => $value) {
-                if (in_array($key, ['status', 'completion_percentage', 'started_at', 'completed_at', 'time_spent'])) {
-                    $fields[] = "`$key` = ?";
-                    $values[] = $value;
-                }
-            }
-            
-            if (empty($fields)) {
-                return false;
-            }
-            
-            $fields[] = "`updated_at` = NOW()";
-            $values[] = $userId;
-            $values[] = $courseId;
-            $values[] = $moduleId;
-            $values[] = $clientId;
-            
-            $sql = "UPDATE module_progress SET " . implode(', ', $fields) . 
-                   " WHERE user_id = ? AND course_id = ? AND module_id = ? AND client_id = ?";
-            
-            $stmt = $this->conn->prepare($sql);
-            return $stmt->execute($values);
-        } catch (PDOException $e) {
-            error_log("ProgressTrackingModel::updateModuleProgress error: " . $e->getMessage());
-            return false;
-        }
+        // Module progress tracking removed - no longer using module_progress table
+        error_log("ProgressTrackingModel::updateModuleProgress - module_progress table removed, skipping update");
+        return true;
     }
 
     // =====================================================

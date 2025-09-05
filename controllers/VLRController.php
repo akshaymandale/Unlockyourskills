@@ -981,9 +981,9 @@ class VLRController extends BaseController
             return;
         }
 
-        // Check if assessment has any user attempts
-        if ($this->VLRModel->hasAssessmentAttempts($id)) {
-            $this->toastError('Cannot delete assessment: Assessment has been started by users and cannot be deleted.', '/unlockyourskills/vlr?tab=assessment');
+        // Check if assessment is assigned to courses with applicability rules
+        if ($this->VLRModel->isAssessmentAssignedToApplicableCourses($id)) {
+            $this->toastError('Cannot delete assessment: Assessment is assigned to courses that are applicable to users and cannot be deleted.', '/unlockyourskills/vlr?tab=assessment');
             return;
         }
 

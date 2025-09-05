@@ -42,15 +42,23 @@ class MyCoursesController {
             exit;
         }
         
-        $courses = $this->myCoursesModel->getUserCourses($userId, $status, $search, $page, $perPage, $clientId);
-        
-        // Add encrypted IDs for secure URLs
-        if (is_array($courses)) {
-            foreach ($courses as &$course) {
-                if (isset($course['id'])) {
-                    $course['encrypted_id'] = IdEncryption::encrypt($course['id']);
+        try {
+            $courses = $this->myCoursesModel->getUserCourses($userId, $status, $search, $page, $perPage, $clientId);
+            
+            // Add encrypted IDs for secure URLs
+            if (is_array($courses)) {
+                foreach ($courses as &$course) {
+                    if (isset($course['id'])) {
+                        $course['encrypted_id'] = IdEncryption::encrypt($course['id']);
+                    }
                 }
             }
+        } catch (Exception $e) {
+            error_log("MyCoursesController: Error getting courses: " . $e->getMessage());
+            error_log("MyCoursesController: Stack trace: " . $e->getTraceAsString());
+            header('Content-Type: application/json');
+            echo json_encode(['success' => false, 'message' => 'Error loading courses: ' . $e->getMessage()]);
+            exit;
         }
         
         header('Content-Type: application/json');
@@ -86,6 +94,18 @@ class MyCoursesController {
     // Render Course Details page
     public function details($id) {
         if (!isset($_SESSION['id']) || !isset($_SESSION['user'])) {
+            // Add debugging output for AJAX requests
+            if (isset($_SERVER['HTTP_X_REQUESTED_WITH']) && $_SERVER['HTTP_X_REQUESTED_WITH'] === 'XMLHttpRequest') {
+                header('Content-Type: application/json');
+                echo json_encode([
+                    'success' => false,
+                    'message' => 'Session validation failed',
+                    'session_id' => session_id(),
+                    'session_data' => $_SESSION,
+                    'redirect' => UrlHelper::url('login')
+                ]);
+                exit;
+            }
             UrlHelper::redirect('login');
         }
         $courseId = IdEncryption::getId($id);
@@ -104,6 +124,7 @@ class MyCoursesController {
         $courseModel = new CourseModel();
         $clientId = $_SESSION['user']['client_id'] ?? null;
         $userId = $_SESSION['user']['id'] ?? null;
+        
         $course = $courseModel->getCourseById($courseId, $clientId, $userId);
         if (!$course) {
             UrlHelper::redirect('my-courses');

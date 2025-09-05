@@ -902,24 +902,37 @@ function hasUserSubmittedFeedback($courseId, $userId, $feedbackPackageId) {
                                 break;
                             
                             default:
-                                // For other content types, check if they have any progress
+                                // For other content types, check user_content_activity instead
                                 $stmt = $db->prepare("
-                                    SELECT cp.status, cp.completion_percentage 
-                                    FROM content_progress cp
-                                    JOIN course_enrollments ce ON cp.enrollment_id = ce.id
-                                    WHERE cp.content_id = ? AND ce.user_id = ?
+                                    SELECT started_at, completed_at 
+                                    FROM user_content_activity 
+                                    WHERE content_id = ? AND user_id = ?
                                 ");
                                 $stmt->execute([$junctionId, $userId]);
-                                $genProgress = $stmt->fetch(PDO::FETCH_ASSOC);
+                                $activity = $stmt->fetch(PDO::FETCH_ASSOC);
                                 
-                                if ($genProgress) {
-                                    $progress = intval($genProgress['completion_percentage'] ?? 0);
+                                if ($activity) {
+                                    if ($activity['completed_at']) {
+                                        $progress = 100;
+                                    } elseif ($activity['started_at']) {
+                                        $progress = 25; // Started but not completed
+                                    } else {
+                                        $progress = 0;
+                                    }
                                 } else {
                                     // Try with actual content ID
                                     $stmt->execute([$actualContentId, $userId]);
-                                    $genProgress = $stmt->fetch(PDO::FETCH_ASSOC);
-                                    if ($genProgress) {
-                                        $progress = intval($genProgress['completion_percentage'] ?? 0);
+                                    $activity = $stmt->fetch(PDO::FETCH_ASSOC);
+                                    if ($activity) {
+                                        if ($activity['completed_at']) {
+                                            $progress = 100;
+                                        } elseif ($activity['started_at']) {
+                                            $progress = 25; // Started but not completed
+                                        } else {
+                                            $progress = 0;
+                                        }
+                                    } else {
+                                        $progress = 0;
                                     }
                                 }
                                 break;

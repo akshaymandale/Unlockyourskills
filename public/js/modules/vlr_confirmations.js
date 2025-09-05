@@ -19,10 +19,16 @@
 if (typeof VLRConfirmations === 'undefined') {
 class VLRConfirmations {
     constructor() {
+        this.initialized = false;
         this.init();
     }
 
     init() {
+        // Prevent multiple initializations
+        if (this.initialized) {
+            return;
+        }
+        
         // VLR-specific delete confirmations
         document.addEventListener('click', (e) => {
             const target = e.target.closest(this.getVLRSelectors());
@@ -31,6 +37,8 @@ class VLRConfirmations {
                 this.handleVLRDelete(target);
             }
         });
+        
+        this.initialized = true;
     }
 
     // Helper function to get translation with fallback
@@ -81,18 +89,19 @@ class VLRConfirmations {
             return;
         }
 
-        // Special handling for assessment packages - check if they have attempts
+        // Special handling for assessment packages - check if they are assigned to applicable courses
         if (data.type === 'assessment') {
             const assessmentData = button.dataset.assessment;
             if (assessmentData) {
                 try {
                     const parsedData = JSON.parse(assessmentData);
-                    if (parsedData.has_attempts) {
-                        // Assessment has attempts, show toaster and don't proceed
+                    if (parsedData.is_assigned_to_applicable_courses) {
+                        // Assessment is assigned to applicable courses, show toaster and don't proceed
+                        console.log('VLRConfirmations: Showing toast for assessment', data.id);
                         if (typeof showSimpleToast === 'function') {
-                            showSimpleToast('Cannot delete assessment: Assessment has been started by users and cannot be deleted.', 'error');
+                            showSimpleToast('Cannot delete assessment: Assessment is assigned to courses that are applicable to users and cannot be deleted.', 'error');
                         } else {
-                            alert('Cannot delete assessment: Assessment has been started by users and cannot be deleted.');
+                            alert('Cannot delete assessment: Assessment is assigned to courses that are applicable to users and cannot be deleted.');
                         }
                         return; // Stop here, don't show confirmation
                     }
@@ -291,13 +300,17 @@ class VLRConfirmations {
     }
 }
 
-// Initialize VLR confirmations
-if (document.readyState !== 'loading') {
-    window.vlrConfirmationsInstance = new VLRConfirmations();
-} else {
-    document.addEventListener('DOMContentLoaded', function() {
+// Initialize VLR confirmations (prevent multiple instances)
+if (!window.vlrConfirmationsInstance) {
+    if (document.readyState !== 'loading') {
         window.vlrConfirmationsInstance = new VLRConfirmations();
-    });
+    } else {
+        document.addEventListener('DOMContentLoaded', function() {
+            if (!window.vlrConfirmationsInstance) {
+                window.vlrConfirmationsInstance = new VLRConfirmations();
+            }
+        });
+    }
 }
 
 // Global VLR helper function
