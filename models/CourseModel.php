@@ -1621,6 +1621,9 @@ class CourseModel
                 case 'assessment':
                     $progress = $this->getAssessmentProgress($contentId, $userId, $clientId);
                     break;
+                case 'assignment':
+                    $progress = $this->getAssignmentProgress($contentId, $userId, $clientId);
+                    break;
                 case 'scorm':
                     // For SCORM, use the course_module_content.id, not the content_id
                     $progress = $this->getScormProgress($content['id'], $userId, $clientId);
@@ -1680,6 +1683,37 @@ class CourseModel
             return !empty($attempts) ? 50 : 0; // 50% if attempted but not completed
         } catch (Exception $e) {
             error_log("Error getting assessment progress: " . $e->getMessage());
+            return 0;
+        }
+    }
+    
+    private function getAssignmentProgress($assignmentId, $userId, $clientId)
+    {
+        try {
+            require_once 'models/AssignmentSubmissionModel.php';
+            $assignmentModel = new AssignmentSubmissionModel();
+            
+            // Get the course ID from the course_module_content table
+            $stmt = $this->conn->prepare("
+                SELECT cm.course_id 
+                FROM course_module_content cmc
+                JOIN course_modules cm ON cmc.module_id = cm.id
+                WHERE cmc.content_id = ? AND cmc.content_type = 'assignment'
+            ");
+            $stmt->execute([$assignmentId]);
+            $courseId = $stmt->fetchColumn();
+            
+            if (!$courseId) {
+                error_log("Error getting assignment progress: Course ID not found for assignment ID: $assignmentId");
+                return 0;
+            }
+            
+            // Check if user has submitted the assignment
+            $hasSubmitted = $assignmentModel->hasUserSubmittedAssignment($courseId, $userId, $assignmentId);
+            
+            return $hasSubmitted ? 100 : 0; // 100% if submitted, 0% if not
+        } catch (Exception $e) {
+            error_log("Error getting assignment progress: " . $e->getMessage());
             return 0;
         }
     }

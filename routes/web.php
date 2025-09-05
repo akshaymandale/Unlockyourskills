@@ -469,6 +469,18 @@ Router::get('/users/autocomplete', 'UserManagementController@getUserEmailsForAut
     Router::post('/feedback-response/delete', 'FeedbackResponseController@deleteFeedback');
 
     // ===================================
+    // ASSIGNMENT SUBMISSIONS
+    // ===================================
+
+    // Assignment Submission Management
+    Router::get('/assignment-submission/{courseId}/{assignmentId}', 'AssignmentSubmissionController@showAssignment');
+    Router::get('/assignment-submission/modal-content', 'AssignmentSubmissionController@getAssignmentModalContent');
+    Router::post('/assignment-submission/submit', 'AssignmentSubmissionController@submitAssignment');
+    Router::get('/assignment-submission/submissions', 'AssignmentSubmissionController@getSubmissions');
+    Router::get('/assignment-submission/check-status', 'AssignmentSubmissionController@checkSubmissionStatus');
+    Router::get('/assignment-submission/course-assignments', 'AssignmentSubmissionController@getCourseAssignments');
+
+    // ===================================
     // OPINION POLLS
     // ===================================
 

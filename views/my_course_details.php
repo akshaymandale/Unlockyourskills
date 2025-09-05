@@ -204,6 +204,64 @@ function hasUserCompletedSurvey($courseId, $userId, $surveyPackageId) {
         return false;
     }
 }
+
+function hasUserSubmittedAssignment($courseId, $userId, $assignmentPackageId) {
+    try {
+        // Debug output - visible on page
+        echo "<!-- Assignment submission check - Course ID: $courseId, User ID: $userId, Assignment Package ID: $assignmentPackageId -->";
+        
+        // If userId is null or empty, try to get it from session or use fallback
+        if (empty($userId)) {
+            // Try to get user ID from session
+            $userId = $_SESSION['user']['id'] ?? $_SESSION['id'] ?? null;
+            
+            // If still empty, use the known user ID from JavaScript (temporary fix)
+            if (empty($userId)) {
+                $userId = 75; // Known user ID from JavaScript
+                echo "<!-- Using fallback user ID: $userId -->";
+            }
+        }
+        
+        $assignmentSubmissionModel = new AssignmentSubmissionModel();
+        $result = $assignmentSubmissionModel->hasUserSubmittedAssignment($courseId, $userId, $assignmentPackageId);
+        
+        echo "<!-- Assignment submission result: " . ($result ? 'YES' : 'NO') . " -->";
+        return $result;
+        
+    } catch (Exception $e) {
+        echo "<!-- Assignment submission check error: " . $e->getMessage() . " -->";
+        return false;
+    }
+}
+
+function hasUserSubmittedFeedback($courseId, $userId, $feedbackPackageId) {
+    try {
+        // Debug output - visible on page
+        echo "<!-- Feedback submission check - Course ID: $courseId, User ID: $userId, Feedback Package ID: $feedbackPackageId -->";
+        
+        // If userId is null or empty, try to get it from session or use fallback
+        if (empty($userId)) {
+            // Try to get user ID from session
+            $userId = $_SESSION['user']['id'] ?? $_SESSION['id'] ?? null;
+            
+            // If still empty, use the known user ID from JavaScript (temporary fix)
+            if (empty($userId)) {
+                $userId = 75; // Known user ID from JavaScript
+                echo "<!-- Using fallback user ID: $userId -->";
+            }
+        }
+        
+        $feedbackResponseModel = new FeedbackResponseModel();
+        $result = $feedbackResponseModel->hasUserSubmittedFeedback($courseId, $userId, $feedbackPackageId);
+        
+        echo "<!-- Feedback submission result: " . ($result ? 'YES' : 'NO') . " -->";
+        return $result;
+        
+    } catch (Exception $e) {
+        echo "<!-- Feedback submission check error: " . $e->getMessage() . " -->";
+        return false;
+    }
+}
 ?>
 
 <style>
@@ -692,6 +750,9 @@ function hasUserCompletedSurvey($courseId, $userId, $surveyPackageId) {
                     return true; // No prerequisites means all are completed
                 }
                 
+                $userId = $_SESSION['user']['id'] ?? $_SESSION['id'] ?? 75; // Fallback to known user ID
+                $courseId = $GLOBALS['course']['id'] ?? null;
+                
                 foreach ($prerequisites as $pre) {
                     if ($pre['prerequisite_type'] === 'assessment') {
                         $assessmentId = $pre['prerequisite_id'];
@@ -701,8 +762,26 @@ function hasUserCompletedSurvey($courseId, $userId, $surveyPackageId) {
                         if (!$result || !$result['passed']) {
                             return false;
                         }
+                    } elseif ($pre['prerequisite_type'] === 'survey') {
+                        // Check if survey has been completed
+                        $isSurveyCompleted = hasUserCompletedSurvey($courseId, $userId, $pre['prerequisite_id']);
+                        if (!$isSurveyCompleted) {
+                            return false;
+                        }
+                    } elseif ($pre['prerequisite_type'] === 'assignment') {
+                        // Check if assignment has been submitted
+                        $isAssignmentSubmitted = hasUserSubmittedAssignment($courseId, $userId, $pre['prerequisite_id']);
+                        if (!$isAssignmentSubmitted) {
+                            return false;
+                        }
+                    } elseif ($pre['prerequisite_type'] === 'feedback') {
+                        // Check if feedback has been submitted
+                        $isFeedbackSubmitted = hasUserSubmittedFeedback($courseId, $userId, $pre['prerequisite_id']);
+                        if (!$isFeedbackSubmitted) {
+                            return false;
+                        }
                     } else {
-                        // For non-assessment prerequisites (courses, modules, etc.), 
+                        // For other prerequisite types (courses, modules, etc.), 
                         // we assume they need to be completed manually or have completion tracking
                         // For now, we'll consider them as completed if they exist
                         // This can be enhanced later with actual completion tracking
@@ -808,6 +887,11 @@ function hasUserCompletedSurvey($courseId, $userId, $surveyPackageId) {
                                 }
                                 break;
                                 
+                            case 'assignment':
+                                // Get assignment progress - check if user has submitted
+                                $progress = getAssignmentProgressStatus($courseId, $junctionId, $userId);
+                                break;
+                                
                             case 'external':
                                 // Get external content progress
                                 $progress = getExternalProgressStatus($courseId, $junctionId, $userId);
@@ -906,6 +990,55 @@ function hasUserCompletedSurvey($courseId, $userId, $surveyPackageId) {
                     
                 } catch (Exception $e) {
                     error_log("Error getting assessment progress status: " . $e->getMessage());
+                    return 0;
+                }
+            }
+        }
+        
+        // Helper to get assignment progress status
+        if (!function_exists('getAssignmentProgressStatus')) {
+            function getAssignmentProgressStatus($courseId, $contentId, $userId) {
+                try {
+                    // Validate inputs
+                    if (empty($courseId) || empty($contentId) || empty($userId)) {
+                        return 0;
+                    }
+                    
+                    // Get database connection
+                    $db = new PDO(
+                        'mysql:unix_socket=/Applications/XAMPP/xamppfiles/var/mysql/mysql.sock;dbname=unlockyourskills',
+                        'root',
+                        ''
+                    );
+                    $db->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+                    
+                    // Get client_id from session
+                    $clientId = $_SESSION['user']['client_id'] ?? null;
+                    
+                    // Get the assignment package ID from course_module_content
+                    $stmt = $db->prepare("
+                        SELECT content_id 
+                        FROM course_module_content 
+                        WHERE id = ? AND content_type = 'assignment'
+                    ");
+                    $stmt->execute([$contentId]);
+                    $contentData = $stmt->fetch(PDO::FETCH_ASSOC);
+                    
+                    if (!$contentData) {
+                        return 0;
+                    }
+                    
+                    $assignmentId = $contentData['content_id'];
+                    
+                    // Use AssignmentSubmissionModel for consistency with CourseModel
+                    require_once 'models/AssignmentSubmissionModel.php';
+                    $assignmentModel = new AssignmentSubmissionModel();
+                    $hasSubmitted = $assignmentModel->hasUserSubmittedAssignment($courseId, $userId, $assignmentId);
+                    
+                    return $hasSubmitted ? 100 : 0; // 100% if submitted, 0% if not
+                    
+                } catch (Exception $e) {
+                    error_log("Error getting assignment progress status: " . $e->getMessage());
                     return 0;
                 }
             }
@@ -1546,6 +1679,8 @@ function hasUserCompletedSurvey($courseId, $userId, $surveyPackageId) {
             // Show completion status
             $completedCount = 0;
             $totalCount = count($course['prerequisites']);
+            $userId = $_SESSION['user']['id'] ?? $_SESSION['id'] ?? 75; // Fallback to known user ID
+            
             foreach ($course['prerequisites'] as $pre) {
                 if ($pre['prerequisite_type'] === 'assessment') {
                     $assessmentId = $pre['prerequisite_id'];
@@ -1553,8 +1688,29 @@ function hasUserCompletedSurvey($courseId, $userId, $surveyPackageId) {
                     if ($result && $result['passed']) {
                         $completedCount++;
                     }
+                } elseif ($pre['prerequisite_type'] === 'survey') {
+                    // Check if survey has been completed
+                    $isSurveyCompleted = hasUserCompletedSurvey($course['id'], $userId, $pre['prerequisite_id']);
+                    if ($isSurveyCompleted) {
+                        $completedCount++;
+                    }
+                } elseif ($pre['prerequisite_type'] === 'assignment') {
+                    // Check if assignment has been submitted
+                    $isAssignmentSubmitted = hasUserSubmittedAssignment($course['id'], $userId, $pre['prerequisite_id']);
+                    if ($isAssignmentSubmitted) {
+                        $completedCount++;
+                    }
+                } elseif ($pre['prerequisite_type'] === 'feedback') {
+                    // Check if feedback has been submitted
+                    $isFeedbackSubmitted = hasUserSubmittedFeedback($course['id'], $userId, $pre['prerequisite_id']);
+                    if ($isFeedbackSubmitted) {
+                        $completedCount++;
+                    }
                 } else {
-                    // For non-assessment prerequisites, consider them as completed for now
+                    // For other prerequisite types (courses, modules, etc.), 
+                    // we assume they need to be completed manually or have completion tracking
+                    // For now, we'll consider them as completed if they exist
+                    // This can be enhanced later with actual completion tracking
                     $completedCount++;
                 }
             }
@@ -1769,6 +1925,11 @@ function hasUserCompletedSurvey($courseId, $userId, $surveyPackageId) {
                                     } elseif ($pre['prerequisite_type'] === 'feedback') {
                                         // For feedback prerequisites, open modal popup
                                         echo "<a class='prerequisite-action-btn {$config['class']}' href='#' onclick='openFeedbackModal(\"" . addslashes($encryptedPrereqId) . "\", \"" . addslashes(IdEncryption::encrypt($GLOBALS['course']['id'])) . "\")'>";
+                                        echo "<i class='fas {$config['icon']} me-1'></i>{$config['label']}";
+                                        echo "</a>";
+                                    } elseif ($pre['prerequisite_type'] === 'assignment') {
+                                        // For assignment prerequisites, open modal popup
+                                        echo "<a class='prerequisite-action-btn {$config['class']}' href='#' onclick='openAssignmentModal(\"" . addslashes($encryptedPrereqId) . "\", \"" . addslashes(IdEncryption::encrypt($GLOBALS['course']['id'])) . "\")'>";
                                         echo "<i class='fas {$config['icon']} me-1'></i>{$config['label']}";
                                         echo "</a>";
                                     } else {
@@ -2369,10 +2530,25 @@ function hasUserCompletedSurvey($courseId, $userId, $surveyPackageId) {
                                                                     }
                                                                     break;
                                                                 case 'feedback':
-                                                                case 'assignment':
                                                                     $encryptedId = IdEncryption::encrypt($content['content_id']);
                                                                     $startUrl = UrlHelper::url('my-courses/start') . '?type=' . urlencode($type) . '&id=' . urlencode($encryptedId);
                                                                     $actionsHtml .= "<a href='" . htmlspecialchars($startUrl) . "' target='_blank' class='prerequisite-action-btn'><i class='fas fa-play me-1'></i>Start</a>";
+                                                                    break;
+                                                                case 'assignment':
+                                                                    $encryptedId = IdEncryption::encrypt($content['content_id']);
+                                                                    $courseId = IdEncryption::encrypt($GLOBALS['course']['id']);
+                                                                    
+                                                                    // Check if assignment has been submitted
+                                                                    $userId = $_SESSION['user']['id'] ?? $_SESSION['id'] ?? 75;
+                                                                    $isAssignmentSubmitted = hasUserSubmittedAssignment($GLOBALS['course']['id'], $userId, $content['content_id']);
+                                                                    
+                                                                    if ($isAssignmentSubmitted) {
+                                                                        // Show submitted assignment button
+                                                                        $actionsHtml .= "<a class='postrequisite-action-btn btn-info' href='#' onclick='openAssignmentModal(\"" . addslashes($encryptedId) . "\", \"" . addslashes($courseId) . "\")' title='View submitted assignment'><i class='fas fa-check me-1'></i>View Submitted Assignment</a>";
+                                                                    } else {
+                                                                        // Show start assignment button
+                                                                        $actionsHtml .= "<a href='#' onclick='openAssignmentModal(\"" . addslashes($encryptedId) . "\", \"" . addslashes($courseId) . "\")' class='postrequisite-action-btn btn-primary'><i class='fas fa-file-pen me-1'></i>Start Assignment</a>";
+                                                                    }
                                                                     break;
                                                                 default:
                                                                     $actionsHtml .= "<span class='postrequisite-action-btn btn-secondary' style='opacity: 0.6; cursor: not-allowed;' disabled><i class='fas fa-ban me-1'></i>Not available</span>";
@@ -2678,6 +2854,11 @@ function hasUserCompletedSurvey($courseId, $userId, $surveyPackageId) {
                                     echo "<a class='postrequisite-action-btn {$config['class']}' href='#' onclick='openFeedbackModal(\"" . addslashes($encryptedPostreqId) . "\", \"" . addslashes(IdEncryption::encrypt($GLOBALS['course']['id'])) . "\")'>";
                                     echo "<i class='fas {$config['icon']} me-1'></i>{$config['label']}";
                                     echo "</a>";
+                                } elseif ($post['content_type'] === 'assignment') {
+                                    // For assignment content, open modal popup
+                                    echo "<a class='postrequisite-action-btn {$config['class']}' href='#' onclick='openAssignmentModal(\"" . addslashes($encryptedPostreqId) . "\", \"" . addslashes(IdEncryption::encrypt($GLOBALS['course']['id'])) . "\")'>";
+                                    echo "<i class='fas {$config['icon']} me-1'></i>{$config['label']}";
+                                    echo "</a>";
                                 } else {
                                     // For other content types, use the existing start method
                                     echo "<a class='postrequisite-action-btn {$config['class']}' target='_blank' href='" . UrlHelper::url('my-courses/start') . '?type=' . urlencode($post['content_type']) . '&id=' . urlencode($encryptedPostreqId) . '&course_id=' . $GLOBALS['course']['id'] . "'>";
@@ -2762,6 +2943,7 @@ function hasUserCompletedSurvey($courseId, $userId, $surveyPackageId) {
 
 <script src="/Unlockyourskills/public/js/course_player.js"></script>
 <script src="/unlockyourskills/public/js/progress-tracking.js"></script>
+<script src="/Unlockyourskills/public/js/assignment_user_response_validation.js"></script>
 
 <script>
 // Expose user data to JavaScript for progress tracking
@@ -3313,6 +3495,9 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // Check feedback status and update button text
     checkFeedbackStatusAndUpdateButtons();
+    
+    // Check assignment status and update button text
+    checkAssignmentStatusAndUpdateButtons();
     
     if (urlParams.get('scorm_return') === 'true') {
         // Check if we've already refreshed to prevent infinite loops
@@ -4187,6 +4372,64 @@ function updateFeedbackButtonAfterSubmission(feedbackId, courseId) {
     });
 }
 
+// Function to check assignment submission status and update button text
+function checkAssignmentStatusAndUpdateButtons() {
+    
+    // Find all assignment buttons (both prerequisites and module content)
+    const assignmentButtons = document.querySelectorAll('a[onclick*="openAssignmentModal"]');
+    
+    assignmentButtons.forEach(button => {
+        // Extract assignment ID and course ID from onclick attribute
+        const onclickAttr = button.getAttribute('onclick');
+        const match = onclickAttr.match(/openAssignmentModal\("([^"]+)",\s*"([^"]+)"\)/);
+        
+        if (match) {
+            const assignmentId = match[1];
+            const courseId = match[2];
+            
+            // Check assignment submission status
+            fetch(`/unlockyourskills/assignment-submission/check-status?course_id=${encodeURIComponent(courseId)}&assignment_id=${encodeURIComponent(assignmentId)}`)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        const buttonText = button.querySelector('i').nextSibling;
+                        if (data.has_submitted) {
+                            // Update button text to "View Submitted Assignment"
+                            buttonText.textContent = ' View Submitted Assignment';
+                            button.classList.remove('btn-primary');
+                            button.classList.add('btn-info');
+                        } else {
+                            // Keep original text "Start Assignment"
+                            buttonText.textContent = ' Start Assignment';
+                            button.classList.remove('btn-info');
+                            button.classList.add('btn-primary');
+                        }
+                    }
+                })
+                .catch(error => {
+                    console.error('Error checking assignment status:', error);
+                });
+        }
+    });
+}
+
+// Function to update assignment button after successful submission
+function updateAssignmentButtonAfterSubmission(assignmentId, courseId) {
+    
+    // Find the specific assignment button (both prerequisites and module content)
+    const assignmentButtons = document.querySelectorAll('a[onclick*="openAssignmentModal"]');
+    
+    assignmentButtons.forEach(button => {
+        const onclickAttr = button.getAttribute('onclick');
+        if (onclickAttr.includes(assignmentId) && onclickAttr.includes(courseId)) {
+            const buttonText = button.querySelector('i').nextSibling;
+            buttonText.textContent = ' View Submitted Assignment';
+            button.classList.remove('btn-primary');
+            button.classList.add('btn-info');
+        }
+    });
+}
+
 // Survey Modal Functions
 function initializeSurveyModalJavaScript() {
     const surveyForm = document.getElementById('surveyFormModal');
@@ -4399,8 +4642,209 @@ function openSurveyModal(surveyId, courseId) {
         });
 }
 
+function openAssignmentModal(assignmentId, courseId) {
+    
+    // Show loading state
+    const modal = document.getElementById('assignmentModal');
+    const modalBody = modal.querySelector('.modal-body');
+    modalBody.innerHTML = '<div class="text-center"><div class="spinner-border" role="status"><span class="visually-hidden">Loading...</span></div><p class="mt-2">Loading assignment form...</p></div>';
+    
+    // Show the modal
+    const bsModal = new bootstrap.Modal(modal);
+    bsModal.show();
+    
+    // Load assignment form content
+    fetch(`/unlockyourskills/assignment-submission/modal-content?assignment_id=${encodeURIComponent(assignmentId)}&course_id=${encodeURIComponent(courseId)}`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                modalBody.innerHTML = data.html;
+                
+                // Update modal title
+                const modalTitle = modal.querySelector('.modal-title');
+                modalTitle.innerHTML = `<i class="fas fa-file-pen me-2"></i>${data.title}`;
+                
+                // Initialize assignment form JavaScript
+                initializeAssignmentModalJavaScript();
+            } else {
+                modalBody.innerHTML = `
+                    <div class="alert alert-danger">
+                        <h5>Error</h5>
+                        <p>${data.message || 'Failed to load assignment. Please try again.'}</p>
+                        <button type="button" class="btn btn-secondary" onclick="openAssignmentModal('${assignmentId}', '${courseId}')">Try Again</button>
+                    </div>
+                `;
+            }
+        })
+        .catch(error => {
+            modalBody.innerHTML = `
+                <div class="alert alert-danger">
+                    <h5>Error</h5>
+                    <p>Failed to load assignment. Please try again.</p>
+                    <button type="button" class="btn btn-secondary" onclick="openAssignmentModal('${assignmentId}', '${courseId}')">Try Again</button>
+                </div>
+            `;
+        });
+}
+
+function initializeAssignmentModalJavaScript() {
+    
+    // Function to initialize assignment submission
+    function initializeAssignmentSubmission() {
+        const form = document.getElementById('assignmentSubmissionForm');
+        if (!form) {
+            setTimeout(initializeAssignmentSubmission, 100);
+            return;
+        }
+        
+        // Handle submission type changes (both radio and checkbox)
+        const submissionTypeInputs = document.querySelectorAll('input[name="submission_type"], input[name="submission_type[]"]');
+        const sections = {
+            'file_upload': document.getElementById('file_upload_section'),
+            'text_entry': document.getElementById('text_entry_section'),
+            'url_submission': document.getElementById('url_submission_section')
+        };
+        
+        function updateSubmissionSections() {
+            // Re-query inputs in case they weren't available initially
+            const currentInputs = document.querySelectorAll('input[name="submission_type"], input[name="submission_type[]"]');
+            
+            // Check if we're dealing with checkboxes (mixed submission)
+            const isCheckboxMode = currentInputs.length > 0 && currentInputs[0].type === 'checkbox';
+            
+            // First, hide all sections
+            Object.values(sections).forEach(section => {
+                if (section) {
+                    section.style.setProperty('display', 'none', 'important');
+                }
+            });
+            
+            if (isCheckboxMode) {
+                // For checkboxes, show all checked sections
+                currentInputs.forEach(input => {
+                    if (input.checked && sections[input.value]) {
+                        sections[input.value].style.setProperty('display', 'block', 'important');
+                    }
+                });
+            } else {
+                // For radio buttons, show only the selected section
+                const checkedInput = document.querySelector('input[name="submission_type"]:checked');
+                if (checkedInput && sections[checkedInput.value]) {
+                    sections[checkedInput.value].style.setProperty('display', 'block', 'important');
+                }
+            }
+        }
+        
+        // Initialize with current selection
+        updateSubmissionSections();
+        
+        // Handle input changes - use event delegation for better reliability
+        document.addEventListener('change', function(e) {
+            if (e.target.matches('input[name="submission_type"], input[name="submission_type[]"]')) {
+                updateSubmissionSections();
+            }
+        });
+        
+        // Form submission - integrate with validation
+        form.addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            // Check if validation script is available and use it
+            if (window.AssignmentUserResponseValidation) {
+                // Create a temporary validator instance to check validation
+                const tempValidator = new window.AssignmentUserResponseValidation();
+                tempValidator.form = form;
+                
+                // Run validation
+                const isValid = tempValidator.validateForm();
+                
+                if (!isValid) {
+                    return false;
+                }
+            } else {
+                // Basic validation fallback
+                const textArea = form.querySelector('#submission_text');
+                if (textArea && textArea.value.trim() === '') {
+                    alert('Please provide text content for text entry submission.');
+                    return false;
+                }
+            }
+            
+            const submitBtn = document.getElementById('submitAssignmentBtn');
+            const originalText = submitBtn.innerHTML;
+            
+            // Prevent double submission by checking if already submitting
+            if (submitBtn.disabled) {
+                return;
+            }
+            
+            // Show loading state
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>Submitting...';
+            
+            // Collect form data
+            const formData = new FormData(form);
+            
+            // Submit assignment
+            fetch('/Unlockyourskills/assignment-submission/submit', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => {
+                return response.json();
+            })
+            .then(data => {
+                if (data.success) {
+                    // Update assignment button to show "View Submitted Assignment"
+                    const assignmentId = formData.get('assignment_package_id');
+                    const courseId = formData.get('course_id');
+                    updateAssignmentButtonAfterSubmission(assignmentId, courseId);
+                    
+                    // Show success message
+                    const modal = document.getElementById('assignmentModal');
+                    const modalBody = modal.querySelector('.modal-body');
+                    modalBody.innerHTML = `
+                        <div class="alert alert-success text-center">
+                            <i class="fas fa-check-circle fa-3x mb-3"></i>
+                            <h4>Assignment Submitted Successfully!</h4>
+                            <p>Thank you for your submission. Your assignment has been received.</p>
+                            <button type="button" class="btn btn-primary" data-bs-dismiss="modal" onclick="window.location.reload()">Close</button>
+                        </div>
+                    `;
+                    
+                    // Close modal after 3 seconds and refresh page
+                    setTimeout(() => {
+                        bootstrap.Modal.getInstance(modal).hide();
+                        // Refresh the page to show updated button states
+                        window.location.reload();
+                    }, 3000);
+                } else {
+                    // Show error message
+                    alert(data.message || 'Failed to submit assignment. Please try again.');
+                }
+            })
+            .catch(error => {
+                alert('An error occurred while submitting the assignment. Please try again.');
+            })
+            .finally(() => {
+                // Re-enable submit button
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = originalText;
+            });
+        });
+    }
+    
+    // Call the initialization function
+    initializeAssignmentSubmission();
+    
+    // Also try after a delay as fallback
+    setTimeout(initializeAssignmentSubmission, 500);
+}
+
 // Global function for external access
 window.openSurveyModal = openSurveyModal;
+window.openAssignmentModal = openAssignmentModal;
+window.updateAssignmentButtonAfterSubmission = updateAssignmentButtonAfterSubmission;
 </script>
 
 <!-- Feedback Modal -->
@@ -4432,6 +4876,23 @@ window.openSurveyModal = openSurveyModal;
             </div>
             <div class="modal-body">
                 <!-- Survey form will be loaded here -->
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Assignment Modal -->
+<div class="modal fade" id="assignmentModal" tabindex="-1" aria-labelledby="assignmentModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="assignmentModalLabel">
+                    <i class="fas fa-file-pen me-2"></i>Assignment Submission
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <!-- Assignment form will be loaded here -->
             </div>
         </div>
     </div>

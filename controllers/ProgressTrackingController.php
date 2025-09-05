@@ -222,6 +222,10 @@ class ProgressTrackingController {
                     error_log("DEBUG: updateContentProgress - calling updateScormProgress");
                     $result = $this->progressModel->updateScormProgress($userId, $courseId, $contentId, $clientId, $data);
                     break;
+                case 'assignment':
+                    error_log("DEBUG: updateContentProgress - calling updateAssignmentProgress");
+                    $result = $this->progressModel->updateAssignmentProgress($userId, $courseId, $contentId, $clientId, $data);
+                    break;
                 case 'video':
                     error_log("DEBUG: updateContentProgress - calling updateVideoProgress");
                     $result = $this->progressModel->updateVideoProgress($userId, $courseId, $contentId, $clientId, $data);

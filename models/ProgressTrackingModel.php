@@ -254,6 +254,10 @@ class ProgressTrackingModel {
                     error_log("DEBUG: Initializing SCORM progress for content ID: $contentId");
                     $this->initializeScormProgress($userId, $courseId, $contentId, $clientId);
                     break;
+                case 'assignment':
+                    error_log("DEBUG: Initializing assignment progress for content ID: $contentId");
+                    $this->initializeAssignmentProgress($userId, $courseId, $contentId, $clientId);
+                    break;
                 case 'video':
                     error_log("DEBUG: Initializing video progress for content ID: $contentId");
                     $this->initializeVideoProgress($userId, $courseId, $contentId, $clientId);
@@ -326,6 +330,40 @@ class ProgressTrackingModel {
             }
         } catch (PDOException $e) {
             error_log("ProgressTrackingModel::initializeScormProgress error: " . $e->getMessage());
+        }
+    }
+
+    /**
+     * Initialize assignment progress
+     */
+    public function initializeAssignmentProgress($userId, $courseId, $contentId, $clientId) {
+        try {
+            error_log("DEBUG: initializeAssignmentProgress called - userId: $userId, courseId: $courseId, contentId: $contentId, clientId: $clientId");
+            
+            // Get assignment package ID from course_module_content
+            // The contentId parameter is actually the course_module_content.id
+            // We need to find the assignment_package_id from the assignment_package table
+            $stmt = $this->conn->prepare("
+                SELECT ap.id as assignment_package_id 
+                FROM assignment_package ap
+                INNER JOIN course_module_content cmc ON cmc.content_id = ap.id AND cmc.content_type = 'assignment'
+                WHERE cmc.id = ?
+            ");
+            $stmt->execute([$contentId]);
+            $assignmentPackageId = $stmt->fetchColumn();
+            
+            error_log("DEBUG: Assignment package ID found: " . ($assignmentPackageId ?: 'NULL'));
+
+            if ($assignmentPackageId) {
+                // For assignments, we don't need a separate progress table
+                // Progress is tracked through assignment submissions
+                // Just log that we found the assignment
+                error_log("DEBUG: Assignment progress tracking initialized for assignment package ID: $assignmentPackageId");
+            } else {
+                error_log("DEBUG: No assignment package found for content ID: $contentId");
+            }
+        } catch (PDOException $e) {
+            error_log("ProgressTrackingModel::initializeAssignmentProgress error: " . $e->getMessage());
         }
     }
 
@@ -404,6 +442,28 @@ class ProgressTrackingModel {
             return $result;
         } catch (PDOException $e) {
             error_log("ProgressTrackingModel::updateScormProgress error: " . $e->getMessage());
+            return false;
+        }
+    }
+
+    /**
+     * Update assignment progress
+     */
+    public function updateAssignmentProgress($userId, $courseId, $contentId, $clientId, $data) {
+        try {
+            error_log("DEBUG: updateAssignmentProgress called - userId: $userId, courseId: $courseId, contentId: $contentId, clientId: $clientId");
+            error_log("DEBUG: updateAssignmentProgress data: " . json_encode($data));
+            
+            // For assignments, progress is tracked through assignment submissions
+            // We don't need to update a separate progress table
+            // The progress is calculated based on submission status in getAssignmentProgress method
+            
+            // Just log that the assignment progress was updated
+            error_log("DEBUG: updateAssignmentProgress - Assignment progress tracking completed");
+            
+            return true;
+        } catch (PDOException $e) {
+            error_log("ProgressTrackingModel::updateAssignmentProgress error: " . $e->getMessage());
             return false;
         }
     }
