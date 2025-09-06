@@ -997,8 +997,8 @@ function hasUserSubmittedFeedback($courseId, $userId, $feedbackPackageId) {
                         return $results['passed'] ? 100 : 0;
                     }
                     
-                    // Check if user has attempted the assessment
-                    $attempts = $assessmentModel->getUserCompletedAssessmentAttempts($assessmentId, $userId, $clientId);
+                    // Check if user has attempted the assessment for this specific course
+                    $attempts = $assessmentModel->getUserCompletedAssessmentAttemptsForCourse($assessmentId, $userId, $courseId, $clientId);
                     return !empty($attempts) ? 50 : 0; // 50% if attempted but not completed
                     
                 } catch (Exception $e) {

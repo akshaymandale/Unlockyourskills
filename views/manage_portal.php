@@ -44,6 +44,11 @@ if ($currentUser) {
                 </a>
             </li>
             <li class="nav-item">
+                <a class="nav-link" id="reports-tab" data-toggle="tab" href="#reports">
+                    <i class="fas fa-chart-bar"></i> <?= Localization::translate('reports'); ?>
+                </a>
+            </li>
+            <li class="nav-item">
                 <a class="nav-link" id="settings-tab" data-toggle="tab" href="#settings">
                     <i class="fas fa-cog"></i> <?= Localization::translate('settings'); ?>
                 </a>
@@ -226,6 +231,81 @@ if ($currentUser) {
                         </div>
                     </div>
                     <?php endif; ?>
+                </div>
+            </div>
+
+            <!-- ✅ Reports Tab -->
+            <div class="tab-pane fade card shadow-lg p-4" id="reports">
+                <!-- ✅ User Reports Section -->
+                <h4 class="text-purple mt-4"><?= Localization::translate('user_reports'); ?></h4>
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="card user-box shadow-sm" onclick="location.href='<?= UrlHelper::url('reports/user-progress') ?>'">
+                            <h5><i class="fas fa-user-chart text-purple"></i> <?= Localization::translate('user_progress_report'); ?></h5>
+                            <p><small class="text-muted"><?= Localization::translate('user_progress_report_description'); ?></small></p>
+                            <div class="mt-2">
+                                <span class="badge bg-success"><?= Localization::translate('active_badge'); ?></span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="col-md-6">
+                        <div class="card user-box shadow-sm" onclick="location.href='<?= UrlHelper::url('reports/user-activity') ?>'">
+                            <h5><i class="fas fa-user-clock text-purple"></i> <?= Localization::translate('user_activity_report'); ?></h5>
+                            <p><small class="text-muted"><?= Localization::translate('user_activity_report_description'); ?></small></p>
+                            <div class="mt-2">
+                                <span class="badge bg-success"><?= Localization::translate('active_badge'); ?></span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ✅ Course Reports Section -->
+                <h4 class="text-purple mt-4"><?= Localization::translate('course_reports'); ?></h4>
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="card user-box shadow-sm" onclick="location.href='<?= UrlHelper::url('reports/course-completion') ?>'">
+                            <h5><i class="fas fa-graduation-cap text-purple"></i> <?= Localization::translate('course_completion_report'); ?></h5>
+                            <p><small class="text-muted"><?= Localization::translate('course_completion_report_description'); ?></small></p>
+                            <div class="mt-2">
+                                <span class="badge bg-success"><?= Localization::translate('active_badge'); ?></span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="col-md-6">
+                        <div class="card user-box shadow-sm" onclick="location.href='<?= UrlHelper::url('reports/assessment-results') ?>'">
+                            <h5><i class="fas fa-clipboard-check text-purple"></i> <?= Localization::translate('assessment_results_report'); ?></h5>
+                            <p><small class="text-muted"><?= Localization::translate('assessment_results_report_description'); ?></small></p>
+                            <div class="mt-2">
+                                <span class="badge bg-success"><?= Localization::translate('active_badge'); ?></span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ✅ Analytics Section -->
+                <h4 class="text-purple mt-4"><?= Localization::translate('analytics'); ?></h4>
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="card user-box shadow-sm" onclick="location.href='<?= UrlHelper::url('reports/learning-analytics') ?>'">
+                            <h5><i class="fas fa-chart-line text-purple"></i> <?= Localization::translate('learning_analytics'); ?></h5>
+                            <p><small class="text-muted"><?= Localization::translate('learning_analytics_description'); ?></small></p>
+                            <div class="mt-2">
+                                <span class="badge bg-success"><?= Localization::translate('active_badge'); ?></span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="col-md-6">
+                        <div class="card user-box shadow-sm" onclick="location.href='<?= UrlHelper::url('reports/engagement-metrics') ?>'">
+                            <h5><i class="fas fa-heart text-purple"></i> <?= Localization::translate('engagement_metrics'); ?></h5>
+                            <p><small class="text-muted"><?= Localization::translate('engagement_metrics_description'); ?></small></p>
+                            <div class="mt-2">
+                                <span class="badge bg-success"><?= Localization::translate('active_badge'); ?></span>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
 

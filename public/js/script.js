@@ -236,7 +236,7 @@ document.addEventListener("DOMContentLoaded", function () {
     // Check URL hash on page load and activate corresponding tab
     function checkUrlHashForTabs() {
         const hash = window.location.hash.substring(1); // Remove the # symbol
-        if (hash && ['user-details', 'course-details', 'social', 'settings'].includes(hash)) {
+        if (hash && ['user-details', 'course-details', 'social', 'reports', 'settings'].includes(hash)) {
             activateManagePortalTab(hash);
         }
     }

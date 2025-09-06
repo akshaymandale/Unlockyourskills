@@ -47,7 +47,7 @@ try {
     $courseModel = new CourseModel();
     
     // Get module progress data
-    $moduleProgress = $courseModel->getModuleContentProgress($moduleId, $userId, $clientId);
+    $moduleProgress = $courseModel->getModuleContentProgress($moduleId, $userId, $clientId, $courseId);
     
     // Verify the module belongs to the specified course
     $course = $courseModel->getCourseById($courseId, $clientId, $userId);

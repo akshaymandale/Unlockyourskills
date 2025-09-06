@@ -153,6 +153,14 @@ class AssessmentPlayerModel
     {
         $db = $this->conn;
 
+        // If clientId is null, fetch it from the database
+        if ($clientId === null) {
+            $stmt = $db->prepare("SELECT client_id FROM user_profiles WHERE id = ? AND is_deleted = 0");
+            $stmt->execute([$userId]);
+            $user = $stmt->fetch(PDO::FETCH_ASSOC);
+            $clientId = $user['client_id'] ?? null;
+        }
+
         // Check if user has exceeded maximum attempts (course-specific if courseId provided)
         if ($this->hasExceededMaxAttempts($assessmentId, $userId, $clientId, $courseId)) {
             throw new Exception('Maximum attempts exceeded for this assessment');
@@ -196,7 +204,7 @@ class AssessmentPlayerModel
                 ) as course_id
                 FROM assessment_package ap
                 LEFT JOIN course_post_requisites cpr ON ap.id = cpr.content_id AND cpr.content_type = 'assessment'
-                LEFT JOIN course_prerequisites cpre ON ap.id = cpr.prerequisite_id AND cpr.prerequisite_type = 'assessment'
+                LEFT JOIN course_prerequisites cpre ON ap.id = cpre.prerequisite_id AND cpre.prerequisite_type = 'assessment'
                 WHERE ap.id = ?
             ");
             $stmt->execute([$assessmentId]);
@@ -217,11 +225,11 @@ class AssessmentPlayerModel
         // Create new attempt
         $stmt = $db->prepare("
             INSERT INTO assessment_attempts (
-                user_id, assessment_id, course_id, attempt_number, status, 
+                user_id, client_id, assessment_id, course_id, attempt_number, status, 
                 started_at, time_limit, time_remaining, 
                 current_question, answers, created_at, updated_at
             ) VALUES (
-                ?, ?, ?, ?, 'in_progress', 
+                ?, ?, ?, ?, ?, 'in_progress', 
                 NOW(), ?, ?, 
                 1, '{}', NOW(), NOW()
             )
@@ -229,6 +237,7 @@ class AssessmentPlayerModel
         
         $stmt->execute([
             $userId, 
+            $clientId,
             $assessmentId, 
             $courseId,
             $attemptNumber,
@@ -297,7 +306,7 @@ class AssessmentPlayerModel
     }
 
     // Submit assessment and calculate results
-    public function submitAssessment($attemptId)
+    public function submitAssessment($attemptId, $clientId = null)
     {
         $db = $this->conn;
 
@@ -313,6 +322,11 @@ class AssessmentPlayerModel
 
         if (!$attempt) {
             return ['success' => false, 'message' => 'Attempt not found'];
+        }
+
+        // If client_id is null in the attempt and we have a clientId parameter, use it
+        if ($attempt['client_id'] === null && $clientId !== null) {
+            $attempt['client_id'] = $clientId;
         }
 
         // Calculate score
@@ -385,10 +399,10 @@ class AssessmentPlayerModel
         // Save results to assessment_results table
         $stmt = $db->prepare("
             INSERT INTO assessment_results (
-                course_id, user_id, assessment_id, attempt_number, score, max_score,
+                course_id, user_id, client_id, assessment_id, attempt_number, score, max_score,
                 percentage, passed, time_taken, started_at, completed_at, answers
             ) VALUES (
-                ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), ?
+                ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), ?
             )
         ");
         
@@ -400,6 +414,7 @@ class AssessmentPlayerModel
         $resultInserted = $stmt->execute([
             $attempt['course_id'],
             $attempt['user_id'],
+            $attempt['client_id'],
             $attempt['assessment_id'],
             $attempt['attempt_number'],
             $totalScore,

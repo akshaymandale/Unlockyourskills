@@ -18,46 +18,17 @@ class MyCoursesModel {
      */
     public function isCourseStarted($courseId, $userId, $clientId) {
         try {
-            // First check if prerequisites are met
-            $prereqStmt = $this->conn->prepare("
+            // First check if there are any prerequisites
+            $prereqCountStmt = $this->conn->prepare("
                 SELECT COUNT(*) as count
                 FROM course_prerequisites cp
                 WHERE cp.course_id = ? AND cp.deleted_at IS NULL
-                AND (
-                    (cp.prerequisite_type = 'assessment' AND EXISTS (
-                        SELECT 1 FROM assessment_attempts aa 
-                        WHERE aa.assessment_id = cp.prerequisite_id 
-                        AND aa.user_id = ? AND (aa.client_id = ? OR aa.client_id IS NULL)
-                    ))
-                    OR (cp.prerequisite_type = 'survey' AND EXISTS (
-                        SELECT 1 FROM course_survey_responses csr 
-                        WHERE csr.survey_package_id = cp.prerequisite_id 
-                        AND csr.user_id = ? AND csr.client_id = ?
-                    ))
-                    OR (cp.prerequisite_type = 'feedback' AND EXISTS (
-                        SELECT 1 FROM course_feedback_responses cfr 
-                        WHERE cfr.feedback_package_id = cp.prerequisite_id 
-                        AND cfr.user_id = ? AND cfr.client_id = ?
-                    ))
-                    OR (cp.prerequisite_type = 'assignment' AND EXISTS (
-                        SELECT 1 FROM assignment_submissions asub 
-                        WHERE asub.assignment_package_id = cp.prerequisite_id 
-                        AND asub.user_id = ? AND asub.course_id = ? AND asub.client_id = ?
-                    ))
-                    OR (cp.prerequisite_type = 'external')
-                )
             ");
-            $prereqStmt->execute([
-                $courseId, $userId, $clientId, // assessment
-                $userId, $clientId, // survey
-                $userId, $clientId, // feedback
-                $userId, $courseId, $clientId  // assignment
-            ]);
-            $prereqResult = $prereqStmt->fetch(PDO::FETCH_ASSOC);
+            $prereqCountStmt->execute([$courseId]);
+            $prereqCountResult = $prereqCountStmt->fetch(PDO::FETCH_ASSOC);
             
-            // If there are prerequisites and they are not met, course is not started
-            if ($prereqResult['count'] > 0) {
-                // There are prerequisites, check if they are met
+            // If there are prerequisites, check if they are ALL met
+            if ($prereqCountResult['count'] > 0) {
                 $prereqMetStmt = $this->conn->prepare("
                     SELECT COUNT(*) as count
                     FROM course_prerequisites cp
@@ -67,6 +38,7 @@ class MyCoursesModel {
                             SELECT 1 FROM assessment_attempts aa 
                             WHERE aa.assessment_id = cp.prerequisite_id 
                             AND aa.user_id = ? AND (aa.client_id = ? OR aa.client_id IS NULL)
+                            AND aa.status = 'completed'
                         ))
                         OR (cp.prerequisite_type = 'survey' AND EXISTS (
                             SELECT 1 FROM course_survey_responses csr 
@@ -94,8 +66,8 @@ class MyCoursesModel {
                 ]);
                 $prereqMetResult = $prereqMetStmt->fetch(PDO::FETCH_ASSOC);
                 
-                // If prerequisites are not met, course is not started
-                if ($prereqMetResult['count'] == 0) {
+                // If prerequisites exist but are not ALL met, course is not started
+                if ($prereqMetResult['count'] < $prereqCountResult['count']) {
                     return false;
                 }
             }
