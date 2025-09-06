@@ -1604,7 +1604,7 @@ class CourseModel
     }
     
     // Calculate content completion progress for a module
-    public function getModuleContentProgress($moduleId, $userId, $clientId = null)
+    public function getModuleContentProgress($moduleId, $userId, $clientId = null, $courseId = null)
     {
         // Get all content items in the module
         $contentItems = $this->getModuleContent($moduleId);
@@ -1630,7 +1630,7 @@ class CourseModel
             // Calculate progress based on content type
             switch ($contentType) {
                 case 'assessment':
-                    $progress = $this->getAssessmentProgress($contentId, $userId, $clientId);
+                    $progress = $this->getAssessmentProgress($contentId, $userId, $clientId, $courseId);
                     break;
                 case 'assignment':
                     $progress = $this->getAssignmentProgress($contentId, $userId, $clientId);
@@ -1678,19 +1678,19 @@ class CourseModel
     }
     
     // Get assessment progress
-    private function getAssessmentProgress($assessmentId, $userId, $clientId)
+    private function getAssessmentProgress($assessmentId, $userId, $clientId, $courseId = null)
     {
         try {
             require_once 'models/AssessmentPlayerModel.php';
             $assessmentModel = new AssessmentPlayerModel();
-            $results = $assessmentModel->getUserAssessmentResults($assessmentId, $userId, $clientId);
+            $results = $assessmentModel->getUserAssessmentResults($assessmentId, $userId, $clientId, $courseId);
             
             if ($results && isset($results['passed'])) {
                 return $results['passed'] ? 100 : 0;
             }
             
-            // Check if user has attempted the assessment
-            $attempts = $assessmentModel->getUserCompletedAssessmentAttempts($assessmentId, $userId, $clientId);
+            // Check if user has attempted the assessment for this specific course
+            $attempts = $assessmentModel->getUserCompletedAssessmentAttemptsForCourse($assessmentId, $userId, $courseId, $clientId);
             return !empty($attempts) ? 50 : 0; // 50% if attempted but not completed
         } catch (Exception $e) {
             error_log("Error getting assessment progress: " . $e->getMessage());

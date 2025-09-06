@@ -920,7 +920,7 @@ class AssessmentPlayer {
             resultStatusElement.textContent = results.passed ? 'PASSED' : 'FAILED';
             resultStatusElement.className = results.passed ? 'text-success' : 'text-danger';
         }
-        if (resultCorrectElement) resultCorrectElement.textContent = results.correct_answers;
+        if (resultCorrectElement) resultCorrectElement.textContent = results.max_score;
 
         // Store redirect URL if provided by server
         console.log('Results object:', results);

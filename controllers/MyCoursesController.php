@@ -143,7 +143,7 @@ class MyCoursesController {
                 foreach ($course['modules'] as &$module) {
                     if (!empty($module['content'])) {
                         // Calculate real-time module progress
-                        $moduleProgress = $courseModel->getModuleContentProgress($module['id'], $userId, $clientId);
+                        $moduleProgress = $courseModel->getModuleContentProgress($module['id'], $userId, $clientId, $courseId);
                         $module['real_progress'] = $moduleProgress['progress_percentage'];
                         $module['completed_items'] = $moduleProgress['completed_items'];
                         $module['total_items'] = $moduleProgress['total_items'];
@@ -247,7 +247,7 @@ class MyCoursesController {
             $courseModel = new CourseModel();
             
             // Get module progress data
-            $moduleProgress = $courseModel->getModuleContentProgress($moduleId, $userId, $clientId);
+            $moduleProgress = $courseModel->getModuleContentProgress($moduleId, $userId, $clientId, $courseId);
             error_log("Module progress data retrieved: " . json_encode($moduleProgress));
             
             // Verify the module belongs to the specified course

@@ -117,6 +117,7 @@ class AssessmentPlayerController
         }
 
         $userId = $_SESSION['user']['id'];
+        $clientId = $_SESSION['user']['client_id'] ?? null;
         
         // Verify attempt belongs to user
         if (!$this->model->verifyAttemptOwnership($attemptId, $userId)) {
@@ -124,7 +125,7 @@ class AssessmentPlayerController
             exit;
         }
 
-        $result = $this->model->submitAssessment($attemptId);
+        $result = $this->model->submitAssessment($attemptId, $clientId);
         
         header('Content-Type: application/json');
         if ($result['success']) {
