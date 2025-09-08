@@ -9177,3 +9177,182 @@ body select:focus,
     0% { transform: rotate(0deg); }
     100% { transform: rotate(360deg); }
 }
+
+/* ========================================
+   FILTER DROPDOWN SEARCH STYLES
+   ======================================== */
+
+/* Filter Dropdown Search Styles */
+.filter-search-input {
+    border: 1px solid #e0e0e0;
+    border-radius: 6px;
+    font-size: 0.875rem;
+    transition: all 0.2s ease;
+}
+
+.filter-search-input:focus {
+    border-color: #007bff;
+    box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
+    outline: none;
+}
+
+.filter-search-input:disabled {
+    background-color: #f8f9fa;
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+/* Filter Dropdown Options */
+.filter-option {
+    transition: all 0.2s ease;
+    border-radius: 4px;
+    margin: 2px 4px;
+}
+
+.filter-option:hover {
+    background-color: #f8f9fa;
+}
+
+.filter-option.hidden {
+    display: none !important;
+}
+
+.filter-option.highlighted {
+    background-color: #e3f2fd;
+    border-left: 3px solid #2196f3;
+}
+
+/* Filter Checkbox Styles */
+.filter-checkbox {
+    margin-right: 8px;
+    transform: scale(1.1);
+}
+
+.filter-checkbox:checked {
+    background-color: #007bff;
+    border-color: #007bff;
+}
+
+.filter-checkbox:focus {
+    box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
+}
+
+/* Filter Label Styles */
+.filter-label {
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: #495057;
+    cursor: pointer;
+    transition: color 0.2s ease;
+}
+
+.filter-label:hover {
+    color: #007bff;
+}
+
+/* Dropdown Button Styles */
+.filter-dropdown-btn {
+    border: 1px solid #ced4da;
+    background-color: #fff;
+    color: #495057;
+    font-size: 0.875rem;
+    padding: 8px 12px;
+    border-radius: 6px;
+    transition: all 0.2s ease;
+    text-align: left;
+    position: relative;
+}
+
+.filter-dropdown-btn:hover {
+    border-color: #007bff;
+    background-color: #f8f9fa;
+}
+
+.filter-dropdown-btn:focus {
+    border-color: #007bff;
+    box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
+    outline: none;
+}
+
+.filter-dropdown-btn:disabled {
+    background-color: #f8f9fa;
+    color: #6c757d;
+    cursor: not-allowed;
+    opacity: 0.6;
+}
+
+/* Dropdown Menu Styles */
+.filter-dropdown-menu {
+    border: 1px solid #e0e0e0;
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    padding: 8px 0;
+    margin-top: 4px;
+    background-color: #fff;
+    z-index: 1050;
+}
+
+.filter-dropdown-menu .dropdown-divider {
+    margin: 4px 0;
+    border-color: #e9ecef;
+}
+
+/* Search Input Container */
+.search-input-container {
+    position: sticky;
+    top: 0;
+    background-color: #fff;
+    z-index: 1;
+    padding: 8px 12px;
+    border-bottom: 1px solid #e9ecef;
+    margin-bottom: 4px;
+}
+
+/* No Results Message */
+.no-results {
+    padding: 12px 16px;
+    color: #6c757d;
+    font-style: italic;
+    text-align: center;
+    font-size: 0.875rem;
+}
+
+/* Filter Count Badge */
+.filter-count-badge {
+    background-color: #007bff;
+    color: white;
+    font-size: 0.75rem;
+    padding: 2px 6px;
+    border-radius: 10px;
+    margin-left: 8px;
+    font-weight: 500;
+}
+
+/* Modern Form Group Styles */
+.modern-form-group {
+    margin-bottom: 1rem;
+}
+
+.modern-form-label {
+    font-weight: 600;
+    color: #2c3e50;
+    margin-bottom: 6px;
+    font-size: 0.875rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+/* Responsive Adjustments */
+@media (max-width: 768px) {
+    .filter-dropdown-menu {
+        max-height: 250px;
+    }
+    
+    .filter-search-input {
+        font-size: 0.8rem;
+    }
+    
+    .filter-label {
+        font-size: 0.8rem;
+    }
+}

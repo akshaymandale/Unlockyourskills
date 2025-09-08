@@ -674,3 +674,31 @@ Router::get('/progress/summary', 'ProgressTrackingController@getUserProgressSumm
 Router::get('/my-courses', 'MyCoursesController@index');
 Router::get('/my-courses/list', 'MyCoursesController@getUserCourses');
 
+// ===================================
+// REPORTS
+// ===================================
+
+// User Progress Report
+Router::get('/reports/user-progress', 'ReportsController@userProgressReport');
+Router::post('/reports/user-progress', 'ReportsController@userProgressReport');
+
+// User Activity Report
+Router::get('/reports/user-activity', 'ReportsController@userActivityReport');
+Router::post('/reports/user-activity', 'ReportsController@userActivityReport');
+
+// Course Completion Report
+Router::get('/reports/course-completion', 'ReportsController@courseCompletionReport');
+Router::post('/reports/course-completion', 'ReportsController@courseCompletionReport');
+
+// Assessment Results Report
+Router::get('/reports/assessment-results', 'ReportsController@assessmentResultsReport');
+Router::post('/reports/assessment-results', 'ReportsController@assessmentResultsReport');
+
+// Learning Analytics Report
+Router::get('/reports/learning-analytics', 'ReportsController@learningAnalyticsReport');
+Router::post('/reports/learning-analytics', 'ReportsController@learningAnalyticsReport');
+
+// Engagement Metrics Report
+Router::get('/reports/engagement-metrics', 'ReportsController@engagementMetricsReport');
+Router::post('/reports/engagement-metrics', 'ReportsController@engagementMetricsReport');
+
