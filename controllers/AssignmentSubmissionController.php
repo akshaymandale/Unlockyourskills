@@ -23,6 +23,260 @@ class AssignmentSubmissionController extends BaseController {
     }
 
     /**
+     * Start assignment tracking
+     */
+    public function startAssignment() {
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+            $this->jsonResponse(['success' => false, 'message' => 'Method not allowed']);
+            return;
+        }
+
+        try {
+            // Check if user is logged in
+            if (!isset($_SESSION['id'])) {
+                $this->jsonResponse(['success' => false, 'message' => 'Please log in to start the assignment']);
+                return;
+            }
+
+            $clientId = $_SESSION['user']['client_id'] ?? 1;
+            $userId = $_SESSION['id'];
+
+            // Get and validate input data
+            $inputData = [];
+            if (!empty($_POST)) {
+                $inputData = $_POST;
+            } else {
+                $rawInput = file_get_contents('php://input');
+                $inputData = json_decode($rawInput, true);
+            }
+            
+            $courseId = $inputData['course_id'] ?? '';
+            $assignmentPackageId = $inputData['assignment_package_id'] ?? '';
+            $submissionType = $inputData['submission_type'] ?? null;
+            
+            if (empty($courseId) || empty($assignmentPackageId)) {
+                $this->jsonResponse(['success' => false, 'message' => 'Missing required data']);
+                return;
+            }
+
+            // Decode IDs
+            $courseId = IdEncryption::decrypt($courseId);
+            $assignmentPackageId = IdEncryption::decrypt($assignmentPackageId);
+
+            if (!$courseId || !$assignmentPackageId) {
+                $this->jsonResponse(['success' => false, 'message' => 'Invalid assignment data']);
+                return;
+            }
+
+            // Get assignment package details
+            $assignmentPackage = $this->assignmentSubmissionModel->getAssignmentPackage($assignmentPackageId);
+            if (!$assignmentPackage) {
+                $this->jsonResponse(['success' => false, 'message' => 'Assignment not found']);
+                return;
+            }
+
+            // Check if user already has a completed submission
+            $existingSubmissions = $this->assignmentSubmissionModel->getSubmissionsByCourseAndUser($courseId, $userId, $assignmentPackageId);
+            $hasCompletedSubmission = false;
+            foreach ($existingSubmissions as $submission) {
+                if (in_array($submission['submission_status'], ['submitted', 'graded', 'returned'])) {
+                    $hasCompletedSubmission = true;
+                    break;
+                }
+            }
+
+            if ($hasCompletedSubmission) {
+                $this->jsonResponse(['success' => false, 'message' => 'Assignment already completed']);
+                return;
+            }
+
+            // Get attempt count for in-progress submissions
+            $attemptCount = $this->assignmentSubmissionModel->getUserSubmissionAttempts($courseId, $userId, $assignmentPackageId);
+            $maxAttempts = $assignmentPackage['max_attempts'] ?? 1;
+            
+            if ($attemptCount >= $maxAttempts) {
+                $this->jsonResponse(['success' => false, 'message' => "Maximum attempts ($maxAttempts) exceeded for this assignment"]);
+                return;
+            }
+
+            // Note: Completion tracking is now handled only when content is actually completed
+
+            // Start assignment tracking
+            $trackingData = [
+                'client_id' => $clientId,
+                'course_id' => $courseId,
+                'user_id' => $userId,
+                'assignment_package_id' => $assignmentPackageId,
+                'submission_type' => $submissionType,
+                'attempt_number' => $attemptCount + 1
+            ];
+
+            $submissionId = $this->assignmentSubmissionModel->startAssignmentTracking($trackingData);
+            
+            if ($submissionId) {
+                $this->jsonResponse([
+                    'success' => true, 
+                    'message' => 'Assignment tracking started successfully',
+                    'submission_id' => $submissionId
+                ]);
+            } else {
+                $this->jsonResponse([
+                    'success' => false, 
+                    'message' => 'Failed to start assignment tracking: ' . $this->assignmentSubmissionModel->getLastError()
+                ]);
+            }
+
+        } catch (Exception $e) {
+            $this->jsonResponse(['success' => false, 'message' => 'An error occurred while starting assignment tracking']);
+        }
+    }
+
+    /**
+     * Save assignment progress (without submitting)
+     */
+    public function saveProgress() {
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+            $this->jsonResponse(['success' => false, 'message' => 'Method not allowed']);
+            return;
+        }
+
+        try {
+            // Check if user is logged in
+            if (!isset($_SESSION['id'])) {
+                $this->jsonResponse(['success' => false, 'message' => 'Please log in to save progress']);
+                return;
+            }
+
+            $clientId = $_SESSION['user']['client_id'] ?? 1;
+            $userId = $_SESSION['id'];
+
+            // Get and validate input data
+            $inputData = [];
+            if (!empty($_POST)) {
+                $inputData = $_POST;
+            } else {
+                $rawInput = file_get_contents('php://input');
+                $inputData = json_decode($rawInput, true);
+            }
+            
+            $courseId = $inputData['course_id'] ?? '';
+            $assignmentPackageId = $inputData['assignment_package_id'] ?? '';
+            $submissionType = $inputData['submission_type'] ?? 'file_upload';
+            $submissionText = $inputData['submission_text'] ?? '';
+            $submissionUrl = $inputData['submission_url'] ?? '';
+            
+            if (empty($courseId) || empty($assignmentPackageId)) {
+                $this->jsonResponse(['success' => false, 'message' => 'Missing required data']);
+                return;
+            }
+
+            // Decode IDs
+            $courseId = IdEncryption::decrypt($courseId);
+            $assignmentPackageId = IdEncryption::decrypt($assignmentPackageId);
+
+            if (!$courseId || !$assignmentPackageId) {
+                $this->jsonResponse(['success' => false, 'message' => 'Invalid assignment data']);
+                return;
+            }
+
+            // Get assignment package details
+            $assignmentPackage = $this->assignmentSubmissionModel->getAssignmentPackage($assignmentPackageId);
+            if (!$assignmentPackage) {
+                $this->jsonResponse(['success' => false, 'message' => 'Assignment not found']);
+                return;
+            }
+
+            // Check if user already has a completed submission
+            $existingSubmissions = $this->assignmentSubmissionModel->getSubmissionsByCourseAndUser($courseId, $userId, $assignmentPackageId);
+            $hasCompletedSubmission = false;
+            foreach ($existingSubmissions as $submission) {
+                if (in_array($submission['submission_status'], ['submitted', 'graded', 'returned'])) {
+                    $hasCompletedSubmission = true;
+                    break;
+                }
+            }
+
+            if ($hasCompletedSubmission) {
+                $this->jsonResponse(['success' => false, 'message' => 'Assignment already completed']);
+                return;
+            }
+
+            // Handle file upload if submission type includes file_upload
+            $submissionFile = null;
+            if (in_array('file_upload', is_array($submissionType) ? $submissionType : [$submissionType]) && !empty($_FILES['submission_file'])) {
+                $uploadResult = $this->handleFileUpload($_FILES['submission_file'], $assignmentPackage);
+                if (!$uploadResult['success']) {
+                    $this->jsonResponse(['success' => false, 'message' => $uploadResult['message']]);
+                    return;
+                }
+                $submissionFile = $uploadResult['filename'];
+            }
+
+            // Get or create in-progress submission
+            $existingInProgressSubmission = $this->assignmentSubmissionModel->getInProgressSubmission($courseId, $userId, $assignmentPackageId);
+            
+            if ($existingInProgressSubmission) {
+                // Update existing in-progress submission
+                $updateData = [
+                    'submission_type' => is_array($submissionType) ? implode(',', $submissionType) : $submissionType,
+                    'submission_file' => $submissionFile,
+                    'submission_text' => $submissionText,
+                    'submission_url' => $submissionUrl,
+                    'submission_status' => 'in-progress'
+                ];
+                
+                $result = $this->assignmentSubmissionModel->updateInProgressSubmission($existingInProgressSubmission['id'], $updateData);
+                
+                if ($result) {
+                    $this->jsonResponse([
+                        'success' => true, 
+                        'message' => 'Progress saved successfully',
+                        'submission_id' => $existingInProgressSubmission['id']
+                    ]);
+                } else {
+                    $this->jsonResponse([
+                        'success' => false, 
+                        'message' => 'Failed to save progress: ' . $this->assignmentSubmissionModel->getLastError()
+                    ]);
+                }
+            } else {
+                // Note: Completion tracking is now handled only when content is actually completed
+                
+                // Create new in-progress submission
+                $trackingData = [
+                    'client_id' => $clientId,
+                    'course_id' => $courseId,
+                    'user_id' => $userId,
+                    'assignment_package_id' => $assignmentPackageId,
+                    'submission_type' => is_array($submissionType) ? implode(',', $submissionType) : $submissionType,
+                    'submission_file' => $submissionFile,
+                    'submission_text' => $submissionText,
+                    'submission_url' => $submissionUrl,
+                    'attempt_number' => 1
+                ];
+
+                $submissionId = $this->assignmentSubmissionModel->startAssignmentTracking($trackingData);
+                
+                if ($submissionId) {
+                    $this->jsonResponse([
+                        'success' => true, 
+                        'message' => 'Progress saved successfully',
+                        'submission_id' => $submissionId
+                    ]);
+                } else {
+                    $this->jsonResponse([
+                        'success' => false, 
+                        'message' => 'Failed to save progress: ' . $this->assignmentSubmissionModel->getLastError()
+                    ]);
+                }
+            }
+
+        } catch (Exception $e) {
+            $this->jsonResponse(['success' => false, 'message' => 'An error occurred while saving progress']);
+        }
+    }
+
+    /**
      * Show assignment submission form
      */
     public function showAssignment($assignmentId, $courseId) {
@@ -47,7 +301,15 @@ class AssignmentSubmissionController extends BaseController {
             // Get user's existing submissions
             $userId = $_SESSION['id'];
             $existingSubmissions = $this->assignmentSubmissionModel->getSubmissionsByCourseAndUser($courseId, $userId, $assignmentId);
-            $hasSubmitted = !empty($existingSubmissions);
+            
+            // Check if user has completed submissions (not just in-progress)
+            $hasSubmitted = false;
+            foreach ($existingSubmissions as $submission) {
+                if (in_array($submission['submission_status'], ['submitted', 'graded', 'returned'])) {
+                    $hasSubmitted = true;
+                    break;
+                }
+            }
 
             $data = [
                 'assignment' => $assignmentPackage,
@@ -105,7 +367,19 @@ class AssignmentSubmissionController extends BaseController {
             // Get user's existing submissions
             $userId = $_SESSION['id'];
             $existingSubmissions = $this->assignmentSubmissionModel->getSubmissionsByCourseAndUser($courseId, $userId, $assignmentId);
-            $hasSubmitted = !empty($existingSubmissions);
+            
+            // Check if user has completed submissions (not just in-progress)
+            $hasSubmitted = false;
+            foreach ($existingSubmissions as $submission) {
+                if (in_array($submission['submission_status'], ['submitted', 'graded', 'returned'])) {
+                    $hasSubmitted = true;
+                    break;
+                }
+            }
+
+            // Get in-progress submission data for pre-populating form
+            $inProgressSubmission = $this->assignmentSubmissionModel->getInProgressSubmission($courseId, $userId, $assignmentId);
+            $hasInProgress = !empty($inProgressSubmission);
 
             $data = [
                 'assignment' => $assignmentPackage,
@@ -113,6 +387,8 @@ class AssignmentSubmissionController extends BaseController {
                 'assignment_id' => $assignmentId,
                 'existing_submissions' => $existingSubmissions,
                 'has_submitted' => $hasSubmitted,
+                'has_in_progress' => $hasInProgress,
+                'in_progress_submission' => $inProgressSubmission,
                 'user_id' => $userId
             ];
 
@@ -191,6 +467,8 @@ class AssignmentSubmissionController extends BaseController {
                 return;
             }
 
+            // Note: Completion tracking is now handled only when content is actually completed
+
             // Check submission attempts
             $attemptCount = $this->assignmentSubmissionModel->getUserSubmissionAttempts($courseId, $userId, $assignmentPackageId);
             $maxAttempts = $assignmentPackage['max_attempts'] ?? 1;
@@ -200,9 +478,12 @@ class AssignmentSubmissionController extends BaseController {
                 return;
             }
 
-            // Check for duplicate submission within last 30 seconds
-            $recentSubmission = $this->assignmentSubmissionModel->getRecentSubmission($courseId, $userId, $assignmentPackageId, 30);
-            if ($recentSubmission) {
+            // Check if there's an existing in-progress submission to update
+            $existingInProgressSubmission = $this->assignmentSubmissionModel->getInProgressSubmission($courseId, $userId, $assignmentPackageId);
+            
+            // Check for duplicate completed submission within last 30 seconds (only for completed submissions)
+            $recentCompletedSubmission = $this->assignmentSubmissionModel->getRecentCompletedSubmission($courseId, $userId, $assignmentPackageId, 30);
+            if ($recentCompletedSubmission) {
                 $this->jsonResponse(['success' => false, 'message' => 'Duplicate submission detected. Please wait before submitting again.']);
                 return;
             }
@@ -254,8 +535,14 @@ class AssignmentSubmissionController extends BaseController {
                 'attempt_number' => $attemptCount + 1
             ];
 
-            // Save submission
-            $submissionId = $this->assignmentSubmissionModel->saveSubmission($submissionData);
+            // Save or update submission
+            if ($existingInProgressSubmission) {
+                // Update existing in-progress submission
+                $submissionId = $this->assignmentSubmissionModel->updateSubmissionToCompleted($existingInProgressSubmission['id'], $submissionData);
+            } else {
+                // Create new submission
+                $submissionId = $this->assignmentSubmissionModel->saveSubmission($submissionData);
+            }
             
             if ($submissionId) {
                 // Update progress tracking for assignment submission
@@ -282,6 +569,14 @@ class AssignmentSubmissionController extends BaseController {
                         // Recalculate course progress
                         $progressModel->calculateCourseProgress($userId, $courseId, $clientId);
                     }
+                    
+                    // Trigger completion tracking for prerequisites/post-requisites (always trigger)
+                    require_once 'models/CompletionTrackingService.php';
+                    $completionService = new CompletionTrackingService();
+                    $completionService->handleContentCompletion($userId, $courseId, $assignmentPackageId, 'assignment', $clientId);
+                    
+                    // Mark prerequisite as complete if applicable
+                    $this->markPrerequisiteCompleteIfApplicable($userId, $courseId, $assignmentPackageId, $clientId);
                 } catch (Exception $e) {
                     error_log("Error updating assignment progress: " . $e->getMessage());
                     // Don't fail the submission if progress tracking fails
@@ -333,13 +628,15 @@ class AssignmentSubmissionController extends BaseController {
                 return;
             }
 
-            // Check if user has submitted this assignment
+            // Check assignment status
             $userId = $_SESSION['id'];
             $hasSubmitted = $this->assignmentSubmissionModel->hasUserSubmittedAssignment($courseId, $userId, $assignmentId);
+            $hasInProgress = !empty($this->assignmentSubmissionModel->getInProgressSubmission($courseId, $userId, $assignmentId));
 
             $this->jsonResponse([
                 'success' => true,
-                'has_submitted' => $hasSubmitted
+                'has_submitted' => $hasSubmitted,
+                'has_in_progress' => $hasInProgress
             ]);
 
         } catch (Exception $e) {
@@ -480,6 +777,76 @@ class AssignmentSubmissionController extends BaseController {
         header('Content-Type: application/json');
         echo json_encode($data);
         exit;
+    }
+
+    /**
+     * Check if assignment is a prerequisite and start tracking
+     */
+    private function startPrerequisiteTrackingIfApplicable($userId, $courseId, $assignmentPackageId, $clientId) {
+        try {
+            require_once 'models/CompletionTrackingService.php';
+            $completionService = new CompletionTrackingService();
+            
+            // Check if this assignment is a prerequisite
+            $isPrerequisite = $this->isContentPrerequisite($courseId, $assignmentPackageId, 'assignment');
+            
+            if ($isPrerequisite) {
+                $completionService->startPrerequisiteTracking($userId, $courseId, $assignmentPackageId, 'assignment', $clientId);
+            }
+        } catch (Exception $e) {
+            error_log("Error in startPrerequisiteTrackingIfApplicable: " . $e->getMessage());
+        }
+    }
+
+    /**
+     * Start module tracking if assignment belongs to a module
+     */
+    private function startModuleTrackingIfApplicable($userId, $courseId, $assignmentPackageId, $contentType, $clientId) {
+        try {
+            require_once 'models/CompletionTrackingService.php';
+            $completionService = new CompletionTrackingService();
+            
+            // Start module tracking if this content belongs to a module
+            $completionService->startModuleTrackingIfApplicable($userId, $courseId, $assignmentPackageId, $contentType, $clientId);
+        } catch (Exception $e) {
+            error_log("Error in startModuleTrackingIfApplicable: " . $e->getMessage());
+        }
+    }
+
+    /**
+     * Check if assignment is a prerequisite and mark as complete
+     */
+    private function markPrerequisiteCompleteIfApplicable($userId, $courseId, $assignmentPackageId, $clientId) {
+        try {
+            require_once 'models/CompletionTrackingService.php';
+            $completionService = new CompletionTrackingService();
+            
+            // Check if this assignment is a prerequisite
+            $isPrerequisite = $this->isContentPrerequisite($courseId, $assignmentPackageId, 'assignment');
+            
+            if ($isPrerequisite) {
+                $completionService->markPrerequisiteComplete($userId, $courseId, $assignmentPackageId, 'assignment', $clientId);
+            }
+        } catch (Exception $e) {
+            error_log("Error in markPrerequisiteCompleteIfApplicable: " . $e->getMessage());
+        }
+    }
+
+    /**
+     * Check if content is a prerequisite
+     */
+    private function isContentPrerequisite($courseId, $contentId, $contentType) {
+        try {
+            $sql = "SELECT COUNT(*) FROM course_prerequisites 
+                    WHERE course_id = ? AND prerequisite_id = ? AND prerequisite_type = ?";
+            $stmt = $this->conn->prepare($sql);
+            $stmt->execute([$courseId, $contentId, $contentType]);
+            
+            return $stmt->fetchColumn() > 0;
+        } catch (Exception $e) {
+            error_log("Error checking if content is prerequisite: " . $e->getMessage());
+            return false;
+        }
     }
 }
 ?>

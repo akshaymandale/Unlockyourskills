@@ -646,7 +646,7 @@
       const contentId = urlParams.get('content_id');
       const contentType = urlParams.get('type');
       
-              if (courseId && moduleId && contentId) {
+              if (courseId && contentId && (moduleId || urlParams.get('prerequisite_id'))) {
           if (contentType === 'video') {
             localStorage.setItem('video_closed_' + contentId, Date.now().toString());
             console.log('Video close flag set for:', contentId);
@@ -1858,7 +1858,7 @@
       const contentId = urlParams.get('content_id');
       const contentType = urlParams.get('type');
       
-      if (courseId && moduleId && contentId) {
+      if (courseId && contentId && (moduleId || urlParams.get('prerequisite_id'))) {
         if (contentType === 'video') {
           localStorage.setItem('video_closed_' + contentId, Date.now().toString());
           console.log('Video close flag set via event listener for:', contentId);
@@ -2617,6 +2617,7 @@
     const courseId = '<?= $GLOBALS['course_id'] ?? '' ?>';
     const moduleId = '<?= $GLOBALS['module_id'] ?? '' ?>';
     const contentId = '<?= $GLOBALS['content_id'] ?? '' ?>';
+    const externalPackageId = '<?= $GLOBALS['external_package_id'] ?? $GLOBALS['content_id'] ?? '' ?>';
     const clientId = '<?= $GLOBALS['client_id'] ?? '' ?>';
     const userId = '<?= $_SESSION['user']['id'] ?? '' ?>';
     
@@ -2686,39 +2687,72 @@
       showIframeFallback();
     };
 
-    if (markCompleteBtn && courseId && moduleId && contentId && clientId && userId) {
+    console.log('External content initialization check:', {
+      markCompleteBtn: !!markCompleteBtn,
+      courseId: courseId,
+      contentId: contentId,
+      clientId: clientId,
+      userId: userId,
+      moduleId: moduleId,
+      externalPackageId: externalPackageId
+    });
+
+    if (markCompleteBtn && courseId && contentId && clientId && userId) {
       // Initialize external progress tracker
       const tracker = new ExternalProgressTracker({
         courseId: courseId,
         contentId: contentId,
-        externalPackageId: contentId, // Using contentId as external package ID
+        externalPackageId: externalPackageId, // Use proper external package ID
         clientId: clientId,
         userId: userId,
         contentType: 'external',
         autoMarkCompleted: false
       });
 
-      // Handle mark as complete button click
+      // Handle mark as complete button click - SIMPLE APPROACH
       markCompleteBtn.addEventListener('click', function() {
-        // Mark as completed
-        tracker.markAsViewed();
-        
-        // Update button state
-        markCompleteBtn.innerHTML = '<i class="fas fa-check-circle me-1"></i>Completed';
-        markCompleteBtn.classList.remove('btn-success');
-        markCompleteBtn.classList.add('btn-secondary');
+        // Disable button to prevent multiple clicks
         markCompleteBtn.disabled = true;
+        markCompleteBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Saving...';
         
-        // Show success notification using the external progress tracker
-        // The tracker will show its own styled notification
+        // Simple direct AJAX call to mark as completed
+        const formData = new FormData();
+        formData.append('course_id', courseId);
+        formData.append('content_id', contentId);
+        formData.append('completion_notes', 'User marked as completed via button');
         
-        // Store completion status in localStorage
-        localStorage.setItem(`external_completed_${contentId}`, 'true');
-        
-        console.log('External content marked as completed:', {
-          courseId: courseId,
-          contentId: contentId,
-          moduleId: moduleId
+        fetch('/Unlockyourskills/external-progress/mark-completed', {
+          method: 'POST',
+          body: formData
+        })
+        .then(response => response.json())
+        .then(data => {
+          if (data.success) {
+            // Update button state
+            markCompleteBtn.innerHTML = '<i class="fas fa-check-circle me-1"></i>Completed';
+            markCompleteBtn.classList.remove('btn-success');
+            markCompleteBtn.classList.add('btn-secondary');
+            
+            // Store in localStorage
+            localStorage.setItem(`external_completed_${contentId}`, 'true');
+            
+            console.log('Content marked as completed successfully');
+            
+            // Close tab immediately after successful database update
+            closeTab();
+          } else {
+            // Re-enable button on error
+            markCompleteBtn.disabled = false;
+            markCompleteBtn.innerHTML = '<i class="fas fa-check-circle me-1"></i>Mark as Complete';
+            alert('Failed to mark as completed. Please try again.');
+          }
+        })
+        .catch(error => {
+          // Re-enable button on error
+          markCompleteBtn.disabled = false;
+          markCompleteBtn.innerHTML = '<i class="fas fa-check-circle me-1"></i>Mark as Complete';
+          console.error('Error:', error);
+          alert('Failed to mark as completed. Please try again.');
         });
       });
 

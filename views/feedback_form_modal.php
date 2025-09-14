@@ -46,7 +46,8 @@
                                 case 'choice':
                                 case 'multi_choice':
                                 case 'dropdown':
-                                    echo '<span class="badge bg-secondary">' . htmlspecialchars($response['option_text']) . '</span>';
+                                    $optionText = $response['option_text'] ?? 'No option selected';
+                                    echo '<span class="badge bg-secondary">' . htmlspecialchars($optionText) . '</span>';
                                     break;
                                 case 'checkbox':
                                     // For checkbox, display all selected options
@@ -54,7 +55,7 @@
                                         foreach ($response['checkbox_options'] as $optionText) {
                                             echo '<span class="badge bg-info me-1 mb-1">' . htmlspecialchars($optionText) . '</span>';
                                         }
-                                    } elseif (isset($response['option_text'])) {
+                                    } elseif (isset($response['option_text']) && !empty($response['option_text'])) {
                                         echo '<span class="badge bg-info">' . htmlspecialchars($response['option_text']) . '</span>';
                                     } else {
                                         echo '<span class="badge bg-warning">No options selected</span>';

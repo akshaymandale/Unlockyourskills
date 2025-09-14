@@ -14,44 +14,17 @@ class ProgressTrackingModel {
     // =====================================================
 
     /**
-     * Initialize or get user course progress
+     * Initialize course progress (simplified - no user_course_progress table)
+     * 
+     * ]\
      */
     public function initializeCourseProgress($userId, $courseId, $clientId) {
         try {
-            // Check if progress already exists
-            $stmt = $this->conn->prepare("
-                SELECT * FROM user_course_progress 
-                WHERE user_id = ? AND course_id = ? AND client_id = ?
-            ");
-            $stmt->execute([$userId, $courseId, $clientId]);
-            $existing = $stmt->fetch(PDO::FETCH_ASSOC);
-
-            if ($existing) {
-                // Update last accessed time
-                $stmt = $this->conn->prepare("
-                    UPDATE user_course_progress 
-                    SET last_accessed_at = NOW(), updated_at = NOW()
-                    WHERE id = ?
-                ");
-                $stmt->execute([$existing['id']]);
-                return $existing;
-            } else {
-                // Create new progress record
-                $stmt = $this->conn->prepare("
-                    INSERT INTO user_course_progress 
-                    (user_id, course_id, client_id, status, started_at, last_accessed_at)
-                    VALUES (?, ?, ?, 'not_started', NOW(), NOW())
-                ");
-                $stmt->execute([$userId, $courseId, $clientId]);
-                
-                $progressId = $this->conn->lastInsertId();
-                
-                // Initialize module and content progress
-                $this->initializeModuleProgress($userId, $courseId, $clientId);
-                $this->initializeContentProgress($userId, $courseId, $clientId);
-                
-                return $this->getCourseProgress($userId, $courseId, $clientId);
-            }
+            // Initialize module and content progress directly
+            $this->initializeModuleProgress($userId, $courseId, $clientId);
+            $this->initializeContentProgress($userId, $courseId, $clientId);
+            
+            return true;
         } catch (PDOException $e) {
             error_log("ProgressTrackingModel::initializeCourseProgress error: " . $e->getMessage());
             return false;
@@ -59,55 +32,19 @@ class ProgressTrackingModel {
     }
 
     /**
-     * Get course progress for a user
+     * Get course progress for a user (simplified - no user_course_progress table)
      */
     public function getCourseProgress($userId, $courseId, $clientId) {
-        try {
-            $stmt = $this->conn->prepare("
-                SELECT * FROM user_course_progress 
-                WHERE user_id = ? AND course_id = ? AND client_id = ?
-            ");
-            $stmt->execute([$userId, $courseId, $clientId]);
-            return $stmt->fetch(PDO::FETCH_ASSOC);
-        } catch (PDOException $e) {
-            error_log("ProgressTrackingModel::getCourseProgress error: " . $e->getMessage());
-            return false;
-        }
+        // Return a simple success response since we no longer track in user_course_progress
+        return ['status' => 'initialized'];
     }
 
     /**
-     * Update course progress status
+     * Update course progress status (simplified - no user_course_progress table)
      */
     public function updateCourseProgress($userId, $courseId, $clientId, $data) {
-        try {
-            $fields = [];
-            $values = [];
-            
-            foreach ($data as $key => $value) {
-                if (in_array($key, ['status', 'completion_percentage', 'current_module_id', 'current_content_id', 'resume_position'])) {
-                    $fields[] = "`$key` = ?";
-                    $values[] = $value;
-                }
-            }
-            
-            if (empty($fields)) {
-                return false;
-            }
-            
-            $fields[] = "`updated_at` = NOW()";
-            $values[] = $userId;
-            $values[] = $courseId;
-            $values[] = $clientId;
-            
-            $sql = "UPDATE user_course_progress SET " . implode(', ', $fields) . 
-                   " WHERE user_id = ? AND course_id = ? AND client_id = ?";
-            
-            $stmt = $this->conn->prepare($sql);
-            return $stmt->execute($values);
-        } catch (PDOException $e) {
-            error_log("ProgressTrackingModel::updateCourseProgress error: " . $e->getMessage());
-            return false;
-        }
+        // No longer needed since we don't use user_course_progress table
+        return true;
     }
 
     // =====================================================
@@ -280,8 +217,8 @@ class ProgressTrackingModel {
             if ($scormPackageId) {
                 $stmt = $this->conn->prepare("
                     INSERT IGNORE INTO scorm_progress 
-                    (user_id, course_id, content_id, scorm_package_id, client_id, created_at, updated_at)
-                    VALUES (?, ?, ?, ?, ?, NOW(), NOW())
+                    (user_id, course_id, content_id, scorm_package_id, client_id, started_at, created_at, updated_at)
+                    VALUES (?, ?, ?, ?, ?, NOW(), NOW(), NOW())
                 ");
                 $result = $stmt->execute([$userId, $courseId, $contentId, $scormPackageId, $clientId]);
                 error_log("DEBUG: SCORM progress insert result: " . ($result ? 'SUCCESS' : 'FAILED'));
@@ -374,6 +311,12 @@ class ProgressTrackingModel {
             }
             
             $fields[] = "`updated_at` = NOW()";
+            
+            // Set completed_at if lesson is completed
+            if (isset($data['lesson_status']) && in_array($data['lesson_status'], ['completed', 'passed'])) {
+                $fields[] = "`completed_at` = NOW()";
+            }
+            
             $values[] = (int)$userId;
             $values[] = (int)$courseId;
             $values[] = (int)$contentId;
@@ -452,8 +395,8 @@ class ProgressTrackingModel {
             if ($videoPackageId) {
                 $stmt = $this->conn->prepare("
                     INSERT IGNORE INTO video_progress 
-                    (user_id, course_id, content_id, video_package_id, client_id)
-                    VALUES (?, ?, ?, ?, ?)
+                    (user_id, course_id, content_id, video_package_id, client_id, started_at)
+                    VALUES (?, ?, ?, ?, ?, NOW())
                 ");
                 $stmt->execute([$userId, $courseId, $contentId, $videoPackageId, $clientId]);
             }
@@ -522,8 +465,8 @@ class ProgressTrackingModel {
             if ($audioPackageId) {
                 $stmt = $this->conn->prepare("
                     INSERT IGNORE INTO audio_progress 
-                    (user_id, course_id, content_id, audio_package_id, client_id)
-                    VALUES (?, ?, ?, ?, ?)
+                    (user_id, course_id, content_id, audio_package_id, client_id, started_at)
+                    VALUES (?, ?, ?, ?, ?, NOW())
                 ");
                 $stmt->execute([$userId, $courseId, $contentId, $audioPackageId, $clientId]);
             }
@@ -592,8 +535,8 @@ class ProgressTrackingModel {
             if ($documentPackageId) {
                 $stmt = $this->conn->prepare("
                     INSERT IGNORE INTO document_progress 
-                    (user_id, course_id, content_id, document_package_id, client_id)
-                    VALUES (?, ?, ?, ?, ?)
+                    (user_id, course_id, content_id, document_package_id, client_id, started_at)
+                    VALUES (?, ?, ?, ?, ?, NOW())
                 ");
                 $stmt->execute([$userId, $courseId, $contentId, $documentPackageId, $clientId]);
             }
@@ -732,8 +675,8 @@ class ProgressTrackingModel {
             if ($externalPackageId) {
                 $stmt = $this->conn->prepare("
                     INSERT IGNORE INTO external_progress 
-                    (user_id, course_id, content_id, external_package_id, client_id)
-                    VALUES (?, ?, ?, ?, ?)
+                    (user_id, course_id, content_id, external_package_id, client_id, started_at)
+                    VALUES (?, ?, ?, ?, ?, NOW())
                 ");
                 $stmt->execute([$userId, $courseId, $contentId, $externalPackageId, $clientId]);
             }
@@ -787,43 +730,26 @@ class ProgressTrackingModel {
     // =====================================================
 
     /**
-     * Calculate overall course progress
+     * Calculate overall course progress from completion tables
      */
     public function calculateCourseProgress($userId, $courseId, $clientId) {
         try {
-            $stmt = $this->conn->prepare("
-                SELECT 
-                    COUNT(DISTINCT cm.id) as total_modules,
-                    COUNT(DISTINCT cmc.id) as total_content_items
-                FROM courses c
-                LEFT JOIN course_modules cm ON c.id = cm.course_id AND (cm.deleted_at IS NULL OR cm.deleted_at = '0000-00-00 00:00:00')
-                LEFT JOIN course_module_content cmc ON cm.id = cmc.module_id AND (cmc.deleted_at IS NULL OR cmc.deleted_at = '0000-00-00 00:00:00')
-                WHERE c.id = ?
-            ");
-            $stmt->execute([$courseId]);
-            $result = $stmt->fetch(PDO::FETCH_ASSOC);
-
-            $totalItems = $result['total_modules'] + $result['total_content_items'];
-            $completedItems = 0; // For now, we'll set this to 0 until we implement full progress tracking
-
-            if ($totalItems > 0) {
-                $percentage = round(($completedItems / $totalItems) * 100, 2);
-            } else {
-                $percentage = 0.00;
+            // Get course completion data from completion tables
+            $courseCompletion = $this->getCourseCompletionData($userId, $courseId, $clientId);
+            
+            if ($courseCompletion) {
+                return [
+                    'total_modules' => $this->getTotalModules($courseId),
+                    'completed_modules' => $this->getCompletedModules($userId, $courseId, $clientId),
+                    'total_content_items' => $this->getTotalContentItems($courseId),
+                    'completed_content_items' => $this->getCompletedContentItems($userId, $courseId, $clientId),
+                    'completion_percentage' => (int) $courseCompletion['completion_percentage']
+                ];
             }
-
-            // Update course progress
-            $this->updateCourseProgress($userId, $courseId, $clientId, [
-                'completion_percentage' => $percentage
-            ]);
-
-            return [
-                'total_modules' => $result['total_modules'],
-                'completed_modules' => 0, // Placeholder
-                'total_content_items' => $result['total_content_items'],
-                'completed_content_items' => 0, // Placeholder
-                'completion_percentage' => $percentage
-            ];
+            
+            // Fallback: calculate from individual completion tables
+            return $this->calculateCourseProgressFromCompletionTables($userId, $courseId, $clientId);
+            
         } catch (PDOException $e) {
             error_log("ProgressTrackingModel::calculateCourseProgress error: " . $e->getMessage());
             return false;
@@ -831,63 +757,251 @@ class ProgressTrackingModel {
     }
 
     /**
-     * Get resume position for a user in a course
+     * Get course completion data from course_completion table
+     * @param int $userId
+     * @param int $courseId
+     * @param int $clientId
+     * @return array|null
      */
-    public function getResumePosition($userId, $courseId, $clientId) {
+    private function getCourseCompletionData($userId, $courseId, $clientId) {
         try {
             $stmt = $this->conn->prepare("
-                SELECT 
-                    current_module_id,
-                    current_content_id,
-                    resume_position
-                FROM user_course_progress 
+                SELECT completion_percentage, is_completed, 
+                       prerequisites_completed, modules_completed, post_requisites_completed
+                FROM course_completion 
                 WHERE user_id = ? AND course_id = ? AND client_id = ?
             ");
             $stmt->execute([$userId, $courseId, $clientId]);
-            $progress = $stmt->fetch(PDO::FETCH_ASSOC);
-
-            if (!$progress) {
-                return null;
-            }
-
-            $resumeData = [
-                'current_module_id' => $progress['current_module_id'],
-                'current_content_id' => $progress['current_content_id'],
-                'resume_position' => $progress['resume_position'] ? json_decode($progress['resume_position'], true) : null
-            ];
-
-            // Get detailed resume data for specific content types
-            if ($progress['current_content_id']) {
-                $stmt = $this->conn->prepare("
-                    SELECT content_type FROM course_module_content WHERE id = ?
-                ");
-                $stmt->execute([$progress['current_content_id']]);
-                $contentType = $stmt->fetchColumn();
-
-                switch ($contentType) {
-                    case 'scorm':
-                        $resumeData['scorm_data'] = $this->getScormResumeData($userId, $courseId, $progress['current_content_id'], $clientId);
-                        break;
-                    case 'video':
-                        $resumeData['video_data'] = $this->getVideoResumeData($userId, $courseId, $progress['current_content_id'], $clientId);
-                        break;
-                    case 'audio':
-                        $resumeData['audio_data'] = $this->getAudioResumeData($userId, $courseId, $progress['current_content_id'], $clientId);
-                        break;
-                    case 'document':
-                        $resumeData['document_data'] = $this->getDocumentResumeData($userId, $courseId, $progress['current_content_id'], $clientId);
-                        break;
-                    case 'interactive':
-                        $resumeData['interactive_data'] = $this->getInteractiveResumeData($userId, $courseId, $progress['current_content_id'], $clientId);
-                        break;
-                }
-            }
-
-            return $resumeData;
-        } catch (PDOException $e) {
-            error_log("ProgressTrackingModel::getResumePosition error: " . $e->getMessage());
+            return $stmt->fetch(PDO::FETCH_ASSOC);
+        } catch (Exception $e) {
+            error_log("Error getting course completion data: " . $e->getMessage());
             return null;
         }
+    }
+
+    /**
+     * Calculate course progress from individual completion tables
+     * @param int $userId
+     * @param int $courseId
+     * @param int $clientId
+     * @return array
+     */
+    private function calculateCourseProgressFromCompletionTables($userId, $courseId, $clientId) {
+        try {
+            $totalWeight = 0;
+            $completedWeight = 0;
+            
+            // Get prerequisite completion data
+            $prereqData = $this->getPrerequisiteCompletionData($userId, $courseId, $clientId);
+            if (!empty($prereqData)) {
+                $totalWeight += count($prereqData);
+                foreach ($prereqData as $prereq) {
+                    if ($prereq['is_completed']) {
+                        $completedWeight++;
+                    }
+                }
+            }
+            
+            // Get module completion data
+            $moduleData = $this->getModuleCompletionData($userId, $courseId, $clientId);
+            if (!empty($moduleData)) {
+                $totalWeight += count($moduleData);
+                foreach ($moduleData as $module) {
+                    if ($module['is_completed']) {
+                        $completedWeight++;
+                    }
+                }
+            }
+            
+            // Get post-requisite completion data
+            $postreqData = $this->getPostRequisiteCompletionData($userId, $courseId, $clientId);
+            if (!empty($postreqData)) {
+                $totalWeight += count($postreqData);
+                foreach ($postreqData as $postreq) {
+                    if ($postreq['is_completed']) {
+                        $completedWeight++;
+                    }
+                }
+            }
+            
+            $percentage = 0;
+            if ($totalWeight > 0) {
+                $percentage = round(($completedWeight / $totalWeight) * 100);
+            }
+            
+            return [
+                'total_modules' => $this->getTotalModules($courseId),
+                'completed_modules' => $this->getCompletedModules($userId, $courseId, $clientId),
+                'total_content_items' => $this->getTotalContentItems($courseId),
+                'completed_content_items' => $this->getCompletedContentItems($userId, $courseId, $clientId),
+                'completion_percentage' => $percentage
+            ];
+            
+        } catch (Exception $e) {
+            error_log("Error calculating course progress from completion tables: " . $e->getMessage());
+            return [
+                'total_modules' => 0,
+                'completed_modules' => 0,
+                'total_content_items' => 0,
+                'completed_content_items' => 0,
+                'completion_percentage' => 0
+            ];
+        }
+    }
+
+    /**
+     * Get total modules for a course
+     * @param int $courseId
+     * @return int
+     */
+    private function getTotalModules($courseId) {
+        try {
+            $stmt = $this->conn->prepare("
+                SELECT COUNT(*) as total
+                FROM course_modules 
+                WHERE course_id = ? AND (deleted_at IS NULL OR deleted_at = '0000-00-00 00:00:00')
+            ");
+            $stmt->execute([$courseId]);
+            $result = $stmt->fetch(PDO::FETCH_ASSOC);
+            return (int) $result['total'];
+        } catch (Exception $e) {
+            return 0;
+        }
+    }
+
+    /**
+     * Get completed modules for a user in a course
+     * @param int $userId
+     * @param int $courseId
+     * @param int $clientId
+     * @return int
+     */
+    private function getCompletedModules($userId, $courseId, $clientId) {
+        try {
+            $stmt = $this->conn->prepare("
+                SELECT COUNT(*) as total
+                FROM module_completion 
+                WHERE user_id = ? AND course_id = ? AND client_id = ? AND is_completed = 1
+            ");
+            $stmt->execute([$userId, $courseId, $clientId]);
+            $result = $stmt->fetch(PDO::FETCH_ASSOC);
+            return (int) $result['total'];
+        } catch (Exception $e) {
+            return 0;
+        }
+    }
+
+    /**
+     * Get total content items for a course
+     * @param int $courseId
+     * @return int
+     */
+    private function getTotalContentItems($courseId) {
+        try {
+            $stmt = $this->conn->prepare("
+                SELECT COUNT(*) as total
+                FROM course_module_content cmc
+                JOIN course_modules cm ON cmc.module_id = cm.id
+                WHERE cm.course_id = ? AND (cmc.deleted_at IS NULL OR cmc.deleted_at = '0000-00-00 00:00:00')
+            ");
+            $stmt->execute([$courseId]);
+            $result = $stmt->fetch(PDO::FETCH_ASSOC);
+            return (int) $result['total'];
+        } catch (Exception $e) {
+            return 0;
+        }
+    }
+
+    /**
+     * Get completed content items for a user in a course
+     * @param int $userId
+     * @param int $courseId
+     * @param int $clientId
+     * @return int
+     */
+    private function getCompletedContentItems($userId, $courseId, $clientId) {
+        try {
+            // This would need to be calculated based on individual content progress
+            // For now, return 0 as this is complex to calculate without content-specific progress tables
+            return 0;
+        } catch (Exception $e) {
+            return 0;
+        }
+    }
+
+    /**
+     * Get prerequisite completion data
+     * @param int $userId
+     * @param int $courseId
+     * @param int $clientId
+     * @return array
+     */
+    private function getPrerequisiteCompletionData($userId, $courseId, $clientId) {
+        try {
+            $stmt = $this->conn->prepare("
+                SELECT prerequisite_id, prerequisite_type, completion_percentage, is_completed
+                FROM prerequisite_completion 
+                WHERE user_id = ? AND course_id = ? AND client_id = ?
+            ");
+            $stmt->execute([$userId, $courseId, $clientId]);
+            return $stmt->fetchAll(PDO::FETCH_ASSOC);
+        } catch (Exception $e) {
+            error_log("Error getting prerequisite completion data: " . $e->getMessage());
+            return [];
+        }
+    }
+
+    /**
+     * Get module completion data
+     * @param int $userId
+     * @param int $courseId
+     * @param int $clientId
+     * @return array
+     */
+    private function getModuleCompletionData($userId, $courseId, $clientId) {
+        try {
+            $stmt = $this->conn->prepare("
+                SELECT module_id, completion_percentage, is_completed
+                FROM module_completion 
+                WHERE user_id = ? AND course_id = ? AND client_id = ?
+            ");
+            $stmt->execute([$userId, $courseId, $clientId]);
+            return $stmt->fetchAll(PDO::FETCH_ASSOC);
+        } catch (Exception $e) {
+            error_log("Error getting module completion data: " . $e->getMessage());
+            return [];
+        }
+    }
+
+    /**
+     * Get post-requisite completion data
+     * @param int $userId
+     * @param int $courseId
+     * @param int $clientId
+     * @return array
+     */
+    private function getPostRequisiteCompletionData($userId, $courseId, $clientId) {
+        try {
+            $stmt = $this->conn->prepare("
+                SELECT post_requisite_id, content_type, completion_percentage, is_completed
+                FROM post_requisite_completion 
+                WHERE user_id = ? AND course_id = ? AND client_id = ?
+            ");
+            $stmt->execute([$userId, $courseId, $clientId]);
+            return $stmt->fetchAll(PDO::FETCH_ASSOC);
+        } catch (Exception $e) {
+            error_log("Error getting post-requisite completion data: " . $e->getMessage());
+            return [];
+        }
+    }
+
+    /**
+     * Get resume position for a user in a course
+     */
+    public function getResumePosition($userId, $courseId, $clientId) {
+        // Since we no longer use user_course_progress table, return null
+        // Resume position can be tracked in individual content progress tables if needed
+        return null;
     }
 
     /**
@@ -1068,72 +1182,23 @@ class ProgressTrackingModel {
     }
 
     /**
-     * Get user's progress summary for all courses
+     * Get user's progress summary for all courses (simplified - no user_course_progress table)
      */
     public function getUserProgressSummary($userId, $clientId) {
-        try {
-            $stmt = $this->conn->prepare("
-                SELECT 
-                    ucp.course_id,
-                    c.name as course_title,
-                    ucp.status,
-                    ucp.completion_percentage,
-                    ucp.last_accessed_at,
-                    ucp.total_time_spent
-                FROM user_course_progress ucp
-                JOIN courses c ON ucp.course_id = c.id
-                WHERE ucp.user_id = ? AND ucp.client_id = ?
-                ORDER BY ucp.last_accessed_at DESC
-            ");
-            $stmt->execute([$userId, $clientId]);
-            return $stmt->fetchAll(PDO::FETCH_ASSOC);
-        } catch (PDOException $e) {
-            error_log("ProgressTrackingModel::getUserProgressSummary error: " . $e->getMessage());
-            return false;
-        }
+        // Since we no longer use user_course_progress table, return empty array
+        // Progress can be calculated from individual content progress tables if needed
+        return [];
     }
 
     /**
-     * Set resume position for a user in a course
+     * Set resume position for a user in a course (simplified - no user_course_progress table)
      */
     public function setResumePosition($userId, $courseId, $clientId, $moduleId = null, $contentId = null, $resumePosition = null) {
-        try {
-            error_log("DEBUG: setResumePosition called - userId: $userId, courseId: $courseId, moduleId: " . ($moduleId ?? 'NULL') . ", contentId: " . ($contentId ?? 'NULL'));
-            error_log("DEBUG: setResumePosition - resumePosition: " . json_encode($resumePosition));
-            
-            // Update user_course_progress with resume position
-            $stmt = $this->conn->prepare("
-                UPDATE user_course_progress 
-                SET current_module_id = ?, current_content_id = ?, resume_position = ?, updated_at = NOW()
-                WHERE user_id = ? AND course_id = ? AND client_id = ?
-            ");
-            
-            $result = $stmt->execute([
-                $moduleId,
-                $contentId,
-                $resumePosition ? json_encode($resumePosition) : null,
-                $userId,
-                $courseId,
-                $clientId
-            ]);
-            
-            if ($result) {
-                error_log("DEBUG: setResumePosition - user_course_progress updated successfully");
-                
-                // Also update the specific content progress if contentId is provided
-                if ($contentId && $resumePosition) {
-                    $this->updateContentResumePosition($userId, $courseId, $contentId, $clientId, $resumePosition);
-                }
-                
-                return true;
-            }
-            
-            error_log("DEBUG: setResumePosition - user_course_progress update failed");
-            return false;
-        } catch (PDOException $e) {
-            error_log("ProgressTrackingModel::setResumePosition error: " . $e->getMessage());
-            return false;
+        // Since we no longer use user_course_progress table, just update content-specific progress if needed
+        if ($contentId && $resumePosition) {
+            $this->updateContentResumePosition($userId, $courseId, $contentId, $clientId, $resumePosition);
         }
+        return true;
     }
 
     /**

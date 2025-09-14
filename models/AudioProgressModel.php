@@ -22,9 +22,9 @@ class AudioProgressModel {
         if (!$progress) {
             // Create new progress record
             $sql = "INSERT INTO audio_progress (user_id, course_id, content_id, audio_package_id, client_id, 
-                    `current_time`, duration, listened_percentage, completion_threshold, is_completed, audio_status, playback_status,
+                    started_at, `current_time`, duration, listened_percentage, completion_threshold, is_completed, audio_status, playback_status,
                     play_count, last_listened_at, playback_speed, notes, created_at, updated_at) 
-                    VALUES (?, ?, ?, ?, ?, 0, 0, 0, 80, 0, 'not_started', 'not_started', 0, NOW(), 1.0, '', NOW(), NOW())";
+                    VALUES (?, ?, ?, ?, ?, NOW(), 0, 0, 0, 80, 0, 'not_started', 'not_started', 0, NOW(), 1.0, '', NOW(), NOW())";
             $stmt = $this->conn->prepare($sql);
             $stmt->execute([$userId, $courseId, $contentId, $audioPackageId, $clientId]);
             
@@ -49,6 +49,18 @@ class AudioProgressModel {
      * Update audio progress
      */
     public function updateProgress($progressId, $data) {
+        // Set started_at if not already set and audio is being started
+        $setStartedAt = "";
+        if (isset($data['audio_status']) && $data['audio_status'] === 'in_progress') {
+            $setStartedAt = ", started_at = CASE WHEN started_at IS NULL THEN NOW() ELSE started_at END";
+        }
+        
+        // Set completed_at if audio is completed
+        $setCompletedAt = "";
+        if (isset($data['is_completed']) && $data['is_completed'] == 1) {
+            $setCompletedAt = ", completed_at = NOW()";
+        }
+        
         $sql = "UPDATE audio_progress SET 
                 `current_time` = ?, 
                 duration = ?, 
@@ -60,7 +72,9 @@ class AudioProgressModel {
                 last_listened_at = NOW(), 
                 playback_speed = ?, 
                 notes = ?, 
-                updated_at = NOW() 
+                updated_at = NOW()
+                $setStartedAt
+                $setCompletedAt
                 WHERE id = ?";
         
         $stmt = $this->conn->prepare($sql);

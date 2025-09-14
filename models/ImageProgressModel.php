@@ -26,8 +26,8 @@ class ImageProgressModel {
             }
             
             // Create new progress record
-            $sql = "INSERT INTO image_progress (user_id, course_id, content_id, image_package_id, client_id, image_status, is_completed, view_count) 
-                    VALUES (?, ?, ?, ?, ?, 'not_viewed', 0, 0)";
+            $sql = "INSERT INTO image_progress (user_id, course_id, content_id, image_package_id, client_id, started_at, image_status, is_completed, view_count) 
+                    VALUES (?, ?, ?, ?, ?, NOW(), 'not_viewed', 0, 0)";
             $stmt = $this->conn->prepare($sql);
             $stmt->execute([$userId, $courseId, $contentId, $imagePackageId, $clientId]);
             
@@ -61,6 +61,18 @@ class ImageProgressModel {
      */
     public function updateProgress($userId, $courseId, $contentId, $clientId, $data) {
         try {
+            // Set started_at if not already set and image is being viewed
+            $setStartedAt = "";
+            if (isset($data['image_status']) && in_array($data['image_status'], ['viewed', 'completed'])) {
+                $setStartedAt = ", started_at = CASE WHEN started_at IS NULL THEN NOW() ELSE started_at END";
+            }
+            
+            // Set completed_at if image is completed
+            $setCompletedAt = "";
+            if (isset($data['is_completed']) && $data['is_completed'] == 1) {
+                $setCompletedAt = ", completed_at = NOW()";
+            }
+            
             $sql = "UPDATE image_progress SET 
                         image_status = ?,
                         is_completed = ?,
@@ -68,6 +80,8 @@ class ImageProgressModel {
                         viewed_at = ?,
                         notes = ?,
                         updated_at = CURRENT_TIMESTAMP
+                        $setStartedAt
+                        $setCompletedAt
                     WHERE user_id = ? AND course_id = ? AND content_id = ? AND client_id = ?";
             
             $stmt = $this->conn->prepare($sql);
@@ -118,6 +132,7 @@ class ImageProgressModel {
                         is_completed = 1,
                         view_count = view_count + 1,
                         viewed_at = COALESCE(viewed_at, CURRENT_TIMESTAMP),
+                        completed_at = NOW(),
                         updated_at = CURRENT_TIMESTAMP
                     WHERE user_id = ? AND course_id = ? AND content_id = ? AND client_id = ?";
             

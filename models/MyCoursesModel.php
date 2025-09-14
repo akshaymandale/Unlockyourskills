@@ -10,7 +10,7 @@ class MyCoursesModel {
     }
 
     /**
-     * Check if a course has been started by checking for any activity in course content
+     * Check if a course has been started by checking completion tables
      * @param int $courseId
      * @param int $userId
      * @param int $clientId
@@ -18,7 +18,85 @@ class MyCoursesModel {
      */
     public function isCourseStarted($courseId, $userId, $clientId) {
         try {
-            // First check if there are any prerequisites
+            // Check if there are any entries in progress tables or completion tables
+            // Course is started if there's any user interaction with course content
+            $progressCheckStmt = $this->conn->prepare("
+                SELECT COUNT(*) as count FROM (
+                    -- Progress tables
+                    SELECT 1 FROM video_progress 
+                    WHERE course_id = ? AND user_id = ? AND client_id = ?
+                    UNION ALL
+                    SELECT 1 FROM audio_progress 
+                    WHERE course_id = ? AND user_id = ? AND client_id = ?
+                    UNION ALL
+                    SELECT 1 FROM document_progress 
+                    WHERE course_id = ? AND user_id = ? AND client_id = ?
+                    UNION ALL
+                    SELECT 1 FROM image_progress 
+                    WHERE course_id = ? AND user_id = ? AND client_id = ?
+                    UNION ALL
+                    SELECT 1 FROM scorm_progress 
+                    WHERE course_id = ? AND user_id = ? AND client_id = ?
+                    UNION ALL
+                    SELECT 1 FROM external_progress 
+                    WHERE course_id = ? AND user_id = ? AND client_id = ?
+                    UNION ALL
+                    SELECT 1 FROM interactive_progress 
+                    WHERE course_id = ? AND user_id = ? AND client_id = ?
+                    UNION ALL
+                    SELECT 1 FROM assignment_submissions 
+                    WHERE course_id = ? AND user_id = ? AND client_id = ?
+                    UNION ALL
+                    SELECT 1 FROM course_survey_responses 
+                    WHERE course_id = ? AND user_id = ? AND client_id = ?
+                    UNION ALL
+                    SELECT 1 FROM course_feedback_responses 
+                    WHERE course_id = ? AND user_id = ? AND client_id = ?
+                    UNION ALL
+                    -- Completion tables
+                    SELECT 1 FROM prerequisite_completion 
+                    WHERE course_id = ? AND user_id = ? AND client_id = ?
+                    AND (completion_percentage > 0 OR is_completed = 1)
+                    UNION ALL
+                    SELECT 1 FROM course_completion 
+                    WHERE course_id = ? AND user_id = ? AND client_id = ?
+                    AND (completion_percentage > 0 OR is_completed = 1)
+                    UNION ALL
+                    SELECT 1 FROM post_requisite_completion 
+                    WHERE course_id = ? AND user_id = ? AND client_id = ?
+                    AND (completion_percentage > 0 OR is_completed = 1)
+                    UNION ALL
+                    SELECT 1 FROM module_completion 
+                    WHERE course_id = ? AND user_id = ? AND client_id = ?
+                    AND (completion_percentage > 0 OR is_completed = 1)
+                ) as progress_entries
+            ");
+            $progressCheckStmt->execute([
+                // Progress tables
+                $courseId, $userId, $clientId, // video_progress
+                $courseId, $userId, $clientId, // audio_progress
+                $courseId, $userId, $clientId, // document_progress
+                $courseId, $userId, $clientId, // image_progress
+                $courseId, $userId, $clientId, // scorm_progress
+                $courseId, $userId, $clientId, // external_progress
+                $courseId, $userId, $clientId, // interactive_progress
+                $courseId, $userId, $clientId, // assignment_submissions
+                $courseId, $userId, $clientId, // course_survey_responses
+                $courseId, $userId, $clientId, // course_feedback_responses
+                // Completion tables
+                $courseId, $userId, $clientId, // prerequisite_completion
+                $courseId, $userId, $clientId, // course_completion
+                $courseId, $userId, $clientId, // post_requisite_completion
+                $courseId, $userId, $clientId  // module_completion
+            ]);
+            $progressResult = $progressCheckStmt->fetch(PDO::FETCH_ASSOC);
+            
+            // If there are any entries in progress or completion tables, course is started
+            if ($progressResult['count'] > 0) {
+                return true;
+            }
+            
+            // Fallback: Check if there are any prerequisites
             $prereqCountStmt = $this->conn->prepare("
                 SELECT COUNT(*) as count
                 FROM course_prerequisites cp
@@ -82,7 +160,7 @@ class MyCoursesModel {
                     (cmc.content_type = 'assessment' AND EXISTS (
                         SELECT 1 FROM assessment_attempts aa 
                         WHERE aa.assessment_id = cmc.content_id 
-                        AND aa.user_id = ? AND (aa.client_id = ? OR aa.client_id IS NULL)
+                        AND aa.user_id = ? AND aa.course_id = ? AND (aa.client_id = ? OR aa.client_id IS NULL)
                     ))
                     OR (cmc.content_type = 'survey' AND EXISTS (
                         SELECT 1 FROM course_survey_responses csr 
@@ -132,7 +210,7 @@ class MyCoursesModel {
                 )
             ");
             $moduleStmt->execute([
-                $courseId, $userId, $clientId, // assessment
+                $courseId, $userId, $courseId, $clientId, // assessment
                 $userId, $clientId, // survey
                 $userId, $clientId, // feedback
                 $userId, $courseId, $clientId, // assignment
@@ -347,7 +425,7 @@ class MyCoursesModel {
     }
 
     /**
-     * Calculate course progress percentage based on content completion
+     * Calculate course progress percentage based on completion tables
      * @param int $courseId
      * @param int $userId
      * @param int $clientId
@@ -355,47 +433,165 @@ class MyCoursesModel {
      */
     private function calculateCourseProgress($courseId, $userId, $clientId) {
         try {
-            // Get all modules and their content for this course
-            $modules = $this->getCourseModules($courseId);
-            $totalItems = 0;
-            $completedItems = 0;
-            $totalProgress = 0;
+            // Get course completion data from completion tables
+            $courseCompletion = $this->getCourseCompletionData($userId, $courseId, $clientId);
             
-            foreach ($modules as $module) {
-                if (isset($module['content']) && is_array($module['content'])) {
-                    foreach ($module['content'] as $content) {
-                        $totalItems++;
-                        $contentProgress = $this->getContentProgress($content, $userId, $clientId, $courseId);
-                        $totalProgress += $contentProgress;
-                        
-                        if ($contentProgress >= 100) {
-                            $completedItems++;
-                        }
+            if ($courseCompletion) {
+                return (int) $courseCompletion['completion_percentage'];
+            }
+            
+            // Fallback: calculate from individual completion tables
+            return $this->calculateCourseProgressFromCompletionTables($userId, $courseId, $clientId);
+            
+        } catch (Exception $e) {
+            error_log("Error calculating course progress: " . $e->getMessage());
+            return 0;
+        }
+    }
+
+    /**
+     * Get course completion data from course_completion table
+     * @param int $userId
+     * @param int $courseId
+     * @param int $clientId
+     * @return array|null
+     */
+    private function getCourseCompletionData($userId, $courseId, $clientId) {
+        try {
+            $stmt = $this->conn->prepare("
+                SELECT completion_percentage, is_completed, 
+                       prerequisites_completed, modules_completed, post_requisites_completed
+                FROM course_completion 
+                WHERE user_id = ? AND course_id = ? AND client_id = ?
+            ");
+            $stmt->execute([$userId, $courseId, $clientId]);
+            return $stmt->fetch(PDO::FETCH_ASSOC);
+        } catch (Exception $e) {
+            error_log("Error getting course completion data: " . $e->getMessage());
+            return null;
+        }
+    }
+
+    /**
+     * Calculate course progress from individual completion tables
+     * @param int $userId
+     * @param int $courseId
+     * @param int $clientId
+     * @return int
+     */
+    private function calculateCourseProgressFromCompletionTables($userId, $courseId, $clientId) {
+        try {
+            $totalWeight = 0;
+            $completedWeight = 0;
+            
+            // Get prerequisite completion data
+            $prereqData = $this->getPrerequisiteCompletionData($userId, $courseId, $clientId);
+            if (!empty($prereqData)) {
+                $totalWeight += count($prereqData);
+                foreach ($prereqData as $prereq) {
+                    if ($prereq['is_completed']) {
+                        $completedWeight++;
                     }
                 }
             }
             
-            // Also count prerequisites as items
-            $prerequisites = $this->getCoursePrerequisites($courseId);
-            foreach ($prerequisites as $prereq) {
-                $totalItems++;
-                $prereqProgress = $this->getPrerequisiteProgress($prereq, $userId, $clientId, $courseId);
-                $totalProgress += $prereqProgress;
-                
-                if ($prereqProgress >= 100) {
-                    $completedItems++;
+            // Get module completion data
+            $moduleData = $this->getModuleCompletionData($userId, $courseId, $clientId);
+            if (!empty($moduleData)) {
+                $totalWeight += count($moduleData);
+                foreach ($moduleData as $module) {
+                    if ($module['is_completed']) {
+                        $completedWeight++;
+                    }
                 }
             }
             
-            if ($totalItems > 0) {
-                return round($totalProgress / $totalItems);
+            // Get post-requisite completion data
+            $postreqData = $this->getPostRequisiteCompletionData($userId, $courseId, $clientId);
+            if (!empty($postreqData)) {
+                $totalWeight += count($postreqData);
+                foreach ($postreqData as $postreq) {
+                    if ($postreq['is_completed']) {
+                        $completedWeight++;
+                    }
+                }
+            }
+            
+            if ($totalWeight > 0) {
+                return round(($completedWeight / $totalWeight) * 100);
             }
             
             return 0;
             
         } catch (Exception $e) {
-            error_log("Error calculating course progress: " . $e->getMessage());
+            error_log("Error calculating course progress from completion tables: " . $e->getMessage());
             return 0;
+        }
+    }
+
+    /**
+     * Get prerequisite completion data
+     * @param int $userId
+     * @param int $courseId
+     * @param int $clientId
+     * @return array
+     */
+    private function getPrerequisiteCompletionData($userId, $courseId, $clientId) {
+        try {
+            $stmt = $this->conn->prepare("
+                SELECT prerequisite_id, prerequisite_type, completion_percentage, is_completed
+                FROM prerequisite_completion 
+                WHERE user_id = ? AND course_id = ? AND client_id = ?
+            ");
+            $stmt->execute([$userId, $courseId, $clientId]);
+            return $stmt->fetchAll(PDO::FETCH_ASSOC);
+        } catch (Exception $e) {
+            error_log("Error getting prerequisite completion data: " . $e->getMessage());
+            return [];
+        }
+    }
+
+    /**
+     * Get module completion data
+     * @param int $userId
+     * @param int $courseId
+     * @param int $clientId
+     * @return array
+     */
+    private function getModuleCompletionData($userId, $courseId, $clientId) {
+        try {
+            $stmt = $this->conn->prepare("
+                SELECT module_id, completion_percentage, is_completed
+                FROM module_completion 
+                WHERE user_id = ? AND course_id = ? AND client_id = ?
+            ");
+            $stmt->execute([$userId, $courseId, $clientId]);
+            return $stmt->fetchAll(PDO::FETCH_ASSOC);
+        } catch (Exception $e) {
+            error_log("Error getting module completion data: " . $e->getMessage());
+            return [];
+        }
+    }
+
+    /**
+     * Get post-requisite completion data
+     * @param int $userId
+     * @param int $courseId
+     * @param int $clientId
+     * @return array
+     */
+    private function getPostRequisiteCompletionData($userId, $courseId, $clientId) {
+        try {
+            $stmt = $this->conn->prepare("
+                SELECT post_requisite_id, content_type, completion_percentage, is_completed
+                FROM post_requisite_completion 
+                WHERE user_id = ? AND course_id = ? AND client_id = ?
+            ");
+            $stmt->execute([$userId, $courseId, $clientId]);
+            return $stmt->fetchAll(PDO::FETCH_ASSOC);
+        } catch (Exception $e) {
+            error_log("Error getting post-requisite completion data: " . $e->getMessage());
+            return [];
         }
     }
 
@@ -497,9 +693,9 @@ class MyCoursesModel {
             case 'interactive':
             case 'non_scorm':
             case 'external':
-                // For these content types, check if there's actual progress, otherwise consider completed by default
+                // For these content types, check if there's actual progress
                 $progress = $this->getGeneralContentProgress($contentId, $userId, $clientId, $courseId);
-                return $progress > 0 ? $progress : 100; // Default to 100% if no progress tracking
+                return $progress; // Return actual progress (0 if no progress tracking)
             default:
                 return 0;
         }
@@ -542,21 +738,21 @@ class MyCoursesModel {
      */
     private function getAssessmentProgress($assessmentId, $userId, $clientId, $courseId) {
         try {
-            // Check if user has attempted this assessment (regardless of which course context)
+            // Check if user has attempted this assessment for this specific course
             $stmt = $this->conn->prepare("
                 SELECT COUNT(*) as count FROM assessment_attempts 
-                WHERE assessment_id = ? AND user_id = ? AND (client_id = ? OR client_id IS NULL)
+                WHERE assessment_id = ? AND user_id = ? AND course_id = ? AND (client_id = ? OR client_id IS NULL)
             ");
-            $stmt->execute([$assessmentId, $userId, $clientId]);
+            $stmt->execute([$assessmentId, $userId, $courseId, $clientId]);
             $result = $stmt->fetch(PDO::FETCH_ASSOC);
             
             if ($result['count'] > 0) {
-                // Check if passed (regardless of which course context)
+                // Check if passed for this specific course
                 $stmt = $this->conn->prepare("
                     SELECT COUNT(*) as count FROM assessment_results 
-                    WHERE assessment_id = ? AND user_id = ? AND (client_id = ? OR client_id IS NULL) AND passed = 1
+                    WHERE assessment_id = ? AND user_id = ? AND course_id = ? AND (client_id = ? OR client_id IS NULL) AND passed = 1
                 ");
-                $stmt->execute([$assessmentId, $userId, $clientId]);
+                $stmt->execute([$assessmentId, $userId, $courseId, $clientId]);
                 $passed = $stmt->fetch(PDO::FETCH_ASSOC);
                 
                 return $passed['count'] > 0 ? 100 : 50; // 100% if passed, 50% if attempted

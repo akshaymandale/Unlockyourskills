@@ -48,7 +48,7 @@
                         ?>
                     </div>
                     <small class="text-muted">
-                        Submitted: <?= date('M j, Y g:i A', strtotime($response['submitted_at'])) ?>
+                        Submitted: <?= $response['submitted_at'] ? date('M j, Y g:i A', strtotime($response['submitted_at'])) : 'Not submitted' ?>
                     </small>
                 </div>
             <?php endforeach; ?>

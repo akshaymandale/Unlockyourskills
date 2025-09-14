@@ -34,9 +34,9 @@ class DocumentProgressModel {
             // Create new progress record
             $sql = "INSERT INTO document_progress (
                         user_id, course_id, content_id, document_package_id, client_id,
-                        current_page, total_pages, pages_viewed, viewed_percentage,
+                        started_at, current_page, total_pages, pages_viewed, viewed_percentage,
                         completion_threshold, is_completed, status, time_spent, last_viewed_at
-                    ) VALUES (?, ?, ?, ?, ?, 1, ?, '[]', 0.00, 80.00, 0, 'not_started', 0, CURRENT_TIMESTAMP)";
+                    ) VALUES (?, ?, ?, ?, ?, NOW(), 1, ?, '[]', 0.00, 80.00, 0, 'not_started', 0, CURRENT_TIMESTAMP)";
             
             $stmt = $this->conn->prepare($sql);
             $stmt->execute([
@@ -77,6 +77,18 @@ class DocumentProgressModel {
                 $status = 'started';
             }
 
+            // Set started_at if not already set and document is being started
+            $setStartedAt = "";
+            if ($status === 'started' || $status === 'in_progress') {
+                $setStartedAt = ", started_at = CASE WHEN started_at IS NULL THEN NOW() ELSE started_at END";
+            }
+            
+            // Set completed_at if document is completed
+            $setCompletedAt = "";
+            if ($isCompleted) {
+                $setCompletedAt = ", completed_at = NOW()";
+            }
+            
             $sql = "UPDATE document_progress 
                     SET current_page = ?,
                         pages_viewed = ?,
@@ -85,6 +97,8 @@ class DocumentProgressModel {
                         status = ?,
                         time_spent = time_spent + ?,
                         last_viewed_at = CURRENT_TIMESTAMP
+                        $setStartedAt
+                        $setCompletedAt
                     WHERE user_id = ? AND course_id = ? AND content_id = ? AND client_id = ?";
             
             $stmt = $this->conn->prepare($sql);

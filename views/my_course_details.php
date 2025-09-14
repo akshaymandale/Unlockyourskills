@@ -234,6 +234,23 @@ function hasUserSubmittedAssignment($courseId, $userId, $assignmentPackageId) {
     }
 }
 
+function hasUserInProgressAssignment($courseId, $userId, $assignmentPackageId) {
+    try {
+        // If userId is null or empty, try to get it from session or use fallback
+        if (empty($userId)) {
+            $userId = $_SESSION['user']['id'] ?? $_SESSION['id'] ?? 75;
+        }
+        
+        $assignmentSubmissionModel = new AssignmentSubmissionModel();
+        $inProgressSubmission = $assignmentSubmissionModel->getInProgressSubmission($courseId, $userId, $assignmentPackageId);
+        
+        return !empty($inProgressSubmission);
+        
+    } catch (Exception $e) {
+        return false;
+    }
+}
+
 function hasUserSubmittedFeedback($courseId, $userId, $feedbackPackageId) {
     try {
         // Debug output - visible on page
@@ -743,6 +760,47 @@ function hasUserSubmittedFeedback($courseId, $userId, $feedbackPackageId) {
             }
         }
         
+        // Helper to check if user has completed external content
+        if (!function_exists('hasUserCompletedExternalContent')) {
+            function hasUserCompletedExternalContent($courseId, $userId, $prerequisiteId) {
+                try {
+                    $clientId = $_SESSION['user']['client_id'] ?? $_SESSION['client_id'] ?? 1;
+                    
+                    $db = new PDO(
+                        'mysql:unix_socket=/Applications/XAMPP/xamppfiles/var/mysql/mysql.sock;dbname=unlockyourskills',
+                        'root',
+                        ''
+                    );
+                    $db->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+                    
+                    // For external prerequisites, we need to find the course_prerequisites.id
+                    // that corresponds to this prerequisite_id (actual content ID)
+                    $sql = "SELECT cp.id as course_prerequisite_id 
+                            FROM course_prerequisites cp 
+                            WHERE cp.course_id = ? AND cp.prerequisite_id = ? AND cp.prerequisite_type = 'external'";
+                    $stmt = $db->prepare($sql);
+                    $stmt->execute([$courseId, $prerequisiteId]);
+                    $prereqRecord = $stmt->fetch(PDO::FETCH_ASSOC);
+                    
+                    if (!$prereqRecord) {
+                        return false; // Prerequisite not found
+                    }
+                    
+                    // Now check external_progress using the course_prerequisites.id
+                    $sql = "SELECT is_completed FROM external_progress 
+                            WHERE user_id = ? AND course_id = ? AND content_id = ? AND client_id = ?";
+                    $stmt = $db->prepare($sql);
+                    $stmt->execute([$userId, $courseId, $prereqRecord['course_prerequisite_id'], $clientId]);
+                    
+                    $result = $stmt->fetch(PDO::FETCH_ASSOC);
+                    return $result && $result['is_completed'] == 1;
+                } catch (Exception $e) {
+                    error_log("Error checking external content completion: " . $e->getMessage());
+                    return false;
+                }
+            }
+        }
+
         // Helper to check if all prerequisites are completed
         if (!function_exists('arePrerequisitesCompleted')) {
             function arePrerequisitesCompleted($prerequisites, $assessmentResults) {
@@ -778,6 +836,12 @@ function hasUserSubmittedFeedback($courseId, $userId, $feedbackPackageId) {
                         // Check if feedback has been submitted
                         $isFeedbackSubmitted = hasUserSubmittedFeedback($courseId, $userId, $pre['prerequisite_id']);
                         if (!$isFeedbackSubmitted) {
+                            return false;
+                        }
+                    } elseif ($pre['prerequisite_type'] === 'external') {
+                        // Check if external content has been completed
+                        $isExternalCompleted = hasUserCompletedExternalContent($courseId, $userId, $pre['prerequisite_id']);
+                        if (!$isExternalCompleted) {
                             return false;
                         }
                     } else {
@@ -1689,41 +1753,27 @@ function hasUserSubmittedFeedback($courseId, $userId, $feedbackPackageId) {
             </div>
             
             <?php 
-            // Show completion status
+            // Show completion status using prerequisite completion tracking
             $completedCount = 0;
             $totalCount = count($course['prerequisites']);
             $userId = $_SESSION['user']['id'] ?? $_SESSION['id'] ?? 75; // Fallback to known user ID
+            $clientId = $_SESSION['user']['client_id'] ?? $_SESSION['client_id'] ?? 1; // Fallback to known client ID
+            
+            // Use prerequisite completion tracking
+            require_once 'models/PrerequisiteCompletionModel.php';
+            $prereqCompletionModel = new PrerequisiteCompletionModel();
             
             foreach ($course['prerequisites'] as $pre) {
-                if ($pre['prerequisite_type'] === 'assessment') {
-                    $assessmentId = $pre['prerequisite_id'];
-                    $result = $GLOBALS['assessmentResults'][$assessmentId] ?? null;
-                    if ($result && $result['passed']) {
-                        $completedCount++;
-                    }
-                } elseif ($pre['prerequisite_type'] === 'survey') {
-                    // Check if survey has been completed
-                    $isSurveyCompleted = hasUserCompletedSurvey($course['id'], $userId, $pre['prerequisite_id']);
-                    if ($isSurveyCompleted) {
-                        $completedCount++;
-                    }
-                } elseif ($pre['prerequisite_type'] === 'assignment') {
-                    // Check if assignment has been submitted
-                    $isAssignmentSubmitted = hasUserSubmittedAssignment($course['id'], $userId, $pre['prerequisite_id']);
-                    if ($isAssignmentSubmitted) {
-                        $completedCount++;
-                    }
-                } elseif ($pre['prerequisite_type'] === 'feedback') {
-                    // Check if feedback has been submitted
-                    $isFeedbackSubmitted = hasUserSubmittedFeedback($course['id'], $userId, $pre['prerequisite_id']);
-                    if ($isFeedbackSubmitted) {
-                        $completedCount++;
-                    }
-                } else {
-                    // For other prerequisite types (courses, modules, etc.), 
-                    // we assume they need to be completed manually or have completion tracking
-                    // For now, we'll consider them as completed if they exist
-                    // This can be enhanced later with actual completion tracking
+                // Use completion tables for ALL prerequisite types
+                $isCompleted = $prereqCompletionModel->isPrerequisiteCompleted(
+                    $userId, 
+                    $course['id'], 
+                    $pre['prerequisite_id'], 
+                    $pre['prerequisite_type'], 
+                    $clientId
+                );
+                
+                if ($isCompleted) {
                     $completedCount++;
                 }
             }
@@ -1803,7 +1853,7 @@ function hasUserSubmittedFeedback($courseId, $userId, $feedbackPackageId) {
                                     <span class="prerequisite-type"><?= htmlspecialchars(ucfirst($type)) ?></span>
                                 </div>
                             </div>
-                            <?php if (!empty($pre['prerequisite_type']) && in_array($pre['prerequisite_type'], ['assessment','survey','feedback','assignment'])): ?>
+                            <?php if (!empty($pre['prerequisite_type']) && in_array($pre['prerequisite_type'], ['assessment','survey','feedback','assignment','document','video','audio','image','interactive','scorm','external'])): ?>
                                 <?php 
                                 $assessmentId = $pre['prerequisite_id'];
                                 $assessmentAttempts = $GLOBALS['assessmentAttempts'][$assessmentId] ?? [];
@@ -1827,7 +1877,8 @@ function hasUserSubmittedFeedback($courseId, $userId, $feedbackPackageId) {
                                         echo "<div class='assessment-status mb-2'>";
                                         echo "<div class='{$statusClass}'><i class='fas {$statusIcon} me-1'></i>{$statusText}</div>";
                                         if ($hasPassed) {
-                                            echo "<div class='text-muted mt-1'>(Score: {$assessmentResults['score']}/{$assessmentResults['max_score']} - {$assessmentResults['percentage']}%)</div>";
+                                            echo "<div class='text-muted mt-1'>Score: {$assessmentResults['score']}/{$assessmentResults['max_score']} - {$assessmentResults['percentage']}%</div>";
+                                            echo "<div class='text-success mt-1'><i class='fas fa-check me-1'></i>Completed</div>";
                                         }
                                         echo "</div>";
                                     }
@@ -1941,8 +1992,96 @@ function hasUserSubmittedFeedback($courseId, $userId, $feedbackPackageId) {
                                         echo "<i class='fas {$config['icon']} me-1'></i>{$config['label']}";
                                         echo "</a>";
                                     } elseif ($pre['prerequisite_type'] === 'assignment') {
-                                        // For assignment prerequisites, open modal popup
-                                        echo "<a class='prerequisite-action-btn {$config['class']}' href='#' onclick='openAssignmentModal(\"" . addslashes($encryptedPrereqId) . "\", \"" . addslashes(IdEncryption::encrypt($GLOBALS['course']['id'])) . "\")'>";
+                                        // Check assignment status
+                                        $userId = $_SESSION['user']['id'] ?? $_SESSION['id'] ?? 75;
+                                        $isAssignmentSubmitted = hasUserSubmittedAssignment($GLOBALS['course']['id'], $userId, $pre['prerequisite_id']);
+                                        $isAssignmentInProgress = hasUserInProgressAssignment($GLOBALS['course']['id'], $userId, $pre['prerequisite_id']);
+                                        
+                                        if ($isAssignmentSubmitted) {
+                                            // Show submitted assignment button
+                                            echo "<a class='prerequisite-action-btn btn-info' href='#' onclick='openAssignmentModal(\"" . addslashes($encryptedPrereqId) . "\", \"" . addslashes(IdEncryption::encrypt($GLOBALS['course']['id'])) . "\")' title='View submitted assignment'>";
+                                            echo "<i class='fas fa-check me-1'></i>View Submitted Assignment";
+                                            echo "</a>";
+                                        } elseif ($isAssignmentInProgress) {
+                                            // Show continue assignment button
+                                            echo "<a class='prerequisite-action-btn btn-warning' href='#' onclick='openAssignmentModal(\"" . addslashes($encryptedPrereqId) . "\", \"" . addslashes(IdEncryption::encrypt($GLOBALS['course']['id'])) . "\")' title='Continue working on assignment'>";
+                                            echo "<i class='fas fa-edit me-1'></i>Continue Assignment";
+                                            echo "</a>";
+                                        } else {
+                                            // Show start assignment button
+                                            echo "<a class='prerequisite-action-btn {$config['class']}' href='#' onclick='openAssignmentModal(\"" . addslashes($encryptedPrereqId) . "\", \"" . addslashes(IdEncryption::encrypt($GLOBALS['course']['id'])) . "\")'>";
+                                            echo "<i class='fas {$config['icon']} me-1'></i>{$config['label']}";
+                                            echo "</a>";
+                                        }
+                                    } elseif ($pre['prerequisite_type'] === 'document') {
+                                        // For document prerequisites, check if user has completed it
+                                        $userId = $_SESSION['user']['id'] ?? $_SESSION['id'] ?? 75;
+                                        $clientId = $_SESSION['user']['client_id'] ?? $_SESSION['client_id'] ?? 1;
+                                        
+                                        // Check if document is completed using completion tracking
+                                        require_once 'models/PrerequisiteCompletionModel.php';
+                                        $prereqCompletionModel = new PrerequisiteCompletionModel();
+                                        $isCompleted = $prereqCompletionModel->isPrerequisiteCompleted($userId, $GLOBALS['course']['id'], $pre['prerequisite_id'], 'document', $clientId);
+                                        
+                                        if ($isCompleted) {
+                                            // Show completed button
+                                            echo "<button class='prerequisite-action-btn prerequisite-action-disabled' disabled title='Document completed'>";
+                                            echo "<i class='fas fa-check me-1'></i>Completed";
+                                            echo "</button>";
+                                        } else {
+                                            // Get document data to construct proper URL
+                                            require_once 'config/Database.php';
+                                            $database = new Database();
+                                            $conn = $database->connect();
+                                            
+                                            $docSql = "SELECT title, word_excel_ppt_file, ebook_manual_file, research_file FROM documents WHERE id = ? AND (is_deleted = 0 OR is_deleted IS NULL)";
+                                            $docStmt = $conn->prepare($docSql);
+                                            $docStmt->execute([$pre['prerequisite_id']]);
+                                            $docData = $docStmt->fetch(PDO::FETCH_ASSOC);
+                                            
+                                            if ($docData) {
+                                                // Get the document file path
+                                                $file = $docData['word_excel_ppt_file'] ?: ($docData['ebook_manual_file'] ?: ($docData['research_file'] ?? null));
+                                                if ($file) {
+                                                    $resolved = (preg_match('#^(https?://|/)#i', $file) || strpos($file, 'uploads/') === 0)
+                                                        ? $file
+                                                        : ('uploads/documents/' . $file);
+                                                    
+                                                    // Construct the proper document viewer URL (same as module content)
+                                                    $viewer = UrlHelper::url('my-courses/view-content') . '?type=document&title=' . urlencode($docData['title']) . '&src=' . urlencode($resolved) . '&course_id=' . $GLOBALS['course']['id'] . '&content_id=' . $pre['prerequisite_id'] . '&document_package_id=' . $pre['prerequisite_id'] . '&prerequisite_id=' . $pre['prerequisite_id'];
+                                                    
+                                                    // Show view document button
+                                                    echo "<a class='prerequisite-action-btn {$config['class']} launch-content-btn' target='_blank' href='" . htmlspecialchars($viewer) . "' data-type='document' data-content-id='" . $pre['prerequisite_id'] . "' data-prerequisite-id='" . $pre['prerequisite_id'] . "'>";
+                                                    echo "<i class='fas {$config['icon']} me-1'></i>{$config['label']}";
+                                                    echo "</a>";
+                                                } else {
+                                                    // No file available
+                                                    echo "<span class='prerequisite-status text-muted'>";
+                                                    echo "<i class='fas fa-exclamation-triangle me-1'></i>No document file";
+                                                    echo "</span>";
+                                                }
+                                            } else {
+                                                // Document not found
+                                                echo "<span class='prerequisite-status text-muted'>";
+                                                echo "<i class='fas fa-exclamation-triangle me-1'></i>Document not found";
+                                                echo "</span>";
+                                            }
+                                        }
+                                    } elseif ($pre['prerequisite_type'] === 'external') {
+                                        // For external content prerequisites, use view-content with proper parameters
+                                        $viewer = UrlHelper::url('my-courses/view-content') . '?type=external&title=' . urlencode($pre['title']) . '&src=' . urlencode($pre['external_url'] ?? '') . '&course_id=' . $GLOBALS['course']['id'] . '&content_id=' . $pre['id'] . '&external_package_id=' . $pre['prerequisite_id'] . '&prerequisite_id=' . $pre['id'];
+                                        
+                                        // Add progress tracking attributes for external content
+                                        $progressAttrs = "data-external-content='true' " .
+                                                       "data-course-id='" . $GLOBALS['course']['id'] . "' " .
+                                                       "data-content-id='" . $pre['id'] . "' " .
+                                                       "data-external-package-id='" . $pre['prerequisite_id'] . "' " .
+                                                       "data-client-id='" . ($_SESSION['user']['client_id'] ?? '') . "' " .
+                                                       "data-user-id='" . ($_SESSION['user']['id'] ?? '') . "' " .
+                                                       "data-content-type='external' " .
+                                                       "data-auto-complete='false'";
+                                        
+                                        echo "<a class='prerequisite-action-btn {$config['class']} launch-content-btn external-content-launch' target='_blank' href='" . htmlspecialchars($viewer) . "' data-type='external' data-content-id='" . $pre['id'] . "' data-prerequisite-id='" . $pre['id'] . "' " . $progressAttrs . ">";
                                         echo "<i class='fas {$config['icon']} me-1'></i>{$config['label']}";
                                         echo "</a>";
                                     } else {
@@ -2027,20 +2166,26 @@ function hasUserSubmittedFeedback($courseId, $userId, $feedbackPackageId) {
             </div>
             
             <?php 
-            // Show modules completion status
+            // Show modules and course completion status from completion tables (no dynamic calculations)
+            require_once 'models/CourseCompletionModel.php';
+            require_once 'models/ModuleCompletionModel.php';
+
+            $userId = $_SESSION['user']['id'] ?? $_SESSION['id'] ?? null;
+            $clientId = $_SESSION['user']['client_id'] ?? $_SESSION['client_id'] ?? null;
+
+            $courseCompletionModel = new CourseCompletionModel();
+            $courseCompletion = $courseCompletionModel->getCompletion($userId, $course['id'], $clientId);
+            $overallModuleProgress = isset($courseCompletion['completion_percentage']) ? (int)$courseCompletion['completion_percentage'] : 0;
+
+            $moduleCompletionModel = new ModuleCompletionModel();
+            $moduleCompletions = $moduleCompletionModel->getCourseModuleCompletions($userId, $course['id'], $clientId);
+            $modulesTotalCount = count($moduleCompletions);
             $modulesCompletedCount = 0;
-            $modulesTotalCount = count($course['modules']);
-            $overallModuleProgress = 0;
-            foreach ($course['modules'] as $module) {
-                // Calculate real progress dynamically
-                $realProgress = calculateModuleRealProgress($module['id'], $course['id'], $_SESSION['user']['id']);
-                $progress = intval($realProgress ?? $module['real_progress'] ?? $module['module_progress'] ?? 0);
-                $overallModuleProgress += $progress;
-                if ($progress >= 100) {
-                    $modulesCompletedCount++;
-                }
+            $moduleIdToCompletion = [];
+            foreach ($moduleCompletions as $mc) {
+                if (!empty($mc['is_completed'])) { $modulesCompletedCount++; }
+                $moduleIdToCompletion[$mc['module_id']] = $mc;
             }
-            $overallModuleProgress = $modulesTotalCount > 0 ? round($overallModuleProgress / $modulesTotalCount) : 0;
             ?>
             
             <div class="modules-completion-status mb-4">
@@ -2093,15 +2238,10 @@ function hasUserSubmittedFeedback($courseId, $userId, $feedbackPackageId) {
                                             <div class="progress-info">
                                                 <div class="progress-text">
                                                     <?php 
-                                                    // Calculate real progress dynamically
-                                                    $realProgress = calculateModuleRealProgress($module['id'], $course['id'], $_SESSION['user']['id']);
-                                                    $realProgress = intval($realProgress ?? $module['real_progress'] ?? $module['module_progress'] ?? 0);
-                                                    $completedItems = intval($module['completed_items'] ?? 0);
-                                                    $totalItems = intval($module['total_items'] ?? 0);
+                                                    // Read module progress from module_completion table
+                                                    $mc = $moduleIdToCompletion[$module['id']] ?? null;
+                                                    $realProgress = $mc ? (int)$mc['completion_percentage'] : 0;
                                                     echo $realProgress . '% Complete';
-                                                    if ($totalItems > 0) {
-                                                        echo ' (' . $completedItems . '/' . $totalItems . ')';
-                                                    }
                                                     ?>
                                                 </div>
                                                 <div class="progress" role="progressbar" aria-label="Module progress" aria-valuenow="<?= $realProgress ?>" aria-valuemin="0" aria-valuemax="100">
@@ -2512,7 +2652,8 @@ function hasUserSubmittedFeedback($courseId, $userId, $feedbackPackageId) {
                                                                         $statusText = $hasPassed ? 'Passed' : 'Failed';
                                                                         $statusHtml .= "<div class='assessment-status mb-2'><div class='{$statusClass}'><i class='fas {$statusIcon} me-1'></i>{$statusText}</div>";
                                                                         if ($hasPassed) {
-                                                                            $statusHtml .= "<div class='text-muted mt-1'>(Score: {$assessmentResults['score']}/{$assessmentResults['max_score']} - {$assessmentResults['percentage']}%)</div>";
+                                                                            $statusHtml .= "<div class='text-muted mt-1'>Score: {$assessmentResults['score']}/{$assessmentResults['max_score']} - {$assessmentResults['percentage']}%</div>";
+                                                                            $statusHtml .= "<div class='text-success mt-1'><i class='fas fa-check me-1'></i>Completed</div>";
                                                                         }
                                                                         $statusHtml .= "</div>";
                                                                     }
@@ -2551,13 +2692,17 @@ function hasUserSubmittedFeedback($courseId, $userId, $feedbackPackageId) {
                                                                     $encryptedId = IdEncryption::encrypt($content['content_id']);
                                                                     $courseId = IdEncryption::encrypt($GLOBALS['course']['id']);
                                                                     
-                                                                    // Check if assignment has been submitted
+                                                                    // Check assignment status
                                                                     $userId = $_SESSION['user']['id'] ?? $_SESSION['id'] ?? 75;
                                                                     $isAssignmentSubmitted = hasUserSubmittedAssignment($GLOBALS['course']['id'], $userId, $content['content_id']);
+                                                                    $isAssignmentInProgress = hasUserInProgressAssignment($GLOBALS['course']['id'], $userId, $content['content_id']);
                                                                     
                                                                     if ($isAssignmentSubmitted) {
                                                                         // Show submitted assignment button
                                                                         $actionsHtml .= "<a class='postrequisite-action-btn btn-info' href='#' onclick='openAssignmentModal(\"" . addslashes($encryptedId) . "\", \"" . addslashes($courseId) . "\")' title='View submitted assignment'><i class='fas fa-check me-1'></i>View Submitted Assignment</a>";
+                                                                    } elseif ($isAssignmentInProgress) {
+                                                                        // Show continue assignment button
+                                                                        $actionsHtml .= "<a class='postrequisite-action-btn btn-warning' href='#' onclick='openAssignmentModal(\"" . addslashes($encryptedId) . "\", \"" . addslashes($courseId) . "\")' title='Continue working on assignment'><i class='fas fa-edit me-1'></i>Continue Assignment</a>";
                                                                     } else {
                                                                         // Show start assignment button
                                                                         $actionsHtml .= "<a href='#' onclick='openAssignmentModal(\"" . addslashes($encryptedId) . "\", \"" . addslashes($courseId) . "\")' class='postrequisite-action-btn btn-primary'><i class='fas fa-file-pen me-1'></i>Start Assignment</a>";
@@ -2868,10 +3013,27 @@ function hasUserSubmittedFeedback($courseId, $userId, $feedbackPackageId) {
                                     echo "<i class='fas {$config['icon']} me-1'></i>{$config['label']}";
                                     echo "</a>";
                                 } elseif ($post['content_type'] === 'assignment') {
-                                    // For assignment content, open modal popup
-                                    echo "<a class='postrequisite-action-btn {$config['class']}' href='#' onclick='openAssignmentModal(\"" . addslashes($encryptedPostreqId) . "\", \"" . addslashes(IdEncryption::encrypt($GLOBALS['course']['id'])) . "\")'>";
-                                    echo "<i class='fas {$config['icon']} me-1'></i>{$config['label']}";
-                                    echo "</a>";
+                                    // Check assignment status
+                                    $userId = $_SESSION['user']['id'] ?? $_SESSION['id'] ?? 75;
+                                    $isAssignmentSubmitted = hasUserSubmittedAssignment($GLOBALS['course']['id'], $userId, $post['content_id']);
+                                    $isAssignmentInProgress = hasUserInProgressAssignment($GLOBALS['course']['id'], $userId, $post['content_id']);
+                                    
+                                    if ($isAssignmentSubmitted) {
+                                        // Show submitted assignment button
+                                        echo "<a class='postrequisite-action-btn btn-info' href='#' onclick='openAssignmentModal(\"" . addslashes($encryptedPostreqId) . "\", \"" . addslashes(IdEncryption::encrypt($GLOBALS['course']['id'])) . "\")' title='View submitted assignment'>";
+                                        echo "<i class='fas fa-check me-1'></i>View Submitted Assignment";
+                                        echo "</a>";
+                                    } elseif ($isAssignmentInProgress) {
+                                        // Show continue assignment button
+                                        echo "<a class='postrequisite-action-btn btn-warning' href='#' onclick='openAssignmentModal(\"" . addslashes($encryptedPostreqId) . "\", \"" . addslashes(IdEncryption::encrypt($GLOBALS['course']['id'])) . "\")' title='Continue working on assignment'>";
+                                        echo "<i class='fas fa-edit me-1'></i>Continue Assignment";
+                                        echo "</a>";
+                                    } else {
+                                        // Show start assignment button
+                                        echo "<a class='postrequisite-action-btn {$config['class']}' href='#' onclick='openAssignmentModal(\"" . addslashes($encryptedPostreqId) . "\", \"" . addslashes(IdEncryption::encrypt($GLOBALS['course']['id'])) . "\")'>";
+                                        echo "<i class='fas {$config['icon']} me-1'></i>{$config['label']}";
+                                        echo "</a>";
+                                    }
                                 } else {
                                     // For other content types, use the existing start method
                                     echo "<a class='postrequisite-action-btn {$config['class']}' target='_blank' href='" . UrlHelper::url('my-courses/start') . '?type=' . urlencode($post['content_type']) . '&id=' . urlencode($encryptedPostreqId) . '&course_id=' . $GLOBALS['course']['id'] . "'>";
@@ -2957,6 +3119,7 @@ function hasUserSubmittedFeedback($courseId, $userId, $feedbackPackageId) {
 <script src="/Unlockyourskills/public/js/course_player.js"></script>
 <script src="/unlockyourskills/public/js/progress-tracking.js"></script>
 <script src="/Unlockyourskills/public/js/assignment_user_response_validation.js"></script>
+<script src="/Unlockyourskills/public/js/prerequisite-progress.js"></script>
 
 <script>
 // Expose user data to JavaScript for progress tracking
@@ -4406,15 +4569,25 @@ function checkAssignmentStatusAndUpdateButtons() {
                 .then(data => {
                     if (data.success) {
                         const buttonText = button.querySelector('i').nextSibling;
+                        const icon = button.querySelector('i');
+                        
                         if (data.has_submitted) {
                             // Update button text to "View Submitted Assignment"
                             buttonText.textContent = ' View Submitted Assignment';
-                            button.classList.remove('btn-primary');
+                            icon.className = 'fas fa-check me-1';
+                            button.classList.remove('btn-primary', 'btn-warning');
                             button.classList.add('btn-info');
+                        } else if (data.has_in_progress) {
+                            // Update button text to "Continue Assignment"
+                            buttonText.textContent = ' Continue Assignment';
+                            icon.className = 'fas fa-edit me-1';
+                            button.classList.remove('btn-primary', 'btn-info');
+                            button.classList.add('btn-warning');
                         } else {
                             // Keep original text "Start Assignment"
                             buttonText.textContent = ' Start Assignment';
-                            button.classList.remove('btn-info');
+                            icon.className = 'fas fa-file-pen me-1';
+                            button.classList.remove('btn-info', 'btn-warning');
                             button.classList.add('btn-primary');
                         }
                     }
@@ -4436,9 +4609,32 @@ function updateAssignmentButtonAfterSubmission(assignmentId, courseId) {
         const onclickAttr = button.getAttribute('onclick');
         if (onclickAttr.includes(assignmentId) && onclickAttr.includes(courseId)) {
             const buttonText = button.querySelector('i').nextSibling;
+            const icon = button.querySelector('i');
+            
             buttonText.textContent = ' View Submitted Assignment';
-            button.classList.remove('btn-primary');
+            icon.className = 'fas fa-check me-1';
+            button.classList.remove('btn-primary', 'btn-warning');
             button.classList.add('btn-info');
+        }
+    });
+}
+
+// Function to update assignment button to "Continue Assignment" after saving progress
+function updateAssignmentButtonToContinue(assignmentId, courseId) {
+    
+    // Find the specific assignment button (both prerequisites and module content)
+    const assignmentButtons = document.querySelectorAll('a[onclick*="openAssignmentModal"]');
+    
+    assignmentButtons.forEach(button => {
+        const onclickAttr = button.getAttribute('onclick');
+        if (onclickAttr.includes(assignmentId) && onclickAttr.includes(courseId)) {
+            const buttonText = button.querySelector('i').nextSibling;
+            const icon = button.querySelector('i');
+            
+            buttonText.textContent = ' Continue Assignment';
+            icon.className = 'fas fa-edit me-1';
+            button.classList.remove('btn-primary', 'btn-info');
+            button.classList.add('btn-warning');
         }
     });
 }
@@ -4666,38 +4862,71 @@ function openAssignmentModal(assignmentId, courseId) {
     const bsModal = new bootstrap.Modal(modal);
     bsModal.show();
     
-    // Load assignment form content
-    fetch(`/unlockyourskills/assignment-submission/modal-content?assignment_id=${encodeURIComponent(assignmentId)}&course_id=${encodeURIComponent(courseId)}`)
-        .then(response => response.json())
-        .then(data => {
-            if (data.success) {
-                modalBody.innerHTML = data.html;
-                
-                // Update modal title
-                const modalTitle = modal.querySelector('.modal-title');
-                modalTitle.innerHTML = `<i class="fas fa-file-pen me-2"></i>${data.title}`;
-                
-                // Initialize assignment form JavaScript
-                initializeAssignmentModalJavaScript();
-            } else {
-                modalBody.innerHTML = `
-                    <div class="alert alert-danger">
-                        <h5>Error</h5>
-                        <p>${data.message || 'Failed to load assignment. Please try again.'}</p>
-                        <button type="button" class="btn btn-secondary" onclick="openAssignmentModal('${assignmentId}', '${courseId}')">Try Again</button>
-                    </div>
-                `;
-            }
+    // Add event listener for modal close to refresh page (only if not already added)
+    if (!modal.hasAttribute('data-refresh-listener-added')) {
+        const handleAssignmentModalClose = () => {
+            window.location.reload();
+            modal.removeEventListener('hidden.bs.modal', handleAssignmentModalClose);
+            modal.removeAttribute('data-refresh-listener-added');
+        };
+        modal.addEventListener('hidden.bs.modal', handleAssignmentModalClose);
+        modal.setAttribute('data-refresh-listener-added', 'true');
+    }
+    
+    // Start assignment tracking first
+    fetch('/unlockyourskills/assignment-submission/start', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+            assignment_package_id: assignmentId,
+            course_id: courseId
         })
-        .catch(error => {
+    })
+    .then(response => response.json())
+    .then(startData => {
+        if (startData.success) {
+            console.log('Assignment tracking started:', startData);
+        } else {
+            console.warn('Failed to start assignment tracking:', startData.message);
+            // Continue loading the modal even if tracking fails
+        }
+        
+        // Load assignment form content
+        return fetch(`/unlockyourskills/assignment-submission/modal-content?assignment_id=${encodeURIComponent(assignmentId)}&course_id=${encodeURIComponent(courseId)}`);
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            modalBody.innerHTML = data.html;
+            
+            // Update modal title
+            const modalTitle = modal.querySelector('.modal-title');
+            modalTitle.innerHTML = `<i class="fas fa-file-pen me-2"></i>${data.title}`;
+            
+            // Initialize assignment form JavaScript
+            initializeAssignmentModalJavaScript();
+        } else {
             modalBody.innerHTML = `
                 <div class="alert alert-danger">
                     <h5>Error</h5>
-                    <p>Failed to load assignment. Please try again.</p>
+                    <p>${data.message || 'Failed to load assignment. Please try again.'}</p>
                     <button type="button" class="btn btn-secondary" onclick="openAssignmentModal('${assignmentId}', '${courseId}')">Try Again</button>
                 </div>
             `;
-        });
+        }
+    })
+    .catch(error => {
+        console.error('Error loading assignment:', error);
+        modalBody.innerHTML = `
+            <div class="alert alert-danger">
+                <h5>Error</h5>
+                <p>Failed to load assignment. Please try again.</p>
+                <button type="button" class="btn btn-secondary" onclick="openAssignmentModal('${assignmentId}', '${courseId}')">Try Again</button>
+            </div>
+        `;
+    });
 }
 
 function initializeAssignmentModalJavaScript() {
@@ -4845,6 +5074,114 @@ function initializeAssignmentModalJavaScript() {
                 submitBtn.innerHTML = originalText;
             });
         });
+        
+        // Save Progress Button Handler
+        const saveProgressBtn = document.getElementById('saveProgressBtn');
+        if (saveProgressBtn) {
+            saveProgressBtn.addEventListener('click', function(e) {
+                e.preventDefault();
+                
+                const originalText = saveProgressBtn.innerHTML;
+                
+                // Prevent double save by checking if already saving
+                if (saveProgressBtn.disabled) {
+                    return;
+                }
+                
+                // Show loading state
+                saveProgressBtn.disabled = true;
+                saveProgressBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>Saving...';
+                
+                // Collect form data
+                const formData = new FormData(form);
+                
+                // Save progress
+                fetch('/Unlockyourskills/assignment-submission/save-progress', {
+                    method: 'POST',
+                    body: formData
+                })
+                .then(response => {
+                    return response.json();
+                })
+                .then(data => {
+                    if (data.success) {
+                        // Close the modal immediately
+                        const modal = document.getElementById('assignmentModal');
+                        const bsModal = bootstrap.Modal.getInstance(modal);
+                        if (bsModal) {
+                            bsModal.hide();
+                        }
+                        
+                        // Show a brief success message before refresh
+                        const successToast = document.createElement('div');
+                        successToast.className = 'toast-container position-fixed top-0 end-0 p-3';
+                        successToast.style.zIndex = '9999';
+                        successToast.innerHTML = `
+                            <div class="toast show" role="alert" aria-live="assertive" aria-atomic="true">
+                                <div class="toast-header bg-success text-white">
+                                    <i class="fas fa-check-circle me-2"></i>
+                                    <strong class="me-auto">Success</strong>
+                                </div>
+                                <div class="toast-body">
+                                    ${data.message || 'Progress saved successfully!'}
+                                </div>
+                            </div>
+                        `;
+                        
+                        document.body.appendChild(successToast);
+                        
+                        // Refresh the page after a short delay to show the success message
+                        setTimeout(() => {
+                            window.location.reload();
+                        }, 1500);
+                    } else {
+                        // Show error message
+                        const errorAlert = document.createElement('div');
+                        errorAlert.className = 'alert alert-danger alert-dismissible fade show';
+                        errorAlert.innerHTML = `
+                            <i class="fas fa-exclamation-circle me-2"></i>
+                            ${data.message || 'Failed to save progress. Please try again.'}
+                            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                        `;
+                        
+                        // Insert at the top of the form
+                        form.insertBefore(errorAlert, form.firstChild);
+                        
+                        // Auto-dismiss after 5 seconds
+                        setTimeout(() => {
+                            if (errorAlert.parentNode) {
+                                errorAlert.remove();
+                            }
+                        }, 5000);
+                    }
+                })
+                .catch(error => {
+                    // Show error message
+                    const errorAlert = document.createElement('div');
+                    errorAlert.className = 'alert alert-danger alert-dismissible fade show';
+                    errorAlert.innerHTML = `
+                        <i class="fas fa-exclamation-circle me-2"></i>
+                        An error occurred while saving progress. Please try again.
+                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                    `;
+                    
+                    // Insert at the top of the form
+                    form.insertBefore(errorAlert, form.firstChild);
+                    
+                    // Auto-dismiss after 5 seconds
+                    setTimeout(() => {
+                        if (errorAlert.parentNode) {
+                            errorAlert.remove();
+                        }
+                    }, 5000);
+                })
+                .finally(() => {
+                    // Re-enable save button
+                    saveProgressBtn.disabled = false;
+                    saveProgressBtn.innerHTML = originalText;
+                });
+            });
+        }
     }
     
     // Call the initialization function
@@ -4858,6 +5195,7 @@ function initializeAssignmentModalJavaScript() {
 window.openSurveyModal = openSurveyModal;
 window.openAssignmentModal = openAssignmentModal;
 window.updateAssignmentButtonAfterSubmission = updateAssignmentButtonAfterSubmission;
+window.updateAssignmentButtonToContinue = updateAssignmentButtonToContinue;
 </script>
 
 <!-- Feedback Modal -->
@@ -4895,7 +5233,7 @@ window.updateAssignmentButtonAfterSubmission = updateAssignmentButtonAfterSubmis
 </div>
 
 <!-- Assignment Modal -->
-<div class="modal fade" id="assignmentModal" tabindex="-1" aria-labelledby="assignmentModalLabel" aria-hidden="true">
+<div class="modal fade" id="assignmentModal" tabindex="-1" aria-labelledby="assignmentModalLabel" aria-hidden="true" data-bs-backdrop="static" data-bs-keyboard="false">
     <div class="modal-dialog modal-lg">
         <div class="modal-content">
             <div class="modal-header">

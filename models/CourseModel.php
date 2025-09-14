@@ -943,6 +943,11 @@ class CourseModel
             ap.title as assessment_title,
             fp.title as feedback_title,
             ep.title as external_title,
+            ep.course_url as external_course_url,
+            ep.video_url as external_video_url,
+            ep.article_url as external_article_url,
+            ep.audio_url as external_audio_url,
+            ep.audio_file as external_audio_file,
             d.title as document_title,
             asg.title as assignment_title,
             aud.title as audio_title,
@@ -992,6 +997,16 @@ class CourseModel
                 case 'external':
                     $row['title'] = $row['external_title'];
                     $row['type'] = 'external';
+                    // Get the external content URL (same logic as in CourseModel::getCourseModuleContent)
+                    $extUrl = $row['external_course_url'] ?: ($row['external_video_url'] ?: ($row['external_article_url'] ?: ($row['external_audio_url'] ?: ($row['external_audio_file'] ?: ''))));
+                    if ($extUrl) {
+                        // Resolve the URL properly
+                        if (preg_match('#^(https?://|/)#i', $extUrl) || strpos($extUrl, 'uploads/') === 0) {
+                            $row['external_url'] = $extUrl;
+                        } else {
+                            $row['external_url'] = 'uploads/external/' . $extUrl;
+                        }
+                    }
                     break;
                 case 'document':
                     $row['title'] = $row['document_title'];
@@ -1603,9 +1618,184 @@ class CourseModel
         return $stmt->fetch(PDO::FETCH_ASSOC);
     }
     
-    // Calculate content completion progress for a module
+    // Calculate content completion progress for a module from completion tables
     public function getModuleContentProgress($moduleId, $userId, $clientId = null, $courseId = null)
     {
+        try {
+            // First try to get module completion data from module_completion table
+            if ($courseId && $clientId) {
+                $moduleCompletion = $this->getModuleCompletionData($userId, $courseId, $moduleId, $clientId);
+                
+                if ($moduleCompletion) {
+                    // Get all content items in the module for detailed breakdown
+                    $contentItems = $this->getModuleContent($moduleId);
+                    $totalItems = count($contentItems);
+                    
+                    return [
+                        'total_items' => $totalItems,
+                        'completed_items' => $this->calculateCompletedContentItems($contentItems, $userId, $clientId, $courseId),
+                        'progress_percentage' => (int) $moduleCompletion['completion_percentage'],
+                        'is_completed' => (bool) $moduleCompletion['is_completed'],
+                        'content_progress' => $this->getDetailedContentProgress($contentItems, $userId, $clientId, $courseId)
+                    ];
+                }
+            }
+            
+            // Fallback: calculate progress dynamically (original method)
+            return $this->calculateModuleProgressDynamically($moduleId, $userId, $clientId, $courseId);
+            
+        } catch (Exception $e) {
+            error_log("Error getting module content progress: " . $e->getMessage());
+            return [
+                'total_items' => 0,
+                'completed_items' => 0,
+                'progress_percentage' => 0,
+                'is_completed' => false,
+                'content_progress' => []
+            ];
+        }
+    }
+
+    /**
+     * Get module completion data from module_completion table
+     * @param int $userId
+     * @param int $courseId
+     * @param int $moduleId
+     * @param int $clientId
+     * @return array|null
+     */
+    private function getModuleCompletionData($userId, $courseId, $moduleId, $clientId) {
+        try {
+            $stmt = $this->conn->prepare("
+                SELECT completion_percentage, is_completed, time_spent, 
+                       started_at, completed_at, last_accessed_at
+                FROM module_completion 
+                WHERE user_id = ? AND course_id = ? AND module_id = ? AND client_id = ?
+            ");
+            $stmt->execute([$userId, $courseId, $moduleId, $clientId]);
+            return $stmt->fetch(PDO::FETCH_ASSOC);
+        } catch (Exception $e) {
+            error_log("Error getting module completion data: " . $e->getMessage());
+            return null;
+        }
+    }
+
+    /**
+     * Calculate completed content items count
+     * @param array $contentItems
+     * @param int $userId
+     * @param int $clientId
+     * @param int $courseId
+     * @return int
+     */
+    private function calculateCompletedContentItems($contentItems, $userId, $clientId, $courseId) {
+        $completedItems = 0;
+        
+        foreach ($contentItems as $content) {
+            $contentId = $content['content_id'];
+            $contentType = $content['content_type'];
+            $progress = 0;
+            
+            // Calculate progress based on content type
+            switch ($contentType) {
+                case 'assessment':
+                    $progress = $this->getAssessmentProgress($contentId, $userId, $clientId, $courseId);
+                    break;
+                case 'assignment':
+                    $progress = $this->getAssignmentProgress($contentId, $userId, $clientId, $courseId);
+                    break;
+                case 'scorm':
+                    $progress = $this->getScormProgress($content['id'], $userId, $clientId);
+                    break;
+                case 'document':
+                    $progress = $this->getDocumentProgress($content['id'], $userId, $clientId);
+                    break;
+                case 'video':
+                case 'audio':
+                case 'image':
+                case 'interactive':
+                case 'non_scorm':
+                case 'external':
+                    $progress = $this->getContentProgress($contentId, $userId, $clientId);
+                    break;
+            }
+            
+            if ($progress >= 100) {
+                $completedItems++;
+            }
+        }
+        
+        return $completedItems;
+    }
+
+    /**
+     * Get detailed content progress for each content item
+     * @param array $contentItems
+     * @param int $userId
+     * @param int $clientId
+     * @param int $courseId
+     * @return array
+     */
+    private function getDetailedContentProgress($contentItems, $userId, $clientId, $courseId) {
+        $detailedProgress = [];
+        
+        foreach ($contentItems as $content) {
+            $contentId = $content['content_id'];
+            $contentType = $content['content_type'];
+            $progress = 0;
+            $status = 'not_started';
+            
+            // Calculate progress based on content type
+            switch ($contentType) {
+                case 'assessment':
+                    $progress = $this->getAssessmentProgress($contentId, $userId, $clientId, $courseId);
+                    break;
+                case 'assignment':
+                    $progress = $this->getAssignmentProgress($contentId, $userId, $clientId, $courseId);
+                    break;
+                case 'scorm':
+                    $progress = $this->getScormProgress($content['id'], $userId, $clientId);
+                    break;
+                case 'document':
+                    $progress = $this->getDocumentProgress($content['id'], $userId, $clientId);
+                    break;
+                case 'video':
+                case 'audio':
+                case 'image':
+                case 'interactive':
+                case 'non_scorm':
+                case 'external':
+                    $progress = $this->getContentProgress($contentId, $userId, $clientId);
+                    break;
+            }
+            
+            // Determine status
+            if ($progress >= 100) {
+                $status = 'completed';
+            } elseif ($progress > 0) {
+                $status = 'in_progress';
+            }
+            
+            $detailedProgress[] = [
+                'content_id' => $contentId,
+                'content_type' => $contentType,
+                'progress' => $progress,
+                'status' => $status
+            ];
+        }
+        
+        return $detailedProgress;
+    }
+
+    /**
+     * Calculate module progress dynamically (original method as fallback)
+     * @param int $moduleId
+     * @param int $userId
+     * @param int $clientId
+     * @param int $courseId
+     * @return array
+     */
+    private function calculateModuleProgressDynamically($moduleId, $userId, $clientId, $courseId) {
         // Get all content items in the module
         $contentItems = $this->getModuleContent($moduleId);
         $totalItems = count($contentItems);
@@ -1617,6 +1807,7 @@ class CourseModel
                 'total_items' => 0,
                 'completed_items' => 0,
                 'progress_percentage' => 0,
+                'is_completed' => false,
                 'content_progress' => []
             ];
         }
@@ -1633,7 +1824,7 @@ class CourseModel
                     $progress = $this->getAssessmentProgress($contentId, $userId, $clientId, $courseId);
                     break;
                 case 'assignment':
-                    $progress = $this->getAssignmentProgress($contentId, $userId, $clientId);
+                    $progress = $this->getAssignmentProgress($contentId, $userId, $clientId, $courseId);
                     break;
                 case 'scorm':
                     // For SCORM, use the course_module_content.id, not the content_id
@@ -1673,6 +1864,7 @@ class CourseModel
             'total_items' => $totalItems,
             'completed_items' => $completedItems,
             'progress_percentage' => $overallProgress,
+            'is_completed' => $overallProgress >= 100,
             'content_progress' => $contentItems
         ];
     }
@@ -1698,13 +1890,19 @@ class CourseModel
         }
     }
     
-    private function getAssignmentProgress($assignmentId, $userId, $clientId)
+    private function getAssignmentProgress($assignmentId, $userId, $clientId, $courseId = null)
     {
         try {
             require_once 'models/AssignmentSubmissionModel.php';
             $assignmentModel = new AssignmentSubmissionModel();
             
-            // Get the course ID from the course_module_content table
+            // If courseId is provided, use it directly
+            if ($courseId) {
+                $hasSubmitted = $assignmentModel->hasUserSubmittedAssignment($courseId, $userId, $assignmentId);
+                return $hasSubmitted ? 100 : 0; // 100% if submitted, 0% if not
+            }
+            
+            // Fallback: Get the course ID from the course_module_content table
             $stmt = $this->conn->prepare("
                 SELECT cm.course_id 
                 FROM course_module_content cmc

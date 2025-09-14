@@ -320,6 +320,11 @@ Router::get('/users/autocomplete', 'UserManagementController@getUserEmailsForAut
     Router::post('/api/document-progress/notes', 'DocumentProgressController@saveNotes');
     Router::get('/api/document-progress/debug', 'DocumentProgressController@debug');
     
+    // Prerequisite Progress API
+    Router::post('/api/prerequisite-progress/start', 'PrerequisiteProgressController@startTracking');
+    Router::post('/api/prerequisite-progress/complete', 'PrerequisiteProgressController@markComplete');
+    Router::get('/api/prerequisite-progress/get', 'PrerequisiteProgressController@getProgress');
+    
     // Debug route for testing
     Router::get('/api/debug', 'MyCoursesController@debug');
 
@@ -475,6 +480,8 @@ Router::get('/users/autocomplete', 'UserManagementController@getUserEmailsForAut
     // Assignment Submission Management
     Router::get('/assignment-submission/{courseId}/{assignmentId}', 'AssignmentSubmissionController@showAssignment');
     Router::get('/assignment-submission/modal-content', 'AssignmentSubmissionController@getAssignmentModalContent');
+    Router::post('/assignment-submission/start', 'AssignmentSubmissionController@startAssignment');
+    Router::post('/assignment-submission/save-progress', 'AssignmentSubmissionController@saveProgress');
     Router::post('/assignment-submission/submit', 'AssignmentSubmissionController@submitAssignment');
     Router::get('/assignment-submission/submissions', 'AssignmentSubmissionController@getSubmissions');
     Router::get('/assignment-submission/check-status', 'AssignmentSubmissionController@checkSubmissionStatus');

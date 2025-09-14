@@ -18,22 +18,134 @@ class SurveyResponseModel {
     }
 
     /**
+     * Start a survey (create initial entry with started_at)
+     */
+    public function startSurvey($clientId, $courseId, $userId, $surveyPackageId) {
+        try {
+            $sql = "INSERT INTO course_survey_responses 
+                    (client_id, course_id, user_id, survey_package_id, question_id, response_type, 
+                     rating_value, text_response, choice_response, file_response, response_data, started_at, submitted_at) 
+                    VALUES 
+                    (:client_id, :course_id, :user_id, :survey_package_id, :question_id, :response_type,
+                     :rating_value, :text_response, :choice_response, :file_response, :response_data, NOW(), NULL)
+                    ON DUPLICATE KEY UPDATE
+                    started_at = CASE WHEN started_at IS NULL THEN NOW() ELSE started_at END,
+                    submitted_at = NULL,
+                    updated_at = CURRENT_TIMESTAMP";
+
+            $stmt = $this->conn->prepare($sql);
+            $params = [
+                ':client_id' => $clientId,
+                ':course_id' => $courseId,
+                ':user_id' => $userId,
+                ':survey_package_id' => $surveyPackageId,
+                ':question_id' => 7, // Using existing question ID 7
+                ':response_type' => 'survey_start',
+                ':rating_value' => null,
+                ':text_response' => 'Survey started',
+                ':choice_response' => null,
+                ':file_response' => null,
+                ':response_data' => null
+            ];
+
+            $result = $stmt->execute($params);
+            
+            if ($result) {
+                return $this->conn->lastInsertId();
+            } else {
+                $this->lastErrorMessage = "Failed to start survey";
+                return false;
+            }
+        } catch (PDOException $e) {
+            $this->lastErrorMessage = "Database error: " . $e->getMessage();
+            return false;
+        }
+    }
+
+    /**
+     * Complete a survey (update with completed_at and response data)
+     */
+    public function completeSurvey($clientId, $courseId, $userId, $surveyPackageId, $responses = []) {
+        try {
+            // Prepare response data for storage
+            $responseData = null;
+            $textResponse = null;
+            $choiceResponse = null;
+            $fileResponse = null;
+            $ratingValue = null;
+            
+            if (!empty($responses)) {
+                // Store all responses as JSON in response_data
+                $responseData = json_encode($responses);
+                
+                // Also store a summary in text_response
+                $responseSummary = [];
+                foreach ($responses as $questionId => $response) {
+                    $responseSummary[] = "Q{$questionId}: " . (is_array($response['value']) ? implode(', ', $response['value']) : $response['value']);
+                }
+                $textResponse = implode(' | ', $responseSummary);
+            }
+            
+            $sql = "UPDATE course_survey_responses 
+                    SET completed_at = NOW(),
+                        submitted_at = NOW(),
+                        text_response = :text_response,
+                        choice_response = :choice_response,
+                        file_response = :file_response,
+                        rating_value = :rating_value,
+                        response_data = :response_data,
+                        updated_at = CURRENT_TIMESTAMP
+                    WHERE client_id = :client_id 
+                    AND course_id = :course_id 
+                    AND user_id = :user_id 
+                    AND survey_package_id = :survey_package_id
+                    AND response_type = 'survey_start'";
+
+            $stmt = $this->conn->prepare($sql);
+            $params = [
+                ':client_id' => $clientId,
+                ':course_id' => $courseId,
+                ':user_id' => $userId,
+                ':survey_package_id' => $surveyPackageId,
+                ':text_response' => $textResponse,
+                ':choice_response' => $choiceResponse,
+                ':file_response' => $fileResponse,
+                ':rating_value' => $ratingValue,
+                ':response_data' => $responseData
+            ];
+
+            $result = $stmt->execute($params);
+            
+            if ($result) {
+                return $stmt->rowCount() > 0;
+            } else {
+                $this->lastErrorMessage = "Failed to complete survey";
+                return false;
+            }
+        } catch (PDOException $e) {
+            $this->lastErrorMessage = "Database error: " . $e->getMessage();
+            return false;
+        }
+    }
+
+    /**
      * Save a survey response
      */
     public function saveResponse($data) {
         try {
             $sql = "INSERT INTO course_survey_responses 
                     (client_id, course_id, user_id, survey_package_id, question_id, response_type, 
-                     rating_value, text_response, choice_response, file_response, response_data) 
+                     rating_value, text_response, choice_response, file_response, response_data, submitted_at) 
                     VALUES 
                     (:client_id, :course_id, :user_id, :survey_package_id, :question_id, :response_type,
-                     :rating_value, :text_response, :choice_response, :file_response, :response_data)
+                     :rating_value, :text_response, :choice_response, :file_response, :response_data, NOW())
                     ON DUPLICATE KEY UPDATE
                     rating_value = VALUES(rating_value),
                     text_response = VALUES(text_response),
                     choice_response = VALUES(choice_response),
                     file_response = VALUES(file_response),
                     response_data = VALUES(response_data),
+                    submitted_at = NOW(),
                     updated_at = CURRENT_TIMESTAMP";
 
             $stmt = $this->conn->prepare($sql);
@@ -70,52 +182,125 @@ class SurveyResponseModel {
      */
     public function getResponsesByCourseAndUser($courseId, $userId, $surveyPackageId = null) {
         try {
-            $sql = "SELECT csr.*, sq.title as question_title, sq.type as question_type, 
-                           sqo.option_text as option_text
-                    FROM course_survey_responses csr
-                    JOIN survey_questions sq ON csr.question_id = sq.id
-                    LEFT JOIN survey_question_options sqo ON csr.choice_response = sqo.id
-                    WHERE csr.course_id = ? AND csr.user_id = ?";
+            // First, check if we have a survey_start record (new single-entry approach)
+            $sql = "SELECT * FROM course_survey_responses 
+                    WHERE course_id = ? AND user_id = ? AND response_type = 'survey_start'";
             
             $params = [$courseId, $userId];
             
             if ($surveyPackageId) {
-                $sql .= " AND csr.survey_package_id = ?";
+                $sql .= " AND survey_package_id = ?";
                 $params[] = $surveyPackageId;
             }
             
-            $sql .= " ORDER BY csr.submitted_at DESC";
-            
             $stmt = $this->conn->prepare($sql);
             $stmt->execute($params);
+            $surveyStartRecord = $stmt->fetch(PDO::FETCH_ASSOC);
             
-            $responses = $stmt->fetchAll(PDO::FETCH_ASSOC);
-            
-            // Process checkbox responses to get actual option texts
-            foreach ($responses as &$response) {
-                if ($response['response_type'] === 'checkbox' && !empty($response['response_data'])) {
-                    $selectedOptionIds = json_decode($response['response_data'], true);
-                    
-                    // Handle both single values and arrays
-                    if (!is_array($selectedOptionIds)) {
-                        // Single value - convert to array
-                        $selectedOptionIds = [$selectedOptionIds];
-                    }
-                    
-                    if (is_array($selectedOptionIds)) {
-                        $optionTexts = [];
-                        foreach ($selectedOptionIds as $optionId) {
-                            $optionText = $this->getOptionTextById($optionId);
-                            if ($optionText) {
-                                $optionTexts[] = $optionText;
+            if ($surveyStartRecord && !empty($surveyStartRecord['response_data'])) {
+                // New single-entry approach - parse the response_data JSON
+                $responseData = json_decode($surveyStartRecord['response_data'], true);
+                $responses = [];
+                
+                if (is_array($responseData)) {
+                    foreach ($responseData as $questionId => $questionResponse) {
+                        // Get question details
+                        $questionSql = "SELECT title, type FROM survey_questions WHERE id = ?";
+                        $questionStmt = $this->conn->prepare($questionSql);
+                        $questionStmt->execute([$questionId]);
+                        $question = $questionStmt->fetch(PDO::FETCH_ASSOC);
+                        
+                        if ($question) {
+                            $response = [
+                                'question_id' => $questionId,
+                                'question_title' => $question['title'],
+                                'question_type' => $question['type'],
+                                'response_type' => $questionResponse['type'],
+                                'text_response' => $surveyStartRecord['text_response'],
+                                'submitted_at' => $surveyStartRecord['submitted_at'],
+                                'completed_at' => $surveyStartRecord['completed_at'],
+                                'started_at' => $surveyStartRecord['started_at']
+                            ];
+                            
+                            // Handle different response types
+                            if ($questionResponse['type'] === 'checkbox' && isset($questionResponse['value'])) {
+                                $selectedOptionIds = $questionResponse['value'];
+                                if (!is_array($selectedOptionIds)) {
+                                    $selectedOptionIds = [$selectedOptionIds];
+                                }
+                                
+                                $optionTexts = [];
+                                foreach ($selectedOptionIds as $optionId) {
+                                    $optionText = $this->getOptionTextById($optionId);
+                                    if ($optionText) {
+                                        $optionTexts[] = $optionText;
+                                    }
+                                }
+                                $response['checkbox_options'] = $optionTexts;
+                            } elseif ($questionResponse['type'] === 'choice' && isset($questionResponse['value'])) {
+                                $optionText = $this->getOptionTextById($questionResponse['value']);
+                                $response['option_text'] = $optionText;
+                            } elseif ($questionResponse['type'] === 'text' && isset($questionResponse['value'])) {
+                                $response['text_response'] = $questionResponse['value'];
+                            } elseif ($questionResponse['type'] === 'rating' && isset($questionResponse['value'])) {
+                                $response['rating_value'] = $questionResponse['value'];
                             }
+                            
+                            $responses[] = $response;
                         }
-                        $response['checkbox_options'] = $optionTexts;
                     }
                 }
+                
+                return $responses;
+            } else {
+                // Fallback to old approach for individual question records
+                $sql = "SELECT csr.*, sq.title as question_title, sq.type as question_type, 
+                               sqo.option_text as option_text
+                        FROM course_survey_responses csr
+                        JOIN survey_questions sq ON csr.question_id = sq.id
+                        LEFT JOIN survey_question_options sqo ON csr.choice_response = sqo.id
+                        WHERE csr.course_id = ? AND csr.user_id = ?";
+                
+                $params = [$courseId, $userId];
+                
+                if ($surveyPackageId) {
+                    $sql .= " AND csr.survey_package_id = ?";
+                    $params[] = $surveyPackageId;
+                }
+                
+                $sql .= " ORDER BY csr.submitted_at DESC";
+                
+                $stmt = $this->conn->prepare($sql);
+                $stmt->execute($params);
+                
+                $responses = $stmt->fetchAll(PDO::FETCH_ASSOC);
+                
+                // Process checkbox responses to get actual option texts
+                foreach ($responses as &$response) {
+                    if ($response['response_type'] === 'checkbox' && !empty($response['response_data'])) {
+                        $selectedOptionIds = json_decode($response['response_data'], true);
+                        
+                        // Handle both single values and arrays
+                        if (!is_array($selectedOptionIds)) {
+                            // Single value - convert to array
+                            $selectedOptionIds = [$selectedOptionIds];
+                        }
+                        
+                        if (is_array($selectedOptionIds)) {
+                            $optionTexts = [];
+                            foreach ($selectedOptionIds as $optionId) {
+                                $optionText = $this->getOptionTextById($optionId);
+                                if ($optionText) {
+                                    $optionTexts[] = $optionText;
+                                }
+                            }
+                            $response['checkbox_options'] = $optionTexts;
+                        }
+                    }
+                }
+                
+                return $responses;
             }
-            
-            return $responses;
         } catch (PDOException $e) {
             return [];
         }
@@ -141,8 +326,10 @@ class SurveyResponseModel {
      */
     public function hasUserSubmittedSurvey($courseId, $userId, $surveyPackageId) {
         try {
+            // Check for survey completion by looking for completed_at timestamp
             $sql = "SELECT COUNT(*) FROM course_survey_responses 
-                    WHERE course_id = ? AND user_id = ? AND survey_package_id = ?";
+                    WHERE course_id = ? AND user_id = ? AND survey_package_id = ? 
+                    AND response_type = 'survey_start' AND completed_at IS NOT NULL";
             
             $stmt = $this->conn->prepare($sql);
             $stmt->execute([$courseId, $userId, $surveyPackageId]);

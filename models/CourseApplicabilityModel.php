@@ -113,7 +113,7 @@ class CourseApplicabilityModel {
                 break;
             } elseif ($rule['applicability_type'] === 'custom_field') {
                 // Users with the custom field value - use client_id from applicability rule
-                $sql = "SELECT id FROM users WHERE client_id = :client_id AND customised_{$rule['custom_field_id']} = :field_value AND is_deleted = 0";
+                $sql = "SELECT id FROM user_profiles WHERE client_id = :client_id AND customised_{$rule['custom_field_id']} = :field_value AND is_deleted = 0";
                 $stmt = $this->conn->prepare($sql);
                 $stmt->execute([':client_id' => $rule['client_id'], ':field_value' => $rule['custom_field_value']]);
                 $ids = $stmt->fetchAll(PDO::FETCH_COLUMN);
@@ -126,7 +126,7 @@ class CourseApplicabilityModel {
             // Fetch all users for the course's client - use client_id from applicability rule
             $firstRule = reset($applicabilities);
             if ($firstRule && isset($firstRule['client_id'])) {
-                $sql = "SELECT u.id FROM users u WHERE u.client_id = :client_id AND u.is_deleted = 0";
+                $sql = "SELECT u.id FROM user_profiles u WHERE u.client_id = :client_id AND u.is_deleted = 0";
                 $stmt = $this->conn->prepare($sql);
                 $stmt->execute([':client_id' => $firstRule['client_id']]);
                 $userIds = $stmt->fetchAll(PDO::FETCH_COLUMN);

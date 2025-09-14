@@ -67,6 +67,7 @@ class ExternalProgressController {
         $courseId = $_POST['course_id'] ?? null;
         $contentId = $_POST['content_id'] ?? null;
         $timeSpent = $_POST['time_spent'] ?? 0;
+        $isCompleted = isset($_POST['is_completed']) ? $_POST['is_completed'] : null;
         $clientId = $_SESSION['user']['client_id'] ?? null;
 
         if (!$userId || !$courseId || !$contentId || !$clientId) {
@@ -76,11 +77,27 @@ class ExternalProgressController {
         }
 
         try {
-            $result = $this->externalProgressModel->updateTimeSpent(
-                $userId, $courseId, $contentId, $clientId, $timeSpent
+            // Get current progress to preserve existing completion status
+            $currentProgress = $this->externalProgressModel->getProgress($userId, $courseId, $contentId, $clientId);
+            $currentIsCompleted = $currentProgress ? $currentProgress['is_completed'] : 0;
+            $currentCompletionNotes = $currentProgress ? $currentProgress['completion_notes'] : null;
+            
+            // Use updateProgress method instead of updateTimeSpent to get the calculation logic
+            $updateData = [
+                'visit_count' => 1, // Default visit count
+                'time_spent' => $timeSpent,
+                'is_completed' => $isCompleted !== null ? $isCompleted : $currentIsCompleted,
+                'completion_notes' => $currentCompletionNotes // Preserve existing completion notes
+            ];
+
+            $result = $this->externalProgressModel->updateProgress(
+                $userId, $courseId, $contentId, $clientId, $updateData
             );
 
             if ($result) {
+                // Update prerequisite completion if this external content is a prerequisite
+                $this->updatePrerequisiteCompletionIfApplicable($userId, $courseId, $contentId, $clientId);
+                
                 echo json_encode(['success' => true, 'message' => 'Time spent updated successfully']);
             } else {
                 http_response_code(500);
@@ -117,11 +134,20 @@ class ExternalProgressController {
         }
 
         try {
+            // Note: Completion tracking is now handled only when content is actually completed
+
             $result = $this->externalProgressModel->markCompleted(
                 $userId, $courseId, $contentId, $clientId, $completionNotes
             );
 
             if ($result) {
+                // Update completion tracking
+                require_once 'models/CompletionTrackingService.php';
+                $completionService = new CompletionTrackingService();
+                $completionService->handleContentCompletion($userId, $courseId, $contentId, 'external', $clientId);
+                
+                // Completion tracking is already handled by handleContentCompletion above
+
                 echo json_encode(['success' => true, 'message' => 'Content marked as completed']);
             } else {
                 http_response_code(500);
@@ -262,6 +288,9 @@ class ExternalProgressController {
             );
 
             if ($result) {
+                // Update prerequisite completion if this external content is a prerequisite
+                $this->updatePrerequisiteCompletionIfApplicable($userId, $courseId, $contentId, $clientId);
+                
                 echo json_encode(['success' => true, 'message' => 'Progress updated successfully']);
             } else {
                 http_response_code(500);
@@ -402,6 +431,99 @@ class ExternalProgressController {
             error_log("Error in batchUpdate: " . $e->getMessage());
             http_response_code(500);
             echo json_encode(['success' => false, 'message' => 'Internal server error']);
+        }
+    }
+
+    /**
+     * Check if external content is a prerequisite and start tracking
+     */
+    private function startPrerequisiteTrackingIfApplicable($userId, $courseId, $contentId, $clientId) {
+        try {
+            require_once 'models/CompletionTrackingService.php';
+            $completionService = new CompletionTrackingService();
+            
+            // Check if this external content is a prerequisite
+            $isPrerequisite = $this->isContentPrerequisite($courseId, $contentId, 'external');
+            
+            if ($isPrerequisite) {
+                $completionService->startPrerequisiteTracking($userId, $courseId, $contentId, 'external', $clientId);
+            }
+        } catch (Exception $e) {
+            error_log("Error in startPrerequisiteTrackingIfApplicable: " . $e->getMessage());
+        }
+    }
+
+    /**
+     * Start module tracking if external content belongs to a module
+     */
+    private function startModuleTrackingIfApplicable($userId, $courseId, $contentId, $contentType, $clientId) {
+        try {
+            require_once 'models/CompletionTrackingService.php';
+            $completionService = new CompletionTrackingService();
+            
+            // Start module tracking if this content belongs to a module
+            $completionService->startModuleTrackingIfApplicable($userId, $courseId, $contentId, $contentType, $clientId);
+        } catch (Exception $e) {
+            error_log("Error in startModuleTrackingIfApplicable: " . $e->getMessage());
+        }
+    }
+
+    /**
+     * Check if external content is a prerequisite and mark as complete
+     */
+    private function markPrerequisiteCompleteIfApplicable($userId, $courseId, $contentId, $clientId) {
+        try {
+            require_once 'models/CompletionTrackingService.php';
+            $completionService = new CompletionTrackingService();
+            
+            // Check if this external content is a prerequisite
+            $isPrerequisite = $this->isContentPrerequisite($courseId, $contentId, 'external');
+            
+            if ($isPrerequisite) {
+                $completionService->markPrerequisiteComplete($userId, $courseId, $contentId, 'external', $clientId);
+            }
+        } catch (Exception $e) {
+            error_log("Error in markPrerequisiteCompleteIfApplicable: " . $e->getMessage());
+        }
+    }
+
+    /**
+     * Check if content is a prerequisite
+     */
+    private function isContentPrerequisite($courseId, $contentId, $contentType) {
+        try {
+            require_once 'config/Database.php';
+            $database = new Database();
+            $conn = $database->connect();
+            
+            $sql = "SELECT COUNT(*) FROM course_prerequisites 
+                    WHERE course_id = ? AND prerequisite_id = ? AND prerequisite_type = ?";
+            $stmt = $conn->prepare($sql);
+            $stmt->execute([$courseId, $contentId, $contentType]);
+            
+            return $stmt->fetchColumn() > 0;
+        } catch (Exception $e) {
+            error_log("Error checking if content is prerequisite: " . $e->getMessage());
+            return false;
+        }
+    }
+
+    /**
+     * Update prerequisite completion if external content is a prerequisite
+     */
+    private function updatePrerequisiteCompletionIfApplicable($userId, $courseId, $contentId, $clientId) {
+        try {
+            require_once 'models/CompletionTrackingService.php';
+            $completionService = new CompletionTrackingService();
+            
+            // Check if this external content is a prerequisite
+            $isPrerequisite = $this->isContentPrerequisite($courseId, $contentId, 'external');
+            
+            if ($isPrerequisite) {
+                $completionService->updatePrerequisiteCompletion($userId, $courseId, $contentId, 'external', $clientId);
+            }
+        } catch (Exception $e) {
+            error_log("Error in updatePrerequisiteCompletionIfApplicable: " . $e->getMessage());
         }
     }
 }
