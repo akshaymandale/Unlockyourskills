@@ -46,6 +46,8 @@ class AudioProgressController {
             exit;
         }
 
+        // Note: Completion tracking is now handled only when content is actually completed
+
         try {
             // Get or create progress record
             $progress = $this->audioProgressModel->getOrCreateProgress(
@@ -83,6 +85,13 @@ class AudioProgressController {
             $success = $this->audioProgressModel->updateProgress($progress['id'], $updateData);
 
             if ($success) {
+                // If audio is completed, update completion tracking
+                if ($isCompleted) {
+                    require_once 'models/CompletionTrackingService.php';
+                    $completionService = new CompletionTrackingService();
+                    $completionService->handleContentCompletion($userId, $courseId, $contentId, 'audio', $clientId);
+                }
+
                 echo json_encode([
                     'success' => true,
                     'progress' => [
@@ -391,6 +400,12 @@ class AudioProgressController {
             $success = $this->audioProgressModel->markAsCompleted($progressId);
             
             if ($success) {
+                // Get progress details for prerequisite tracking
+                $progress = $this->audioProgressModel->getProgressById($progressId);
+                if ($progress) {
+                    $this->markPrerequisiteCompleteIfApplicable($progress['user_id'], $progress['course_id'], $progress['content_id'], $progress['client_id']);
+                }
+                
                 echo json_encode(['success' => true, 'message' => 'Audio marked as completed']);
             } else {
                 throw new Exception('Failed to mark as completed');
@@ -618,6 +633,80 @@ class AudioProgressController {
             error_log("Audio content info error: " . $e->getMessage());
             http_response_code(500);
             echo json_encode(['success' => false, 'message' => 'Failed to fetch content info']);
+        }
+    }
+
+    /**
+     * Check if audio is a prerequisite and start tracking
+     */
+    private function startPrerequisiteTrackingIfApplicable($userId, $courseId, $contentId, $clientId) {
+        try {
+            require_once 'models/CompletionTrackingService.php';
+            $completionService = new CompletionTrackingService();
+            
+            // Check if this audio is a prerequisite
+            $isPrerequisite = $this->isContentPrerequisite($courseId, $contentId, 'audio');
+            
+            if ($isPrerequisite) {
+                $completionService->startPrerequisiteTracking($userId, $courseId, $contentId, 'audio', $clientId);
+            }
+        } catch (Exception $e) {
+            error_log("Error in startPrerequisiteTrackingIfApplicable: " . $e->getMessage());
+        }
+    }
+
+    /**
+     * Start module tracking if audio belongs to a module
+     */
+    private function startModuleTrackingIfApplicable($userId, $courseId, $contentId, $contentType, $clientId) {
+        try {
+            require_once 'models/CompletionTrackingService.php';
+            $completionService = new CompletionTrackingService();
+            
+            // Start module tracking if this content belongs to a module
+            $completionService->startModuleTrackingIfApplicable($userId, $courseId, $contentId, $contentType, $clientId);
+        } catch (Exception $e) {
+            error_log("Error in startModuleTrackingIfApplicable: " . $e->getMessage());
+        }
+    }
+
+    /**
+     * Check if audio is a prerequisite and mark as complete
+     */
+    private function markPrerequisiteCompleteIfApplicable($userId, $courseId, $contentId, $clientId) {
+        try {
+            require_once 'models/CompletionTrackingService.php';
+            $completionService = new CompletionTrackingService();
+            
+            // Check if this audio is a prerequisite
+            $isPrerequisite = $this->isContentPrerequisite($courseId, $contentId, 'audio');
+            
+            if ($isPrerequisite) {
+                $completionService->markPrerequisiteComplete($userId, $courseId, $contentId, 'audio', $clientId);
+            }
+        } catch (Exception $e) {
+            error_log("Error in markPrerequisiteCompleteIfApplicable: " . $e->getMessage());
+        }
+    }
+
+    /**
+     * Check if content is a prerequisite
+     */
+    private function isContentPrerequisite($courseId, $contentId, $contentType) {
+        try {
+            require_once 'config/Database.php';
+            $database = new Database();
+            $conn = $database->connect();
+            
+            $sql = "SELECT COUNT(*) FROM course_prerequisites 
+                    WHERE course_id = ? AND prerequisite_id = ? AND prerequisite_type = ?";
+            $stmt = $conn->prepare($sql);
+            $stmt->execute([$courseId, $contentId, $contentType]);
+            
+            return $stmt->fetchColumn() > 0;
+        } catch (Exception $e) {
+            error_log("Error checking if content is prerequisite: " . $e->getMessage());
+            return false;
         }
     }
 }

@@ -28,15 +28,33 @@ class AssignmentSubmissionModel {
      */
     public function saveSubmission($data) {
         try {
-            $sql = "INSERT INTO assignment_submissions (
-                client_id, course_id, user_id, assignment_package_id,
-                submission_type, submission_file, submission_text, submission_url,
-                submission_status, due_date, is_late, attempt_number
-            ) VALUES (
-                :client_id, :course_id, :user_id, :assignment_package_id,
-                :submission_type, :submission_file, :submission_text, :submission_url,
-                :submission_status, :due_date, :is_late, :attempt_number
-            )";
+            // Build SQL based on submission status
+            $submissionStatus = $data['submission_status'] ?? 'submitted';
+            if ($submissionStatus === 'submitted') {
+                $sql = "INSERT INTO assignment_submissions (
+                    client_id, course_id, user_id, assignment_package_id,
+                    submission_type, submission_file, submission_text, submission_url,
+                    submission_status, due_date, is_late, attempt_number,
+                    started_at, submitted_at, completed_at, updated_at
+                ) VALUES (
+                    :client_id, :course_id, :user_id, :assignment_package_id,
+                    :submission_type, :submission_file, :submission_text, :submission_url,
+                    :submission_status, :due_date, :is_late, :attempt_number,
+                    :started_at, NOW(), NOW(), NOW()
+                )";
+            } else {
+                $sql = "INSERT INTO assignment_submissions (
+                    client_id, course_id, user_id, assignment_package_id,
+                    submission_type, submission_file, submission_text, submission_url,
+                    submission_status, due_date, is_late, attempt_number,
+                    started_at, updated_at
+                ) VALUES (
+                    :client_id, :course_id, :user_id, :assignment_package_id,
+                    :submission_type, :submission_file, :submission_text, :submission_url,
+                    :submission_status, :due_date, :is_late, :attempt_number,
+                    :started_at, NOW()
+                )";
+            }
 
             $stmt = $this->conn->prepare($sql);
             $result = $stmt->execute([
@@ -51,7 +69,8 @@ class AssignmentSubmissionModel {
                 ':submission_status' => $data['submission_status'] ?? 'submitted',
                 ':due_date' => $data['due_date'] ?? null,
                 ':is_late' => isset($data['is_late']) ? (int)$data['is_late'] : 0,
-                ':attempt_number' => $data['attempt_number'] ?? 1
+                ':attempt_number' => $data['attempt_number'] ?? 1,
+                ':started_at' => $data['started_at'] ?? null
             ]);
 
             if ($result) {
@@ -140,7 +159,9 @@ class AssignmentSubmissionModel {
         try {
             $sql = "SELECT COUNT(*) as count 
                     FROM assignment_submissions 
-                    WHERE course_id = ? AND user_id = ? AND assignment_package_id = ? AND is_deleted = 0";
+                    WHERE course_id = ? AND user_id = ? AND assignment_package_id = ? 
+                    AND submission_status IN ('submitted', 'graded', 'returned')
+                    AND is_deleted = 0";
             
             $stmt = $this->conn->prepare($sql);
             $stmt->execute([$courseId, $userId, $assignmentPackageId]);
@@ -152,13 +173,15 @@ class AssignmentSubmissionModel {
     }
 
     /**
-     * Get user's submission attempt count for an assignment
+     * Get user's submission attempt count for an assignment (only completed submissions)
      */
     public function getUserSubmissionAttempts($courseId, $userId, $assignmentPackageId) {
         try {
             $sql = "SELECT COUNT(*) as count 
                     FROM assignment_submissions 
-                    WHERE course_id = ? AND user_id = ? AND assignment_package_id = ? AND is_deleted = 0";
+                    WHERE course_id = ? AND user_id = ? AND assignment_package_id = ? 
+                    AND submission_status IN ('submitted', 'graded', 'returned') 
+                    AND is_deleted = 0";
             
             $stmt = $this->conn->prepare($sql);
             $stmt->execute([$courseId, $userId, $assignmentPackageId]);
@@ -177,6 +200,29 @@ class AssignmentSubmissionModel {
             $sql = "SELECT id, submitted_at 
                     FROM assignment_submissions 
                     WHERE course_id = ? AND user_id = ? AND assignment_package_id = ? 
+                    AND is_deleted = 0 
+                    AND submitted_at >= DATE_SUB(NOW(), INTERVAL ? SECOND)
+                    ORDER BY submitted_at DESC 
+                    LIMIT 1";
+            
+            $stmt = $this->conn->prepare($sql);
+            $stmt->execute([$courseId, $userId, $assignmentPackageId, $seconds]);
+            
+            return $stmt->fetch(PDO::FETCH_ASSOC);
+        } catch (PDOException $e) {
+            return null;
+        }
+    }
+
+    /**
+     * Get recent completed submission within specified seconds to prevent duplicates
+     */
+    public function getRecentCompletedSubmission($courseId, $userId, $assignmentPackageId, $seconds = 30) {
+        try {
+            $sql = "SELECT id, submitted_at 
+                    FROM assignment_submissions 
+                    WHERE course_id = ? AND user_id = ? AND assignment_package_id = ? 
+                    AND submission_status IN ('submitted', 'graded', 'returned')
                     AND is_deleted = 0 
                     AND submitted_at >= DATE_SUB(NOW(), INTERVAL ? SECOND)
                     ORDER BY submitted_at DESC 
@@ -384,6 +430,184 @@ class AssignmentSubmissionModel {
             return $stmt->fetch(PDO::FETCH_ASSOC);
         } catch (PDOException $e) {
             return null;
+        }
+    }
+
+    /**
+     * Start assignment tracking - create in-progress submission record
+     */
+    public function startAssignmentTracking($data) {
+        try {
+            // Check if user already has an in-progress submission for this assignment
+            $existingSubmission = $this->getInProgressSubmission($data['course_id'], $data['user_id'], $data['assignment_package_id']);
+            
+            if ($existingSubmission) {
+                // Update started_at if not already set
+                if (!$existingSubmission['started_at']) {
+                    $sql = "UPDATE assignment_submissions 
+                            SET started_at = NOW(), updated_at = NOW() 
+                            WHERE id = ?";
+                    $stmt = $this->conn->prepare($sql);
+                    return $stmt->execute([$existingSubmission['id']]);
+                }
+                return $existingSubmission['id'];
+            }
+            
+            // Create new in-progress submission
+            $sql = "INSERT INTO assignment_submissions (
+                client_id, course_id, user_id, assignment_package_id,
+                submission_type, submission_status, started_at, attempt_number,
+                created_at, updated_at
+            ) VALUES (
+                :client_id, :course_id, :user_id, :assignment_package_id,
+                :submission_type, :submission_status, NOW(), :attempt_number,
+                NOW(), NOW()
+            )";
+
+            $stmt = $this->conn->prepare($sql);
+            $result = $stmt->execute([
+                ':client_id' => $data['client_id'],
+                ':course_id' => $data['course_id'],
+                ':user_id' => $data['user_id'],
+                ':assignment_package_id' => $data['assignment_package_id'],
+                ':submission_type' => $data['submission_type'] ?? null,
+                ':submission_status' => 'in-progress',
+                ':attempt_number' => $data['attempt_number'] ?? 1
+            ]);
+
+            if ($result) {
+                return $this->conn->lastInsertId();
+            } else {
+                $this->lastErrorMessage = "Failed to start assignment tracking";
+                return false;
+            }
+        } catch (PDOException $e) {
+            $this->lastErrorMessage = "Database error: " . $e->getMessage();
+            return false;
+        }
+    }
+
+    /**
+     * Get in-progress submission for a user and assignment
+     */
+    public function getInProgressSubmission($courseId, $userId, $assignmentPackageId) {
+        try {
+            $sql = "SELECT * FROM assignment_submissions 
+                    WHERE course_id = ? AND user_id = ? AND assignment_package_id = ? 
+                    AND submission_status = 'in-progress' AND is_deleted = 0
+                    ORDER BY created_at DESC LIMIT 1";
+            
+            $stmt = $this->conn->prepare($sql);
+            $stmt->execute([$courseId, $userId, $assignmentPackageId]);
+            
+            return $stmt->fetch(PDO::FETCH_ASSOC);
+        } catch (PDOException $e) {
+            return null;
+        }
+    }
+
+    /**
+     * Update in-progress submission with new data (without changing status)
+     */
+    public function updateInProgressSubmission($submissionId, $data) {
+        try {
+            $sql = "UPDATE assignment_submissions 
+                    SET submission_type = ?, 
+                        submission_file = ?, 
+                        submission_text = ?, 
+                        submission_url = ?, 
+                        submission_status = ?,
+                        updated_at = NOW()
+                    WHERE id = ? AND submission_status = 'in-progress'";
+            
+            $stmt = $this->conn->prepare($sql);
+            $result = $stmt->execute([
+                $data['submission_type'],
+                $data['submission_file'] ?? null,
+                $data['submission_text'] ?? null,
+                $data['submission_url'] ?? null,
+                $data['submission_status'] ?? 'in-progress',
+                $submissionId
+            ]);
+            
+            if ($result) {
+                return $submissionId;
+            } else {
+                $this->lastErrorMessage = "Failed to update in-progress submission";
+                return false;
+            }
+        } catch (PDOException $e) {
+            $this->lastErrorMessage = "Database error: " . $e->getMessage();
+            return false;
+        }
+    }
+
+    /**
+     * Update in-progress submission to completed status
+     */
+    public function updateSubmissionToCompleted($submissionId, $data) {
+        try {
+            $sql = "UPDATE assignment_submissions 
+                    SET submission_type = ?, 
+                        submission_file = ?, 
+                        submission_text = ?, 
+                        submission_url = ?, 
+                        submission_status = 'submitted',
+                        submitted_at = NOW(),
+                        completed_at = NOW(),
+                        is_late = ?,
+                        attempt_number = ?,
+                        updated_at = NOW()
+                    WHERE id = ?";
+            
+            $stmt = $this->conn->prepare($sql);
+            $result = $stmt->execute([
+                $data['submission_type'],
+                $data['submission_file'] ?? null,
+                $data['submission_text'] ?? null,
+                $data['submission_url'] ?? null,
+                isset($data['is_late']) ? (int)$data['is_late'] : 0,
+                $data['attempt_number'] ?? 1,
+                $submissionId
+            ]);
+            
+            if ($result) {
+                return $submissionId;
+            } else {
+                $this->lastErrorMessage = "Failed to update submission to completed";
+                return false;
+            }
+        } catch (PDOException $e) {
+            $this->lastErrorMessage = "Database error: " . $e->getMessage();
+            return false;
+        }
+    }
+
+    /**
+     * Update assignment submission status and set completed_at when graded
+     */
+    public function updateSubmissionStatus($submissionId, $status, $grade = null, $feedback = null) {
+        try {
+            // Set completed_at if status is 'graded' or 'returned'
+            $setCompletedAt = "";
+            if (in_array($status, ['graded', 'returned'])) {
+                $setCompletedAt = ", completed_at = NOW()";
+            }
+            
+            $sql = "UPDATE assignment_submissions 
+                    SET submission_status = ?, 
+                        grade = ?, 
+                        feedback = ?, 
+                        graded_at = NOW(),
+                        updated_at = NOW()
+                        $setCompletedAt
+                    WHERE id = ?";
+            
+            $stmt = $this->conn->prepare($sql);
+            return $stmt->execute([$status, $grade, $feedback, $submissionId]);
+        } catch (PDOException $e) {
+            $this->lastErrorMessage = $e->getMessage();
+            return false;
         }
     }
 }

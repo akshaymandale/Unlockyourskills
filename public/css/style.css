@@ -1,3 +1,43 @@
+/* Fix overly long prerequisite assessment cards overflowing the layout */
+.prerequisites-grid,
+.prerequisite-item,
+.prerequisite-card {
+    overflow: hidden;
+}
+
+.prerequisite-card .card-body { 
+    overflow: hidden; 
+}
+
+/* Truncate long titles and meta lines */
+.prerequisite-card .prerequisite-title,
+.prerequisite-card .prerequisite-subtitle,
+.prerequisite-card .prerequisite-status,
+.prerequisite-card .prerequisite-score {
+    display: -webkit-box;
+    -webkit-line-clamp: 1;
+    line-clamp: 1;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    word-break: break-word;
+}
+
+/* Allow wrapping for long words/content blocks inside prerequisite cards */
+.prerequisite-card * {
+    word-wrap: break-word;
+    overflow-wrap: anywhere;
+}
+
+/* Prevent card from exceeding container width */
+.prerequisite-card { 
+    max-width: 100%; 
+}
+
+/* Ensure badges/labels don’t force overflow */
+.prerequisite-card .badge {
+    white-space: nowrap;
+}
 /* Unlock Your Skills - Complete Navbar, Sidebar, and Manage Portal CSS */
 
 /* ===== SURVEY FORM STYLES ===== */
@@ -6202,13 +6242,11 @@ body select:focus,
 /* Course Details - Modern Prerequisites & Post-requisites Styling */
 .prerequisites-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); /* Slightly increased minimum width */
+    grid-template-columns: repeat(2, 1fr); /* Fixed 2 columns to match post-requisites */
     gap: 20px; /* Increased gap for better breathing room */
     margin-top: 16px;
     align-items: start; /* Ensure cards align to top */
     grid-auto-rows: minmax(min-content, max-content); /* Allow rows to adjust to content */
-    /* Ensure proper grid behavior */
-    grid-auto-flow: row dense; /* Fill grid efficiently */
 }
 
 .postrequisites-grid {
@@ -7005,7 +7043,7 @@ body select:focus,
 /* Responsive Design */
 @media (max-width: 768px) {
     .prerequisites-grid {
-        grid-template-columns: 1fr;
+        grid-template-columns: 1fr; /* Single column on mobile */
         gap: 12px;
     }
     

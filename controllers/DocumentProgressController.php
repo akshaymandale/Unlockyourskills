@@ -76,6 +76,8 @@ class DocumentProgressController {
                 $totalPages
             );
 
+            // Note: Completion tracking is now handled only when content is actually completed
+
             echo json_encode(['success' => true, 'data' => $result]);
         } catch (Exception $e) {
             http_response_code(500);
@@ -123,6 +125,13 @@ class DocumentProgressController {
                 $viewedPercentage
             );
 
+            // If document is completed, update completion tracking
+            if ($result && isset($result['is_completed']) && $result['is_completed']) {
+                require_once 'models/CompletionTrackingService.php';
+                $completionService = new CompletionTrackingService();
+                $completionService->handleContentCompletion($userId, $courseId, $contentId, 'document', $clientId);
+            }
+
             echo json_encode(['success' => true, 'data' => $result]);
         } catch (Exception $e) {
             http_response_code(500);
@@ -161,6 +170,13 @@ class DocumentProgressController {
                 $contentId,
                 $clientId
             );
+
+            // Handle completion tracking when content is actually completed
+            if ($result) {
+                require_once 'models/CompletionTrackingService.php';
+                $completionService = new CompletionTrackingService();
+                $completionService->handleContentCompletion($userId, $courseId, $contentId, 'document', $clientId);
+            }
 
             echo json_encode(['success' => true, 'data' => $result]);
         } catch (Exception $e) {
@@ -367,6 +383,80 @@ class DocumentProgressController {
                 return 'Incomplete';
             default:
                 return 'Unknown';
+        }
+    }
+
+    /**
+     * Check if content is a prerequisite and start tracking
+     */
+    private function startPrerequisiteTrackingIfApplicable($userId, $courseId, $contentId, $contentType, $clientId) {
+        try {
+            require_once 'models/CompletionTrackingService.php';
+            $completionService = new CompletionTrackingService();
+            
+            // Check if this content is a prerequisite
+            $isPrerequisite = $this->isContentPrerequisite($courseId, $contentId, $contentType);
+            
+            if ($isPrerequisite) {
+                $completionService->startPrerequisiteTracking($userId, $courseId, $contentId, $contentType, $clientId);
+            }
+        } catch (Exception $e) {
+            error_log("Error in startPrerequisiteTrackingIfApplicable: " . $e->getMessage());
+        }
+    }
+
+    /**
+     * Start module tracking if content belongs to a module
+     */
+    private function startModuleTrackingIfApplicable($userId, $courseId, $contentId, $contentType, $clientId) {
+        try {
+            require_once 'models/CompletionTrackingService.php';
+            $completionService = new CompletionTrackingService();
+            
+            // Start module tracking if this content belongs to a module
+            $completionService->startModuleTrackingIfApplicable($userId, $courseId, $contentId, $contentType, $clientId);
+        } catch (Exception $e) {
+            error_log("Error in startModuleTrackingIfApplicable: " . $e->getMessage());
+        }
+    }
+
+    /**
+     * Check if content is a prerequisite and mark as complete
+     */
+    private function markPrerequisiteCompleteIfApplicable($userId, $courseId, $contentId, $contentType, $clientId) {
+        try {
+            require_once 'models/CompletionTrackingService.php';
+            $completionService = new CompletionTrackingService();
+            
+            // Check if this content is a prerequisite
+            $isPrerequisite = $this->isContentPrerequisite($courseId, $contentId, $contentType);
+            
+            if ($isPrerequisite) {
+                $completionService->markPrerequisiteComplete($userId, $courseId, $contentId, $contentType, $clientId);
+            }
+        } catch (Exception $e) {
+            error_log("Error in markPrerequisiteCompleteIfApplicable: " . $e->getMessage());
+        }
+    }
+
+    /**
+     * Check if content is a prerequisite
+     */
+    private function isContentPrerequisite($courseId, $contentId, $contentType) {
+        try {
+            require_once 'config/Database.php';
+            $database = new Database();
+            $conn = $database->connect();
+            
+            $sql = "SELECT COUNT(*) FROM course_prerequisites 
+                    WHERE course_id = ? AND prerequisite_id = ? AND prerequisite_type = ?";
+            $stmt = $conn->prepare($sql);
+            $stmt->execute([$courseId, $contentId, $contentType]);
+            
+            return $stmt->fetchColumn() > 0;
+        } catch (Exception $e) {
+            error_log("Error checking if content is prerequisite: " . $e->getMessage());
+            return false;
         }
     }
 }

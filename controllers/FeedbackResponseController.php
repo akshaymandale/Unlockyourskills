@@ -2,6 +2,7 @@
 require_once 'config/autoload.php';
 require_once 'models/FeedbackResponseModel.php';
 require_once 'core/IdEncryption.php';
+require_once 'config/Database.php';
 require_once 'controllers/BaseController.php';
 require_once 'core/UrlHelper.php';
 
@@ -112,76 +113,36 @@ class FeedbackResponseController extends BaseController {
 
         $clientId = $_SESSION['user']['client_id'] ?? 1;
         $userId = $_SESSION['id'];
-        $successCount = 0;
+
+        // Process responses for completion (don't save individual responses)
+        $processedResponses = [];
         $errorCount = 0;
 
         // Process each response
         foreach ($responses as $questionId => $responseData) {
-            error_log("Processing question $questionId: " . print_r($responseData, true));
+            $processedResponses[$questionId] = $responseData;
+        }
+
+        // Complete the feedback with all responses
+        $result = $this->FeedbackResponseModel->completeFeedback($clientId, $courseId, $userId, $feedbackPackageId, $processedResponses);
+
+        if ($result) {
+            $successCount = count($processedResponses);
             
-            $responseType = $responseData['type'] ?? '';
-            $responseValue = $responseData['value'] ?? '';
-
-            error_log("Response type: $responseType, value: " . print_r($responseValue, true));
-
-            // Determine response type and value
-            $data = [
-                'client_id' => $clientId,
-                'course_id' => $courseId,
-                'user_id' => $userId,
-                'feedback_package_id' => $feedbackPackageId,
-                'question_id' => $questionId,
-                'response_type' => $responseType,
-                'rating_value' => null,
-                'text_response' => null,
-                'choice_response' => null,
-                'file_response' => null,
-                'response_data' => null
-            ];
-
-            // Map response types to database enum values
-            switch ($responseType) {
-                case 'rating':
-                    $data['rating_value'] = intval($responseValue);
-                    $data['response_type'] = 'rating';
-                    break;
-                case 'text':
-                case 'short_answer':
-                case 'long_answer':
-                    $data['text_response'] = $responseValue;
-                    $data['response_type'] = 'text';
-                    break;
-                case 'choice':
-                case 'multi_choice':
-                case 'checkbox':
-                case 'dropdown':
-                    $data['choice_response'] = $responseValue;
-                    $data['response_type'] = 'choice';
-                    break;
-                case 'file':
-                case 'upload':
-                    $data['file_response'] = $responseValue;
-                    $data['response_type'] = 'file';
-                    break;
-                default:
-                    // Store complex responses in JSON
-                    $data['response_data'] = json_encode($responseData);
-                    $data['response_type'] = 'text'; // Default to text for unknown types
-                    break;
+            // Trigger completion tracking for prerequisites/post-requisites (same as surveys)
+            try {
+                require_once 'models/CompletionTrackingService.php';
+                $completionService = new CompletionTrackingService();
+                $completionService->handleContentCompletion($userId, $courseId, $feedbackPackageId, 'feedback', $clientId);
+                
+                // Mark prerequisite as complete if applicable
+                $this->markPrerequisiteCompleteIfApplicable($userId, $courseId, $feedbackPackageId, $clientId);
+            } catch (Exception $e) {
+                error_log("Error in feedback completion tracking: " . $e->getMessage());
+                // Don't fail the feedback submission if completion tracking fails
             }
-
-            // Save the response
-            $result = $this->FeedbackResponseModel->saveResponse($data);
-            if ($result) {
-                $successCount++;
-            } else {
-                // Capture model error if available
-                $modelError = method_exists($this->FeedbackResponseModel, 'getLastError') ? $this->FeedbackResponseModel->getLastError() : '';
-                if (!empty($modelError)) {
-                    error_log("Feedback save error for question {$questionId}: " . $modelError);
-                }
-                $errorCount++;
-            }
+        } else {
+            $errorCount = count($processedResponses);
         }
 
         // Set JSON header for modal response
@@ -214,68 +175,85 @@ class FeedbackResponseController extends BaseController {
             return;
         }
 
-        $courseId = $_GET['course_id'] ?? null;
-        $feedbackPackageId = $_GET['feedback_id'] ?? null;
-
-        if (!$courseId || !$feedbackPackageId) {
-            http_response_code(400);
-            echo json_encode(['error' => 'Missing required data']);
-            return;
-        }
-
-        // Decrypt IDs if they're encrypted
         try {
-            $courseId = IdEncryption::decrypt($courseId);
-            $feedbackPackageId = IdEncryption::decrypt($feedbackPackageId);
+            $courseId = IdEncryption::decrypt($_GET['course_id'] ?? '');
+            $feedbackPackageId = IdEncryption::decrypt($_GET['feedback_id'] ?? '');
+            
+            if (!$courseId || !$feedbackPackageId) {
+                $this->jsonResponse(['success' => false, 'message' => 'Invalid feedback link']);
+                return;
+            }
+
+            $clientId = $_SESSION['user']['client_id'] ?? 1;
+            $userId = $_SESSION['id'];
+
+            // Check if user has already submitted this feedback
+            $hasSubmitted = $this->FeedbackResponseModel->hasUserSubmittedFeedback($courseId, $userId, $feedbackPackageId);
+
+            // Only start feedback if it hasn't been submitted yet
+            if (!$hasSubmitted) {
+                $this->FeedbackResponseModel->startFeedback($clientId, $courseId, $userId, $feedbackPackageId);
+            }
+
+            // Get existing responses if user has submitted
+            $existingResponses = [];
+            if ($hasSubmitted) {
+                $existingResponses = $this->FeedbackResponseModel->getResponsesByCourseAndUser($courseId, $userId, $feedbackPackageId);
+            }
+
+            // Get feedback package with questions
+            $feedbackPackage = $this->FeedbackResponseModel->getFeedbackPackageForCourse($courseId, $feedbackPackageId);
+            
+            if (!$feedbackPackage) {
+                $this->jsonResponse(['success' => false, 'message' => 'Feedback not found or access denied']);
+                return;
+            }
+
+            // Get course details
+            require_once 'models/CourseModel.php';
+            $courseModel = new CourseModel();
+            $course = $courseModel->getCourseById($courseId);
+
+            if (!$course) {
+                $this->jsonResponse(['success' => false, 'message' => 'Course not found']);
+                return;
+            }
+
+            // Prepare data for view
+            $data = [
+                'course_id' => $courseId,
+                'course' => $course,
+                'feedback_package' => $feedbackPackage,
+                'has_submitted' => $hasSubmitted,
+                'existing_responses' => $existingResponses,
+                'encrypted_course_id' => IdEncryption::encrypt($courseId),
+                'encrypted_feedback_id' => IdEncryption::encrypt($feedbackPackageId)
+            ];
+
+            // Render the feedback form content
+            ob_start();
+            extract($data);
+            include 'views/feedback_form_modal.php';
+            $html = ob_get_clean();
+
+            $this->jsonResponse([
+                'success' => true,
+                'html' => $html,
+                'title' => $feedbackPackage['title']
+            ]);
+
         } catch (Exception $e) {
-            http_response_code(400);
-            echo json_encode(['error' => 'Invalid course or feedback information']);
-            return;
+            $this->jsonResponse(['success' => false, 'message' => 'An error occurred while loading the feedback']);
         }
+    }
 
-        // Get feedback package details
-        $feedbackPackage = $this->FeedbackResponseModel->getFeedbackPackageForCourse($courseId, $feedbackPackageId);
-        
-        if (!$feedbackPackage) {
-            http_response_code(404);
-            echo json_encode(['error' => 'Feedback not found']);
-            return;
-        }
-
-        // Check if user has already submitted feedback
-        $hasSubmitted = $this->FeedbackResponseModel->hasUserSubmittedFeedback($courseId, $_SESSION['id'], $feedbackPackageId);
-
-        // Get existing responses if any
-        $existingResponses = [];
-        if ($hasSubmitted) {
-            $existingResponses = $this->FeedbackResponseModel->getResponsesByCourseAndUser($courseId, $_SESSION['id'], $feedbackPackageId);
-        }
-
-        // Get course details
-        require_once 'models/CourseModel.php';
-        $courseModel = new CourseModel();
-        $course = $courseModel->getCourseById($courseId);
-
-        if (!$course) {
-            http_response_code(404);
-            echo json_encode(['error' => 'Course not found']);
-            return;
-        }
-
-        // Render the feedback form HTML for modal
-        ob_start();
-        include 'views/feedback_form_modal.php';
-        $html = ob_get_clean();
-
-        // Set JSON header for modal response
+    /**
+     * Send JSON response
+     */
+    private function jsonResponse($data) {
         header('Content-Type: application/json');
-        echo json_encode([
-            'success' => true,
-            'html' => $html,
-            'hasSubmitted' => $hasSubmitted,
-            'feedbackPackage' => $feedbackPackage,
-            'existingResponses' => $existingResponses
-        ]);
+        echo json_encode($data);
+        exit;
     }
 
     /**
@@ -362,6 +340,45 @@ class FeedbackResponseController extends BaseController {
                 'success' => false,
                 'message' => 'Failed to delete feedback responses'
             ]);
+        }
+    }
+
+    /**
+     * Check if feedback is a prerequisite and mark as complete
+     */
+    private function markPrerequisiteCompleteIfApplicable($userId, $courseId, $feedbackPackageId, $clientId) {
+        try {
+            require_once 'models/CompletionTrackingService.php';
+            $completionService = new CompletionTrackingService();
+            
+            // Check if this feedback is a prerequisite
+            $isPrerequisite = $this->isContentPrerequisite($courseId, $feedbackPackageId, 'feedback');
+            
+            if ($isPrerequisite) {
+                $completionService->markPrerequisiteComplete($userId, $courseId, $feedbackPackageId, 'feedback', $clientId);
+            }
+        } catch (Exception $e) {
+            error_log("Error in markPrerequisiteCompleteIfApplicable: " . $e->getMessage());
+        }
+    }
+
+    /**
+     * Check if content is a prerequisite
+     */
+    private function isContentPrerequisite($courseId, $contentId, $contentType) {
+        try {
+            $database = new Database();
+            $conn = $database->connect();
+            
+            $sql = "SELECT COUNT(*) FROM course_prerequisites 
+                    WHERE course_id = ? AND prerequisite_id = ? AND prerequisite_type = ?";
+            $stmt = $conn->prepare($sql);
+            $stmt->execute([$courseId, $contentId, $contentType]);
+            
+            return $stmt->fetchColumn() > 0;
+        } catch (Exception $e) {
+            error_log("Error checking if content is prerequisite: " . $e->getMessage());
+            return false;
         }
     }
 }

@@ -208,6 +208,9 @@ class MyCoursesController {
             }
         }
 
+        // Note: Completion tracking is now handled only when content is actually completed
+        // No initialization on course page load
+        
         // Expose assessment attempts data, details, and results to view
         $GLOBALS['assessmentAttempts'] = $assessmentAttempts;
         $GLOBALS['assessmentDetails'] = $assessmentDetails;
@@ -371,10 +374,27 @@ class MyCoursesController {
             $courseId = $_GET['course_id'] ?? null;
             $moduleId = $_GET['module_id'] ?? null;
             $contentId = $_GET['content_id'] ?? null;
+            $externalPackageId = $_GET['external_package_id'] ?? null;
             $clientId = $_SESSION['user']['client_id'] ?? null;
+            $prerequisiteId = $_GET['prerequisite_id'] ?? null;
+            
+            // Use different IDs for prerequisites vs module content in external_progress
+            if ($prerequisiteId) {
+                // For prerequisites, use course_prerequisites.id
+                $contentId = $prerequisiteId;
+            } elseif ($contentId) {
+                // For module content, use course_module_content.id (keep as is)
+                // No conversion needed - contentId is already course_module_content.id
+            }
+            
+            // For external content, externalPackageId can come from either external_package_id or prerequisite_id
+            if (!$externalPackageId && $prerequisiteId) {
+                $externalPackageId = $prerequisiteId;
+            }
             
             // Validate required parameters for external content
-            if (!$courseId || !$moduleId || !$contentId || !$clientId) {
+            // module_id is optional for prerequisites
+            if (!$courseId || !$contentId || !$clientId) {
                 UrlHelper::redirect('my-courses');
             }
             
@@ -394,6 +414,7 @@ class MyCoursesController {
             $GLOBALS['course_id'] = $courseId;
             $GLOBALS['module_id'] = $moduleId;
             $GLOBALS['content_id'] = $contentId;
+            $GLOBALS['external_package_id'] = $externalPackageId;
             $GLOBALS['client_id'] = $clientId;
         } else {
             $src = $this->normalizeEmbedUrl($rawSrc, $type);
@@ -527,6 +548,27 @@ class MyCoursesController {
                     // Get current attempt data
                     $attempt = $assessmentModel->getAttempt($attemptId);
                     error_log("Attempt data: " . print_r($attempt, true));
+                    
+                    // Start prerequisite tracking if this assessment is a prerequisite for the course
+                    try {
+                        require_once 'models/CompletionTrackingService.php';
+                        $completionService = new CompletionTrackingService();
+                        
+                        // Check if prerequisite exists for this course and assessment
+                        require_once 'config/Database.php';
+                        $database = new Database();
+                        $conn = $database->connect();
+                        
+                        $stmt = $conn->prepare("SELECT COUNT(*) FROM course_prerequisites WHERE course_id = ? AND prerequisite_id = ? AND prerequisite_type = 'assessment' AND (deleted_at IS NULL OR deleted_at = '0000-00-00 00:00:00')");
+                        $stmt->execute([$courseId, $id]);
+                        $isPrerequisite = $stmt->fetchColumn() > 0;
+                        
+                        if ($isPrerequisite) {
+                            $completionService->startPrerequisiteTracking($userId, $courseId, $id, 'assessment', $clientId);
+                        }
+                    } catch (Exception $e) {
+                        error_log("Error starting prerequisite tracking for assessment: " . $e->getMessage());
+                    }
                     
                     // Expose data to view (same structure as AssessmentPlayerController)
                     $GLOBALS['assessment'] = $payload;

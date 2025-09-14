@@ -29,9 +29,9 @@ class VideoProgressModel {
                 // Create new progress record
                 $sql = "INSERT INTO video_progress 
                         (user_id, course_id, content_id, video_package_id, client_id, 
-                         `current_time`, duration, watched_percentage, completion_threshold, 
+                         started_at, `current_time`, duration, watched_percentage, completion_threshold, 
                          is_completed, video_status, play_count, last_watched_at, created_at, updated_at) 
-                        VALUES (?, ?, ?, ?, ?, 0, 0, 0, 80, 0, 'not_started', 0, NOW(), NOW(), NOW())";
+                        VALUES (?, ?, ?, ?, ?, NOW(), 0, 0, 0, 80, 0, 'not_started', 0, NOW(), NOW(), NOW())";
                 $stmt = $this->conn->prepare($sql);
                 $stmt->execute([$userId, $courseId, $contentId, $videoPackageId, $clientId]);
                 
@@ -55,6 +55,18 @@ class VideoProgressModel {
      */
     public function updateProgress($userId, $courseId, $contentId, $clientId, $data) {
         try {
+            // Set started_at if not already set and video is being started
+            $setStartedAt = "";
+            if (isset($data['video_status']) && $data['video_status'] === 'in_progress') {
+                $setStartedAt = ", started_at = CASE WHEN started_at IS NULL THEN NOW() ELSE started_at END";
+            }
+            
+            // Set completed_at if video is completed
+            $setCompletedAt = "";
+            if (isset($data['is_completed']) && $data['is_completed'] == 1) {
+                $setCompletedAt = ", completed_at = NOW()";
+            }
+            
             $sql = "UPDATE video_progress SET 
                     `current_time` = ?,
                     duration = ?,
@@ -67,6 +79,8 @@ class VideoProgressModel {
                     bookmarks = ?,
                     notes = ?,
                     updated_at = NOW()
+                    $setStartedAt
+                    $setCompletedAt
                     WHERE user_id = ? AND course_id = ? AND content_id = ? AND client_id = ?";
 
             $stmt = $this->conn->prepare($sql);

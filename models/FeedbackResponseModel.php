@@ -18,6 +18,92 @@ class FeedbackResponseModel {
     }
 
     /**
+     * Start feedback (create entry with started_at)
+     */
+    public function startFeedback($clientId, $courseId, $userId, $feedbackPackageId) {
+        try {
+            // Use a dummy question ID that exists in feedback_questions table
+            // First, get any existing question ID for this feedback package
+            $sql = "SELECT fq.id FROM feedback_questions fq
+                    JOIN feedback_question_mapping fqm ON fq.id = fqm.feedback_question_id
+                    WHERE fqm.feedback_package_id = ? AND fq.is_deleted = 0
+                    LIMIT 1";
+            $stmt = $this->conn->prepare($sql);
+            $stmt->execute([$feedbackPackageId]);
+            $question = $stmt->fetch(PDO::FETCH_ASSOC);
+            
+            if (!$question) {
+                // If no questions exist, create a dummy question
+                $sql = "INSERT INTO feedback_questions (title, type, is_deleted, created_at) 
+                        VALUES ('Feedback Start', 'text', 0, NOW())";
+                $this->conn->exec($sql);
+                $questionId = $this->conn->lastInsertId();
+                
+                // Map it to the feedback package
+                $sql = "INSERT INTO feedback_question_mapping (feedback_package_id, feedback_question_id) 
+                        VALUES (?, ?)";
+                $stmt = $this->conn->prepare($sql);
+                $stmt->execute([$feedbackPackageId, $questionId]);
+            } else {
+                $questionId = $question['id'];
+            }
+            
+            $sql = "INSERT INTO course_feedback_responses 
+                    (client_id, course_id, user_id, feedback_package_id, question_id, response_type, 
+                     text_response, started_at, submitted_at) 
+                    VALUES 
+                    (?, ?, ?, ?, ?, 'feedback_start', 'Feedback started', NOW(), NULL)
+                    ON DUPLICATE KEY UPDATE
+                    started_at = NOW(),
+                    submitted_at = NULL,
+                    updated_at = NOW()";
+
+            $stmt = $this->conn->prepare($sql);
+            return $stmt->execute([$clientId, $courseId, $userId, $feedbackPackageId, $questionId]);
+            
+        } catch (PDOException $e) {
+            error_log("Error starting feedback: " . $e->getMessage());
+            return false;
+        }
+    }
+
+    /**
+     * Complete feedback (update existing entry with all responses)
+     */
+    public function completeFeedback($clientId, $courseId, $userId, $feedbackPackageId, $responses = []) {
+        try {
+            // Create a summary of responses
+            $responseSummary = [];
+            foreach ($responses as $questionId => $response) {
+                $responseSummary[] = "Q{$questionId}: " . (is_array($response['value']) ? implode(', ', $response['value']) : $response['value']);
+            }
+            $textResponse = implode('; ', $responseSummary);
+            
+            // Update the existing feedback_start record
+            $sql = "UPDATE course_feedback_responses 
+                    SET text_response = ?,
+                        response_data = ?,
+                        completed_at = NOW(),
+                        submitted_at = NOW(),
+                        updated_at = NOW()
+                    WHERE course_id = ? AND user_id = ? AND feedback_package_id = ? AND response_type = 'feedback_start'";
+
+            $stmt = $this->conn->prepare($sql);
+            return $stmt->execute([
+                $textResponse,
+                json_encode($responses),
+                $courseId,
+                $userId,
+                $feedbackPackageId
+            ]);
+            
+        } catch (PDOException $e) {
+            error_log("Error completing feedback: " . $e->getMessage());
+            return false;
+        }
+    }
+
+    /**
      * Save a feedback response
      */
     public function saveResponse($data) {
@@ -78,52 +164,125 @@ class FeedbackResponseModel {
      */
     public function getResponsesByCourseAndUser($courseId, $userId, $feedbackPackageId = null) {
         try {
-            $sql = "SELECT cfr.*, fq.title as question_title, fq.type as question_type, 
-                           fqo.option_text as option_text
-                    FROM course_feedback_responses cfr
-                    JOIN feedback_questions fq ON cfr.question_id = fq.id
-                    LEFT JOIN feedback_question_options fqo ON cfr.choice_response = fqo.id
-                    WHERE cfr.course_id = ? AND cfr.user_id = ?";
+            // First, check if we have a feedback_start record (new single-entry approach)
+            $sql = "SELECT * FROM course_feedback_responses 
+                    WHERE course_id = ? AND user_id = ? AND response_type = 'feedback_start'";
             
             $params = [$courseId, $userId];
             
             if ($feedbackPackageId) {
-                $sql .= " AND cfr.feedback_package_id = ?";
+                $sql .= " AND feedback_package_id = ?";
                 $params[] = $feedbackPackageId;
             }
             
-            $sql .= " ORDER BY cfr.submitted_at DESC";
-            
             $stmt = $this->conn->prepare($sql);
             $stmt->execute($params);
+            $feedbackStartRecord = $stmt->fetch(PDO::FETCH_ASSOC);
             
-            $responses = $stmt->fetchAll(PDO::FETCH_ASSOC);
-            
-            // Process checkbox responses to get actual option texts
-            foreach ($responses as &$response) {
-                if ($response['response_type'] === 'checkbox' && !empty($response['response_data'])) {
-                    $selectedOptionIds = json_decode($response['response_data'], true);
-                    
-                    // Handle both single values and arrays
-                    if (!is_array($selectedOptionIds)) {
-                        // Single value - convert to array
-                        $selectedOptionIds = [$selectedOptionIds];
-                    }
-                    
-                    if (is_array($selectedOptionIds)) {
-                        $optionTexts = [];
-                        foreach ($selectedOptionIds as $optionId) {
-                            $optionText = $this->getOptionTextById($optionId);
-                            if ($optionText) {
-                                $optionTexts[] = $optionText;
+            if ($feedbackStartRecord && !empty($feedbackStartRecord['response_data'])) {
+                // New single-entry approach - parse the response_data JSON
+                $responseData = json_decode($feedbackStartRecord['response_data'], true);
+                $responses = [];
+                
+                if (is_array($responseData)) {
+                    foreach ($responseData as $questionId => $questionResponse) {
+                        // Get question details
+                        $questionSql = "SELECT title, type FROM feedback_questions WHERE id = ?";
+                        $questionStmt = $this->conn->prepare($questionSql);
+                        $questionStmt->execute([$questionId]);
+                        $question = $questionStmt->fetch(PDO::FETCH_ASSOC);
+                        
+                        if ($question) {
+                            $response = [
+                                'question_id' => $questionId,
+                                'question_title' => $question['title'],
+                                'question_type' => $question['type'],
+                                'response_type' => $questionResponse['type'],
+                                'text_response' => $feedbackStartRecord['text_response'],
+                                'submitted_at' => $feedbackStartRecord['submitted_at'],
+                                'completed_at' => $feedbackStartRecord['completed_at'],
+                                'started_at' => $feedbackStartRecord['started_at']
+                            ];
+                            
+                            // Handle different response types
+                            if ($questionResponse['type'] === 'checkbox' && isset($questionResponse['value'])) {
+                                $selectedOptionIds = $questionResponse['value'];
+                                if (!is_array($selectedOptionIds)) {
+                                    $selectedOptionIds = [$selectedOptionIds];
+                                }
+                                
+                                $optionTexts = [];
+                                foreach ($selectedOptionIds as $optionId) {
+                                    $optionText = $this->getOptionTextById($optionId);
+                                    if ($optionText) {
+                                        $optionTexts[] = $optionText;
+                                    }
+                                }
+                                $response['checkbox_options'] = $optionTexts;
+                            } elseif (in_array($questionResponse['type'], ['choice', 'multi_choice', 'dropdown']) && isset($questionResponse['value'])) {
+                                $optionText = $this->getOptionTextById($questionResponse['value']);
+                                $response['option_text'] = $optionText;
+                            } elseif (in_array($questionResponse['type'], ['text', 'short_answer', 'long_answer']) && isset($questionResponse['value'])) {
+                                $response['text_response'] = $questionResponse['value'];
+                            } elseif ($questionResponse['type'] === 'rating' && isset($questionResponse['value'])) {
+                                $response['rating_value'] = $questionResponse['value'];
                             }
+                            
+                            $responses[] = $response;
                         }
-                        $response['checkbox_options'] = $optionTexts;
                     }
                 }
+                
+                return $responses;
+            } else {
+                // Fallback to old approach for individual question records
+                $sql = "SELECT cfr.*, fq.title as question_title, fq.type as question_type, 
+                               fqo.option_text as option_text
+                        FROM course_feedback_responses cfr
+                        JOIN feedback_questions fq ON cfr.question_id = fq.id
+                        LEFT JOIN feedback_question_options fqo ON cfr.choice_response = fqo.id
+                        WHERE cfr.course_id = ? AND cfr.user_id = ?";
+                
+                $params = [$courseId, $userId];
+                
+                if ($feedbackPackageId) {
+                    $sql .= " AND cfr.feedback_package_id = ?";
+                    $params[] = $feedbackPackageId;
+                }
+                
+                $sql .= " ORDER BY cfr.submitted_at DESC";
+                
+                $stmt = $this->conn->prepare($sql);
+                $stmt->execute($params);
+                
+                $responses = $stmt->fetchAll(PDO::FETCH_ASSOC);
+                
+                // Process checkbox responses to get actual option texts
+                foreach ($responses as &$response) {
+                    if ($response['response_type'] === 'checkbox' && !empty($response['response_data'])) {
+                        $selectedOptionIds = json_decode($response['response_data'], true);
+                        
+                        // Handle both single values and arrays
+                        if (!is_array($selectedOptionIds)) {
+                            // Single value - convert to array
+                            $selectedOptionIds = [$selectedOptionIds];
+                        }
+                        
+                        if (is_array($selectedOptionIds)) {
+                            $optionTexts = [];
+                            foreach ($selectedOptionIds as $optionId) {
+                                $optionText = $this->getOptionTextById($optionId);
+                                if ($optionText) {
+                                    $optionTexts[] = $optionText;
+                                }
+                            }
+                            $response['checkbox_options'] = $optionTexts;
+                        }
+                    }
+                }
+                
+                return $responses;
             }
-            
-            return $responses;
         } catch (PDOException $e) {
             return [];
         }
@@ -151,7 +310,8 @@ class FeedbackResponseModel {
     public function hasUserSubmittedFeedback($courseId, $userId, $feedbackPackageId) {
         try {
             $sql = "SELECT COUNT(*) FROM course_feedback_responses 
-                    WHERE course_id = ? AND user_id = ? AND feedback_package_id = ?";
+                    WHERE course_id = ? AND user_id = ? AND feedback_package_id = ? 
+                    AND response_type = 'feedback_start' AND completed_at IS NOT NULL";
             
             $stmt = $this->conn->prepare($sql);
             $stmt->execute([$courseId, $userId, $feedbackPackageId]);
@@ -168,7 +328,7 @@ class FeedbackResponseModel {
      */
     public function getFeedbackPackageForCourse($courseId, $feedbackPackageId) {
         try {
-            // Get feedback package details from course_post_requisites (existing system)
+            // First check course_post_requisites (existing system)
             $sql = "SELECT fp.*, cpr.requisite_type as feedback_type, cpr.is_required
                     FROM feedback_package fp
                     JOIN course_post_requisites cpr ON fp.id = cpr.content_id
@@ -177,6 +337,23 @@ class FeedbackResponseModel {
             $stmt = $this->conn->prepare($sql);
             $stmt->execute([$courseId, $feedbackPackageId]);
             $feedbackPackage = $stmt->fetch(PDO::FETCH_ASSOC);
+            
+            // If not found in post-requisites, check prerequisites
+            if (!$feedbackPackage) {
+                $sql = "SELECT fp.*, cp.prerequisite_type as feedback_type, cp.prerequisite_description
+                        FROM feedback_package fp
+                        JOIN course_prerequisites cp ON fp.id = cp.prerequisite_id
+                        WHERE cp.course_id = ? AND cp.prerequisite_id = ? AND cp.prerequisite_type = 'feedback' AND cp.deleted_at IS NULL";
+                
+                $stmt = $this->conn->prepare($sql);
+                $stmt->execute([$courseId, $feedbackPackageId]);
+                $feedbackPackage = $stmt->fetch(PDO::FETCH_ASSOC);
+                
+                // Add is_required field for prerequisites (default to true)
+                if ($feedbackPackage) {
+                    $feedbackPackage['is_required'] = 1;
+                }
+            }
             
             if (!$feedbackPackage) {
                 return false;

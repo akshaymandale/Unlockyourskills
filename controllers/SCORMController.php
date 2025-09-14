@@ -296,6 +296,8 @@ class SCORMController extends BaseController
                 return;
             }
 
+            // Note: Completion tracking is now handled only when content is actually completed
+
             // Mark content as complete
             $updateData = [
                 'lesson_status' => 'completed'
@@ -323,6 +325,13 @@ class SCORMController extends BaseController
                     'status' => 'in_progress',
                     'completion_percentage' => 100.0
                 ]);
+
+                // Update completion tracking
+                require_once 'models/CompletionTrackingService.php';
+                $completionService = new CompletionTrackingService();
+                $completionService->handleContentCompletion($userId, $courseId, $contentId, 'scorm', $clientId);
+                
+                // Completion tracking is already handled by handleContentCompletion above
 
                 echo json_encode([
                     'success' => true,
@@ -379,6 +388,80 @@ class SCORMController extends BaseController
             error_log("[SCORM] Error getting resume data: " . $e->getMessage());
             http_response_code(500);
             echo json_encode(['error' => 'Internal server error']);
+        }
+    }
+
+    /**
+     * Check if SCORM content is a prerequisite and start tracking
+     */
+    private function startPrerequisiteTrackingIfApplicable($userId, $courseId, $contentId, $clientId) {
+        try {
+            require_once 'models/CompletionTrackingService.php';
+            $completionService = new CompletionTrackingService();
+            
+            // Check if this SCORM content is a prerequisite
+            $isPrerequisite = $this->isContentPrerequisite($courseId, $contentId, 'scorm');
+            
+            if ($isPrerequisite) {
+                $completionService->startPrerequisiteTracking($userId, $courseId, $contentId, 'scorm', $clientId);
+            }
+        } catch (Exception $e) {
+            error_log("Error in startPrerequisiteTrackingIfApplicable: " . $e->getMessage());
+        }
+    }
+
+    /**
+     * Start module tracking if SCORM content belongs to a module
+     */
+    private function startModuleTrackingIfApplicable($userId, $courseId, $contentId, $contentType, $clientId) {
+        try {
+            require_once 'models/CompletionTrackingService.php';
+            $completionService = new CompletionTrackingService();
+            
+            // Start module tracking if this content belongs to a module
+            $completionService->startModuleTrackingIfApplicable($userId, $courseId, $contentId, $contentType, $clientId);
+        } catch (Exception $e) {
+            error_log("Error in startModuleTrackingIfApplicable: " . $e->getMessage());
+        }
+    }
+
+    /**
+     * Check if SCORM content is a prerequisite and mark as complete
+     */
+    private function markPrerequisiteCompleteIfApplicable($userId, $courseId, $contentId, $clientId) {
+        try {
+            require_once 'models/CompletionTrackingService.php';
+            $completionService = new CompletionTrackingService();
+            
+            // Check if this SCORM content is a prerequisite
+            $isPrerequisite = $this->isContentPrerequisite($courseId, $contentId, 'scorm');
+            
+            if ($isPrerequisite) {
+                $completionService->markPrerequisiteComplete($userId, $courseId, $contentId, 'scorm', $clientId);
+            }
+        } catch (Exception $e) {
+            error_log("Error in markPrerequisiteCompleteIfApplicable: " . $e->getMessage());
+        }
+    }
+
+    /**
+     * Check if content is a prerequisite
+     */
+    private function isContentPrerequisite($courseId, $contentId, $contentType) {
+        try {
+            require_once 'config/Database.php';
+            $database = new Database();
+            $conn = $database->connect();
+            
+            $sql = "SELECT COUNT(*) FROM course_prerequisites 
+                    WHERE course_id = ? AND prerequisite_id = ? AND prerequisite_type = ?";
+            $stmt = $conn->prepare($sql);
+            $stmt->execute([$courseId, $contentId, $contentType]);
+            
+            return $stmt->fetchColumn() > 0;
+        } catch (Exception $e) {
+            error_log("Error checking if content is prerequisite: " . $e->getMessage());
+            return false;
         }
     }
 }

@@ -419,21 +419,21 @@ class ExternalProgressTracker {
     setupTabCloseProtection() {
         // Before unload event
         window.addEventListener('beforeunload', (e) => {
-            if (this.currentProgress.time_spent > 0) {
+            if (this.currentProgress.time_spent > 0 && !this.currentProgress.is_completed) {
                 this.beaconSave();
             }
         });
 
         // Page hide event
         window.addEventListener('pagehide', (e) => {
-            if (this.currentProgress.time_spent > 0) {
+            if (this.currentProgress.time_spent > 0 && !this.currentProgress.is_completed) {
                 this.beaconSave();
             }
         });
 
         // Unload event
         window.addEventListener('unload', (e) => {
-            if (this.currentProgress.time_spent > 0) {
+            if (this.currentProgress.time_spent > 0 && !this.currentProgress.is_completed) {
                 this.beaconSave();
             }
         });
@@ -443,12 +443,23 @@ class ExternalProgressTracker {
      * Save progress using beacon API (for reliable unload transmission)
      */
     beaconSave() {
+        // Don't save if already completed - this prevents overwriting completion status
+        if (this.currentProgress.is_completed) {
+            console.log('Skipping beacon save - content already completed');
+            return;
+        }
+
+        // Only save if we have meaningful progress to save
+        if (this.currentProgress.time_spent === 0) {
+            return;
+        }
+
         const data = {
             course_id: this.options.courseId,
             content_id: this.options.contentId,
             time_spent: this.currentProgress.time_spent,
             visit_count: this.currentProgress.visit_count,
-            is_completed: this.currentProgress.is_completed ? 1 : 0
+            is_completed: 0 // Always 0 for beacon saves to avoid overwriting completion
         };
 
         // Convert data to FormData for beacon

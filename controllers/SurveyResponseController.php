@@ -2,6 +2,7 @@
 require_once 'controllers/BaseController.php';
 require_once 'models/SurveyResponseModel.php';
 require_once 'core/IdEncryption.php';
+require_once 'config/Database.php';
 
 class SurveyResponseController extends BaseController {
     private $surveyResponseModel;
@@ -116,6 +117,11 @@ class SurveyResponseController extends BaseController {
             // Check if user has already submitted this survey
             $hasSubmitted = $this->surveyResponseModel->hasUserSubmittedSurvey($courseId, $userId, $surveyPackageId);
 
+            // Only start the survey if it hasn't been submitted yet
+            if (!$hasSubmitted) {
+                $this->surveyResponseModel->startSurvey($clientId, $courseId, $userId, $surveyPackageId);
+            }
+
             // Get existing responses if user has submitted
             $existingResponses = [];
             if ($hasSubmitted) {
@@ -198,7 +204,8 @@ class SurveyResponseController extends BaseController {
                 return;
             }
 
-            $successCount = 0;
+            // Process responses for completion (don't save individual responses)
+            $processedResponses = [];
             $errorCount = 0;
 
             // Process each response
@@ -207,72 +214,91 @@ class SurveyResponseController extends BaseController {
                 $responseType = $responseData['type'] ?? '';
                 $responseValue = $responseData['value'] ?? '';
 
-                // Determine response type and value
-                $data = [
-                    'client_id' => $clientId,
-                    'course_id' => $courseId,
-                    'user_id' => $userId,
-                    'survey_package_id' => $surveyPackageId,
-                    'question_id' => $questionId,
-                    'response_type' => $responseType,
-                    'rating_value' => null,
-                    'text_response' => null,
-                    'choice_response' => null,
-                    'file_response' => null,
-                    'response_data' => null
+                // Store response for completion
+                $processedResponses[$questionId] = [
+                    'type' => $responseType,
+                    'value' => $responseValue
                 ];
-
-                // Map response types to database enum values
-                switch ($responseType) {
-                    case 'rating':
-                        $data['rating_value'] = intval($responseValue);
-                        break;
-                    case 'text':
-                        $data['text_response'] = $responseValue;
-                        break;
-                    case 'choice':
-                        $data['choice_response'] = $responseValue;
-                        break;
-                    case 'checkbox':
-                        // For checkbox responses, store as JSON in response_data
-                        $data['response_data'] = json_encode($responseValue);
-                        break;
-                    case 'file':
-                        $data['file_response'] = $responseValue;
-                        break;
-                    default:
-                        // Store as JSON for complex responses
-                        $data['response_data'] = json_encode($responseValue);
-                        break;
-                }
-
-                // Save response
-                $result = $this->surveyResponseModel->saveResponse($data);
-                
-                if ($result) {
-                    $successCount++;
-                } else {
-                    $errorCount++;
-                }
             }
 
             if ($errorCount === 0) {
-                $this->jsonResponse([
-                    'success' => true, 
-                    'message' => 'Survey submitted successfully!',
-                    'submitted_count' => $successCount
-                ]);
+                // Complete the survey (update the single record with all response data)
+                $result = $this->surveyResponseModel->completeSurvey($clientId, $courseId, $userId, $surveyPackageId, $processedResponses);
+                
+                if ($result) {
+                    // Trigger completion tracking for prerequisites/post-requisites (same as assignments)
+                    try {
+                        require_once 'models/CompletionTrackingService.php';
+                        $completionService = new CompletionTrackingService();
+                        $completionService->handleContentCompletion($userId, $courseId, $surveyPackageId, 'survey', $clientId);
+                        
+                        // Mark prerequisite as complete if applicable
+                        $this->markPrerequisiteCompleteIfApplicable($userId, $courseId, $surveyPackageId, $clientId);
+                    } catch (Exception $e) {
+                        error_log("Error in survey completion tracking: " . $e->getMessage());
+                        // Don't fail the survey submission if completion tracking fails
+                    }
+                    
+                    $this->jsonResponse([
+                        'success' => true, 
+                        'message' => 'Survey submitted successfully!',
+                        'submitted_count' => count($processedResponses)
+                    ]);
+                } else {
+                    $this->jsonResponse([
+                        'success' => false, 
+                        'message' => 'Failed to complete survey: ' . $this->surveyResponseModel->getLastError()
+                    ]);
+                }
             } else {
                 $this->jsonResponse([
                     'success' => false, 
-                    'message' => "Survey partially submitted. $successCount responses saved, $errorCount failed.",
-                    'submitted_count' => $successCount,
+                    'message' => "Survey submission failed. $errorCount responses had invalid data.",
                     'error_count' => $errorCount
                 ]);
             }
 
         } catch (Exception $e) {
             $this->jsonResponse(['success' => false, 'message' => 'An error occurred while submitting the survey']);
+        }
+    }
+
+    /**
+     * Check if survey is a prerequisite and mark as complete
+     */
+    private function markPrerequisiteCompleteIfApplicable($userId, $courseId, $surveyPackageId, $clientId) {
+        try {
+            require_once 'models/CompletionTrackingService.php';
+            $completionService = new CompletionTrackingService();
+            
+            // Check if this survey is a prerequisite
+            $isPrerequisite = $this->isContentPrerequisite($courseId, $surveyPackageId, 'survey');
+            
+            if ($isPrerequisite) {
+                $completionService->markPrerequisiteComplete($userId, $courseId, $surveyPackageId, 'survey', $clientId);
+            }
+        } catch (Exception $e) {
+            error_log("Error in markPrerequisiteCompleteIfApplicable: " . $e->getMessage());
+        }
+    }
+
+    /**
+     * Check if content is a prerequisite
+     */
+    private function isContentPrerequisite($courseId, $contentId, $contentType) {
+        try {
+            $database = new Database();
+            $conn = $database->connect();
+            
+            $sql = "SELECT COUNT(*) FROM course_prerequisites 
+                    WHERE course_id = ? AND prerequisite_id = ? AND prerequisite_type = ?";
+            $stmt = $conn->prepare($sql);
+            $stmt->execute([$courseId, $contentId, $contentType]);
+            
+            return $stmt->fetchColumn() > 0;
+        } catch (Exception $e) {
+            error_log("Error checking if content is prerequisite: " . $e->getMessage());
+            return false;
         }
     }
 

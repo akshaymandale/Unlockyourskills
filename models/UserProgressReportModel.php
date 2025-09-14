@@ -258,14 +258,69 @@ class UserProgressReportModel {
                             WHERE asub.assignment_package_id = cp.prerequisite_id 
                             AND asub.user_id = ? AND asub.course_id = ? AND asub.client_id = ?
                         ))
-                        OR (cp.prerequisite_type = 'external')
+                        OR (cp.prerequisite_type = 'external' AND EXISTS (
+                            SELECT 1 FROM external_progress ep 
+                            WHERE ep.content_id = cp.prerequisite_id 
+                            AND ep.user_id = ? AND ep.course_id = ? AND ep.client_id = ?
+                            AND ep.is_completed = 1
+                        ))
+                        OR (cp.prerequisite_type = 'scorm' AND EXISTS (
+                            SELECT 1 FROM scorm_progress sp 
+                            WHERE sp.content_id = cp.prerequisite_id 
+                            AND sp.user_id = ? AND sp.course_id = ? AND sp.client_id = ?
+                            AND sp.is_completed = 1
+                        ))
+                        OR (cp.prerequisite_type = 'document' AND EXISTS (
+                            SELECT 1 FROM document_progress dp 
+                            WHERE dp.content_id = cp.prerequisite_id 
+                            AND dp.user_id = ? AND dp.course_id = ? AND dp.client_id = ?
+                            AND dp.is_completed = 1
+                        ))
+                        OR (cp.prerequisite_type = 'audio' AND EXISTS (
+                            SELECT 1 FROM audio_progress ap 
+                            WHERE ap.content_id = cp.prerequisite_id 
+                            AND ap.user_id = ? AND ap.course_id = ? AND ap.client_id = ?
+                            AND ap.is_completed = 1
+                        ))
+                        OR (cp.prerequisite_type = 'video' AND EXISTS (
+                            SELECT 1 FROM video_progress vp 
+                            WHERE vp.content_id = cp.prerequisite_id 
+                            AND vp.user_id = ? AND vp.course_id = ? AND vp.client_id = ?
+                            AND vp.is_completed = 1
+                        ))
+                        OR (cp.prerequisite_type = 'image' AND EXISTS (
+                            SELECT 1 FROM image_progress ip 
+                            WHERE ip.content_id = cp.prerequisite_id 
+                            AND ip.user_id = ? AND ip.course_id = ? AND ip.client_id = ?
+                            AND ip.is_completed = 1
+                        ))
+                        OR (cp.prerequisite_type = 'interactive' AND EXISTS (
+                            SELECT 1 FROM interactive_progress inp 
+                            WHERE inp.content_id = cp.prerequisite_id 
+                            AND inp.user_id = ? AND inp.course_id = ? AND inp.client_id = ?
+                            AND inp.is_completed = 1
+                        ))
+                        OR (cp.prerequisite_type = 'non_scorm' AND EXISTS (
+                            SELECT 1 FROM non_scorm_progress nsp 
+                            WHERE nsp.content_id = cp.prerequisite_id 
+                            AND nsp.user_id = ? AND nsp.course_id = ? AND nsp.client_id = ?
+                            AND nsp.is_completed = 1
+                        ))
                     )
                 ");
                 $prereqMetStmt->execute([
                     $courseId, $userId, $clientId, // assessment
                     $userId, $clientId, // survey
                     $userId, $clientId, // feedback
-                    $userId, $courseId, $clientId  // assignment
+                    $userId, $courseId, $clientId, // assignment
+                    $userId, $courseId, $clientId, // external
+                    $userId, $courseId, $clientId, // scorm
+                    $userId, $courseId, $clientId, // document
+                    $userId, $courseId, $clientId, // audio
+                    $userId, $courseId, $clientId, // video
+                    $userId, $courseId, $clientId, // image
+                    $userId, $courseId, $clientId, // interactive
+                    $userId, $courseId, $clientId  // non_scorm
                 ]);
                 $prereqMetResult = $prereqMetStmt->fetch(PDO::FETCH_ASSOC);
                 
@@ -363,7 +418,7 @@ class UserProgressReportModel {
     }
 
     /**
-     * Calculate course progress percentage based on content completion
+     * Calculate course progress percentage based on completion tables
      * @param int $courseId
      * @param int $userId
      * @param int $clientId
@@ -371,47 +426,165 @@ class UserProgressReportModel {
      */
     public function calculateCourseProgress($courseId, $userId, $clientId) {
         try {
-            // Get all modules and their content for this course
-            $modules = $this->getCourseModules($courseId);
-            $totalItems = 0;
-            $completedItems = 0;
-            $totalProgress = 0;
+            // Get course completion data from completion tables
+            $courseCompletion = $this->getCourseCompletionData($userId, $courseId, $clientId);
             
-            foreach ($modules as $module) {
-                if (isset($module['content']) && is_array($module['content'])) {
-                    foreach ($module['content'] as $content) {
-                        $totalItems++;
-                        $contentProgress = $this->getContentProgress($content, $userId, $clientId, $courseId);
-                        $totalProgress += $contentProgress;
-                        
-                        if ($contentProgress >= 100) {
-                            $completedItems++;
-                        }
+            if ($courseCompletion) {
+                return (int) $courseCompletion['completion_percentage'];
+            }
+            
+            // Fallback: calculate from individual completion tables
+            return $this->calculateCourseProgressFromCompletionTables($userId, $courseId, $clientId);
+            
+        } catch (Exception $e) {
+            error_log("Error calculating course progress: " . $e->getMessage());
+            return 0;
+        }
+    }
+
+    /**
+     * Get course completion data from course_completion table
+     * @param int $userId
+     * @param int $courseId
+     * @param int $clientId
+     * @return array|null
+     */
+    private function getCourseCompletionData($userId, $courseId, $clientId) {
+        try {
+            $stmt = $this->conn->prepare("
+                SELECT completion_percentage, is_completed, 
+                       prerequisites_completed, modules_completed, post_requisites_completed
+                FROM course_completion 
+                WHERE user_id = ? AND course_id = ? AND client_id = ?
+            ");
+            $stmt->execute([$userId, $courseId, $clientId]);
+            return $stmt->fetch(PDO::FETCH_ASSOC);
+        } catch (Exception $e) {
+            error_log("Error getting course completion data: " . $e->getMessage());
+            return null;
+        }
+    }
+
+    /**
+     * Calculate course progress from individual completion tables
+     * @param int $userId
+     * @param int $courseId
+     * @param int $clientId
+     * @return int
+     */
+    private function calculateCourseProgressFromCompletionTables($userId, $courseId, $clientId) {
+        try {
+            $totalWeight = 0;
+            $completedWeight = 0;
+            
+            // Get prerequisite completion data
+            $prereqData = $this->getPrerequisiteCompletionData($userId, $courseId, $clientId);
+            if (!empty($prereqData)) {
+                $totalWeight += count($prereqData);
+                foreach ($prereqData as $prereq) {
+                    if ($prereq['is_completed']) {
+                        $completedWeight++;
                     }
                 }
             }
             
-            // Also count prerequisites as items
-            $prerequisites = $this->getCoursePrerequisites($courseId);
-            foreach ($prerequisites as $prereq) {
-                $totalItems++;
-                $prereqProgress = $this->getPrerequisiteProgress($prereq, $userId, $clientId, $courseId);
-                $totalProgress += $prereqProgress;
-                
-                if ($prereqProgress >= 100) {
-                    $completedItems++;
+            // Get module completion data
+            $moduleData = $this->getModuleCompletionData($userId, $courseId, $clientId);
+            if (!empty($moduleData)) {
+                $totalWeight += count($moduleData);
+                foreach ($moduleData as $module) {
+                    if ($module['is_completed']) {
+                        $completedWeight++;
+                    }
                 }
             }
             
-            if ($totalItems > 0) {
-                return round($totalProgress / $totalItems);
+            // Get post-requisite completion data
+            $postreqData = $this->getPostRequisiteCompletionData($userId, $courseId, $clientId);
+            if (!empty($postreqData)) {
+                $totalWeight += count($postreqData);
+                foreach ($postreqData as $postreq) {
+                    if ($postreq['is_completed']) {
+                        $completedWeight++;
+                    }
+                }
+            }
+            
+            if ($totalWeight > 0) {
+                return round(($completedWeight / $totalWeight) * 100);
             }
             
             return 0;
             
         } catch (Exception $e) {
-            error_log("Error calculating course progress: " . $e->getMessage());
+            error_log("Error calculating course progress from completion tables: " . $e->getMessage());
             return 0;
+        }
+    }
+
+    /**
+     * Get prerequisite completion data
+     * @param int $userId
+     * @param int $courseId
+     * @param int $clientId
+     * @return array
+     */
+    private function getPrerequisiteCompletionData($userId, $courseId, $clientId) {
+        try {
+            $stmt = $this->conn->prepare("
+                SELECT prerequisite_id, prerequisite_type, completion_percentage, is_completed
+                FROM prerequisite_completion 
+                WHERE user_id = ? AND course_id = ? AND client_id = ?
+            ");
+            $stmt->execute([$userId, $courseId, $clientId]);
+            return $stmt->fetchAll(PDO::FETCH_ASSOC);
+        } catch (Exception $e) {
+            error_log("Error getting prerequisite completion data: " . $e->getMessage());
+            return [];
+        }
+    }
+
+    /**
+     * Get module completion data
+     * @param int $userId
+     * @param int $courseId
+     * @param int $clientId
+     * @return array
+     */
+    private function getModuleCompletionData($userId, $courseId, $clientId) {
+        try {
+            $stmt = $this->conn->prepare("
+                SELECT module_id, completion_percentage, is_completed
+                FROM module_completion 
+                WHERE user_id = ? AND course_id = ? AND client_id = ?
+            ");
+            $stmt->execute([$userId, $courseId, $clientId]);
+            return $stmt->fetchAll(PDO::FETCH_ASSOC);
+        } catch (Exception $e) {
+            error_log("Error getting module completion data: " . $e->getMessage());
+            return [];
+        }
+    }
+
+    /**
+     * Get post-requisite completion data
+     * @param int $userId
+     * @param int $courseId
+     * @param int $clientId
+     * @return array
+     */
+    private function getPostRequisiteCompletionData($userId, $courseId, $clientId) {
+        try {
+            $stmt = $this->conn->prepare("
+                SELECT post_requisite_id, content_type, completion_percentage, is_completed
+                FROM post_requisite_completion 
+                WHERE user_id = ? AND course_id = ? AND client_id = ?
+            ");
+            $stmt->execute([$userId, $courseId, $clientId]);
+            return $stmt->fetchAll(PDO::FETCH_ASSOC);
+        } catch (Exception $e) {
+            error_log("Error getting post-requisite completion data: " . $e->getMessage());
+            return [];
         }
     }
 

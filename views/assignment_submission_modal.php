@@ -157,6 +157,24 @@ if (!isset($assignment) || !isset($course_id) || !isset($assignment_id)) {
                 <input type="hidden" name="course_id" value="<?= htmlspecialchars(IdEncryption::encrypt($course_id)) ?>">
                 <input type="hidden" name="assignment_package_id" value="<?= htmlspecialchars(IdEncryption::encrypt($assignment_id)) ?>">
                 
+                <?php 
+                // Check if there's meaningful saved content to continue
+                $hasSavedContent = false;
+                if ($has_in_progress && !empty($in_progress_submission)) {
+                    $hasSavedContent = !empty($in_progress_submission['submission_text']) || 
+                                     !empty($in_progress_submission['submission_file']) || 
+                                     !empty($in_progress_submission['submission_url']);
+                }
+                ?>
+                
+                <?php if ($hasSavedContent): ?>
+                    <div class="alert alert-warning">
+                        <i class="fas fa-edit me-2"></i>
+                        <strong>Continue Your Work:</strong> Your previously saved progress has been loaded below. You can continue editing and save your progress or submit when ready.
+                        <small class="d-block mt-1">Last saved: <?= date('M j, Y g:i A', strtotime($in_progress_submission['updated_at'])) ?></small>
+                    </div>
+                <?php endif; ?>
+                
                 <!-- Submission Type Selection -->
                 <div class="submission-type-selection">
                     <label class="form-label"><strong>Submission Type:</strong></label>
@@ -165,27 +183,34 @@ if (!isset($assignment) || !isset($course_id) || !isset($assignment_id)) {
                     $isMixed = ($submissionFormat === 'mixed');
                     $inputType = $isMixed ? 'checkbox' : 'radio';
                     $nameAttribute = $isMixed ? 'submission_type[]' : 'submission_type';
+                    
+                    // Get saved submission types from in-progress submission (only if there's saved content)
+                    $savedSubmissionTypes = [];
+                    if ($hasSavedContent && isset($in_progress_submission['submission_type']) && !empty($in_progress_submission['submission_type'])) {
+                        $savedSubmissionTypes = explode(',', $in_progress_submission['submission_type']);
+                        $savedSubmissionTypes = array_map('trim', $savedSubmissionTypes);
+                    }
                     ?>
                     
                     <?php if ($isMixed): ?>
                         <!-- Mixed submission - show all options with checkboxes -->
                         <div class="form-check">
                             <input class="form-check-input" type="checkbox" name="submission_type[]" id="text_entry" 
-                                   value="text_entry" checked>
+                                   value="text_entry" <?= in_array('text_entry', $savedSubmissionTypes) ? 'checked' : 'checked' ?>>
                             <label class="form-check-label" for="text_entry">
                                 <i class="fas fa-keyboard me-1"></i>Text Entry
                             </label>
                         </div>
                         <div class="form-check">
                             <input class="form-check-input" type="checkbox" name="submission_type[]" id="file_upload" 
-                                   value="file_upload">
+                                   value="file_upload" <?= in_array('file_upload', $savedSubmissionTypes) ? 'checked' : '' ?>>
                             <label class="form-check-label" for="file_upload">
                                 <i class="fas fa-upload me-1"></i>File Upload
                             </label>
                         </div>
                         <div class="form-check">
                             <input class="form-check-input" type="checkbox" name="submission_type[]" id="url_submission" 
-                                   value="url_submission">
+                                   value="url_submission" <?= in_array('url_submission', $savedSubmissionTypes) ? 'checked' : '' ?>>
                             <label class="form-check-label" for="url_submission">
                                 <i class="fas fa-link me-1"></i>URL Submission
                             </label>
@@ -200,7 +225,7 @@ if (!isset($assignment) || !isset($course_id) || !isset($assignment_id)) {
                         <?php if ($submissionFormat === 'text_entry'): ?>
                             <div class="form-check">
                                 <input class="form-check-input" type="radio" name="submission_type" id="text_entry" 
-                                       value="text_entry" checked>
+                                       value="text_entry" <?= (empty($savedSubmissionTypes) || in_array('text_entry', $savedSubmissionTypes)) ? 'checked' : '' ?>>
                                 <label class="form-check-label" for="text_entry">
                                     <i class="fas fa-keyboard me-1"></i>Text Entry
                                 </label>
@@ -208,7 +233,7 @@ if (!isset($assignment) || !isset($course_id) || !isset($assignment_id)) {
                         <?php elseif ($submissionFormat === 'file_upload'): ?>
                             <div class="form-check">
                                 <input class="form-check-input" type="radio" name="submission_type" id="file_upload" 
-                                       value="file_upload" checked>
+                                       value="file_upload" <?= (empty($savedSubmissionTypes) || in_array('file_upload', $savedSubmissionTypes)) ? 'checked' : '' ?>>
                                 <label class="form-check-label" for="file_upload">
                                     <i class="fas fa-upload me-1"></i>File Upload
                                 </label>
@@ -216,7 +241,7 @@ if (!isset($assignment) || !isset($course_id) || !isset($assignment_id)) {
                         <?php elseif ($submissionFormat === 'url_submission'): ?>
                             <div class="form-check">
                                 <input class="form-check-input" type="radio" name="submission_type" id="url_submission" 
-                                       value="url_submission" checked>
+                                       value="url_submission" <?= (empty($savedSubmissionTypes) || in_array('url_submission', $savedSubmissionTypes)) ? 'checked' : '' ?>>
                                 <label class="form-check-label" for="url_submission">
                                     <i class="fas fa-link me-1"></i>URL Submission
                                 </label>
@@ -225,7 +250,7 @@ if (!isset($assignment) || !isset($course_id) || !isset($assignment_id)) {
                             <!-- Fallback to file_upload if unknown format -->
                             <div class="form-check">
                                 <input class="form-check-input" type="radio" name="submission_type" id="file_upload" 
-                                       value="file_upload" checked>
+                                       value="file_upload" <?= (empty($savedSubmissionTypes) || in_array('file_upload', $savedSubmissionTypes)) ? 'checked' : '' ?>>
                                 <label class="form-check-label" for="file_upload">
                                     <i class="fas fa-upload me-1"></i>File Upload
                                 </label>
@@ -239,7 +264,7 @@ if (!isset($assignment) || !isset($course_id) || !isset($assignment_id)) {
                     <div class="mb-3">
                         <label for="submission_text" class="form-label"><strong>Text Submission:</strong></label>
                         <textarea class="form-control" id="submission_text" name="submission_text" rows="10" 
-                                  placeholder="Enter your assignment content here..."></textarea>
+                                  placeholder="Enter your assignment content here..."><?= ($hasSavedContent && isset($in_progress_submission['submission_text'])) ? htmlspecialchars($in_progress_submission['submission_text']) : '' ?></textarea>
                     </div>
                 </div>
                 
@@ -250,6 +275,20 @@ if (!isset($assignment) || !isset($course_id) || !isset($assignment_id)) {
                         <input type="file" class="form-control" id="submission_file" name="submission_file" 
                                accept=".pdf,.doc,.docx,.txt,.rtf,.jpg,.jpeg,.png,.gif">
                         <div class="form-text">Max size: 50MB. Allowed formats: PDF, DOC, DOCX, TXT, RTF, JPG, PNG, GIF</div>
+                        
+                        <?php if ($hasSavedContent && isset($in_progress_submission['submission_file']) && !empty($in_progress_submission['submission_file'])): ?>
+                            <div class="mt-2">
+                                <div class="alert alert-info">
+                                    <i class="fas fa-file me-2"></i>
+                                    <strong>Previously uploaded file:</strong>
+                                    <a href="uploads/assignment_submissions/<?= htmlspecialchars($in_progress_submission['submission_file']) ?>" 
+                                       target="_blank" class="btn btn-sm btn-outline-primary ms-2">
+                                        <i class="fas fa-download me-1"></i>Download
+                                    </a>
+                                    <small class="text-muted d-block mt-1">Upload a new file to replace this one.</small>
+                                </div>
+                            </div>
+                        <?php endif; ?>
                     </div>
                 </div>
                 
@@ -258,14 +297,18 @@ if (!isset($assignment) || !isset($course_id) || !isset($assignment_id)) {
                     <div class="mb-3">
                         <label for="submission_url" class="form-label"><strong>Submission URL:</strong></label>
                         <input type="url" class="form-control" id="submission_url" name="submission_url" 
-                               placeholder="https://example.com/your-submission">
+                               placeholder="https://example.com/your-submission"
+                               value="<?= ($hasSavedContent && isset($in_progress_submission['submission_url'])) ? htmlspecialchars($in_progress_submission['submission_url']) : '' ?>">
                         <div class="form-text">Enter the URL where your assignment can be viewed</div>
                     </div>
                 </div>
                 
-                <!-- Submit Button -->
-                <div class="d-grid">
-                    <button type="submit" class="btn btn-primary" id="submitAssignmentBtn">
+                <!-- Action Buttons -->
+                <div class="d-flex gap-2">
+                    <button type="button" class="btn btn-outline-primary flex-fill" id="saveProgressBtn">
+                        <i class="fas fa-save me-1"></i>Save Progress
+                    </button>
+                    <button type="submit" class="btn btn-primary flex-fill" id="submitAssignmentBtn">
                         <i class="fas fa-paper-plane me-1"></i>Submit Assignment
                     </button>
                 </div>
@@ -499,8 +542,10 @@ function initializeAssignmentSubmission() {
                 const handleModalClose = () => {
                     window.location.reload();
                     modal.removeEventListener('hidden.bs.modal', handleModalClose);
+                    modal.removeAttribute('data-refresh-listener-added');
                 };
                 modal.addEventListener('hidden.bs.modal', handleModalClose);
+                modal.setAttribute('data-refresh-listener-added', 'true');
                 
                 // Close modal after 3 seconds
                 setTimeout(() => {
