@@ -801,6 +801,280 @@ function hasUserSubmittedFeedback($courseId, $userId, $feedbackPackageId) {
             }
         }
 
+        // Helper to check if SCORM content is completed
+        if (!function_exists('hasUserCompletedScormContent')) {
+            function hasUserCompletedScormContent($courseId, $userId, $prerequisiteId) {
+                try {
+                    $clientId = $_SESSION['user']['client_id'] ?? $_SESSION['client_id'] ?? 1;
+                    
+                    $db = new PDO(
+                        'mysql:unix_socket=/Applications/XAMPP/xamppfiles/var/mysql/mysql.sock;dbname=unlockyourskills',
+                        'root',
+                        ''
+                    );
+                    $db->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+                    
+                    // For SCORM prerequisites, we need to find the course_module_content.id
+                    // that corresponds to this prerequisite_id (SCORM package ID)
+                    $sql = "SELECT cmc.id as module_content_id 
+                            FROM course_module_content cmc
+                            WHERE cmc.content_id = ? AND cmc.content_type = 'scorm'
+                            LIMIT 1";
+                    $stmt = $db->prepare($sql);
+                    $stmt->execute([$prerequisiteId]);
+                    $moduleContentId = $stmt->fetchColumn();
+                    
+                    if (!$moduleContentId) {
+                        return false; // No corresponding module content found
+                    }
+                    
+                    // Now check scorm_progress using the course_module_content.id
+                    // First try by content_id (for module content)
+                    $sql = "SELECT completed_at FROM scorm_progress 
+                            WHERE user_id = ? AND course_id = ? AND content_id = ? AND client_id = ? AND completed_at IS NOT NULL";
+                    $stmt = $db->prepare($sql);
+                    $stmt->execute([$userId, $courseId, $moduleContentId, $clientId]);
+                    $result = $stmt->fetch(PDO::FETCH_ASSOC);
+                    
+                    if ($result && !empty($result['completed_at'])) {
+                        return true;
+                    }
+                    
+                    // If not found by content_id, try by scorm_package_id (for prerequisites)
+                    $sql = "SELECT completed_at FROM scorm_progress 
+                            WHERE user_id = ? AND course_id = ? AND scorm_package_id = ? AND client_id = ? AND completed_at IS NOT NULL";
+                    $stmt = $db->prepare($sql);
+                    $stmt->execute([$userId, $courseId, $prerequisiteId, $clientId]);
+                    $result = $stmt->fetch(PDO::FETCH_ASSOC);
+                    
+                    return $result && !empty($result['completed_at']);
+                } catch (Exception $e) {
+                    error_log("Error checking SCORM content completion: " . $e->getMessage());
+                    return false;
+                }
+            }
+        }
+
+        // Helper to check if video content is completed
+        if (!function_exists('hasUserCompletedVideoContent')) {
+            function hasUserCompletedVideoContent($courseId, $userId, $prerequisiteId) {
+                try {
+                    $clientId = $_SESSION['user']['client_id'] ?? $_SESSION['client_id'] ?? 1;
+                    
+                    $db = new PDO(
+                        'mysql:unix_socket=/Applications/XAMPP/xamppfiles/var/mysql/mysql.sock;dbname=unlockyourskills',
+                        'root',
+                        ''
+                    );
+                    $db->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+                    
+                    // For video prerequisites, we need to find the course_prerequisites.id
+                    $sql = "SELECT cp.id as course_prerequisite_id 
+                            FROM course_prerequisites cp 
+                            WHERE cp.course_id = ? AND cp.prerequisite_id = ? AND cp.prerequisite_type = 'video'";
+                    $stmt = $db->prepare($sql);
+                    $stmt->execute([$courseId, $prerequisiteId]);
+                    $prereqRecord = $stmt->fetch(PDO::FETCH_ASSOC);
+                    
+                    if (!$prereqRecord) {
+                        return false;
+                    }
+                    
+                    // Check video_progress using is_completed
+                    $sql = "SELECT is_completed FROM video_progress 
+                            WHERE user_id = ? AND course_id = ? AND content_id = ? AND client_id = ? AND is_completed = 1";
+                    $stmt = $db->prepare($sql);
+                    $stmt->execute([$userId, $courseId, $prereqRecord['course_prerequisite_id'], $clientId]);
+                    
+                    $result = $stmt->fetch(PDO::FETCH_ASSOC);
+                    return $result && $result['is_completed'] == 1;
+                } catch (Exception $e) {
+                    error_log("Error checking video content completion: " . $e->getMessage());
+                    return false;
+                }
+            }
+        }
+
+        // Helper to check if audio content is completed
+        if (!function_exists('hasUserCompletedAudioContent')) {
+            function hasUserCompletedAudioContent($courseId, $userId, $prerequisiteId) {
+                try {
+                    $clientId = $_SESSION['user']['client_id'] ?? $_SESSION['client_id'] ?? 1;
+                    
+                    $db = new PDO(
+                        'mysql:unix_socket=/Applications/XAMPP/xamppfiles/var/mysql/mysql.sock;dbname=unlockyourskills',
+                        'root',
+                        ''
+                    );
+                    $db->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+                    
+                    $sql = "SELECT cp.id as course_prerequisite_id 
+                            FROM course_prerequisites cp 
+                            WHERE cp.course_id = ? AND cp.prerequisite_id = ? AND cp.prerequisite_type = 'audio'";
+                    $stmt = $db->prepare($sql);
+                    $stmt->execute([$courseId, $prerequisiteId]);
+                    $prereqRecord = $stmt->fetch(PDO::FETCH_ASSOC);
+                    
+                    if (!$prereqRecord) {
+                        return false;
+                    }
+                    
+                    $sql = "SELECT is_completed FROM audio_progress 
+                            WHERE user_id = ? AND course_id = ? AND content_id = ? AND client_id = ? AND is_completed = 1";
+                    $stmt = $db->prepare($sql);
+                    $stmt->execute([$userId, $courseId, $prereqRecord['course_prerequisite_id'], $clientId]);
+                    
+                    $result = $stmt->fetch(PDO::FETCH_ASSOC);
+                    return $result && $result['is_completed'] == 1;
+                } catch (Exception $e) {
+                    error_log("Error checking audio content completion: " . $e->getMessage());
+                    return false;
+                }
+            }
+        }
+
+        // Helper to check if document content is completed
+        if (!function_exists('hasUserCompletedDocumentContent')) {
+            function hasUserCompletedDocumentContent($courseId, $userId, $prerequisiteId) {
+                try {
+                    $clientId = $_SESSION['user']['client_id'] ?? $_SESSION['client_id'] ?? 1;
+                    
+                    $db = new PDO(
+                        'mysql:unix_socket=/Applications/XAMPP/xamppfiles/var/mysql/mysql.sock;dbname=unlockyourskills',
+                        'root',
+                        ''
+                    );
+                    $db->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+                    
+                    $sql = "SELECT cp.id as course_prerequisite_id 
+                            FROM course_prerequisites cp 
+                            WHERE cp.course_id = ? AND cp.prerequisite_id = ? AND cp.prerequisite_type = 'document'";
+                    $stmt = $db->prepare($sql);
+                    $stmt->execute([$courseId, $prerequisiteId]);
+                    $prereqRecord = $stmt->fetch(PDO::FETCH_ASSOC);
+                    
+                    if (!$prereqRecord) {
+                        return false;
+                    }
+                    
+                    $sql = "SELECT is_completed FROM document_progress 
+                            WHERE user_id = ? AND course_id = ? AND content_id = ? AND client_id = ? AND is_completed = 1";
+                    $stmt = $db->prepare($sql);
+                    $stmt->execute([$userId, $courseId, $prereqRecord['course_prerequisite_id'], $clientId]);
+                    
+                    $result = $stmt->fetch(PDO::FETCH_ASSOC);
+                    return $result && $result['is_completed'] == 1;
+                } catch (Exception $e) {
+                    error_log("Error checking document content completion: " . $e->getMessage());
+                    return false;
+                }
+            }
+        }
+
+        // Helper to check if image content is completed
+        if (!function_exists('hasUserCompletedImageContent')) {
+            function hasUserCompletedImageContent($courseId, $userId, $prerequisiteId) {
+                try {
+                    $clientId = $_SESSION['user']['client_id'] ?? $_SESSION['client_id'] ?? 1;
+                    
+                    $db = new PDO(
+                        'mysql:unix_socket=/Applications/XAMPP/xamppfiles/var/mysql/mysql.sock;dbname=unlockyourskills',
+                        'root',
+                        ''
+                    );
+                    $db->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+                    
+                    $sql = "SELECT cp.id as course_prerequisite_id 
+                            FROM course_prerequisites cp 
+                            WHERE cp.course_id = ? AND cp.prerequisite_id = ? AND cp.prerequisite_type = 'image'";
+                    $stmt = $db->prepare($sql);
+                    $stmt->execute([$courseId, $prerequisiteId]);
+                    $prereqRecord = $stmt->fetch(PDO::FETCH_ASSOC);
+                    
+                    if (!$prereqRecord) {
+                        return false;
+                    }
+                    
+                    $sql = "SELECT is_completed FROM image_progress 
+                            WHERE user_id = ? AND course_id = ? AND content_id = ? AND client_id = ? AND is_completed = 1";
+                    $stmt = $db->prepare($sql);
+                    $stmt->execute([$userId, $courseId, $prereqRecord['course_prerequisite_id'], $clientId]);
+                    
+                    $result = $stmt->fetch(PDO::FETCH_ASSOC);
+                    return $result && $result['is_completed'] == 1;
+                } catch (Exception $e) {
+                    error_log("Error checking image content completion: " . $e->getMessage());
+                    return false;
+                }
+            }
+        }
+
+        // Helper to check if interactive content is completed
+        if (!function_exists('hasUserCompletedInteractiveContent')) {
+            function hasUserCompletedInteractiveContent($courseId, $userId, $prerequisiteId) {
+                try {
+                    $clientId = $_SESSION['user']['client_id'] ?? $_SESSION['client_id'] ?? 1;
+                    
+                    $db = new PDO(
+                        'mysql:unix_socket=/Applications/XAMPP/xamppfiles/var/mysql/mysql.sock;dbname=unlockyourskills',
+                        'root',
+                        ''
+                    );
+                    $db->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+                    
+                    $sql = "SELECT cp.id as course_prerequisite_id 
+                            FROM course_prerequisites cp 
+                            WHERE cp.course_id = ? AND cp.prerequisite_id = ? AND cp.prerequisite_type = 'interactive'";
+                    $stmt = $db->prepare($sql);
+                    $stmt->execute([$courseId, $prerequisiteId]);
+                    $prereqRecord = $stmt->fetch(PDO::FETCH_ASSOC);
+                    
+                    if (!$prereqRecord) {
+                        return false;
+                    }
+                    
+                    $sql = "SELECT is_completed FROM interactive_progress 
+                            WHERE user_id = ? AND course_id = ? AND content_id = ? AND client_id = ? AND is_completed = 1";
+                    $stmt = $db->prepare($sql);
+                    $stmt->execute([$userId, $courseId, $prereqRecord['course_prerequisite_id'], $clientId]);
+                    
+                    $result = $stmt->fetch(PDO::FETCH_ASSOC);
+                    return $result && $result['is_completed'] == 1;
+                } catch (Exception $e) {
+                    error_log("Error checking interactive content completion: " . $e->getMessage());
+                    return false;
+                }
+            }
+        }
+
+        // Helper to check if course prerequisite is completed
+        if (!function_exists('hasUserCompletedCoursePrerequisite')) {
+            function hasUserCompletedCoursePrerequisite($courseId, $userId, $prerequisiteId) {
+                try {
+                    $clientId = $_SESSION['user']['client_id'] ?? $_SESSION['client_id'] ?? 1;
+                    
+                    $db = new PDO(
+                        'mysql:unix_socket=/Applications/XAMPP/xamppfiles/var/mysql/mysql.sock;dbname=unlockyourskills',
+                        'root',
+                        ''
+                    );
+                    $db->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+                    
+                    // For course prerequisites, check course_completion table
+                    $sql = "SELECT is_completed FROM course_completion 
+                            WHERE user_id = ? AND course_id = ? AND client_id = ? AND is_completed = 1";
+                    $stmt = $db->prepare($sql);
+                    $stmt->execute([$userId, $prerequisiteId, $clientId]);
+                    
+                    $result = $stmt->fetch(PDO::FETCH_ASSOC);
+                    return $result && $result['is_completed'] == 1;
+                } catch (Exception $e) {
+                    error_log("Error checking course prerequisite completion: " . $e->getMessage());
+                    return false;
+                }
+            }
+        }
+
         // Helper to check if all prerequisites are completed
         if (!function_exists('arePrerequisitesCompleted')) {
             function arePrerequisitesCompleted($prerequisites, $assessmentResults) {
@@ -844,8 +1118,50 @@ function hasUserSubmittedFeedback($courseId, $userId, $feedbackPackageId) {
                         if (!$isExternalCompleted) {
                             return false;
                         }
+                    } elseif ($pre['prerequisite_type'] === 'scorm') {
+                        // Check if SCORM content has been completed
+                        $isScormCompleted = hasUserCompletedScormContent($courseId, $userId, $pre['prerequisite_id']);
+                        if (!$isScormCompleted) {
+                            return false;
+                        }
+                    } elseif ($pre['prerequisite_type'] === 'video') {
+                        // Check if video content has been completed
+                        $isVideoCompleted = hasUserCompletedVideoContent($courseId, $userId, $pre['prerequisite_id']);
+                        if (!$isVideoCompleted) {
+                            return false;
+                        }
+                    } elseif ($pre['prerequisite_type'] === 'audio') {
+                        // Check if audio content has been completed
+                        $isAudioCompleted = hasUserCompletedAudioContent($courseId, $userId, $pre['prerequisite_id']);
+                        if (!$isAudioCompleted) {
+                            return false;
+                        }
+                    } elseif ($pre['prerequisite_type'] === 'document') {
+                        // Check if document content has been completed
+                        $isDocumentCompleted = hasUserCompletedDocumentContent($courseId, $userId, $pre['prerequisite_id']);
+                        if (!$isDocumentCompleted) {
+                            return false;
+                        }
+                    } elseif ($pre['prerequisite_type'] === 'image') {
+                        // Check if image content has been completed
+                        $isImageCompleted = hasUserCompletedImageContent($courseId, $userId, $pre['prerequisite_id']);
+                        if (!$isImageCompleted) {
+                            return false;
+                        }
+                    } elseif ($pre['prerequisite_type'] === 'interactive') {
+                        // Check if interactive content has been completed
+                        $isInteractiveCompleted = hasUserCompletedInteractiveContent($courseId, $userId, $pre['prerequisite_id']);
+                        if (!$isInteractiveCompleted) {
+                            return false;
+                        }
+                    } elseif ($pre['prerequisite_type'] === 'course') {
+                        // Check if course prerequisite has been completed
+                        $isCourseCompleted = hasUserCompletedCoursePrerequisite($courseId, $userId, $pre['prerequisite_id']);
+                        if (!$isCourseCompleted) {
+                            return false;
+                        }
                     } else {
-                        // For other prerequisite types (courses, modules, etc.), 
+                        // For other prerequisite types (modules, etc.), 
                         // we assume they need to be completed manually or have completion tracking
                         // For now, we'll consider them as completed if they exist
                         // This can be enhanced later with actual completion tracking
@@ -1298,6 +1614,244 @@ function hasUserSubmittedFeedback($courseId, $userId, $feedbackPackageId) {
                         'last_updated' => '',
                         'has_progress' => false,
                         'progress_percentage' => 0
+                    ];
+                }
+            }
+        }
+        
+        // Helper to get prerequisite progress status
+        if (!function_exists('getPrerequisiteProgressStatus')) {
+            function getPrerequisiteProgressStatus($courseId, $prerequisiteId, $prerequisiteType, $userId) {
+                try {
+                    // Validate inputs
+                    if (empty($courseId) || empty($prerequisiteId) || empty($prerequisiteType) || empty($userId)) {
+                        return [
+                            'status' => 'not_started',
+                            'progress_percentage' => 0,
+                            'has_progress' => false,
+                            'last_updated' => '',
+                            'details' => []
+                        ];
+                    }
+                    
+                    // Get database connection
+                    $db = new PDO(
+                        'mysql:unix_socket=/Applications/XAMPP/xamppfiles/var/mysql/mysql.sock;dbname=unlockyourskills',
+                        'root',
+                        ''
+                    );
+                    $db->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+                    
+                    $progressPercentage = 0;
+                    $status = 'not_started';
+                    $hasProgress = false;
+                    $lastUpdated = '';
+                    $details = [];
+                    
+                    switch ($prerequisiteType) {
+                        case 'assessment':
+                            // For assessments, only show progress if there are actual results
+                            // Don't show "not started" status to match module behavior
+                            $stmt = $db->prepare("
+                                SELECT aa.id, aa.status, aa.updated_at 
+                                FROM assessment_attempts aa
+                                WHERE aa.assessment_id = ? AND aa.user_id = ? AND aa.status = 'completed'
+                                ORDER BY aa.updated_at DESC
+                                LIMIT 1
+                            ");
+                            $stmt->execute([$prerequisiteId, $userId]);
+                            $progress = $stmt->fetch(PDO::FETCH_ASSOC);
+                            
+                            if ($progress) {
+                                $hasProgress = true;
+                                $lastUpdated = $progress['updated_at'];
+                                $details = $progress;
+                                
+                                // Only show completed status for assessments
+                                $status = 'completed';
+                                $progressPercentage = 100;
+                            } else {
+                                // No progress data - don't show any status for assessments
+                                $status = 'no_status';
+                                $progressPercentage = 0;
+                            }
+                            break;
+                            
+                        case 'scorm':
+                            // Get SCORM progress - for prerequisites, we need to look up by scorm_package_id
+                            // The prerequisite_id is the SCORM package ID, so we can query directly
+                            $stmt = $db->prepare("
+                                SELECT lesson_status, lesson_location, score_raw, score_max, session_time, updated_at, suspend_data 
+                                FROM scorm_progress 
+                                WHERE course_id = ? AND scorm_package_id = ? AND user_id = ?
+                            ");
+                            $stmt->execute([$courseId, $prerequisiteId, $userId]);
+                            $progress = $stmt->fetch(PDO::FETCH_ASSOC);
+                            
+                            if ($progress) {
+                                $hasProgress = true;
+                                $lastUpdated = $progress['updated_at'];
+                                $details = $progress;
+                                
+                                if ($progress['lesson_status'] === 'completed' || $progress['lesson_status'] === 'passed') {
+                                    $status = 'completed';
+                                    $progressPercentage = 100;
+                                } elseif ($progress['lesson_status'] === 'incomplete' || $progress['lesson_status'] === 'browsed') {
+                                    $status = 'incomplete';
+                                    // Calculate progress based on lesson_location and suspend_data (same as module logic)
+                                    if (!empty($progress['lesson_location'])) {
+                                        $progressPercentage = 75; // Has location data - user has navigated
+                                    } elseif (!empty($progress['suspend_data'])) {
+                                        $progressPercentage = 50; // Has suspend data - user has interacted
+                                    } elseif ($progress['score_max'] > 0 && $progress['score_raw'] !== null) {
+                                        $progressPercentage = min(100, max(0, intval(($progress['score_raw'] / $progress['score_max']) * 100)));
+                                    } else {
+                                        $progressPercentage = 25; // Just started
+                                    }
+                                } else {
+                                    $status = 'not_started';
+                                    $progressPercentage = 0;
+                                }
+                            }
+                            break;
+                            
+                        case 'survey':
+                            // Get survey progress
+                            $stmt = $db->prepare("
+                                SELECT submitted_at, started_at, updated_at 
+                                FROM course_survey_responses 
+                                WHERE survey_package_id = ? AND user_id = ? AND course_id = ?
+                            ");
+                            $stmt->execute([$prerequisiteId, $userId, $courseId]);
+                            $progress = $stmt->fetch(PDO::FETCH_ASSOC);
+                            
+                            if ($progress) {
+                                $hasProgress = true;
+                                $lastUpdated = $progress['updated_at'];
+                                $details = $progress;
+                                
+                                if (!empty($progress['submitted_at'])) {
+                                    $status = 'completed';
+                                    $progressPercentage = 100;
+                                } elseif (!empty($progress['started_at'])) {
+                                    $status = 'in_progress';
+                                    $progressPercentage = 50;
+                                } else {
+                                    $status = 'not_started';
+                                    $progressPercentage = 0;
+                                }
+                            }
+                            break;
+                            
+                        case 'feedback':
+                            // Get feedback progress
+                            $stmt = $db->prepare("
+                                SELECT submitted_at, started_at, updated_at 
+                                FROM course_feedback_responses 
+                                WHERE feedback_package_id = ? AND user_id = ? AND course_id = ?
+                            ");
+                            $stmt->execute([$prerequisiteId, $userId, $courseId]);
+                            $progress = $stmt->fetch(PDO::FETCH_ASSOC);
+                            
+                            if ($progress) {
+                                $hasProgress = true;
+                                $lastUpdated = $progress['updated_at'];
+                                $details = $progress;
+                                
+                                if (!empty($progress['submitted_at'])) {
+                                    $status = 'completed';
+                                    $progressPercentage = 100;
+                                } elseif (!empty($progress['started_at'])) {
+                                    $status = 'in_progress';
+                                    $progressPercentage = 50;
+                                } else {
+                                    $status = 'not_started';
+                                    $progressPercentage = 0;
+                                }
+                            }
+                            break;
+                            
+                        case 'assignment':
+                            // Get assignment progress
+                            $stmt = $db->prepare("
+                                SELECT submitted_at, started_at, updated_at, status 
+                                FROM assignment_submissions 
+                                WHERE assignment_package_id = ? AND user_id = ? AND course_id = ?
+                            ");
+                            $stmt->execute([$prerequisiteId, $userId, $courseId]);
+                            $progress = $stmt->fetch(PDO::FETCH_ASSOC);
+                            
+                            if ($progress) {
+                                $hasProgress = true;
+                                $lastUpdated = $progress['updated_at'];
+                                $details = $progress;
+                                
+                                if ($progress['status'] === 'submitted' || $progress['status'] === 'graded') {
+                                    $status = 'completed';
+                                    $progressPercentage = 100;
+                                } elseif (!empty($progress['started_at'])) {
+                                    $status = 'in_progress';
+                                    $progressPercentage = 50;
+                                } else {
+                                    $status = 'not_started';
+                                    $progressPercentage = 0;
+                                }
+                            }
+                            break;
+                            
+                        case 'external':
+                            // Get external progress
+                            $stmt = $db->prepare("
+                                SELECT is_completed, completion_notes, updated_at, time_spent 
+                                FROM external_progress 
+                                WHERE content_id = ? AND user_id = ? AND course_id = ?
+                            ");
+                            $stmt->execute([$prerequisiteId, $userId, $courseId]);
+                            $progress = $stmt->fetch(PDO::FETCH_ASSOC);
+                            
+                            if ($progress) {
+                                $hasProgress = true;
+                                $lastUpdated = $progress['updated_at'];
+                                $details = $progress;
+                                
+                                if ($progress['is_completed']) {
+                                    $status = 'completed';
+                                    $progressPercentage = 100;
+                                } else {
+                                    $status = 'in_progress';
+                                    $progressPercentage = 50;
+                                }
+                            }
+                            break;
+                            
+                        default:
+                            // For other types, just check if there's any progress
+                            $status = 'not_started';
+                            $progressPercentage = 0;
+                    }
+                    
+                    return [
+                        'status' => $status,
+                        'progress_percentage' => $progressPercentage,
+                        'has_progress' => $hasProgress,
+                        'last_updated' => $lastUpdated,
+                        'details' => $details,
+                        // Add SCORM-specific fields to match getScormProgressStatus
+                        'location' => $details['lesson_location'] ?? '',
+                        'score' => $details['score_raw'] ?? 0,
+                        'max_score' => $details['score_max'] ?? 100,
+                        'session_time' => $details['session_time'] ?? ''
+                    ];
+                    
+                } catch (Exception $e) {
+                    error_log("Error getting prerequisite progress: " . $e->getMessage());
+                    
+                    return [
+                        'status' => 'unknown',
+                        'progress_percentage' => 0,
+                        'has_progress' => false,
+                        'last_updated' => '',
+                        'details' => []
                     ];
                 }
             }
@@ -1768,7 +2322,7 @@ function hasUserSubmittedFeedback($courseId, $userId, $feedbackPackageId) {
                 $isCompleted = $prereqCompletionModel->isPrerequisiteCompleted(
                     $userId, 
                     $course['id'], 
-                    $pre['prerequisite_id'], 
+                    $pre['id'], 
                     $pre['prerequisite_type'], 
                     $clientId
                 );
@@ -1851,6 +2405,47 @@ function hasUserSubmittedFeedback($courseId, $userId, $feedbackPackageId) {
                                         <?= htmlspecialchars($pre['title']) ?>
                                     </h6>
                                     <span class="prerequisite-type"><?= htmlspecialchars(ucfirst($type)) ?></span>
+                                    
+                                    <?php
+                                    // Get prerequisite progress status
+                                    $prereqProgress = getPrerequisiteProgressStatus($course['id'], $pre['prerequisite_id'], $pre['prerequisite_type'], $userId);
+                                    $progressPercentage = $prereqProgress['progress_percentage'];
+                                    $status = $prereqProgress['status'];
+                                    $hasProgress = $prereqProgress['has_progress'];
+                                    $lastUpdated = $prereqProgress['last_updated'];
+                                    $score = $prereqProgress['score'] ?? 0;
+                                    $maxScore = $prereqProgress['max_score'] ?? 100;
+                                    ?>
+                                    
+                                    <!-- Progress Display -->
+                                    <?php if ($status !== 'no_status'): ?>
+                                    <div class="prerequisite-progress mt-2">
+                                        <div class="progress-info d-flex justify-content-between align-items-center mb-1">
+                                            <span class="progress-text small">
+                                                <?php if ($status === 'completed'): ?>
+                                                    <i class="fas fa-check-circle text-success me-1"></i>Completed
+                                                <?php elseif ($status === 'incomplete'): ?>
+                                                    <i class="fas fa-clock text-warning me-1"></i>Incomplete
+                                                <?php else: ?>
+                                                    <i class="fas fa-circle text-muted me-1"></i>Not Started
+                                                <?php endif; ?>
+                                                <?php if ($pre['prerequisite_type'] === 'scorm' && $hasProgress && $score > 0): ?>
+                                                    - Score: <?= $score ?>/<?= $maxScore ?>
+                                                <?php endif; ?>
+                                            </span>
+                                            <span class="progress-percentage small text-muted"><?= $progressPercentage ?>%</span>
+                                        </div>
+                                        <div class="progress" style="height: 6px;">
+                                            <div class="progress-bar <?= $status === 'completed' ? 'bg-success' : ($status === 'incomplete' ? 'bg-warning' : 'bg-secondary') ?>" 
+                                                 style="width: <?= $progressPercentage ?>%"></div>
+                                        </div>
+                                        <?php if ($hasProgress && !empty($lastUpdated)): ?>
+                                            <div class="progress-details small text-muted mt-1">
+                                                <i class="fas fa-clock me-1"></i>Last updated: <?= date('M j, Y g:i A', strtotime($lastUpdated)) ?>
+                                            </div>
+                                        <?php endif; ?>
+                                    </div>
+                                    <?php endif; ?>
                                 </div>
                             </div>
                             <?php if (!empty($pre['prerequisite_type']) && in_array($pre['prerequisite_type'], ['assessment','survey','feedback','assignment','document','video','audio','image','interactive','scorm','external'])): ?>
@@ -2084,6 +2679,25 @@ function hasUserSubmittedFeedback($courseId, $userId, $feedbackPackageId) {
                                         echo "<a class='prerequisite-action-btn {$config['class']} launch-content-btn external-content-launch' target='_blank' href='" . htmlspecialchars($viewer) . "' data-type='external' data-content-id='" . $pre['id'] . "' data-prerequisite-id='" . $pre['id'] . "' " . $progressAttrs . ">";
                                         echo "<i class='fas {$config['icon']} me-1'></i>{$config['label']}";
                                         echo "</a>";
+                                    } elseif ($pre['prerequisite_type'] === 'scorm') {
+                                        // For SCORM prerequisites, check completion status and show appropriate button
+                                        $userId = $_SESSION['user']['id'] ?? $_SESSION['id'] ?? 75;
+                                        $clientId = $_SESSION['user']['client_id'] ?? $_SESSION['client_id'] ?? 1;
+                                        
+                                        // Get SCORM progress status
+                                        $prereqProgress = getPrerequisiteProgressStatus($GLOBALS['course']['id'], $pre['prerequisite_id'], $pre['prerequisite_type'], $userId);
+                                        
+                                        if ($prereqProgress['status'] === 'completed') {
+                                            // SCORM completed - show completed button
+                                            echo "<button class='prerequisite-action-btn btn-success' disabled title='SCORM content completed'>";
+                                            echo "<i class='fas fa-check-circle me-1'></i>Completed";
+                                            echo "</button>";
+                                        } else {
+                                            // SCORM not completed - show launch button
+                                            echo "<a class='prerequisite-action-btn {$config['class']} launch-content-btn' href='#' data-type='scorm' data-content-id='" . $pre['prerequisite_id'] . "' data-prerequisite-id='" . $pre['id'] . "' onclick='launchPrerequisiteSCORM(event, " . $GLOBALS['course']['id'] . ", " . $pre['id'] . ", " . $pre['prerequisite_id'] . ", \"" . addslashes($pre['title']) . "\")'>";
+                                            echo "<i class='fas {$config['icon']} me-1'></i>{$config['label']}";
+                                            echo "</a>";
+                                        }
                                     } else {
                                         // For other prerequisite types, use the existing start method
                                         echo "<a class='prerequisite-action-btn {$config['class']}' target='_blank' href='" . UrlHelper::url('my-courses/start') . '?type=' . urlencode($pre['prerequisite_type']) . '&id=' . urlencode($encryptedPrereqId) . '&course_id=' . $GLOBALS['course']['id'] . "'>";
@@ -2402,7 +3016,7 @@ function hasUserSubmittedFeedback($courseId, $userId, $feedbackPackageId) {
                                                                             $scormLauncherUrl = UrlHelper::url('scorm/launch') . '?course_id=' . $GLOBALS['course']['id'] . '&module_id=' . $module['id'] . '&content_id=' . $content['id'] . '&title=' . urlencode($content['title']);
                                                                             $actionsHtml .= "<a href='" . htmlspecialchars($scormLauncherUrl) . "' target='_blank' class='postrequisite-action-btn btn-secondary launch-content-btn' data-module-id='" . $module['id'] . "' data-content-id='" . $content['id'] . "' data-type='scorm' onclick='launchNewSCORMPlayer(event, " . $GLOBALS['course']['id'] . ", " . $module['id'] . ", " . $content['id'] . ", \"" . addslashes($content['title']) . "\")'><i class='fas fa-cube me-1'></i>Launch</a>";
                                                                         } else {
-                                                                            $statusHtml .= "<div class='scorm-completed-badge'><span class='badge bg-success'><i class='fas fa-check-circle me-1'></i>SCORM Completed</span></div>";
+                                                                            $actionsHtml .= "<button class='postrequisite-action-btn btn-success' disabled title='SCORM content completed'><i class='fas fa-check-circle me-1'></i>Completed</button>";
                                                                         }
                                                                     } else {
                                                                         $statusHtml .= "<span class='content-error'><i class='fas fa-exclamation-triangle me-1'></i>No SCORM launch path</span>";
@@ -3464,6 +4078,71 @@ function launchNewSCORMPlayer(event, courseId, moduleId, contentId, title) {
         
     } else {
         console.error('Failed to open SCORM player window');
+        alert('Failed to open SCORM player. Please check your popup blocker settings.');
+    }
+    
+    return false;
+}
+
+// Function to handle SCORM content in prerequisites
+function launchPrerequisiteSCORM(event, courseId, prerequisiteId, scormPackageId, title) {
+    event.preventDefault();
+    
+    console.log('Launching prerequisite SCORM player:', {
+        courseId: courseId,
+        prerequisiteId: prerequisiteId,
+        scormPackageId: scormPackageId,
+        title: title
+    });
+    
+    // Build the SCORM launcher URL for prerequisites
+    const scormLauncherUrl = `${window.location.origin}/Unlockyourskills/scorm/launch?course_id=${courseId}&content_id=${scormPackageId}&prerequisite_id=${prerequisiteId}&title=${encodeURIComponent(title)}`;
+    
+    console.log('Constructed prerequisite SCORM URL:', scormLauncherUrl);
+    
+    // Open in new window/tab with session preservation
+    const scormWindow = window.open(scormLauncherUrl, 'scorm_player', 'width=1200,height=800,scrollbars=yes,resizable=yes,menubar=yes,toolbar=yes');
+    
+    if (scormWindow) {
+        console.log('Prerequisite SCORM player window opened successfully');
+        
+        // Focus the new window
+        scormWindow.focus();
+        
+        // Add event listener for when the window is closed
+        let hasRefreshed = false; // Prevent multiple refreshes
+        let checkInterval = null;
+        
+        const checkClosed = setInterval(() => {
+            if (scormWindow.closed && !hasRefreshed) {
+                console.log('Prerequisite SCORM player window closed');
+                clearInterval(checkClosed);
+                hasRefreshed = true;
+                
+                // Add return parameter and refresh to show updated SCORM progress
+                const currentUrl = new URL(window.location);
+                currentUrl.searchParams.set('scorm_return', 'true');
+                window.history.replaceState({}, '', currentUrl);
+                
+                // Refresh after a short delay to show updated progress
+                setTimeout(() => {
+                    window.location.reload();
+                }, 500);
+            }
+        }, 1000);
+        
+        // Store the interval reference for cleanup
+        checkInterval = checkClosed;
+        
+        // Cleanup function to prevent memory leaks
+        window.addEventListener('beforeunload', () => {
+            if (checkInterval) {
+                clearInterval(checkInterval);
+            }
+        });
+        
+    } else {
+        console.error('Failed to open prerequisite SCORM player window');
         alert('Failed to open SCORM player. Please check your popup blocker settings.');
     }
     

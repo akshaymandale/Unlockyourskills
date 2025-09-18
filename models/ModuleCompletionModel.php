@@ -202,7 +202,8 @@ class ModuleCompletionModel {
                 }
                 
                 // Check if content is completed based on content type
-                $isCompleted = $this->isContentCompleted($userId, $courseId, $content['content_id'], $content['content_type'], $clientId);
+                // Use course_module_content.id for the lookup, not the actual content ID
+                $isCompleted = $this->isContentCompleted($userId, $courseId, $content['id'], $content['content_type'], $clientId);
                 
                 if ($isCompleted) {
                     $completedContent++;
@@ -256,6 +257,10 @@ class ModuleCompletionModel {
                         FROM $table ep
                         INNER JOIN course_module_content cmc ON ep.content_id = cmc.id
                         WHERE ep.user_id = ? AND ep.course_id = ? AND cmc.content_id = ? AND ep.client_id = ?";
+            } elseif ($contentType === 'scorm') {
+                // For SCORM content, check lesson_status and completed_at
+                $sql = "SELECT lesson_status, completed_at FROM $table 
+                        WHERE user_id = ? AND course_id = ? AND content_id = ? AND client_id = ?";
             } else {
                 $sql = "SELECT is_completed FROM $table 
                         WHERE user_id = ? AND course_id = ? AND content_id = ? AND client_id = ?";
@@ -265,7 +270,15 @@ class ModuleCompletionModel {
             $stmt->execute([$userId, $courseId, $contentId, $clientId]);
             
             $result = $stmt->fetch(PDO::FETCH_ASSOC);
-            return $result && $result['is_completed'] == 1;
+            
+            if ($contentType === 'scorm') {
+                // For SCORM, check if lesson_status is 'completed' or 'passed' and completed_at is not null
+                return $result && 
+                       ($result['lesson_status'] === 'completed' || $result['lesson_status'] === 'passed') && 
+                       !empty($result['completed_at']);
+            } else {
+                return $result && $result['is_completed'] == 1;
+            }
             
         } catch (Exception $e) {
             error_log("Error in isContentCompleted: " . $e->getMessage());

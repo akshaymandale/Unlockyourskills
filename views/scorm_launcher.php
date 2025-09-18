@@ -4,6 +4,14 @@
  * Provides a professional SCORM content player with progress tracking integration
  */
 
+// Start session to maintain authentication in new window
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+}
+
+// Include required classes
+require_once __DIR__ . '/../core/UrlHelper.php';
+
 // Get content details from controller data or URL parameters as fallback
 $courseId = $launcherData['course_id'] ?? $_GET['course_id'] ?? null;
 $moduleId = $launcherData['module_id'] ?? $_GET['module_id'] ?? null;
@@ -11,8 +19,8 @@ $contentId = $launcherData['content_id'] ?? $_GET['content_id'] ?? null;
 $scormUrl = $launcherData['scorm_url'] ?? $_GET['scorm_url'] ?? null;
 $title = $launcherData['title'] ?? $_GET['title'] ?? 'SCORM Content';
 
-// Validate required parameters
-if (!$courseId || !$moduleId || !$contentId || !$scormUrl) {
+// Validate required parameters (module_id is optional for prerequisites)
+if (!$courseId || !$contentId || !$scormUrl) {
     die('Missing required parameters for SCORM content. Received: ' . json_encode([
         'course_id' => $courseId,
         'module_id' => $moduleId,
@@ -20,6 +28,11 @@ if (!$courseId || !$moduleId || !$contentId || !$scormUrl) {
         'scorm_url' => $scormUrl,
         'launcherData' => $launcherData ?? 'not set'
     ]));
+}
+
+// For prerequisites, module_id might not be provided - use a fallback
+if (!$moduleId) {
+    $moduleId = 'prerequisite_' . $contentId;
 }
 
 // Get user information from session (session already started by main application)
@@ -752,7 +765,10 @@ if (!$userId || !$clientId) {
             userId: <?= json_encode($userId) ?>,
             clientId: <?= json_encode($clientId) ?>,
             scormUrl: <?= json_encode($scormUrl) ?>,
-            title: <?= json_encode($title) ?>
+            title: <?= json_encode($title) ?>,
+            contentType: <?= json_encode($launcherData['content_type'] ?? 'module') ?>,
+            prerequisiteId: <?= json_encode($launcherData['prerequisite_id'] ?? null) ?>,
+            scormPackageId: <?= json_encode($launcherData['scorm_package_id'] ?? null) ?>
         };
 
         // Global variables
@@ -896,6 +912,9 @@ if (!$userId || !$clientId) {
                 
                 // Setup event listeners
                 setupEventListeners();
+                
+                // Setup periodic time update
+                setupTimeTracking();
                 
                 isInitialized = true;
                 hideLoadingOverlay();
@@ -1320,6 +1339,10 @@ if (!$userId || !$clientId) {
                     scormData.progress_percent = calculateProgressFromSuspendData(scormData.suspend_data);
                 }
                 
+                // Use calculated time values instead of extracted ones
+                scormData.session_time = getAccumulatedSessionTime();
+                scormData.total_time = getTotalTime();
+                
                 console.log('Extracted SCORM data from iframe:', scormData);
                 return scormData;
                 
@@ -1691,6 +1714,21 @@ if (!$userId || !$clientId) {
             }
         }
         
+        // Get total time (session time + any previous total time)
+        function getTotalTime() {
+            try {
+                // Get current session time
+                const sessionTime = getAccumulatedSessionTime();
+                
+                // For now, total time is the same as session time
+                // In a more complex implementation, this would add previous session times
+                return sessionTime;
+            } catch (error) {
+                console.error('Error calculating total time:', error);
+                return 'PT0S';
+            }
+        }
+        
         // Save SCORM progress using the SCORM API endpoint
         async function saveSCORMProgress(progressData) {
             try {
@@ -1708,13 +1746,17 @@ if (!$userId || !$clientId) {
                     score_raw: parseInt(progressData.score_raw) || 0,
                     score_min: parseInt(progressData.score_min) || 0,
                     score_max: parseInt(progressData.score_max) || 100,
-                    session_time: progressData.session_time || 'PT0S'
+                    session_time: progressData.session_time || 'PT0S',
+                    total_time: progressData.total_time || 'PT0S'
                 };
                 
                 const requestBody = {
                     course_id: SCORM_CONFIG.courseId,
                     content_id: SCORM_CONFIG.contentId,
-                    progress_data: JSON.stringify(cleanData)
+                    progress_data: JSON.stringify(cleanData),
+                    content_type: SCORM_CONFIG.contentType,
+                    prerequisite_id: SCORM_CONFIG.prerequisiteId,
+                    scorm_package_id: SCORM_CONFIG.scormPackageId
                 };
                 
                 console.log('Sending SCORM progress data:', requestBody);
@@ -1901,6 +1943,24 @@ if (!$userId || !$clientId) {
             }
             console.log('Auto-save stopped');
         }
+        
+        // Setup time tracking
+        function setupTimeTracking() {
+            // Update session time every 5 seconds
+            setInterval(() => {
+                if (isInitialized && !window.contentCompleted) {
+                    // Update the accumulated session time based on page load time
+                    const currentTime = Date.now();
+                    const elapsed = (currentTime - sessionStartTime) / 1000; // Convert to seconds
+                    
+                    // Only update if we have meaningful elapsed time
+                    if (elapsed > 0) {
+                        accumulatedSessionTime = Math.floor(elapsed);
+                        console.log('Updated session time:', accumulatedSessionTime + 's');
+                    }
+                }
+            }, 5000);
+        }
 
         // Setup event listeners
         function setupEventListeners() {
@@ -2052,7 +2112,10 @@ if (!$userId || !$clientId) {
                     course_id: SCORM_CONFIG.courseId,
                     content_id: SCORM_CONFIG.contentId,
                     module_id: SCORM_CONFIG.moduleId,
-                    lesson_status: 'completed'
+                    lesson_status: 'completed',
+                    content_type: SCORM_CONFIG.contentType,
+                    prerequisite_id: SCORM_CONFIG.prerequisiteId,
+                    scorm_package_id: SCORM_CONFIG.scormPackageId
                 };
                 
                 console.log('Sending complete request with data:', requestBody);
