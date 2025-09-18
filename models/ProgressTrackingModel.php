@@ -196,9 +196,10 @@ class ProgressTrackingModel {
     /**
      * Initialize SCORM progress tracking
      */
-    public function initializeScormProgress($userId, $courseId, $contentId, $clientId) {
+    public function initializeScormProgress($userId, $courseId, $contentId, $clientId, $prerequisiteId = null, $moduleId = null, $postrequisiteId = null) {
         try {
             error_log("DEBUG: initializeScormProgress called - userId: $userId, courseId: $courseId, contentId: $contentId, clientId: $clientId");
+            error_log("DEBUG: IDs - prerequisiteId: " . ($prerequisiteId ?? 'NULL') . ", moduleId: " . ($moduleId ?? 'NULL') . ", postrequisiteId: " . ($postrequisiteId ?? 'NULL'));
             
             // Get SCORM package ID from course_module_content
             // The contentId parameter is actually the course_module_content.id
@@ -217,21 +218,142 @@ class ProgressTrackingModel {
             if ($scormPackageId) {
                 $stmt = $this->conn->prepare("
                     INSERT IGNORE INTO scorm_progress 
-                    (user_id, course_id, content_id, scorm_package_id, client_id, started_at, created_at, updated_at)
-                    VALUES (?, ?, ?, ?, ?, NOW(), NOW(), NOW())
+                    (user_id, course_id, prerequisite_id, postrequisite_id, content_id, scorm_package_id, client_id, 
+                     started_at, lesson_status, lesson_location, score_raw, score_min, score_max, 
+                     total_time, session_time, created_at, updated_at)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, NOW(), 'incomplete', '', 0.00, 0.00, 100.00, '00:00:00', '00:00:00', NOW(), NOW())
                 ");
-                $result = $stmt->execute([$userId, $courseId, $contentId, $scormPackageId, $clientId]);
+                $result = $stmt->execute([$userId, $courseId, $prerequisiteId, $postrequisiteId, $contentId, $scormPackageId, $clientId]);
                 error_log("DEBUG: SCORM progress insert result: " . ($result ? 'SUCCESS' : 'FAILED'));
                 
                 if ($result) {
                     $insertId = $this->conn->lastInsertId();
                     error_log("DEBUG: SCORM progress record ID: " . $insertId);
+                    return true;
                 }
+                return false;
             } else {
                 error_log("DEBUG: No SCORM package found for content ID: $contentId");
+                return false;
             }
         } catch (PDOException $e) {
             error_log("ProgressTrackingModel::initializeScormProgress error: " . $e->getMessage());
+            return false;
+        }
+    }
+
+    /**
+     * Initialize SCORM progress for prerequisites
+     * For prerequisites, contentId is the SCORM package ID, but we need to find the course_module_content.id
+     */
+    public function initializePrerequisiteScormProgress($userId, $courseId, $contentId, $clientId, $prerequisiteId = null) {
+        try {
+            error_log("DEBUG: initializePrerequisiteScormProgress called - userId: $userId, courseId: $courseId, contentId: $contentId, clientId: $clientId, prerequisiteId: " . ($prerequisiteId ?? 'NULL'));
+            
+            // For prerequisites, contentId is the SCORM package ID
+            // We need to find the course_module_content.id that corresponds to this SCORM package
+            $stmt = $this->conn->prepare("
+                SELECT cmc.id as module_content_id 
+                FROM course_module_content cmc
+                WHERE cmc.content_id = ? AND cmc.content_type = 'scorm'
+                LIMIT 1
+            ");
+            $stmt->execute([$contentId]);
+            $moduleContentId = $stmt->fetchColumn();
+            
+            error_log("DEBUG: Prerequisite module content ID found: " . ($moduleContentId ?: 'NULL'));
+
+            // For prerequisites, we should only set prerequisite_id and leave content_id as NULL
+            // since the user hasn't launched the module content yet
+            $stmt = $this->conn->prepare("
+                INSERT IGNORE INTO scorm_progress 
+                (user_id, course_id, prerequisite_id, postrequisite_id, content_id, scorm_package_id, client_id, 
+                 started_at, lesson_status, lesson_location, score_raw, score_min, score_max, 
+                 total_time, session_time, created_at, updated_at)
+                VALUES (?, ?, ?, ?, ?, ?, ?, NOW(), 'incomplete', '', 0.00, 0.00, 100.00, '00:00:00', '00:00:00', NOW(), NOW())
+            ");
+            $result = $stmt->execute([$userId, $courseId, $prerequisiteId, null, null, $contentId, $clientId]);
+            error_log("DEBUG: Prerequisite SCORM progress insert result: " . ($result ? 'SUCCESS' : 'FAILED'));
+            
+            if ($result) {
+                $insertId = $this->conn->lastInsertId();
+                error_log("DEBUG: Prerequisite SCORM progress record ID: " . $insertId);
+            }
+        } catch (PDOException $e) {
+            error_log("ProgressTrackingModel::initializePrerequisiteScormProgress error: " . $e->getMessage());
+        }
+    }
+
+    /**
+     * Get module content ID for SCORM package
+     * Used by SCORM controller to resolve content_id for prerequisites
+     */
+    public function getModuleContentIdForScormPackage($scormPackageId) {
+        try {
+            $stmt = $this->conn->prepare("
+                SELECT cmc.id as module_content_id 
+                FROM course_module_content cmc
+                WHERE cmc.content_id = ? AND cmc.content_type = 'scorm'
+                LIMIT 1
+            ");
+            $stmt->execute([$scormPackageId]);
+            $moduleContentId = $stmt->fetchColumn();
+            
+            error_log("DEBUG: getModuleContentIdForScormPackage - SCORM Package ID: {$scormPackageId}, Module Content ID: " . ($moduleContentId ?: 'NULL'));
+            
+            return $moduleContentId;
+        } catch (PDOException $e) {
+            error_log("ProgressTrackingModel::getModuleContentIdForScormPackage error: " . $e->getMessage());
+            return null;
+        }
+    }
+
+    /**
+     * Get prerequisite SCORM progress record
+     * Used to check if a prerequisite SCORM progress record already exists
+     */
+    public function getPrerequisiteScormProgress($userId, $courseId, $scormPackageId, $prerequisiteId, $clientId) {
+        try {
+            $stmt = $this->conn->prepare("
+                SELECT id, lesson_status, lesson_location, score_raw, score_min, score_max, 
+                       total_time, session_time, suspend_data, started_at, completed_at
+                FROM scorm_progress 
+                WHERE user_id = ? AND course_id = ? AND scorm_package_id = ? AND prerequisite_id = ? AND client_id = ?
+                LIMIT 1
+            ");
+            $stmt->execute([$userId, $courseId, $scormPackageId, $prerequisiteId, $clientId]);
+            $result = $stmt->fetch(PDO::FETCH_ASSOC);
+            
+            error_log("DEBUG: getPrerequisiteScormProgress - userId: $userId, courseId: $courseId, scormPackageId: $scormPackageId, prerequisiteId: $prerequisiteId, clientId: $clientId, found: " . ($result ? 'YES' : 'NO'));
+            
+            return $result;
+        } catch (PDOException $e) {
+            error_log("ProgressTrackingModel::getPrerequisiteScormProgress error: " . $e->getMessage());
+            return null;
+        }
+    }
+
+    /**
+     * Get SCORM progress for module or post-requisite content
+     */
+    public function getScormProgress($userId, $courseId, $contentId, $clientId) {
+        try {
+            $stmt = $this->conn->prepare("
+                SELECT id, lesson_status, lesson_location, score_raw, score_min, score_max, 
+                       total_time, session_time, suspend_data, started_at, completed_at
+                FROM scorm_progress 
+                WHERE user_id = ? AND course_id = ? AND content_id = ? AND client_id = ?
+                LIMIT 1
+            ");
+            $stmt->execute([$userId, $courseId, $contentId, $clientId]);
+            $result = $stmt->fetch(PDO::FETCH_ASSOC);
+            
+            error_log("DEBUG: getScormProgress - userId: $userId, courseId: $courseId, contentId: $contentId, clientId: $clientId, found: " . ($result ? 'YES' : 'NO'));
+            
+            return $result;
+        } catch (PDOException $e) {
+            error_log("ProgressTrackingModel::getScormProgress error: " . $e->getMessage());
+            return null;
         }
     }
 
@@ -266,6 +388,86 @@ class ProgressTrackingModel {
             }
         } catch (PDOException $e) {
             error_log("ProgressTrackingModel::initializeAssignmentProgress error: " . $e->getMessage());
+        }
+    }
+
+    /**
+     * Update SCORM progress for prerequisites
+     */
+    public function updatePrerequisiteScormProgress($userId, $courseId, $scormPackageId, $prerequisiteId, $clientId, $data) {
+        try {
+            error_log("DEBUG: updatePrerequisiteScormProgress called - userId: $userId, courseId: $courseId, scormPackageId: $scormPackageId, prerequisiteId: $prerequisiteId, clientId: $clientId");
+            error_log("DEBUG: updatePrerequisiteScormProgress data: " . json_encode($data));
+            
+            // Check if prerequisite SCORM progress record exists
+            $stmt = $this->conn->prepare("
+                SELECT id FROM scorm_progress 
+                WHERE user_id = ? AND course_id = ? AND scorm_package_id = ? AND prerequisite_id = ? AND client_id = ?
+            ");
+            $stmt->execute([$userId, $courseId, $scormPackageId, $prerequisiteId, $clientId]);
+            $existingRecord = $stmt->fetch();
+            
+            if (!$existingRecord) {
+                error_log("DEBUG: updatePrerequisiteScormProgress - no existing record, creating one first");
+                // Create the prerequisite record first
+                $this->initializePrerequisiteScormProgress($userId, $courseId, $scormPackageId, $clientId, $prerequisiteId);
+            }
+            
+            $fields = [];
+            $values = [];
+            
+            $allowedFields = [
+                'lesson_status', 'lesson_location', 'score_raw', 'score_min', 'score_max',
+                'total_time', 'session_time', 'suspend_data', 'launch_data', 'interactions', 'objectives'
+            ];
+            
+            foreach ($data as $key => $value) {
+                if (in_array($key, $allowedFields)) {
+                    $fields[] = "`$key` = ?";
+                    $values[] = $value;
+                }
+            }
+            
+            error_log("DEBUG: updatePrerequisiteScormProgress fields to update: " . json_encode($fields));
+            
+            if (empty($fields)) {
+                error_log("DEBUG: updatePrerequisiteScormProgress - no valid fields to update");
+                return false;
+            }
+            
+            $fields[] = "`updated_at` = NOW()";
+            
+            // Set completed_at if lesson is completed
+            if (isset($data['lesson_status']) && in_array($data['lesson_status'], ['completed', 'passed'])) {
+                $fields[] = "`completed_at` = NOW()";
+            }
+            
+            $values[] = (int)$userId;
+            $values[] = (int)$courseId;
+            $values[] = (int)$scormPackageId;
+            $values[] = (int)$prerequisiteId;
+            $values[] = (int)$clientId;
+            
+            $sql = "UPDATE scorm_progress SET " . implode(', ', $fields) . 
+                   " WHERE user_id = ? AND course_id = ? AND scorm_package_id = ? AND prerequisite_id = ? AND client_id = ?";
+            
+            error_log("DEBUG: updatePrerequisiteScormProgress SQL: " . $sql);
+            error_log("DEBUG: updatePrerequisiteScormProgress values: " . json_encode($values));
+            
+            $stmt = $this->conn->prepare($sql);
+            $result = $stmt->execute($values);
+            
+            if ($result) {
+                $rowCount = $stmt->rowCount();
+                error_log("DEBUG: updatePrerequisiteScormProgress SUCCESS - rows affected: $rowCount");
+            } else {
+                error_log("DEBUG: updatePrerequisiteScormProgress FAILED - execute returned false");
+            }
+            
+            return $result;
+        } catch (PDOException $e) {
+            error_log("ProgressTrackingModel::updatePrerequisiteScormProgress error: " . $e->getMessage());
+            return false;
         }
     }
 

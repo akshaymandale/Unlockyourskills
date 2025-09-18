@@ -151,24 +151,33 @@ class CourseCompletionModel {
      */
     public function calculateCourseCompletion($userId, $courseId, $clientId) {
         try {
-            // Check prerequisites completion
-            $prerequisitesCompleted = $this->arePrerequisitesCompleted($userId, $courseId, $clientId);
+            // Check if each component type exists and is completed
+            $hasPrerequisites = $this->hasPrerequisites($courseId);
+            $hasModules = $this->hasModules($courseId);
+            $hasPostRequisites = $this->hasPostRequisites($courseId);
             
-            // Check modules completion
-            $modulesCompleted = $this->areModulesCompleted($userId, $courseId, $clientId);
+            $prerequisitesCompleted = $hasPrerequisites ? $this->arePrerequisitesCompleted($userId, $courseId, $clientId) : false;
+            $modulesCompleted = $hasModules ? $this->areModulesCompleted($userId, $courseId, $clientId) : false;
+            $postRequisitesCompleted = $hasPostRequisites ? $this->arePostRequisitesCompleted($userId, $courseId, $clientId) : false;
             
-            // Check post-requisites completion
-            $postRequisitesCompleted = $this->arePostRequisitesCompleted($userId, $courseId, $clientId);
-            
-            // Calculate overall completion
-            $totalComponents = 3; // prerequisites + modules + post-requisites
+            // Calculate overall completion based on existing components only
+            $totalComponents = 0;
             $completedComponents = 0;
             
-            if ($prerequisitesCompleted) $completedComponents++;
-            if ($modulesCompleted) $completedComponents++;
-            if ($postRequisitesCompleted) $completedComponents++;
+            if ($hasPrerequisites) {
+                $totalComponents++;
+                if ($prerequisitesCompleted) $completedComponents++;
+            }
+            if ($hasModules) {
+                $totalComponents++;
+                if ($modulesCompleted) $completedComponents++;
+            }
+            if ($hasPostRequisites) {
+                $totalComponents++;
+                if ($postRequisitesCompleted) $completedComponents++;
+            }
             
-            $completionPercentage = round(($completedComponents / $totalComponents) * 100, 2);
+            $completionPercentage = $totalComponents > 0 ? round(($completedComponents / $totalComponents) * 100, 2) : 0;
             $isCompleted = $completionPercentage >= 100.00;
             
             return [
@@ -192,6 +201,54 @@ class CourseCompletionModel {
     }
 
     /**
+     * Check if course has prerequisites
+     */
+    private function hasPrerequisites($courseId) {
+        try {
+            $sql = "SELECT COUNT(*) FROM course_prerequisites 
+                    WHERE course_id = ? AND (deleted_at IS NULL OR deleted_at = '0000-00-00 00:00:00')";
+            $stmt = $this->conn->prepare($sql);
+            $stmt->execute([$courseId]);
+            return $stmt->fetchColumn() > 0;
+        } catch (Exception $e) {
+            error_log("Error in hasPrerequisites: " . $e->getMessage());
+            return false;
+        }
+    }
+
+    /**
+     * Check if course has modules
+     */
+    private function hasModules($courseId) {
+        try {
+            $sql = "SELECT COUNT(*) FROM course_modules 
+                    WHERE course_id = ? AND (deleted_at IS NULL OR deleted_at = '0000-00-00 00:00:00')";
+            $stmt = $this->conn->prepare($sql);
+            $stmt->execute([$courseId]);
+            return $stmt->fetchColumn() > 0;
+        } catch (Exception $e) {
+            error_log("Error in hasModules: " . $e->getMessage());
+            return false;
+        }
+    }
+
+    /**
+     * Check if course has post-requisites
+     */
+    private function hasPostRequisites($courseId) {
+        try {
+            $sql = "SELECT COUNT(*) FROM course_post_requisites 
+                    WHERE course_id = ? AND is_deleted = 0";
+            $stmt = $this->conn->prepare($sql);
+            $stmt->execute([$courseId]);
+            return $stmt->fetchColumn() > 0;
+        } catch (Exception $e) {
+            error_log("Error in hasPostRequisites: " . $e->getMessage());
+            return false;
+        }
+    }
+
+    /**
      * Check if prerequisites are completed
      */
     private function arePrerequisitesCompleted($userId, $courseId, $clientId) {
@@ -206,7 +263,7 @@ class CourseCompletionModel {
             $prerequisites = $stmt->fetchAll(PDO::FETCH_ASSOC);
             
             if (empty($prerequisites)) {
-                return true; // No prerequisites means they're "completed"
+                return false; // No prerequisites means they're not completed
             }
             
             // Check if all prerequisites are completed
@@ -238,7 +295,7 @@ class CourseCompletionModel {
             $modules = $stmt->fetchAll(PDO::FETCH_COLUMN);
             
             if (empty($modules)) {
-                return true; // No modules means they're "completed"
+                return false; // No modules means they're not completed
             }
             
             // Check if all modules are completed
@@ -272,7 +329,7 @@ class CourseCompletionModel {
             $postRequisites = $stmt->fetchAll(PDO::FETCH_ASSOC);
             
             if (empty($postRequisites)) {
-                return true; // No post-requisites means they're "completed"
+                return false; // No post-requisites means they're not completed
             }
             
             // Check if all post-requisites are completed
@@ -329,6 +386,11 @@ class CourseCompletionModel {
                 $sql = "SELECT completed_at FROM $table 
                         WHERE user_id = ? AND course_id = ? AND feedback_package_id = ? AND client_id = ? AND completed_at IS NOT NULL";
                 $params = [$userId, $courseId, $prerequisiteId, $clientId];
+            } elseif ($prerequisiteType === 'scorm') {
+                // For SCORM, check lesson_status and completed_at
+                $sql = "SELECT lesson_status, completed_at FROM $table 
+                        WHERE user_id = ? AND course_id = ? AND scorm_package_id = ? AND client_id = ?";
+                $params = [$userId, $courseId, $prerequisiteId, $clientId];
             } else {
                 $sql = "SELECT is_completed FROM $table 
                         WHERE user_id = ? AND course_id = ? AND content_id = ? AND client_id = ?";
@@ -342,6 +404,11 @@ class CourseCompletionModel {
             
             if (in_array($prerequisiteType, ['survey', 'feedback'])) {
                 return $result && !empty($result['completed_at']);
+            } elseif ($prerequisiteType === 'scorm') {
+                // For SCORM, check if lesson_status is 'completed' or 'passed' and completed_at is not null
+                return $result && 
+                       ($result['lesson_status'] === 'completed' || $result['lesson_status'] === 'passed') && 
+                       !empty($result['completed_at']);
             } else {
                 return $result && $result['is_completed'] == 1;
             }

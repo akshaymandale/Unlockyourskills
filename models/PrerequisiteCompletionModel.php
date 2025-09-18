@@ -285,8 +285,16 @@ class PrerequisiteCompletionModel {
                 $sql = "SELECT started_at, completed_at FROM $table 
                         WHERE user_id = ? AND course_id = ? AND feedback_package_id = ? AND client_id = ? AND response_type = 'feedback_start'";
                 $params = [$userId, $courseId, $prerequisiteId, $clientId];
+            } elseif ($prerequisiteType === 'scorm') {
+                // For SCORM prerequisites, we need to find the course_module_content.id
+                // that corresponds to this prerequisite_id (SCORM package ID)
+                $sql = "SELECT sp.completed_at 
+                        FROM $table sp
+                        INNER JOIN course_module_content cmc ON sp.content_id = cmc.id
+                        WHERE sp.user_id = ? AND sp.course_id = ? AND cmc.content_id = ? AND sp.client_id = ?";
+                $params = [$userId, $courseId, $prerequisiteId, $clientId];
             } else {
-                $sql = "SELECT time_spent, completed_at FROM $table 
+                $sql = "SELECT completed_at FROM $table 
                         WHERE user_id = ? AND course_id = ? AND content_id = ? AND client_id = ?";
                 $params = [$userId, $courseId, $prerequisiteId, $clientId];
             }
@@ -310,6 +318,9 @@ class PrerequisiteCompletionModel {
                         // Fallback to stored time_spent if timestamps are not available
                         $timeSpent = isset($result['time_spent']) ? (int)$result['time_spent'] : 0;
                     }
+                } elseif ($prerequisiteType === 'scorm') {
+                    // SCORM doesn't track time_spent in the same way, set to 0
+                    $timeSpent = 0;
                 } else {
                     $timeSpent = isset($result['time_spent']) ? (int)$result['time_spent'] : 0;
                 }

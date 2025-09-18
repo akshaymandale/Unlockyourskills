@@ -10,7 +10,7 @@ class MyCoursesModel {
     }
 
     /**
-     * Check if a course has been started by checking completion tables
+     * Check if a course has been started by checking progress tables only
      * @param int $courseId
      * @param int $userId
      * @param int $clientId
@@ -18,11 +18,11 @@ class MyCoursesModel {
      */
     public function isCourseStarted($courseId, $userId, $clientId) {
         try {
-            // Check if there are any entries in progress tables or completion tables
+            // Check if there are any entries in progress tables only
             // Course is started if there's any user interaction with course content
             $progressCheckStmt = $this->conn->prepare("
                 SELECT COUNT(*) as count FROM (
-                    -- Progress tables
+                    -- Progress tables only
                     SELECT 1 FROM video_progress 
                     WHERE course_id = ? AND user_id = ? AND client_id = ?
                     UNION ALL
@@ -52,27 +52,10 @@ class MyCoursesModel {
                     UNION ALL
                     SELECT 1 FROM course_feedback_responses 
                     WHERE course_id = ? AND user_id = ? AND client_id = ?
-                    UNION ALL
-                    -- Completion tables
-                    SELECT 1 FROM prerequisite_completion 
-                    WHERE course_id = ? AND user_id = ? AND client_id = ?
-                    AND (completion_percentage > 0 OR is_completed = 1)
-                    UNION ALL
-                    SELECT 1 FROM course_completion 
-                    WHERE course_id = ? AND user_id = ? AND client_id = ?
-                    AND (completion_percentage > 0 OR is_completed = 1)
-                    UNION ALL
-                    SELECT 1 FROM post_requisite_completion 
-                    WHERE course_id = ? AND user_id = ? AND client_id = ?
-                    AND (completion_percentage > 0 OR is_completed = 1)
-                    UNION ALL
-                    SELECT 1 FROM module_completion 
-                    WHERE course_id = ? AND user_id = ? AND client_id = ?
-                    AND (completion_percentage > 0 OR is_completed = 1)
                 ) as progress_entries
             ");
             $progressCheckStmt->execute([
-                // Progress tables
+                // Progress tables only
                 $courseId, $userId, $clientId, // video_progress
                 $courseId, $userId, $clientId, // audio_progress
                 $courseId, $userId, $clientId, // document_progress
@@ -82,16 +65,11 @@ class MyCoursesModel {
                 $courseId, $userId, $clientId, // interactive_progress
                 $courseId, $userId, $clientId, // assignment_submissions
                 $courseId, $userId, $clientId, // course_survey_responses
-                $courseId, $userId, $clientId, // course_feedback_responses
-                // Completion tables
-                $courseId, $userId, $clientId, // prerequisite_completion
-                $courseId, $userId, $clientId, // course_completion
-                $courseId, $userId, $clientId, // post_requisite_completion
-                $courseId, $userId, $clientId  // module_completion
+                $courseId, $userId, $clientId  // course_feedback_responses
             ]);
             $progressResult = $progressCheckStmt->fetch(PDO::FETCH_ASSOC);
             
-            // If there are any entries in progress or completion tables, course is started
+            // If there are any entries in progress tables, course is started
             if ($progressResult['count'] > 0) {
                 return true;
             }
@@ -303,13 +281,11 @@ class MyCoursesModel {
             $params[':search'] = '%' . $search . '%';
         }
 
-        $sql .= " GROUP BY c.id ORDER BY c.name ASC LIMIT :limit OFFSET :offset";
+        $sql .= " GROUP BY c.id ORDER BY c.name ASC";
         $stmt = $this->conn->prepare($sql);
         foreach ($params as $k => $v) {
             $stmt->bindValue($k, $v);
         }
-        $stmt->bindValue(':limit', (int)$perPage, PDO::PARAM_INT);
-        $stmt->bindValue(':offset', (int)$offset, PDO::PARAM_INT);
         $stmt->execute();
         $courses = $stmt->fetchAll(PDO::FETCH_ASSOC);
         
@@ -351,7 +327,12 @@ class MyCoursesModel {
             });
         }
         
-        return array_values($courses);
+        // Apply pagination after status filtering
+        $courses = array_values($courses);
+        $totalCourses = count($courses);
+        $courses = array_slice($courses, $offset, $perPage);
+        
+        return $courses;
     }
 
     /**
@@ -425,7 +406,7 @@ class MyCoursesModel {
     }
 
     /**
-     * Calculate course progress percentage based on completion tables
+     * Calculate course progress percentage based on progress tables
      * @param int $courseId
      * @param int $userId
      * @param int $clientId
@@ -433,15 +414,8 @@ class MyCoursesModel {
      */
     private function calculateCourseProgress($courseId, $userId, $clientId) {
         try {
-            // Get course completion data from completion tables
-            $courseCompletion = $this->getCourseCompletionData($userId, $courseId, $clientId);
-            
-            if ($courseCompletion) {
-                return (int) $courseCompletion['completion_percentage'];
-            }
-            
-            // Fallback: calculate from individual completion tables
-            return $this->calculateCourseProgressFromCompletionTables($userId, $courseId, $clientId);
+            // Calculate progress from actual progress tables, not completion tables
+            return $this->calculateCourseProgressFromProgressTables($userId, $courseId, $clientId);
             
         } catch (Exception $e) {
             error_log("Error calculating course progress: " . $e->getMessage());
@@ -473,47 +447,29 @@ class MyCoursesModel {
     }
 
     /**
-     * Calculate course progress from individual completion tables
+     * Calculate course progress from progress tables
      * @param int $userId
      * @param int $courseId
      * @param int $clientId
      * @return int
      */
-    private function calculateCourseProgressFromCompletionTables($userId, $courseId, $clientId) {
+    private function calculateCourseProgressFromProgressTables($userId, $courseId, $clientId) {
         try {
             $totalWeight = 0;
             $completedWeight = 0;
             
-            // Get prerequisite completion data
-            $prereqData = $this->getPrerequisiteCompletionData($userId, $courseId, $clientId);
-            if (!empty($prereqData)) {
-                $totalWeight += count($prereqData);
-                foreach ($prereqData as $prereq) {
-                    if ($prereq['is_completed']) {
-                        $completedWeight++;
-                    }
-                }
+            // Get all course content (prerequisites + modules + post-requisites)
+            $allContent = $this->getAllCourseContent($courseId);
+            
+            if (empty($allContent)) {
+                return 0;
             }
             
-            // Get module completion data
-            $moduleData = $this->getModuleCompletionData($userId, $courseId, $clientId);
-            if (!empty($moduleData)) {
-                $totalWeight += count($moduleData);
-                foreach ($moduleData as $module) {
-                    if ($module['is_completed']) {
-                        $completedWeight++;
-                    }
-                }
-            }
-            
-            // Get post-requisite completion data
-            $postreqData = $this->getPostRequisiteCompletionData($userId, $courseId, $clientId);
-            if (!empty($postreqData)) {
-                $totalWeight += count($postreqData);
-                foreach ($postreqData as $postreq) {
-                    if ($postreq['is_completed']) {
-                        $completedWeight++;
-                    }
+            foreach ($allContent as $content) {
+                $totalWeight++;
+                $isCompleted = $this->isContentCompletedInProgressTables($content, $userId, $courseId, $clientId);
+                if ($isCompleted) {
+                    $completedWeight++;
                 }
             }
             
@@ -524,11 +480,129 @@ class MyCoursesModel {
             return 0;
             
         } catch (Exception $e) {
-            error_log("Error calculating course progress from completion tables: " . $e->getMessage());
+            error_log("Error calculating course progress from progress tables: " . $e->getMessage());
             return 0;
         }
     }
 
+    /**
+     * Get all course content (prerequisites + modules + post-requisites)
+     * @param int $courseId
+     * @return array
+     */
+    private function getAllCourseContent($courseId) {
+        try {
+            $allContent = [];
+            
+            // Get prerequisites
+            $stmt = $this->conn->prepare("
+                SELECT cp.id, cp.prerequisite_id, cp.prerequisite_type, 'prerequisite' as content_category
+                FROM course_prerequisites cp
+                WHERE cp.course_id = ? AND cp.deleted_at IS NULL
+            ");
+            $stmt->execute([$courseId]);
+            $prerequisites = $stmt->fetchAll(PDO::FETCH_ASSOC);
+            $allContent = array_merge($allContent, $prerequisites);
+            
+            // Get module content
+            $stmt = $this->conn->prepare("
+                SELECT cmc.id as content_id, cmc.content_id as scorm_package_id, cmc.content_type, 'module' as content_category
+                FROM course_module_content cmc
+                INNER JOIN course_modules cm ON cmc.module_id = cm.id
+                WHERE cm.course_id = ? AND cmc.deleted_at IS NULL
+            ");
+            $stmt->execute([$courseId]);
+            $moduleContent = $stmt->fetchAll(PDO::FETCH_ASSOC);
+            $allContent = array_merge($allContent, $moduleContent);
+            
+            // Get post-requisites
+            $stmt = $this->conn->prepare("
+                SELECT cpr.id, cpr.content_id, cpr.content_type, 'post_requisite' as content_category
+                FROM course_post_requisites cpr
+                WHERE cpr.course_id = ?
+            ");
+            $stmt->execute([$courseId]);
+            $postRequisites = $stmt->fetchAll(PDO::FETCH_ASSOC);
+            $allContent = array_merge($allContent, $postRequisites);
+            
+            return $allContent;
+            
+        } catch (Exception $e) {
+            error_log("Error getting all course content: " . $e->getMessage());
+            return [];
+        }
+    }
+    
+    /**
+     * Check if content is completed based on progress tables
+     * @param array $content
+     * @param int $userId
+     * @param int $courseId
+     * @param int $clientId
+     * @return bool
+     */
+    private function isContentCompletedInProgressTables($content, $userId, $courseId, $clientId) {
+        try {
+            // Handle different field structures based on content category
+            if (!isset($content['content_category'])) {
+                error_log("Content missing content_category: " . print_r($content, true));
+                return false;
+            }
+            
+            if ($content['content_category'] === 'prerequisite') {
+                $contentType = $content['prerequisite_type'];
+                $contentId = $content['id']; // Use the prerequisite record ID
+            } elseif ($content['content_category'] === 'module') {
+                $contentType = $content['content_type'];
+                $contentId = $content['content_id']; // Use the module content ID
+            } elseif ($content['content_category'] === 'post_requisite') {
+                $contentType = $content['content_type'];
+                $contentId = $content['id']; // Use the post-requisite record ID
+            } else {
+                error_log("Unknown content category: " . $content['content_category']);
+                return false;
+            }
+            
+            switch ($contentType) {
+                case 'scorm':
+                    // For SCORM, we need to handle prerequisites vs modules differently
+                    if (isset($content['content_category']) && $content['content_category'] === 'prerequisite') {
+                        // For prerequisites, use the SCORM package ID
+                        $scormPackageId = $content['prerequisite_id'] ?? $content['content_id'];
+                        return $this->isScormContentCompleted($scormPackageId, $userId, $courseId, $clientId);
+                    } else {
+                        // For modules, use the course_module_content.id
+                        $moduleContentId = $content['content_id'];
+                        return $this->isScormContentCompleted($moduleContentId, $userId, $courseId, $clientId);
+                    }
+                case 'video':
+                    return $this->isVideoContentCompleted($contentId, $userId, $courseId, $clientId);
+                case 'audio':
+                    return $this->isAudioContentCompleted($contentId, $userId, $courseId, $clientId);
+                case 'document':
+                    return $this->isDocumentContentCompleted($contentId, $userId, $courseId, $clientId);
+                case 'image':
+                    return $this->isImageContentCompleted($contentId, $userId, $courseId, $clientId);
+                case 'external':
+                    return $this->isExternalContentCompleted($contentId, $userId, $courseId, $clientId);
+                case 'interactive':
+                    return $this->isInteractiveContentCompleted($contentId, $userId, $courseId, $clientId);
+                case 'assignment':
+                    return $this->isAssignmentCompleted($contentId, $userId, $courseId, $clientId);
+                case 'survey':
+                    return $this->isSurveyCompleted($contentId, $userId, $courseId, $clientId);
+                case 'feedback':
+                    return $this->isFeedbackCompleted($contentId, $userId, $courseId, $clientId);
+                default:
+                    return false;
+            }
+            
+        } catch (Exception $e) {
+            error_log("Error checking content completion: " . $e->getMessage());
+            return false;
+        }
+    }
+    
     /**
      * Get prerequisite completion data
      * @param int $userId
@@ -834,6 +908,275 @@ class MyCoursesModel {
         }
     }
 
+    /**
+     * Check if SCORM content is completed
+     * @param int $contentId
+     * @param int $userId
+     * @param int $courseId
+     * @param int $clientId
+     * @return bool
+     */
+    private function isScormContentCompleted($contentId, $userId, $courseId, $clientId) {
+        try {
+            // Check if this is a prerequisite (SCORM package ID) or module content (course_module_content.id)
+            // For prerequisites: contentId is the SCORM package ID, need to check scorm_package_id
+            // For module content: contentId is the course_module_content.id, need to check content_id
+            
+            // First, try direct lookup by content_id (for module content)
+            $stmt = $this->conn->prepare("
+                SELECT sp.completed_at 
+                FROM scorm_progress sp
+                WHERE sp.user_id = ? AND sp.course_id = ? AND sp.content_id = ? AND sp.client_id = ?
+            ");
+            $stmt->execute([$userId, $courseId, $contentId, $clientId]);
+            $result = $stmt->fetch(PDO::FETCH_ASSOC);
+            
+            if ($result && !empty($result['completed_at'])) {
+                return true;
+            }
+            
+            // If not found, try lookup by scorm_package_id (for prerequisites)
+            $stmt = $this->conn->prepare("
+                SELECT sp.completed_at 
+                FROM scorm_progress sp
+                WHERE sp.user_id = ? AND sp.course_id = ? AND sp.scorm_package_id = ? AND sp.client_id = ?
+            ");
+            $stmt->execute([$userId, $courseId, $contentId, $clientId]);
+            $result = $stmt->fetch(PDO::FETCH_ASSOC);
+            
+            return $result && !empty($result['completed_at']);
+            
+        } catch (Exception $e) {
+            error_log("Error checking SCORM content completion: " . $e->getMessage());
+            return false;
+        }
+    }
+    
+    /**
+     * Check if video content is completed
+     * @param int $contentId
+     * @param int $userId
+     * @param int $courseId
+     * @param int $clientId
+     * @return bool
+     */
+    private function isVideoContentCompleted($contentId, $userId, $courseId, $clientId) {
+        try {
+            $stmt = $this->conn->prepare("
+                SELECT is_completed FROM video_progress 
+                WHERE content_id = ? AND user_id = ? AND course_id = ? AND client_id = ?
+            ");
+            $stmt->execute([$contentId, $userId, $courseId, $clientId]);
+            $result = $stmt->fetch(PDO::FETCH_ASSOC);
+            
+            return $result && $result['is_completed'] == 1;
+            
+        } catch (Exception $e) {
+            error_log("Error checking video content completion: " . $e->getMessage());
+            return false;
+        }
+    }
+    
+    /**
+     * Check if audio content is completed
+     * @param int $contentId
+     * @param int $userId
+     * @param int $courseId
+     * @param int $clientId
+     * @return bool
+     */
+    private function isAudioContentCompleted($contentId, $userId, $courseId, $clientId) {
+        try {
+            $stmt = $this->conn->prepare("
+                SELECT is_completed FROM audio_progress 
+                WHERE content_id = ? AND user_id = ? AND course_id = ? AND client_id = ?
+            ");
+            $stmt->execute([$contentId, $userId, $courseId, $clientId]);
+            $result = $stmt->fetch(PDO::FETCH_ASSOC);
+            
+            return $result && $result['is_completed'] == 1;
+            
+        } catch (Exception $e) {
+            error_log("Error checking audio content completion: " . $e->getMessage());
+            return false;
+        }
+    }
+    
+    /**
+     * Check if document content is completed
+     * @param int $contentId
+     * @param int $userId
+     * @param int $courseId
+     * @param int $clientId
+     * @return bool
+     */
+    private function isDocumentContentCompleted($contentId, $userId, $courseId, $clientId) {
+        try {
+            $stmt = $this->conn->prepare("
+                SELECT is_completed FROM document_progress 
+                WHERE content_id = ? AND user_id = ? AND course_id = ? AND client_id = ?
+            ");
+            $stmt->execute([$contentId, $userId, $courseId, $clientId]);
+            $result = $stmt->fetch(PDO::FETCH_ASSOC);
+            
+            return $result && $result['is_completed'] == 1;
+            
+        } catch (Exception $e) {
+            error_log("Error checking document content completion: " . $e->getMessage());
+            return false;
+        }
+    }
+    
+    /**
+     * Check if image content is completed
+     * @param int $contentId
+     * @param int $userId
+     * @param int $courseId
+     * @param int $clientId
+     * @return bool
+     */
+    private function isImageContentCompleted($contentId, $userId, $courseId, $clientId) {
+        try {
+            $stmt = $this->conn->prepare("
+                SELECT is_completed FROM image_progress 
+                WHERE content_id = ? AND user_id = ? AND course_id = ? AND client_id = ?
+            ");
+            $stmt->execute([$contentId, $userId, $courseId, $clientId]);
+            $result = $stmt->fetch(PDO::FETCH_ASSOC);
+            
+            return $result && $result['is_completed'] == 1;
+            
+        } catch (Exception $e) {
+            error_log("Error checking image content completion: " . $e->getMessage());
+            return false;
+        }
+    }
+    
+    /**
+     * Check if external content is completed
+     * @param int $contentId
+     * @param int $userId
+     * @param int $courseId
+     * @param int $clientId
+     * @return bool
+     */
+    private function isExternalContentCompleted($contentId, $userId, $courseId, $clientId) {
+        try {
+            $stmt = $this->conn->prepare("
+                SELECT is_completed FROM external_progress 
+                WHERE content_id = ? AND user_id = ? AND course_id = ? AND client_id = ?
+            ");
+            $stmt->execute([$contentId, $userId, $courseId, $clientId]);
+            $result = $stmt->fetch(PDO::FETCH_ASSOC);
+            
+            return $result && $result['is_completed'] == 1;
+            
+        } catch (Exception $e) {
+            error_log("Error checking external content completion: " . $e->getMessage());
+            return false;
+        }
+    }
+    
+    /**
+     * Check if interactive content is completed
+     * @param int $contentId
+     * @param int $userId
+     * @param int $courseId
+     * @param int $clientId
+     * @return bool
+     */
+    private function isInteractiveContentCompleted($contentId, $userId, $courseId, $clientId) {
+        try {
+            $stmt = $this->conn->prepare("
+                SELECT is_completed FROM interactive_progress 
+                WHERE content_id = ? AND user_id = ? AND course_id = ? AND client_id = ?
+            ");
+            $stmt->execute([$contentId, $userId, $courseId, $clientId]);
+            $result = $stmt->fetch(PDO::FETCH_ASSOC);
+            
+            return $result && $result['is_completed'] == 1;
+            
+        } catch (Exception $e) {
+            error_log("Error checking interactive content completion: " . $e->getMessage());
+            return false;
+        }
+    }
+    
+    /**
+     * Check if assignment is completed
+     * @param int $contentId
+     * @param int $userId
+     * @param int $courseId
+     * @param int $clientId
+     * @return bool
+     */
+    private function isAssignmentCompleted($contentId, $userId, $courseId, $clientId) {
+        try {
+            $stmt = $this->conn->prepare("
+                SELECT submitted_at FROM assignment_submissions 
+                WHERE assignment_package_id = ? AND user_id = ? AND course_id = ? AND client_id = ?
+            ");
+            $stmt->execute([$contentId, $userId, $courseId, $clientId]);
+            $result = $stmt->fetch(PDO::FETCH_ASSOC);
+            
+            return $result && !empty($result['submitted_at']);
+            
+        } catch (Exception $e) {
+            error_log("Error checking assignment completion: " . $e->getMessage());
+            return false;
+        }
+    }
+    
+    /**
+     * Check if survey is completed
+     * @param int $contentId
+     * @param int $userId
+     * @param int $courseId
+     * @param int $clientId
+     * @return bool
+     */
+    private function isSurveyCompleted($contentId, $userId, $courseId, $clientId) {
+        try {
+            $stmt = $this->conn->prepare("
+                SELECT completed_at FROM course_survey_responses 
+                WHERE survey_package_id = ? AND user_id = ? AND course_id = ? AND client_id = ?
+            ");
+            $stmt->execute([$contentId, $userId, $courseId, $clientId]);
+            $result = $stmt->fetch(PDO::FETCH_ASSOC);
+            
+            return $result && !empty($result['completed_at']);
+            
+        } catch (Exception $e) {
+            error_log("Error checking survey completion: " . $e->getMessage());
+            return false;
+        }
+    }
+    
+    /**
+     * Check if feedback is completed
+     * @param int $contentId
+     * @param int $userId
+     * @param int $courseId
+     * @param int $clientId
+     * @return bool
+     */
+    private function isFeedbackCompleted($contentId, $userId, $courseId, $clientId) {
+        try {
+            $stmt = $this->conn->prepare("
+                SELECT completed_at FROM course_feedback_responses 
+                WHERE feedback_package_id = ? AND user_id = ? AND course_id = ? AND client_id = ?
+            ");
+            $stmt->execute([$contentId, $userId, $courseId, $clientId]);
+            $result = $stmt->fetch(PDO::FETCH_ASSOC);
+            
+            return $result && !empty($result['completed_at']);
+            
+        } catch (Exception $e) {
+            error_log("Error checking feedback completion: " . $e->getMessage());
+            return false;
+        }
+    }
+    
     /**
      * Get SCORM progress
      * @param int $contentId
