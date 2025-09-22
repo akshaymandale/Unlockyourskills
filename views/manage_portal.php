@@ -135,6 +135,20 @@ if ($currentUser) {
                     </div>
                     <?php endif; ?>
                 </div>
+
+                <h3 class="text-purple mt-4">Assessment Details</h3>
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="card user-box shadow-sm" onclick="window.location.href='<?= UrlHelper::url('assessment-details') ?>'">
+                            <h5><i class="fas fa-clipboard-check text-purple"></i> Increase Assessment Attempts</h5>
+                            <p><small class="text-muted">Manage and increase assessment attempts for users</small></p>
+                            <div class="mt-2">
+                                <span class="badge bg-success"><?= Localization::translate('active_badge'); ?></span>
+                                <span class="badge bg-light text-dark"><?= Localization::translate('new_feature_badge'); ?></span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
             </div>
 
             <!-- ✅ Social Tab -->

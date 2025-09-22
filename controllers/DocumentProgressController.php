@@ -4,14 +4,17 @@ if (session_status() === PHP_SESSION_NONE) {
 }
 
 require_once 'models/DocumentProgressModel.php';
+require_once 'models/SharedContentCompletionService.php';
 require_once 'core/UrlHelper.php';
 
 class DocumentProgressController {
     private $documentProgressModel;
     private $conn;
+    private $sharedContentService;
 
     public function __construct() {
         $this->documentProgressModel = new DocumentProgressModel();
+        $this->sharedContentService = new SharedContentCompletionService();
         
         // Get database connection
         try {
@@ -42,6 +45,7 @@ class DocumentProgressController {
         $courseId = $input['course_id'] ?? null;
         $moduleId = $input['module_id'] ?? null;
         $contentId = $input['content_id'] ?? null;
+        $prerequisiteId = $input['prerequisite_id'] ?? null;
         $documentPackageId = $input['document_package_id'] ?? null;
         $totalPages = $input['total_pages'] ?? 0;
 
@@ -60,9 +64,9 @@ class DocumentProgressController {
             }
         }
 
-        if (!$courseId || !$contentId) {
+        if (!$courseId || (!$contentId && !$prerequisiteId)) {
             http_response_code(400);
-            echo json_encode(['success' => false, 'error' => 'Missing required parameters: course_id and content_id']);
+            echo json_encode(['success' => false, 'error' => 'Missing required parameters: course_id and (content_id or prerequisite_id)']);
             return;
         }
 
@@ -73,7 +77,8 @@ class DocumentProgressController {
                 $contentId,
                 $documentPackageId,
                 $clientId,
-                $totalPages
+                $totalPages,
+                $prerequisiteId
             );
 
             // Note: Completion tracking is now handled only when content is actually completed
@@ -102,14 +107,15 @@ class DocumentProgressController {
         $input = json_decode(file_get_contents('php://input'), true);
         $courseId = $input['course_id'] ?? null;
         $contentId = $input['content_id'] ?? null;
+        $prerequisiteId = $input['prerequisite_id'] ?? null;
         $currentPage = $input['current_page'] ?? 1;
         $pagesViewed = $input['pages_viewed'] ?? [];
         $timeSpent = $input['time_spent'] ?? 0;
         $viewedPercentage = $input['viewed_percentage'] ?? 0;
 
-        if (!$courseId || !$contentId) {
+        if (!$courseId || (!$contentId && !$prerequisiteId)) {
             http_response_code(400);
-            echo json_encode(['success' => false, 'error' => 'Missing required parameters']);
+            echo json_encode(['success' => false, 'error' => 'Missing required parameters: course_id and (content_id or prerequisite_id)']);
             return;
         }
 
@@ -122,14 +128,26 @@ class DocumentProgressController {
                 $currentPage,
                 $pagesViewed,
                 $timeSpent,
-                $viewedPercentage
+                $viewedPercentage,
+                $prerequisiteId
             );
 
-            // If document is completed, update completion tracking
+            // If document is completed, handle shared content completion
             if ($result && isset($result['is_completed']) && $result['is_completed']) {
-                require_once 'models/CompletionTrackingService.php';
-                $completionService = new CompletionTrackingService();
-                $completionService->handleContentCompletion($userId, $courseId, $contentId, 'document', $clientId);
+                // Determine content type and IDs for shared completion
+                $contentType = 'module'; // Default to module
+                $sharedContentId = $contentId; // Default to contentId
+                
+                // Check if this is a prerequisite
+                if ($prerequisiteId) {
+                    $contentType = 'prerequisite';
+                    $sharedContentId = $result['document_package_id']; // Use document package ID for shared content lookup
+                }
+                
+                // Handle shared document completion
+                $this->sharedContentService->handleSharedContentCompletion(
+                    $userId, $courseId, $sharedContentId, $clientId, 'document', $contentType, $prerequisiteId
+                );
             }
 
             echo json_encode(['success' => true, 'data' => $result]);
@@ -173,9 +191,10 @@ class DocumentProgressController {
 
             // Handle completion tracking when content is actually completed
             if ($result) {
-                require_once 'models/CompletionTrackingService.php';
-                $completionService = new CompletionTrackingService();
-                $completionService->handleContentCompletion($userId, $courseId, $contentId, 'document', $clientId);
+                // Handle shared content completion - always treat markComplete as module completion
+                $this->sharedContentService->handleSharedContentCompletion(
+                    $userId, $courseId, $contentId, $clientId, 'document', 'module'
+                );
             }
 
             echo json_encode(['success' => true, 'data' => $result]);
@@ -200,10 +219,11 @@ class DocumentProgressController {
 
         $courseId = $_GET['course_id'] ?? null;
         $contentId = $_GET['content_id'] ?? null;
+        $prerequisiteId = $_GET['prerequisite_id'] ?? null;
 
-        if (!$courseId || !$contentId) {
+        if (!$courseId || (!$contentId && !$prerequisiteId)) {
             http_response_code(400);
-            echo json_encode(['success' => false, 'error' => 'Missing required parameters']);
+            echo json_encode(['success' => false, 'error' => 'Missing required parameters: course_id and (content_id or prerequisite_id)']);
             return;
         }
 
@@ -212,7 +232,8 @@ class DocumentProgressController {
                 $userId,
                 $courseId,
                 $contentId,
-                $clientId
+                $clientId,
+                $prerequisiteId
             );
             
             if ($progress) {
@@ -248,13 +269,14 @@ class DocumentProgressController {
         $input = json_decode(file_get_contents('php://input'), true);
         $courseId = $input['course_id'] ?? null;
         $contentId = $input['content_id'] ?? null;
+        $prerequisiteId = $input['prerequisite_id'] ?? null;
         $page = $input['page'] ?? 1;
         $title = $input['title'] ?? '';
         $note = $input['note'] ?? '';
 
-        if (!$courseId || !$contentId) {
+        if (!$courseId || (!$contentId && !$prerequisiteId)) {
             http_response_code(400);
-            echo json_encode(['success' => false, 'error' => 'Missing required parameters']);
+            echo json_encode(['success' => false, 'error' => 'Missing required parameters: course_id and (content_id or prerequisite_id)']);
             return;
         }
 
@@ -266,7 +288,8 @@ class DocumentProgressController {
                 $clientId,
                 $page,
                 $title,
-                $note
+                $note,
+                $prerequisiteId
             );
 
             echo json_encode(['success' => true, 'data' => $result]);
@@ -293,11 +316,12 @@ class DocumentProgressController {
         $input = json_decode(file_get_contents('php://input'), true);
         $courseId = $input['course_id'] ?? null;
         $contentId = $input['content_id'] ?? null;
+        $prerequisiteId = $input['prerequisite_id'] ?? null;
         $notes = $input['notes'] ?? '';
 
-        if (!$courseId || !$contentId) {
+        if (!$courseId || (!$contentId && !$prerequisiteId)) {
             http_response_code(400);
-            echo json_encode(['success' => false, 'error' => 'Missing required parameters']);
+            echo json_encode(['success' => false, 'error' => 'Missing required parameters: course_id and (content_id or prerequisite_id)']);
             return;
         }
 
@@ -307,7 +331,8 @@ class DocumentProgressController {
                 $courseId,
                 $contentId,
                 $clientId,
-                $notes
+                $notes,
+                $prerequisiteId
             );
 
             echo json_encode(['success' => true, 'data' => $result]);
@@ -386,58 +411,6 @@ class DocumentProgressController {
         }
     }
 
-    /**
-     * Check if content is a prerequisite and start tracking
-     */
-    private function startPrerequisiteTrackingIfApplicable($userId, $courseId, $contentId, $contentType, $clientId) {
-        try {
-            require_once 'models/CompletionTrackingService.php';
-            $completionService = new CompletionTrackingService();
-            
-            // Check if this content is a prerequisite
-            $isPrerequisite = $this->isContentPrerequisite($courseId, $contentId, $contentType);
-            
-            if ($isPrerequisite) {
-                $completionService->startPrerequisiteTracking($userId, $courseId, $contentId, $contentType, $clientId);
-            }
-        } catch (Exception $e) {
-            error_log("Error in startPrerequisiteTrackingIfApplicable: " . $e->getMessage());
-        }
-    }
-
-    /**
-     * Start module tracking if content belongs to a module
-     */
-    private function startModuleTrackingIfApplicable($userId, $courseId, $contentId, $contentType, $clientId) {
-        try {
-            require_once 'models/CompletionTrackingService.php';
-            $completionService = new CompletionTrackingService();
-            
-            // Start module tracking if this content belongs to a module
-            $completionService->startModuleTrackingIfApplicable($userId, $courseId, $contentId, $contentType, $clientId);
-        } catch (Exception $e) {
-            error_log("Error in startModuleTrackingIfApplicable: " . $e->getMessage());
-        }
-    }
-
-    /**
-     * Check if content is a prerequisite and mark as complete
-     */
-    private function markPrerequisiteCompleteIfApplicable($userId, $courseId, $contentId, $contentType, $clientId) {
-        try {
-            require_once 'models/CompletionTrackingService.php';
-            $completionService = new CompletionTrackingService();
-            
-            // Check if this content is a prerequisite
-            $isPrerequisite = $this->isContentPrerequisite($courseId, $contentId, $contentType);
-            
-            if ($isPrerequisite) {
-                $completionService->markPrerequisiteComplete($userId, $courseId, $contentId, $contentType, $clientId);
-            }
-        } catch (Exception $e) {
-            error_log("Error in markPrerequisiteCompleteIfApplicable: " . $e->getMessage());
-        }
-    }
 
     /**
      * Check if content is a prerequisite

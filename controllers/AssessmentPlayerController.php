@@ -130,45 +130,9 @@ class AssessmentPlayerController
 
         $result = $this->model->submitAssessment($attemptId, $clientId);
         
-        // Mark prerequisite as complete only if passed OR attempts exhausted
-        if ($result['success']) {
-            $assessmentId = $this->getAssessmentIdFromAttempt($attemptId);
-            
-            // Resolve course_id robustly: attempt -> module mapping -> prerequisites mapping
-            $courseId = $this->getCourseIdFromAttempt($attemptId);
-            if (!$courseId && $assessmentId) {
-                $courseId = $this->getCourseIdForAssessment($assessmentId);
-            }
-            if (!$courseId && $assessmentId) {
-                $courseId = $this->getCourseIdFromPrerequisites($assessmentId);
-            }
-            
-            if ($assessmentId && $courseId) {
-                try {
-                    require_once 'config/Database.php';
-                    $database = new Database();
-                    $conn = $database->connect();
-                    
-                    // Get max attempts from package
-                    $stmt = $conn->prepare("SELECT num_attempts FROM assessment_package WHERE id = ?");
-                    $stmt->execute([$assessmentId]);
-                    $maxAttempts = (int)($stmt->fetchColumn() ?? 0);
-                    
-                    // Count attempts used by this user for this assessment (completed attempts)
-                    $stmt = $conn->prepare("SELECT COUNT(*) FROM assessment_attempts WHERE assessment_id = ? AND user_id = ? AND status = 'completed' AND is_deleted = 0");
-                    $stmt->execute([$assessmentId, $userId]);
-                    $attemptsUsed = (int)$stmt->fetchColumn();
-                    
-                    $passed = !empty($result['passed']);
-                    $attemptsExhausted = ($maxAttempts > 0) ? ($attemptsUsed >= $maxAttempts) : false;
-                    
-                    if ($passed || $attemptsExhausted) {
-                        $this->markPrerequisiteCompleteIfApplicable($userId, $courseId, $assessmentId, $clientId);
-                    }
-                } catch (Exception $e) {
-                    error_log("Error evaluating assessment prerequisite completion: " . $e->getMessage());
-                }
-            }
+        // If assessment is completed successfully, check if it's also part of modules or prerequisites
+        if ($result['success'] && $result['passed']) {
+            $this->handleSharedAssessmentCompletion($attemptId, $userId, $clientId);
         }
         
         header('Content-Type: application/json');
@@ -258,77 +222,262 @@ class AssessmentPlayerController
         ]);
     }
 
+
     /**
-     * Check if assessment is a prerequisite and start tracking
+     * Handle shared assessment completion - create entries for both modules and prerequisites
      */
-    private function startPrerequisiteTrackingIfApplicable($userId, $courseId, $assessmentId, $clientId) {
+    private function handleSharedAssessmentCompletion($attemptId, $userId, $clientId) {
         try {
-            require_once 'models/CompletionTrackingService.php';
-            $completionService = new CompletionTrackingService();
+            // Get assessment details from attempt
+            $assessmentId = $this->getAssessmentIdFromAttempt($attemptId);
+            $courseId = $this->getCourseIdFromAttempt($attemptId);
             
-            // Check if this assessment is a prerequisite
-            $isPrerequisite = $this->isContentPrerequisite($courseId, $assessmentId, 'assessment');
+            if (!$assessmentId || !$courseId) {
+                return;
+            }
             
-            if ($isPrerequisite) {
-                $completionService->startPrerequisiteTracking($userId, $courseId, $assessmentId, 'assessment', $clientId);
+            // Get the latest assessment result for this attempt
+            $assessmentResult = $this->getLatestAssessmentResult($assessmentId, $userId, $courseId);
+            
+            if (!$assessmentResult) {
+                return;
+            }
+            
+            // Check if this assessment also exists in modules
+            $moduleContents = $this->getModuleContentsForAssessment($courseId, $assessmentId);
+            
+            if (!empty($moduleContents)) {
+                // Create duplicate entries for each module content
+                foreach ($moduleContents as $moduleContent) {
+                    $this->createModuleAssessmentResult($assessmentResult, $moduleContent, $userId, $courseId, $clientId);
+                }
+                
+                error_log("Created module assessment results for shared assessment $assessmentId in course $courseId for user $userId");
+            }
+            
+            // Check if this assessment also exists as a prerequisite
+            $prerequisiteIds = $this->getPrerequisiteIdsForAssessment($courseId, $assessmentId);
+            
+            if (!empty($prerequisiteIds)) {
+                // Create duplicate entries for each prerequisite
+                foreach ($prerequisiteIds as $prerequisiteId) {
+                    $this->createPrerequisiteAssessmentResult($assessmentResult, $prerequisiteId, $userId, $courseId, $clientId);
+                }
+                
+                error_log("Created prerequisite assessment results for shared assessment $assessmentId in course $courseId for user $userId");
             }
         } catch (Exception $e) {
-            error_log("Error in startPrerequisiteTrackingIfApplicable: " . $e->getMessage());
+            error_log("Error handling shared assessment completion: " . $e->getMessage());
         }
     }
-
+    
     /**
-     * Start module tracking if assessment belongs to a module
+     * Get module contents that contain this assessment
      */
-    private function startModuleTrackingIfApplicable($userId, $courseId, $assessmentId, $contentType, $clientId) {
-        try {
-            require_once 'models/CompletionTrackingService.php';
-            $completionService = new CompletionTrackingService();
-            
-            // Start module tracking if this content belongs to a module
-            $completionService->startModuleTrackingIfApplicable($userId, $courseId, $assessmentId, $contentType, $clientId);
-        } catch (Exception $e) {
-            error_log("Error in startModuleTrackingIfApplicable: " . $e->getMessage());
-        }
-    }
-
-    /**
-     * Check if assessment is a prerequisite and mark as complete
-     */
-    private function markPrerequisiteCompleteIfApplicable($userId, $courseId, $assessmentId, $clientId) {
-        try {
-            require_once 'models/CompletionTrackingService.php';
-            $completionService = new CompletionTrackingService();
-            
-            // Check if this assessment is a prerequisite
-            $isPrerequisite = $this->isContentPrerequisite($courseId, $assessmentId, 'assessment');
-            
-            if ($isPrerequisite) {
-                $completionService->markPrerequisiteComplete($userId, $courseId, $assessmentId, 'assessment', $clientId);
-            }
-        } catch (Exception $e) {
-            error_log("Error in markPrerequisiteCompleteIfApplicable: " . $e->getMessage());
-        }
-    }
-
-    /**
-     * Check if content is a prerequisite
-     */
-    private function isContentPrerequisite($courseId, $contentId, $contentType) {
+    private function getModuleContentsForAssessment($courseId, $assessmentId) {
         try {
             require_once 'config/Database.php';
             $database = new Database();
             $conn = $database->connect();
             
-            $sql = "SELECT COUNT(*) FROM course_prerequisites 
-                    WHERE course_id = ? AND prerequisite_id = ? AND prerequisite_type = ?";
-            $stmt = $conn->prepare($sql);
-            $stmt->execute([$courseId, $contentId, $contentType]);
+            $sql = "SELECT cmc.id as content_id, cmc.module_id, cmc.content_id as assessment_id
+                    FROM course_module_content cmc
+                    JOIN course_modules cm ON cmc.module_id = cm.id
+                    WHERE cm.course_id = ? AND cmc.content_id = ? AND cmc.content_type = 'assessment' 
+                    AND cmc.deleted_at IS NULL AND cm.deleted_at IS NULL";
             
-            return $stmt->fetchColumn() > 0;
+            $stmt = $conn->prepare($sql);
+            $stmt->execute([$courseId, $assessmentId]);
+            return $stmt->fetchAll(PDO::FETCH_ASSOC);
         } catch (Exception $e) {
-            error_log("Error checking if content is prerequisite: " . $e->getMessage());
-            return false;
+            error_log("Error getting module contents for assessment: " . $e->getMessage());
+            return [];
+        }
+    }
+    
+    /**
+     * Get the latest assessment result for this assessment
+     */
+    private function getLatestAssessmentResult($assessmentId, $userId, $courseId) {
+        try {
+            require_once 'config/Database.php';
+            $database = new Database();
+            $conn = $database->connect();
+            
+            $sql = "SELECT * FROM assessment_results 
+                    WHERE assessment_id = ? AND user_id = ? AND course_id = ? 
+                    ORDER BY completed_at DESC LIMIT 1";
+            
+            $stmt = $conn->prepare($sql);
+            $stmt->execute([$assessmentId, $userId, $courseId]);
+            return $stmt->fetch(PDO::FETCH_ASSOC);
+        } catch (Exception $e) {
+            error_log("Error getting latest assessment result: " . $e->getMessage());
+            return null;
+        }
+    }
+    
+    /**
+     * Create assessment result entry for module content
+     */
+    private function createModuleAssessmentResult($assessmentResult, $moduleContent, $userId, $courseId, $clientId) {
+        try {
+            require_once 'config/Database.php';
+            $database = new Database();
+            $conn = $database->connect();
+            
+            // Check if entry already exists for this module content
+            $sql = "SELECT id FROM assessment_results 
+                    WHERE user_id = ? AND course_id = ? AND content_id = ? AND assessment_id = ?";
+            $stmt = $conn->prepare($sql);
+            $stmt->execute([$userId, $courseId, $moduleContent['content_id'], $assessmentResult['assessment_id']]);
+            
+            if ($stmt->fetch()) {
+                // Entry already exists, update it
+                $sql = "UPDATE assessment_results SET 
+                        attempt_number = ?, score = ?, max_score = ?, percentage = ?, 
+                        passed = ?, time_taken = ?, started_at = ?, completed_at = ?, 
+                        answers = ?, updated_at = NOW()
+                        WHERE user_id = ? AND course_id = ? AND content_id = ? AND assessment_id = ?";
+                
+                $stmt = $conn->prepare($sql);
+                $stmt->execute([
+                    $assessmentResult['attempt_number'],
+                    $assessmentResult['score'],
+                    $assessmentResult['max_score'],
+                    $assessmentResult['percentage'],
+                    $assessmentResult['passed'],
+                    $assessmentResult['time_taken'],
+                    $assessmentResult['started_at'],
+                    $assessmentResult['completed_at'],
+                    $assessmentResult['answers'],
+                    $userId,
+                    $courseId,
+                    $moduleContent['content_id'],
+                    $assessmentResult['assessment_id']
+                ]);
+            } else {
+                // Create new entry
+                $sql = "INSERT INTO assessment_results (
+                        course_id, user_id, client_id, assessment_id, attempt_number, 
+                        score, max_score, percentage, passed, time_taken, started_at, 
+                        completed_at, answers, content_id, created_at, updated_at
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW())";
+                
+                $stmt = $conn->prepare($sql);
+                $stmt->execute([
+                    $courseId,
+                    $userId,
+                    $clientId,
+                    $assessmentResult['assessment_id'],
+                    $assessmentResult['attempt_number'],
+                    $assessmentResult['score'],
+                    $assessmentResult['max_score'],
+                    $assessmentResult['percentage'],
+                    $assessmentResult['passed'],
+                    $assessmentResult['time_taken'],
+                    $assessmentResult['started_at'],
+                    $assessmentResult['completed_at'],
+                    $assessmentResult['answers'],
+                    $moduleContent['content_id']
+                ]);
+            }
+            
+        } catch (Exception $e) {
+            error_log("Error creating module assessment result: " . $e->getMessage());
+        }
+    }
+    
+    /**
+     * Get prerequisite IDs for this assessment
+     */
+    private function getPrerequisiteIdsForAssessment($courseId, $assessmentId) {
+        try {
+            require_once 'config/Database.php';
+            $database = new Database();
+            $conn = $database->connect();
+            
+            $sql = "SELECT id FROM course_prerequisites 
+                    WHERE course_id = ? AND prerequisite_id = ? AND prerequisite_type = 'assessment' 
+                    AND (deleted_at IS NULL OR deleted_at = '0000-00-00 00:00:00')";
+            
+            $stmt = $conn->prepare($sql);
+            $stmt->execute([$courseId, $assessmentId]);
+            return $stmt->fetchAll(PDO::FETCH_COLUMN);
+        } catch (Exception $e) {
+            error_log("Error getting prerequisite IDs for assessment: " . $e->getMessage());
+            return [];
+        }
+    }
+    
+    /**
+     * Create assessment result entry for prerequisite
+     */
+    private function createPrerequisiteAssessmentResult($assessmentResult, $prerequisiteId, $userId, $courseId, $clientId) {
+        try {
+            require_once 'config/Database.php';
+            $database = new Database();
+            $conn = $database->connect();
+            
+            // Check if entry already exists for this prerequisite
+            $sql = "SELECT id FROM assessment_results 
+                    WHERE user_id = ? AND course_id = ? AND prerequisite_id = ? AND assessment_id = ?";
+            $stmt = $conn->prepare($sql);
+            $stmt->execute([$userId, $courseId, $prerequisiteId, $assessmentResult['assessment_id']]);
+            
+            if ($stmt->fetch()) {
+                // Entry already exists, update it
+                $sql = "UPDATE assessment_results SET 
+                        attempt_number = ?, score = ?, max_score = ?, percentage = ?, 
+                        passed = ?, time_taken = ?, started_at = ?, completed_at = ?, 
+                        answers = ?, updated_at = NOW()
+                        WHERE user_id = ? AND course_id = ? AND prerequisite_id = ? AND assessment_id = ?";
+                
+                $stmt = $conn->prepare($sql);
+                $stmt->execute([
+                    $assessmentResult['attempt_number'],
+                    $assessmentResult['score'],
+                    $assessmentResult['max_score'],
+                    $assessmentResult['percentage'],
+                    $assessmentResult['passed'],
+                    $assessmentResult['time_taken'],
+                    $assessmentResult['started_at'],
+                    $assessmentResult['completed_at'],
+                    $assessmentResult['answers'],
+                    $userId,
+                    $courseId,
+                    $prerequisiteId,
+                    $assessmentResult['assessment_id']
+                ]);
+            } else {
+                // Create new entry
+                $sql = "INSERT INTO assessment_results (
+                        course_id, user_id, client_id, assessment_id, attempt_number, 
+                        score, max_score, percentage, passed, time_taken, started_at, 
+                        completed_at, answers, prerequisite_id, created_at, updated_at
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW())";
+                
+                $stmt = $conn->prepare($sql);
+                $stmt->execute([
+                    $courseId,
+                    $userId,
+                    $clientId,
+                    $assessmentResult['assessment_id'],
+                    $assessmentResult['attempt_number'],
+                    $assessmentResult['score'],
+                    $assessmentResult['max_score'],
+                    $assessmentResult['percentage'],
+                    $assessmentResult['passed'],
+                    $assessmentResult['time_taken'],
+                    $assessmentResult['started_at'],
+                    $assessmentResult['completed_at'],
+                    $assessmentResult['answers'],
+                    $prerequisiteId
+                ]);
+            }
+            
+        } catch (Exception $e) {
+            error_log("Error creating prerequisite assessment result: " . $e->getMessage());
         }
     }
 

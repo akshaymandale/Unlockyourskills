@@ -260,49 +260,49 @@ class UserProgressReportModel {
                         ))
                         OR (cp.prerequisite_type = 'external' AND EXISTS (
                             SELECT 1 FROM external_progress ep 
-                            WHERE ep.content_id = cp.prerequisite_id 
+                            WHERE ep.prerequisite_id = cp.id 
                             AND ep.user_id = ? AND ep.course_id = ? AND ep.client_id = ?
                             AND ep.is_completed = 1
                         ))
                         OR (cp.prerequisite_type = 'scorm' AND EXISTS (
                             SELECT 1 FROM scorm_progress sp 
-                            WHERE sp.content_id = cp.prerequisite_id 
+                            WHERE sp.scorm_package_id = cp.prerequisite_id 
                             AND sp.user_id = ? AND sp.course_id = ? AND sp.client_id = ?
-                            AND sp.is_completed = 1
+                            AND sp.lesson_status IN ('completed', 'passed') AND sp.completed_at IS NOT NULL
                         ))
                         OR (cp.prerequisite_type = 'document' AND EXISTS (
                             SELECT 1 FROM document_progress dp 
-                            WHERE dp.content_id = cp.prerequisite_id 
+                            WHERE dp.prerequisite_id = cp.id 
                             AND dp.user_id = ? AND dp.course_id = ? AND dp.client_id = ?
                             AND dp.is_completed = 1
                         ))
                         OR (cp.prerequisite_type = 'audio' AND EXISTS (
                             SELECT 1 FROM audio_progress ap 
-                            WHERE ap.content_id = cp.prerequisite_id 
+                            WHERE ap.prerequisite_id = cp.id 
                             AND ap.user_id = ? AND ap.course_id = ? AND ap.client_id = ?
                             AND ap.is_completed = 1
                         ))
                         OR (cp.prerequisite_type = 'video' AND EXISTS (
                             SELECT 1 FROM video_progress vp 
-                            WHERE vp.content_id = cp.prerequisite_id 
+                            WHERE vp.prerequisite_id = cp.id 
                             AND vp.user_id = ? AND vp.course_id = ? AND vp.client_id = ?
                             AND vp.is_completed = 1
                         ))
                         OR (cp.prerequisite_type = 'image' AND EXISTS (
                             SELECT 1 FROM image_progress ip 
-                            WHERE ip.content_id = cp.prerequisite_id 
+                            WHERE ip.prerequisite_id = cp.id 
                             AND ip.user_id = ? AND ip.course_id = ? AND ip.client_id = ?
                             AND ip.is_completed = 1
                         ))
                         OR (cp.prerequisite_type = 'interactive' AND EXISTS (
                             SELECT 1 FROM interactive_progress inp 
-                            WHERE inp.content_id = cp.prerequisite_id 
+                            WHERE inp.prerequisite_id = cp.id 
                             AND inp.user_id = ? AND inp.course_id = ? AND inp.client_id = ?
                             AND inp.is_completed = 1
                         ))
                         OR (cp.prerequisite_type = 'non_scorm' AND EXISTS (
                             SELECT 1 FROM non_scorm_progress nsp 
-                            WHERE nsp.content_id = cp.prerequisite_id 
+                            WHERE nsp.prerequisite_id = cp.id 
                             AND nsp.user_id = ? AND nsp.course_id = ? AND nsp.client_id = ?
                             AND nsp.is_completed = 1
                         ))

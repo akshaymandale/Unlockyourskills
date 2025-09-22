@@ -1,6 +1,7 @@
 <?php
 require_once 'config/autoload.php';
 require_once 'models/FeedbackResponseModel.php';
+require_once 'models/SharedContentCompletionService.php';
 require_once 'core/IdEncryption.php';
 require_once 'config/Database.php';
 require_once 'controllers/BaseController.php';
@@ -8,12 +9,14 @@ require_once 'core/UrlHelper.php';
 
 class FeedbackResponseController extends BaseController {
     private $FeedbackResponseModel;
+    private $sharedContentService;
 
     public function __construct() {
         if (session_status() === PHP_SESSION_NONE) {
             session_start();
         }
         $this->FeedbackResponseModel = new FeedbackResponseModel();
+        $this->sharedContentService = new SharedContentCompletionService();
     }
 
     /**
@@ -129,18 +132,10 @@ class FeedbackResponseController extends BaseController {
         if ($result) {
             $successCount = count($processedResponses);
             
-            // Trigger completion tracking for prerequisites/post-requisites (same as surveys)
-            try {
-                require_once 'models/CompletionTrackingService.php';
-                $completionService = new CompletionTrackingService();
-                $completionService->handleContentCompletion($userId, $courseId, $feedbackPackageId, 'feedback', $clientId);
-                
-                // Mark prerequisite as complete if applicable
-                $this->markPrerequisiteCompleteIfApplicable($userId, $courseId, $feedbackPackageId, $clientId);
-            } catch (Exception $e) {
-                error_log("Error in feedback completion tracking: " . $e->getMessage());
-                // Don't fail the feedback submission if completion tracking fails
-            }
+            // Handle shared content completion
+            $this->sharedContentService->handleSharedContentCompletion(
+                $userId, $courseId, $feedbackPackageId, $clientId, 'feedback', 'module'
+            );
         } else {
             $errorCount = count($processedResponses);
         }
@@ -346,21 +341,6 @@ class FeedbackResponseController extends BaseController {
     /**
      * Check if feedback is a prerequisite and mark as complete
      */
-    private function markPrerequisiteCompleteIfApplicable($userId, $courseId, $feedbackPackageId, $clientId) {
-        try {
-            require_once 'models/CompletionTrackingService.php';
-            $completionService = new CompletionTrackingService();
-            
-            // Check if this feedback is a prerequisite
-            $isPrerequisite = $this->isContentPrerequisite($courseId, $feedbackPackageId, 'feedback');
-            
-            if ($isPrerequisite) {
-                $completionService->markPrerequisiteComplete($userId, $courseId, $feedbackPackageId, 'feedback', $clientId);
-            }
-        } catch (Exception $e) {
-            error_log("Error in markPrerequisiteCompleteIfApplicable: " . $e->getMessage());
-        }
-    }
 
     /**
      * Check if content is a prerequisite

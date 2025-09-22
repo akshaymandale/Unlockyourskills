@@ -488,49 +488,9 @@ class SCORMController extends BaseController
             error_log("[SCORM] Complete endpoint - updateScormProgress result: " . ($result ? 'SUCCESS' : 'FAILED'));
 
             if ($result) {
-                // For prerequisites, also update prerequisite completion
-                if ($contentType === 'prerequisite' && $prerequisiteId && $scormPackageId) {
-                    error_log("[SCORM] Complete endpoint - Updating prerequisite completion for prerequisiteId: $prerequisiteId, scormPackageId: $scormPackageId");
-                    
-                    try {
-                        require_once 'models/PrerequisiteCompletionModel.php';
-                        $prerequisiteCompletionModel = new PrerequisiteCompletionModel();
-                        
-                        // First, get or create the prerequisite completion record
-                        // Use the prerequisite record ID (from course_prerequisites table) instead of SCORM package ID
-                        $completion = $prerequisiteCompletionModel->getOrCreateCompletion($userId, $courseId, $prerequisiteId, 'scorm', $clientId);
-                        
-                        // Mark it as completed
-                        $prereqResult = $prerequisiteCompletionModel->markAsCompleted($userId, $courseId, $prerequisiteId, 'scorm', $clientId);
-                        
-                        if ($prereqResult) {
-                            error_log("[SCORM] Prerequisite completion marked as completed successfully");
-                        } else {
-                            error_log("[SCORM] Failed to mark prerequisite completion as completed");
-                        }
-                    } catch (Exception $e) {
-                        error_log("[SCORM] Error updating prerequisite completion: " . $e->getMessage());
-                    }
-                }
+                // Handle shared SCORM completion (auto-complete if same SCORM exists in modules/prerequisites)
+                $this->handleSharedScormCompletion($userId, $courseId, $contentId, $clientId, $contentType, $prerequisiteId, $scormPackageId);
                 
-                // Update completion tracking
-                require_once 'models/CompletionTrackingService.php';
-                $completionService = new CompletionTrackingService();
-                
-                // Update module completion for module content
-                if ($contentType !== 'prerequisite' && $moduleId) {
-                    error_log("[SCORM] Complete endpoint - Updating module completion for moduleId: $moduleId, contentId: $contentId");
-                    $moduleResult = $completionService->updateModuleCompletion($userId, $courseId, $moduleId, $clientId, $contentId);
-                    
-                    if ($moduleResult) {
-                        error_log("[SCORM] Module completion updated successfully");
-                    } else {
-                        error_log("[SCORM] Failed to update module completion");
-                    }
-                }
-                
-                // For module content, completion tracking is already handled above
-                // No need to call handleContentCompletion as it would create duplicate prerequisite completion records
 
                 echo json_encode([
                     'success' => true,
@@ -590,58 +550,6 @@ class SCORMController extends BaseController
         }
     }
 
-    /**
-     * Check if SCORM content is a prerequisite and start tracking
-     */
-    private function startPrerequisiteTrackingIfApplicable($userId, $courseId, $contentId, $clientId) {
-        try {
-            require_once 'models/CompletionTrackingService.php';
-            $completionService = new CompletionTrackingService();
-            
-            // Check if this SCORM content is a prerequisite
-            $isPrerequisite = $this->isContentPrerequisite($courseId, $contentId, 'scorm');
-            
-            if ($isPrerequisite) {
-                $completionService->startPrerequisiteTracking($userId, $courseId, $contentId, 'scorm', $clientId);
-            }
-        } catch (Exception $e) {
-            error_log("Error in startPrerequisiteTrackingIfApplicable: " . $e->getMessage());
-        }
-    }
-
-    /**
-     * Start module tracking if SCORM content belongs to a module
-     */
-    private function startModuleTrackingIfApplicable($userId, $courseId, $contentId, $contentType, $clientId) {
-        try {
-            require_once 'models/CompletionTrackingService.php';
-            $completionService = new CompletionTrackingService();
-            
-            // Start module tracking if this content belongs to a module
-            $completionService->startModuleTrackingIfApplicable($userId, $courseId, $contentId, $contentType, $clientId);
-        } catch (Exception $e) {
-            error_log("Error in startModuleTrackingIfApplicable: " . $e->getMessage());
-        }
-    }
-
-    /**
-     * Check if SCORM content is a prerequisite and mark as complete
-     */
-    private function markPrerequisiteCompleteIfApplicable($userId, $courseId, $contentId, $clientId) {
-        try {
-            require_once 'models/CompletionTrackingService.php';
-            $completionService = new CompletionTrackingService();
-            
-            // Check if this SCORM content is a prerequisite
-            $isPrerequisite = $this->isContentPrerequisite($courseId, $contentId, 'scorm');
-            
-            if ($isPrerequisite) {
-                $completionService->markPrerequisiteComplete($userId, $courseId, $contentId, 'scorm', $clientId);
-            }
-        } catch (Exception $e) {
-            error_log("Error in markPrerequisiteCompleteIfApplicable: " . $e->getMessage());
-        }
-    }
 
     /**
      * Determine content type based on parameters and database lookup
@@ -715,6 +623,244 @@ class SCORMController extends BaseController
         } catch (Exception $e) {
             error_log("Error checking if content is prerequisite: " . $e->getMessage());
             return false;
+        }
+    }
+    
+    /**
+     * Handle shared SCORM completion - auto-complete if same SCORM exists in modules/prerequisites
+     */
+    private function handleSharedScormCompletion($userId, $courseId, $contentId, $clientId, $contentType, $prerequisiteId = null, $scormPackageId = null) {
+        try {
+            // Determine the actual SCORM package ID that was completed
+            $completedScormId = null;
+            
+            if ($contentType === 'prerequisite' && $scormPackageId) {
+                $completedScormId = $scormPackageId;
+            } else {
+                $completedScormId = $contentId;
+            }
+            
+            if (!$completedScormId) {
+                error_log("[SCORM] handleSharedScormCompletion - No SCORM ID to work with");
+                return;
+            }
+            
+            error_log("[SCORM] handleSharedScormCompletion - Processing SCORM ID: $completedScormId for user: $userId, course: $courseId");
+            
+            // Get the latest SCORM progress for this SCORM package
+            $scormProgress = $this->getLatestScormProgress($completedScormId, $userId, $courseId, $clientId);
+            
+            if (!$scormProgress) {
+                error_log("[SCORM] handleSharedScormCompletion - No SCORM progress found");
+                return;
+            }
+            
+            // Check if this SCORM also exists in modules (if completed as prerequisite)
+            if ($contentType === 'prerequisite') {
+                $moduleContents = $this->getModuleContentsForScorm($courseId, $completedScormId);
+                
+                if (!empty($moduleContents)) {
+                    // Create duplicate entries for each module content
+                    foreach ($moduleContents as $moduleContent) {
+                        $this->createModuleScormProgress($scormProgress, $moduleContent, $userId, $courseId, $clientId);
+                    }
+                    
+                    error_log("[SCORM] Created module SCORM progress for shared SCORM $completedScormId in course $courseId for user $userId");
+                }
+            }
+            
+            // Check if this SCORM also exists as a prerequisite (if completed as module)
+            if ($contentType !== 'prerequisite') {
+                $prerequisiteIds = $this->getPrerequisiteIdsForScorm($courseId, $completedScormId);
+                
+                if (!empty($prerequisiteIds)) {
+                    // Create duplicate entries for each prerequisite
+                    foreach ($prerequisiteIds as $prereqId) {
+                        $this->createPrerequisiteScormProgress($scormProgress, $prereqId, $userId, $courseId, $clientId);
+                    }
+                    
+                    error_log("[SCORM] Created prerequisite SCORM progress for shared SCORM $completedScormId in course $courseId for user $userId");
+                }
+            }
+            
+        } catch (Exception $e) {
+            error_log("[SCORM] Error handling shared SCORM completion: " . $e->getMessage());
+        }
+    }
+    
+    /**
+     * Get module contents that contain this SCORM
+     */
+    private function getModuleContentsForScorm($courseId, $scormId) {
+        try {
+            require_once 'config/Database.php';
+            $database = new Database();
+            $conn = $database->connect();
+            
+            $sql = "SELECT cmc.id as content_id, cmc.module_id, cmc.content_id as scorm_id
+                    FROM course_module_content cmc
+                    JOIN course_modules cm ON cmc.module_id = cm.id
+                    WHERE cm.course_id = ? AND cmc.content_id = ? AND cmc.content_type = 'scorm' 
+                    AND cmc.deleted_at IS NULL AND cm.deleted_at IS NULL";
+            
+            $stmt = $conn->prepare($sql);
+            $stmt->execute([$courseId, $scormId]);
+            return $stmt->fetchAll(PDO::FETCH_ASSOC);
+        } catch (Exception $e) {
+            error_log("[SCORM] Error getting module contents for SCORM: " . $e->getMessage());
+            return [];
+        }
+    }
+    
+    /**
+     * Get prerequisite IDs that contain this SCORM
+     */
+    private function getPrerequisiteIdsForScorm($courseId, $scormId) {
+        try {
+            require_once 'config/Database.php';
+            $database = new Database();
+            $conn = $database->connect();
+            
+            $sql = "SELECT id FROM course_prerequisites 
+                    WHERE course_id = ? AND prerequisite_id = ? AND prerequisite_type = 'scorm' 
+                    AND deleted_at IS NULL";
+            
+            $stmt = $conn->prepare($sql);
+            $stmt->execute([$courseId, $scormId]);
+            return $stmt->fetchAll(PDO::FETCH_COLUMN);
+        } catch (Exception $e) {
+            error_log("[SCORM] Error getting prerequisite IDs for SCORM: " . $e->getMessage());
+            return [];
+        }
+    }
+    
+    /**
+     * Get the latest SCORM progress for this SCORM package
+     */
+    private function getLatestScormProgress($scormId, $userId, $courseId, $clientId) {
+        try {
+            require_once 'config/Database.php';
+            $database = new Database();
+            $conn = $database->connect();
+            
+            $sql = "SELECT * FROM scorm_progress 
+                    WHERE scorm_package_id = ? AND user_id = ? AND course_id = ? AND client_id = ? 
+                    ORDER BY completed_at DESC LIMIT 1";
+            
+            $stmt = $conn->prepare($sql);
+            $stmt->execute([$scormId, $userId, $courseId, $clientId]);
+            return $stmt->fetch(PDO::FETCH_ASSOC);
+        } catch (Exception $e) {
+            error_log("[SCORM] Error getting latest SCORM progress: " . $e->getMessage());
+            return null;
+        }
+    }
+    
+    /**
+     * Create SCORM progress entry for module content
+     */
+    private function createModuleScormProgress($scormProgress, $moduleContent, $userId, $courseId, $clientId) {
+        try {
+            require_once 'config/Database.php';
+            $database = new Database();
+            $conn = $database->connect();
+            
+            // Check if progress already exists for this module content
+            $checkSql = "SELECT id FROM scorm_progress 
+                        WHERE user_id = ? AND course_id = ? AND content_id = ? AND client_id = ?";
+            $checkStmt = $conn->prepare($checkSql);
+            $checkStmt->execute([$userId, $courseId, $moduleContent['content_id'], $clientId]);
+            
+            if ($checkStmt->fetch()) {
+                error_log("[SCORM] Module SCORM progress already exists for content {$moduleContent['content_id']}");
+                return;
+            }
+            
+            // Create new progress entry for module content
+            $sql = "INSERT INTO scorm_progress (
+                        user_id, course_id, content_id, scorm_package_id, client_id,
+                        lesson_status, lesson_location, score_raw, score_min, score_max,
+                        total_time, session_time, suspend_data, launch_data, interactions, objectives,
+                        completed_at, created_at, updated_at
+                    ) VALUES (
+                        ?, ?, ?, ?, ?,
+                        ?, ?, ?, ?, ?,
+                        ?, ?, ?, ?, ?, ?,
+                        NOW(), NOW(), NOW()
+                    )";
+            
+            $stmt = $conn->prepare($sql);
+            $result = $stmt->execute([
+                $userId, $courseId, $moduleContent['content_id'], $scormProgress['scorm_package_id'], $clientId,
+                $scormProgress['lesson_status'], $scormProgress['lesson_location'], 
+                $scormProgress['score_raw'], $scormProgress['score_min'], $scormProgress['score_max'],
+                $scormProgress['total_time'], $scormProgress['session_time'], 
+                $scormProgress['suspend_data'], $scormProgress['launch_data'], 
+                $scormProgress['interactions'], $scormProgress['objectives']
+            ]);
+            
+            if ($result) {
+                error_log("[SCORM] Created module SCORM progress for content {$moduleContent['content_id']}");
+            } else {
+                error_log("[SCORM] Failed to create module SCORM progress for content {$moduleContent['content_id']}");
+            }
+            
+        } catch (Exception $e) {
+            error_log("[SCORM] Error creating module SCORM progress: " . $e->getMessage());
+        }
+    }
+    
+    /**
+     * Create SCORM progress entry for prerequisite
+     */
+    private function createPrerequisiteScormProgress($scormProgress, $prerequisiteId, $userId, $courseId, $clientId) {
+        try {
+            require_once 'config/Database.php';
+            $database = new Database();
+            $conn = $database->connect();
+            
+            // Check if progress already exists for this prerequisite
+            $checkSql = "SELECT id FROM scorm_progress 
+                        WHERE user_id = ? AND course_id = ? AND prerequisite_id = ? AND client_id = ?";
+            $checkStmt = $conn->prepare($checkSql);
+            $checkStmt->execute([$userId, $courseId, $prerequisiteId, $clientId]);
+            
+            if ($checkStmt->fetch()) {
+                error_log("[SCORM] Prerequisite SCORM progress already exists for prerequisite {$prerequisiteId}");
+                return;
+            }
+            
+            // Create new progress entry for prerequisite
+            $sql = "INSERT INTO scorm_progress (
+                        user_id, course_id, prerequisite_id, scorm_package_id, client_id,
+                        lesson_status, lesson_location, score_raw, score_min, score_max,
+                        total_time, session_time, suspend_data, launch_data, interactions, objectives,
+                        completed_at, created_at, updated_at
+                    ) VALUES (
+                        ?, ?, ?, ?, ?,
+                        ?, ?, ?, ?, ?,
+                        ?, ?, ?, ?, ?, ?,
+                        NOW(), NOW(), NOW()
+                    )";
+            
+            $stmt = $conn->prepare($sql);
+            $result = $stmt->execute([
+                $userId, $courseId, $prerequisiteId, $scormProgress['scorm_package_id'], $clientId,
+                $scormProgress['lesson_status'], $scormProgress['lesson_location'], 
+                $scormProgress['score_raw'], $scormProgress['score_min'], $scormProgress['score_max'],
+                $scormProgress['total_time'], $scormProgress['session_time'], 
+                $scormProgress['suspend_data'], $scormProgress['launch_data'], 
+                $scormProgress['interactions'], $scormProgress['objectives']
+            ]);
+            
+            if ($result) {
+                error_log("[SCORM] Created prerequisite SCORM progress for prerequisite {$prerequisiteId}");
+            } else {
+                error_log("[SCORM] Failed to create prerequisite SCORM progress for prerequisite {$prerequisiteId}");
+            }
+            
+        } catch (Exception $e) {
+            error_log("[SCORM] Error creating prerequisite SCORM progress: " . $e->getMessage());
         }
     }
 }

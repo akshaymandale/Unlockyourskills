@@ -5,7 +5,7 @@
 
 require_once 'config/Database.php';
 require_once 'models/ExternalProgressModel.php';
-require_once 'models/PrerequisiteCompletionModel.php';
+// Note: Completion tracking has been removed
 
 echo "Simple Debug for Course ID 14 External Prerequisite\n";
 echo "==================================================\n\n";
@@ -14,7 +14,7 @@ try {
     $database = new Database();
     $conn = $database->connect();
     $externalProgressModel = new ExternalProgressModel();
-    $prerequisiteModel = new PrerequisiteCompletionModel();
+    // Note: Completion tracking has been removed
     
     $courseId = 14;
     

@@ -645,22 +645,26 @@
       const moduleId = urlParams.get('module_id');
       const contentId = urlParams.get('content_id');
       const contentType = urlParams.get('type');
+      const documentPackageId = urlParams.get('document_package_id');
       
-              if (courseId && contentId && (moduleId || urlParams.get('prerequisite_id'))) {
-          if (contentType === 'video') {
-            localStorage.setItem('video_closed_' + contentId, Date.now().toString());
-            console.log('Video close flag set for:', contentId);
-          } else if (contentType === 'image') {
-            localStorage.setItem('image_closed_' + contentId, Date.now().toString());
-            console.log('Image close flag set for:', contentId);
-          } else if (contentType === 'external') {
-            localStorage.setItem('external_closed_' + contentId, Date.now().toString());
-            console.log('External content close flag set for:', contentId);
-          } else {
-            localStorage.setItem('document_closed_' + contentId, Date.now().toString());
-            console.log('Document close flag set for:', contentId);
-          }
+      // For document prerequisites, use document_package_id instead of content_id
+      const actualContentId = (contentType === 'document' && documentPackageId && !contentId) ? documentPackageId : contentId;
+      
+      if (courseId && actualContentId && (moduleId || urlParams.get('prerequisite_id'))) {
+        if (contentType === 'video') {
+          localStorage.setItem('video_closed_' + actualContentId, Date.now().toString());
+          console.log('Video close flag set for:', actualContentId);
+        } else if (contentType === 'image') {
+          localStorage.setItem('image_closed_' + actualContentId, Date.now().toString());
+          console.log('Image close flag set for:', actualContentId);
+        } else if (contentType === 'external') {
+          localStorage.setItem('external_closed_' + actualContentId, Date.now().toString());
+          console.log('External content close flag set for:', actualContentId);
+        } else {
+          localStorage.setItem('document_closed_' + actualContentId, Date.now().toString());
+          console.log('Document close flag set for:', actualContentId);
         }
+      }
     } catch (error) {
       console.error('Error setting content close flag:', error);
     }
@@ -1690,7 +1694,7 @@
     });
     
     // Initialize document progress tracker for document content only
-    if (contentType === 'document' && courseId && contentId) {
+    if (contentType === 'document' && courseId && (contentId || documentPackageId)) {
       debugLog('📄 Document content detected, initializing progress tracker');
       
       // Wait for document progress tracker to be available
@@ -1704,8 +1708,12 @@
             debugLog('📦 Document package ID set:', documentPackageId);
           }
           
-          // Start tracking
-          window.documentProgressTracker.startTracking();
+          // Only start tracking if not already started
+          if (!window.documentProgressTracker.isTracking) {
+            window.documentProgressTracker.startTracking();
+          } else {
+            debugLog('⚠️ Document tracking already started');
+          }
         } else {
           debugLog('⏳ Document progress tracker not ready yet, retrying in 500ms');
           setTimeout(waitForDocumentTracker, 500);
@@ -1758,15 +1766,30 @@
     // Wait for progress tracker to be available (only for non-audio and non-video content)
     if (contentType !== 'audio' && contentType !== 'video') {
       const waitForProgressTracker = () => {
+        // Check for prerequisite parameters as well
+        const prerequisiteId = urlParams.get('prerequisite_id');
+        const documentPackageId = urlParams.get('document_package_id');
+        const hasModuleParams = !!(courseId && moduleId && contentId && contentType);
+        const hasPrerequisiteParams = !!(courseId && prerequisiteId && documentPackageId && contentType);
+        
         debugLog('⏳ Waiting for progress tracker...', {
           hasProgressTracker: !!window.progressTracker,
           isInitialized: window.progressTracker?.isInitialized,
-          hasAllParams: !!(courseId && moduleId && contentId && contentType)
+          hasModuleParams: hasModuleParams,
+          hasPrerequisiteParams: hasPrerequisiteParams,
+          hasAllParams: hasModuleParams || hasPrerequisiteParams
         });
         
-        if (window.progressTracker && window.progressTracker.isInitialized && courseId && moduleId && contentId && contentType) {
+        if (window.progressTracker && window.progressTracker.isInitialized && (hasModuleParams || hasPrerequisiteParams)) {
           debugLog('✅ Progress tracker ready, setting course context');
-          window.progressTracker.setCourseContext(courseId, moduleId, contentId, contentType);
+          
+          if (hasModuleParams) {
+            // Module content
+            window.progressTracker.setCourseContext(courseId, moduleId, contentId, contentType);
+          } else if (hasPrerequisiteParams) {
+            // Prerequisite content - use prerequisite_id as moduleId and document_package_id as contentId
+            window.progressTracker.setCourseContext(courseId, prerequisiteId, documentPackageId, contentType);
+          }
           
           // Setup SCORM functionality
           if (contentType === 'scorm') {
@@ -1857,23 +1880,27 @@
       const moduleId = urlParams.get('module_id');
       const contentId = urlParams.get('content_id');
       const contentType = urlParams.get('type');
+      const documentPackageId = urlParams.get('document_package_id');
       
-      if (courseId && contentId && (moduleId || urlParams.get('prerequisite_id'))) {
+      // For document prerequisites, use document_package_id instead of content_id
+      const actualContentId = (contentType === 'document' && documentPackageId && !contentId) ? documentPackageId : contentId;
+      
+      if (courseId && actualContentId && (moduleId || urlParams.get('prerequisite_id'))) {
         if (contentType === 'video') {
-          localStorage.setItem('video_closed_' + contentId, Date.now().toString());
-          console.log('Video close flag set via event listener for:', contentId);
+          localStorage.setItem('video_closed_' + actualContentId, Date.now().toString());
+          console.log('Video close flag set via event listener for:', actualContentId);
         } else if (contentType === 'image') {
-          localStorage.setItem('image_closed_' + contentId, Date.now().toString());
-          console.log('Image close flag set via event listener for:', contentId);
+          localStorage.setItem('image_closed_' + actualContentId, Date.now().toString());
+          console.log('Image close flag set via event listener for:', actualContentId);
         } else if (contentType === 'external') {
-          localStorage.setItem('external_closed_' + contentId, Date.now().toString());
-          console.log('External content close flag set via event listener for:', contentId);
+          localStorage.setItem('external_closed_' + actualContentId, Date.now().toString());
+          console.log('External content close flag set via event listener for:', actualContentId);
         } else if (contentType === 'audio') {
-          localStorage.setItem('audio_closed_' + contentId, Date.now().toString());
-          console.log('Audio close flag set via event listener for:', contentId);
+          localStorage.setItem('audio_closed_' + actualContentId, Date.now().toString());
+          console.log('Audio close flag set via event listener for:', actualContentId);
         } else {
-          localStorage.setItem('document_closed_' + contentId, Date.now().toString());
-          console.log('Document close flag set via event listener for:', contentId);
+          localStorage.setItem('document_closed_' + actualContentId, Date.now().toString());
+          console.log('Document close flag set via event listener for:', actualContentId);
         }
       }
     } catch (error) {

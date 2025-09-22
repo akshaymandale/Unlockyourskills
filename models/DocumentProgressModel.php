@@ -12,38 +12,77 @@ class DocumentProgressModel {
     /**
      * Start tracking a document when user opens it
      */
-    public function startTracking($userId, $courseId, $contentId, $documentPackageId, $clientId, $totalPages = 0) {
+    public function startTracking($userId, $courseId, $contentId, $documentPackageId, $clientId, $totalPages = 0, $prerequisiteId = null) {
         try {
-            error_log("DocumentProgressModel::startTracking called with: userId=$userId, courseId=$courseId, contentId=$contentId, documentPackageId=$documentPackageId, clientId=$clientId, totalPages=$totalPages");
+            error_log("DocumentProgressModel::startTracking called with: userId=$userId, courseId=$courseId, contentId=$contentId, documentPackageId=$documentPackageId, clientId=$clientId, totalPages=$totalPages, prerequisiteId=$prerequisiteId");
             
-            // Check if progress record already exists
-            $existingProgress = $this->getProgress($userId, $courseId, $contentId, $clientId);
+            // Determine if this is a prerequisite based on parameters
+            $isPrerequisite = ($prerequisiteId !== null);
             
-            if ($existingProgress) {
-                // Update last_viewed_at and return existing progress
-                $sql = "UPDATE document_progress 
-                        SET last_viewed_at = CURRENT_TIMESTAMP,
-                            total_pages = CASE WHEN total_pages = 0 THEN ? ELSE total_pages END
+            if ($isPrerequisite) {
+                // Use the provided prerequisite_id directly
+                
+                // For prerequisites, look for records with prerequisite_id = course_prerequisites.id
+                $sql = "SELECT * FROM document_progress 
+                        WHERE user_id = ? AND course_id = ? AND prerequisite_id = ? AND client_id = ?";
+                $stmt = $this->conn->prepare($sql);
+                $stmt->execute([$userId, $courseId, $prerequisiteId, $clientId]);
+                $progress = $stmt->fetch(PDO::FETCH_ASSOC);
+
+                if (!$progress) {
+                    // Create new progress record for prerequisite
+                    // For prerequisites, only set prerequisite_id and leave content_id as NULL
+                    $sql = "INSERT INTO document_progress (
+                                user_id, course_id, prerequisite_id, content_id, document_package_id, client_id,
+                                started_at, current_page, total_pages, pages_viewed, viewed_percentage,
+                                completion_threshold, is_completed, status, time_spent, last_viewed_at
+                            ) VALUES (?, ?, ?, NULL, ?, ?, NOW(), 1, ?, '[]', 0.00, 80.00, 0, 'not_started', 0, CURRENT_TIMESTAMP)";
+                    $stmt = $this->conn->prepare($sql);
+                    $stmt->execute([$userId, $courseId, $prerequisiteId, $documentPackageId, $clientId, $totalPages]);
+                    
+                    return $this->getProgress($userId, $courseId, $contentId, $clientId, $prerequisiteId);
+                } else {
+                    // Update last_viewed_at and return existing progress
+                    $sql = "UPDATE document_progress 
+                            SET last_viewed_at = CURRENT_TIMESTAMP,
+                                total_pages = CASE WHEN total_pages = 0 THEN ? ELSE total_pages END
+                            WHERE user_id = ? AND course_id = ? AND prerequisite_id = ? AND client_id = ?";
+                    $stmt = $this->conn->prepare($sql);
+                    $stmt->execute([$totalPages, $userId, $courseId, $prerequisiteId, $clientId]);
+                    
+                    return $this->getProgress($userId, $courseId, $contentId, $clientId, $prerequisiteId);
+                }
+            } else {
+                // For regular modules, look for records with content_id = contentId
+                $sql = "SELECT * FROM document_progress 
                         WHERE user_id = ? AND course_id = ? AND content_id = ? AND client_id = ?";
                 $stmt = $this->conn->prepare($sql);
-                $stmt->execute([$totalPages, $userId, $courseId, $contentId, $clientId]);
-                
-                return $this->getProgress($userId, $courseId, $contentId, $clientId);
+                $stmt->execute([$userId, $courseId, $contentId, $clientId]);
+                $progress = $stmt->fetch(PDO::FETCH_ASSOC);
+
+                if (!$progress) {
+                    // Create new progress record for module
+                    $sql = "INSERT INTO document_progress (
+                                user_id, course_id, content_id, document_package_id, client_id,
+                                started_at, current_page, total_pages, pages_viewed, viewed_percentage,
+                                completion_threshold, is_completed, status, time_spent, last_viewed_at
+                            ) VALUES (?, ?, ?, ?, ?, NOW(), 1, ?, '[]', 0.00, 80.00, 0, 'not_started', 0, CURRENT_TIMESTAMP)";
+                    $stmt = $this->conn->prepare($sql);
+                    $stmt->execute([$userId, $courseId, $contentId, $documentPackageId, $clientId, $totalPages]);
+                    
+                    return $this->getProgress($userId, $courseId, $contentId, $clientId);
+                } else {
+                    // Update last_viewed_at and return existing progress
+                    $sql = "UPDATE document_progress 
+                            SET last_viewed_at = CURRENT_TIMESTAMP,
+                                total_pages = CASE WHEN total_pages = 0 THEN ? ELSE total_pages END
+                            WHERE user_id = ? AND course_id = ? AND content_id = ? AND client_id = ?";
+                    $stmt = $this->conn->prepare($sql);
+                    $stmt->execute([$totalPages, $userId, $courseId, $contentId, $clientId]);
+                    
+                    return $this->getProgress($userId, $courseId, $contentId, $clientId);
+                }
             }
-
-            // Create new progress record
-            $sql = "INSERT INTO document_progress (
-                        user_id, course_id, content_id, document_package_id, client_id,
-                        started_at, current_page, total_pages, pages_viewed, viewed_percentage,
-                        completion_threshold, is_completed, status, time_spent, last_viewed_at
-                    ) VALUES (?, ?, ?, ?, ?, NOW(), 1, ?, '[]', 0.00, 80.00, 0, 'not_started', 0, CURRENT_TIMESTAMP)";
-            
-            $stmt = $this->conn->prepare($sql);
-            $stmt->execute([
-                $userId, $courseId, $contentId, $documentPackageId, $clientId, $totalPages
-            ]);
-
-            return $this->getProgress($userId, $courseId, $contentId, $clientId);
         } catch (Exception $e) {
             error_log("Error starting document tracking: " . $e->getMessage());
             throw $e;
@@ -53,10 +92,13 @@ class DocumentProgressModel {
     /**
      * Update document progress
      */
-    public function updateProgress($userId, $courseId, $contentId, $clientId, $currentPage, $pagesViewed, $timeSpent, $viewedPercentage) {
+    public function updateProgress($userId, $courseId, $contentId, $clientId, $currentPage, $pagesViewed, $timeSpent, $viewedPercentage, $prerequisiteId = null) {
         try {
+            // Determine if this is a prerequisite based on parameters
+            $isPrerequisite = ($prerequisiteId !== null);
+            
             // Ensure progress record exists
-            $existingProgress = $this->getProgress($userId, $courseId, $contentId, $clientId);
+            $existingProgress = $this->getProgress($userId, $courseId, $contentId, $clientId, $prerequisiteId);
             if (!$existingProgress) {
                 throw new Exception('Document progress record not found. Please start tracking first.');
             }
@@ -89,25 +131,48 @@ class DocumentProgressModel {
                 $setCompletedAt = ", completed_at = NOW()";
             }
             
-            $sql = "UPDATE document_progress 
-                    SET current_page = ?,
-                        pages_viewed = ?,
-                        viewed_percentage = ?,
-                        is_completed = ?,
-                        status = ?,
-                        time_spent = time_spent + ?,
-                        last_viewed_at = CURRENT_TIMESTAMP
-                        $setStartedAt
-                        $setCompletedAt
-                    WHERE user_id = ? AND course_id = ? AND content_id = ? AND client_id = ?";
+            if ($isPrerequisite) {
+                // Use the provided prerequisite_id directly
+                
+                $sql = "UPDATE document_progress 
+                        SET current_page = ?,
+                            pages_viewed = ?,
+                            viewed_percentage = ?,
+                            is_completed = ?,
+                            status = ?,
+                            time_spent = time_spent + ?,
+                            last_viewed_at = CURRENT_TIMESTAMP
+                            $setStartedAt
+                            $setCompletedAt
+                        WHERE user_id = ? AND course_id = ? AND prerequisite_id = ? AND client_id = ?";
+            } else {
+                $sql = "UPDATE document_progress 
+                        SET current_page = ?,
+                            pages_viewed = ?,
+                            viewed_percentage = ?,
+                            is_completed = ?,
+                            status = ?,
+                            time_spent = time_spent + ?,
+                            last_viewed_at = CURRENT_TIMESTAMP
+                            $setStartedAt
+                            $setCompletedAt
+                        WHERE user_id = ? AND course_id = ? AND content_id = ? AND client_id = ?";
+            }
             
             $stmt = $this->conn->prepare($sql);
-            $stmt->execute([
-                $currentPage, $pagesViewedJson, $viewedPercentage, $isCompleted, $status, $timeSpent,
-                $userId, $courseId, $contentId, $clientId
-            ]);
+            if ($isPrerequisite) {
+                $stmt->execute([
+                    $currentPage, $pagesViewedJson, $viewedPercentage, $isCompleted, $status, $timeSpent,
+                    $userId, $courseId, $prerequisiteId, $clientId
+                ]);
+            } else {
+                $stmt->execute([
+                    $currentPage, $pagesViewedJson, $viewedPercentage, $isCompleted, $status, $timeSpent,
+                    $userId, $courseId, $contentId, $clientId
+                ]);
+            }
 
-            return $this->getProgress($userId, $courseId, $contentId, $clientId);
+            return $this->getProgress($userId, $courseId, $contentId, $clientId, $prerequisiteId);
         } catch (Exception $e) {
             error_log("Error updating document progress: " . $e->getMessage());
             throw $e;
@@ -182,20 +247,37 @@ class DocumentProgressModel {
     /**
      * Get document progress for a user
      */
-    public function getProgress($userId, $courseId, $contentId, $clientId) {
+    public function getProgress($userId, $courseId, $contentId, $clientId, $prerequisiteId = null) {
         try {
-            error_log("DocumentProgressModel::getProgress called with: userId=$userId, courseId=$courseId, contentId=$contentId, clientId=$clientId");
+            error_log("DocumentProgressModel::getProgress called with: userId=$userId, courseId=$courseId, contentId=$contentId, clientId=$clientId, prerequisiteId=$prerequisiteId");
             
-            $sql = "SELECT dp.*, d.title as document_title, 
-                           COALESCE(d.word_excel_ppt_file, d.ebook_manual_file, d.research_file) as document_path
-                    FROM document_progress dp
-                    LEFT JOIN documents d ON dp.document_package_id = d.id
-                    WHERE dp.user_id = ? AND dp.course_id = ? AND dp.content_id = ? AND dp.client_id = ?";
+            // Determine if this is a prerequisite based on parameters
+            $isPrerequisite = ($prerequisiteId !== null);
+            
+            if ($isPrerequisite) {
+                // Use the provided prerequisite_id directly
+                $sql = "SELECT dp.*, d.title as document_title, 
+                               COALESCE(d.word_excel_ppt_file, d.ebook_manual_file, d.research_file) as document_path
+                        FROM document_progress dp
+                        LEFT JOIN documents d ON dp.document_package_id = d.id
+                        WHERE dp.user_id = ? AND dp.course_id = ? AND dp.prerequisite_id = ? AND dp.client_id = ?";
+            } else {
+                // For regular modules, look for records with content_id = contentId
+                $sql = "SELECT dp.*, d.title as document_title, 
+                               COALESCE(d.word_excel_ppt_file, d.ebook_manual_file, d.research_file) as document_path
+                        FROM document_progress dp
+                        LEFT JOIN documents d ON dp.document_package_id = d.id
+                        WHERE dp.user_id = ? AND dp.course_id = ? AND dp.content_id = ? AND dp.client_id = ?";
+            }
             
             error_log("SQL Query: " . $sql);
             
             $stmt = $this->conn->prepare($sql);
-            $stmt->execute([$userId, $courseId, $contentId, $clientId]);
+            if ($isPrerequisite) {
+                $stmt->execute([$userId, $courseId, $prerequisiteId, $clientId]);
+            } else {
+                $stmt->execute([$userId, $courseId, $contentId, $clientId]);
+            }
             
             $progress = $stmt->fetch(PDO::FETCH_ASSOC);
             
@@ -260,9 +342,9 @@ class DocumentProgressModel {
     /**
      * Save bookmark in document
      */
-    public function saveBookmark($userId, $courseId, $contentId, $clientId, $page, $title, $note) {
+    public function saveBookmark($userId, $courseId, $contentId, $clientId, $page, $title, $note, $prerequisiteId = null) {
         try {
-            $progress = $this->getProgress($userId, $courseId, $contentId, $clientId);
+            $progress = $this->getProgress($userId, $courseId, $contentId, $clientId, $prerequisiteId);
             if (!$progress) {
                 throw new Exception('Document progress record not found');
             }
@@ -280,15 +362,28 @@ class DocumentProgressModel {
             
             $bookmarks[] = $bookmark;
 
-            $sql = "UPDATE document_progress 
-                    SET bookmarks = ?
-                    WHERE user_id = ? AND course_id = ? AND content_id = ? AND client_id = ?";
+            // Determine if this is a prerequisite
+            $isPrerequisite = ($prerequisiteId !== null);
             
-            $stmt = $this->conn->prepare($sql);
-            $stmt->execute([
-                json_encode($bookmarks),
-                $userId, $courseId, $contentId, $clientId
-            ]);
+            if ($isPrerequisite) {
+                $sql = "UPDATE document_progress 
+                        SET bookmarks = ?
+                        WHERE user_id = ? AND course_id = ? AND prerequisite_id = ? AND client_id = ?";
+                $stmt = $this->conn->prepare($sql);
+                $stmt->execute([
+                    json_encode($bookmarks),
+                    $userId, $courseId, $prerequisiteId, $clientId
+                ]);
+            } else {
+                $sql = "UPDATE document_progress 
+                        SET bookmarks = ?
+                        WHERE user_id = ? AND course_id = ? AND content_id = ? AND client_id = ?";
+                $stmt = $this->conn->prepare($sql);
+                $stmt->execute([
+                    json_encode($bookmarks),
+                    $userId, $courseId, $contentId, $clientId
+                ]);
+            }
 
             return $bookmark;
         } catch (Exception $e) {
@@ -300,14 +395,24 @@ class DocumentProgressModel {
     /**
      * Save notes for document
      */
-    public function saveNotes($userId, $courseId, $contentId, $clientId, $notes) {
+    public function saveNotes($userId, $courseId, $contentId, $clientId, $notes, $prerequisiteId = null) {
         try {
-            $sql = "UPDATE document_progress 
-                    SET notes = ?
-                    WHERE user_id = ? AND course_id = ? AND content_id = ? AND client_id = ?";
+            // Determine if this is a prerequisite
+            $isPrerequisite = ($prerequisiteId !== null);
             
-            $stmt = $this->conn->prepare($sql);
-            $stmt->execute([$notes, $userId, $courseId, $contentId, $clientId]);
+            if ($isPrerequisite) {
+                $sql = "UPDATE document_progress 
+                        SET notes = ?
+                        WHERE user_id = ? AND course_id = ? AND prerequisite_id = ? AND client_id = ?";
+                $stmt = $this->conn->prepare($sql);
+                $stmt->execute([$notes, $userId, $courseId, $prerequisiteId, $clientId]);
+            } else {
+                $sql = "UPDATE document_progress 
+                        SET notes = ?
+                        WHERE user_id = ? AND course_id = ? AND content_id = ? AND client_id = ?";
+                $stmt = $this->conn->prepare($sql);
+                $stmt->execute([$notes, $userId, $courseId, $contentId, $clientId]);
+            }
 
             if ($stmt->rowCount() === 0) {
                 throw new Exception('Document progress record not found');
@@ -390,6 +495,57 @@ class DocumentProgressModel {
         } catch (Exception $e) {
             error_log("Error getting document stats: " . $e->getMessage());
             throw $e;
+        }
+    }
+
+    /**
+     * Get document package by ID
+     */
+    public function getDocumentPackageById($documentPackageId) {
+        try {
+            $sql = "SELECT id, title, word_excel_ppt_file, ebook_manual_file, research_file, version, language, description, tags, mobile_support, client_id, created_by, created_at, updated_by, updated_at, is_deleted FROM documents WHERE id = ? AND (is_deleted IS NULL OR is_deleted = 0)";
+            $stmt = $this->conn->prepare($sql);
+            $stmt->execute([$documentPackageId]);
+            
+            return $stmt->fetch(PDO::FETCH_ASSOC);
+        } catch (Exception $e) {
+            error_log("Error in getDocumentPackageById: " . $e->getMessage());
+            return false;
+        }
+    }
+
+    /**
+     * Check if content is a prerequisite
+     */
+    private function isContentPrerequisite($courseId, $contentId, $contentType) {
+        try {
+            $sql = "SELECT COUNT(*) FROM course_prerequisites 
+                    WHERE course_id = ? AND prerequisite_id = ? AND prerequisite_type = ?";
+            $stmt = $this->conn->prepare($sql);
+            $stmt->execute([$courseId, $contentId, $contentType]);
+            
+            return $stmt->fetchColumn() > 0;
+        } catch (Exception $e) {
+            error_log("Error checking if content is prerequisite: " . $e->getMessage());
+            return false;
+        }
+    }
+
+    /**
+     * Get the course_prerequisites.id for a given prerequisite content
+     */
+    private function getCoursePrerequisiteId($courseId, $contentId, $contentType) {
+        try {
+            $sql = "SELECT id FROM course_prerequisites 
+                    WHERE course_id = ? AND prerequisite_id = ? AND prerequisite_type = ?";
+            $stmt = $this->conn->prepare($sql);
+            $stmt->execute([$courseId, $contentId, $contentType]);
+            
+            $result = $stmt->fetch(PDO::FETCH_ASSOC);
+            return $result ? $result['id'] : null;
+        } catch (Exception $e) {
+            error_log("Error getting course prerequisite ID: " . $e->getMessage());
+            return null;
         }
     }
 }

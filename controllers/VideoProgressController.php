@@ -4,12 +4,15 @@ if (session_status() === PHP_SESSION_NONE) {
 }
 
 require_once 'models/VideoProgressModel.php';
+require_once 'models/SharedContentCompletionService.php';
 
 class VideoProgressController {
     private $videoProgressModel;
+    private $sharedContentService;
 
     public function __construct() {
         $this->videoProgressModel = new VideoProgressModel();
+        $this->sharedContentService = new SharedContentCompletionService();
     }
 
     /**
@@ -69,6 +72,28 @@ class VideoProgressController {
 
             if ($result) {
                 error_log("Video progress saved immediately - Action: $action, User: $userId, Content: $contentId, Progress: $watchedPercentage%");
+                
+                // Handle shared content completion if video is completed
+                // Only trigger shared completion if video is actually 100% complete, not just at threshold
+                if ($isCompleted == 1 && $watchedPercentage >= 100) {
+                    // Determine content type and IDs for shared completion
+                    $contentType = 'module'; // Default to module
+                    $prerequisiteId = null;
+                    $sharedContentId = $contentId; // Default to contentId
+                    
+                    // Check if this is a prerequisite by looking at the progress record
+                    if ($progress['prerequisite_id'] && !$progress['content_id']) {
+                        $contentType = 'prerequisite';
+                        $prerequisiteId = $progress['prerequisite_id'];
+                        $sharedContentId = $videoPackageId; // Use video package ID for shared content lookup
+                    }
+                    
+                    // Handle shared video completion
+                    $this->sharedContentService->handleSharedContentCompletion(
+                        $userId, $courseId, $sharedContentId, $clientId, 'video', $contentType, $prerequisiteId
+                    );
+                }
+                
                 echo json_encode(['success' => true, 'message' => 'Progress saved']);
             } else {
                 http_response_code(500);
@@ -138,6 +163,28 @@ class VideoProgressController {
 
             if ($result) {
                 error_log("Video progress saved via beacon - User: $userId, Content: $contentId, Progress: $watchedPercentage%");
+                
+                // Handle shared content completion if video is completed
+                // Only trigger shared completion if video is actually 100% complete, not just at threshold
+                if ($isCompleted == 1 && $watchedPercentage >= 100) {
+                    // Determine content type and IDs for shared completion
+                    $contentType = 'module'; // Default to module
+                    $prerequisiteId = null;
+                    $sharedContentId = $contentId; // Default to contentId
+                    
+                    // Check if this is a prerequisite by looking at the progress record
+                    if ($progress['prerequisite_id'] && !$progress['content_id']) {
+                        $contentType = 'prerequisite';
+                        $prerequisiteId = $progress['prerequisite_id'];
+                        $sharedContentId = $videoPackageId; // Use video package ID for shared content lookup
+                    }
+                    
+                    // Handle shared video completion
+                    $this->sharedContentService->handleSharedContentCompletion(
+                        $userId, $courseId, $sharedContentId, $clientId, 'video', $contentType, $prerequisiteId
+                    );
+                }
+                
                 echo json_encode(['success' => true, 'message' => 'Progress saved via beacon']);
             } else {
                 http_response_code(500);
@@ -240,6 +287,7 @@ class VideoProgressController {
         $courseId = $_GET['course_id'] ?? null;
         $contentId = $_GET['content_id'] ?? null;
         $clientId = $_SESSION['user']['client_id'] ?? null;
+        $videoPackageId = $_GET['video_package_id'] ?? null;
 
         if (!$userId || !$courseId || !$contentId || !$clientId) {
             http_response_code(400);
@@ -248,13 +296,76 @@ class VideoProgressController {
         }
 
         try {
-            $result = $this->videoProgressModel->getResumePosition($userId, $courseId, $contentId, $clientId);
-            echo json_encode($result);
+            // Get video package ID if not provided
+            if (!$videoPackageId) {
+                $videoPackageId = $this->getVideoPackageId($contentId);
+            }
+            
+            if (!$videoPackageId) {
+                http_response_code(400);
+                echo json_encode(['success' => false, 'message' => 'Could not determine video package ID']);
+                exit;
+            }
+            
+            // Get or create progress record (this will create the first entry if it doesn't exist)
+            $progress = $this->videoProgressModel->getOrCreateProgress($userId, $courseId, $contentId, $videoPackageId, $clientId);
+            
+            if ($progress && $progress['current_time'] > 0) {
+                echo json_encode([
+                    'success' => true,
+                    'resume_position' => $progress['current_time'],
+                    'duration' => $progress['duration'],
+                    'watched_percentage' => $progress['watched_percentage'],
+                    'play_count' => $progress['play_count'],
+                    'last_watched_at' => $progress['last_watched_at']
+                ]);
+            } else {
+                echo json_encode([
+                    'success' => true,
+                    'resume_position' => 0,
+                    'duration' => 0,
+                    'watched_percentage' => 0,
+                    'play_count' => 0,
+                    'last_watched_at' => null
+                ]);
+            }
 
         } catch (Exception $e) {
             error_log("Error in getResumePosition: " . $e->getMessage());
             http_response_code(500);
             echo json_encode(['success' => false, 'message' => 'Internal server error']);
+        }
+    }
+
+    /**
+     * Get video package ID for content
+     */
+    private function getVideoPackageId($contentId) {
+        try {
+            require_once 'config/Database.php';
+            $database = new Database();
+            $conn = $database->connect();
+
+            // First try course_module_content
+            $sql = "SELECT content_id as video_package_id FROM course_module_content 
+                    WHERE id = ? AND content_type = 'video'";
+            $stmt = $conn->prepare($sql);
+            $stmt->execute([$contentId]);
+            $result = $stmt->fetch(PDO::FETCH_ASSOC);
+
+            if (!$result) {
+                // If not found in course_module_content, try course_prerequisites
+                $sql = "SELECT prerequisite_id as video_package_id FROM course_prerequisites 
+                        WHERE id = ? AND prerequisite_type = 'video'";
+                $stmt = $conn->prepare($sql);
+                $stmt->execute([$contentId]);
+                $result = $stmt->fetch(PDO::FETCH_ASSOC);
+            }
+
+            return $result ? $result['video_package_id'] : null;
+        } catch (Exception $e) {
+            error_log("Error getting video package ID: " . $e->getMessage());
+            return null;
         }
     }
 

@@ -1,14 +1,17 @@
 <?php
 require_once 'models/AudioProgressModel.php';
+require_once 'models/SharedContentCompletionService.php';
 require_once 'models/CourseModel.php';
 
 class AudioProgressController {
     private $audioProgressModel;
     private $courseModel;
+    private $sharedContentService;
 
     public function __construct() {
         $this->audioProgressModel = new AudioProgressModel();
         $this->courseModel = new CourseModel();
+        $this->sharedContentService = new SharedContentCompletionService();
     }
 
     /**
@@ -85,11 +88,24 @@ class AudioProgressController {
             $success = $this->audioProgressModel->updateProgress($progress['id'], $updateData);
 
             if ($success) {
-                // If audio is completed, update completion tracking
+                // If audio is completed, handle shared completion
                 if ($isCompleted) {
-                    require_once 'models/CompletionTrackingService.php';
-                    $completionService = new CompletionTrackingService();
-                    $completionService->handleContentCompletion($userId, $courseId, $contentId, 'audio', $clientId);
+                    // Determine content type and IDs for shared completion
+                    $contentType = 'module'; // Default to module
+                    $prerequisiteId = null;
+                    $audioPackageId = $audioPackageId;
+                    
+                    // Check if this is a prerequisite by looking at the progress record
+                    if ($progress['prerequisite_id'] && !$progress['content_id']) {
+                        $contentType = 'prerequisite';
+                        $prerequisiteId = $progress['prerequisite_id'];
+                    }
+                    
+                    // Handle shared audio completion
+                    $this->handleSharedAudioCompletion(
+                        $userId, $courseId, $contentId, $clientId, 
+                        $contentType, $prerequisiteId, $audioPackageId
+                    );
                 }
 
                 echo json_encode([
@@ -173,6 +189,26 @@ class AudioProgressController {
             $success = $this->audioProgressModel->updateProgress($progress['id'], $updateData);
             
             if ($success) {
+                // If audio is completed, handle shared completion
+                if ($updateData['is_completed']) {
+                    // Determine content type and IDs for shared completion
+                    $contentType = 'module'; // Default to module
+                    $prerequisiteId = null;
+                    $audioPackageId = $audioPackageId;
+                    
+                    // Check if this is a prerequisite by looking at the progress record
+                    if ($progress['prerequisite_id'] && !$progress['content_id']) {
+                        $contentType = 'prerequisite';
+                        $prerequisiteId = $progress['prerequisite_id'];
+                    }
+                    
+                    // Handle shared audio completion
+                    $this->handleSharedAudioCompletion(
+                        $userId, $courseId, $contentId, $clientId, 
+                        $contentType, $prerequisiteId, $audioPackageId
+                    );
+                }
+                
                 echo json_encode([
                     'success' => true, 
                     'message' => 'Progress saved immediately',
@@ -404,6 +440,23 @@ class AudioProgressController {
                 $progress = $this->audioProgressModel->getProgressById($progressId);
                 if ($progress) {
                     $this->markPrerequisiteCompleteIfApplicable($progress['user_id'], $progress['course_id'], $progress['content_id'], $progress['client_id']);
+                    
+                    // Determine content type and IDs for shared completion
+                    $contentType = 'module'; // Default to module
+                    $prerequisiteId = null;
+                    $audioPackageId = $progress['audio_package_id'];
+                    
+                    // Check if this is a prerequisite by looking at the progress record
+                    if ($progress['prerequisite_id'] && !$progress['content_id']) {
+                        $contentType = 'prerequisite';
+                        $prerequisiteId = $progress['prerequisite_id'];
+                    }
+                    
+                    // Handle shared audio completion
+                    $this->handleSharedAudioCompletion(
+                        $progress['user_id'], $progress['course_id'], $progress['content_id'], 
+                        $progress['client_id'], $contentType, $prerequisiteId, $audioPackageId
+                    );
                 }
                 
                 echo json_encode(['success' => true, 'message' => 'Audio marked as completed']);
@@ -449,7 +502,18 @@ class AudioProgressController {
         }
 
         try {
-            $progress = $this->audioProgressModel->getProgress($userId, $courseId, $contentId, $clientId);
+            // Get audio package ID from the content info endpoint
+            $audioPackageId = $this->getAudioPackageId($contentId);
+            
+            if (!$audioPackageId) {
+                error_log("Audio resume position: Could not get audio package ID for content $contentId");
+                http_response_code(400);
+                echo json_encode(['success' => false, 'message' => 'Could not determine audio package ID']);
+                exit;
+            }
+            
+            // Get or create progress record
+            $progress = $this->audioProgressModel->getOrCreateProgress($userId, $courseId, $contentId, $audioPackageId, $clientId);
             error_log("Audio resume position: Progress data: " . print_r($progress, true));
             
             if ($progress && $progress['current_time'] > 0) {
@@ -606,16 +670,26 @@ class AudioProgressController {
         }
 
         try {
-            // Get audio package ID from course_module_content
+            // Get audio package ID from course_module_content or course_prerequisites
             require_once 'config/Database.php';
             $database = new Database();
             $conn = $database->connect();
 
+            // First try course_module_content
             $sql = "SELECT content_id as audio_package_id FROM course_module_content 
                     WHERE id = ? AND content_type = 'audio'";
             $stmt = $conn->prepare($sql);
             $stmt->execute([$contentId]);
             $result = $stmt->fetch(PDO::FETCH_ASSOC);
+
+            if (!$result) {
+                // If not found in course_module_content, try course_prerequisites
+                $sql = "SELECT prerequisite_id as audio_package_id FROM course_prerequisites 
+                        WHERE id = ? AND prerequisite_type = 'audio'";
+                $stmt = $conn->prepare($sql);
+                $stmt->execute([$contentId]);
+                $result = $stmt->fetch(PDO::FETCH_ASSOC);
+            }
 
             if ($result) {
                 echo json_encode([
@@ -636,56 +710,36 @@ class AudioProgressController {
         }
     }
 
-    /**
-     * Check if audio is a prerequisite and start tracking
-     */
-    private function startPrerequisiteTrackingIfApplicable($userId, $courseId, $contentId, $clientId) {
-        try {
-            require_once 'models/CompletionTrackingService.php';
-            $completionService = new CompletionTrackingService();
-            
-            // Check if this audio is a prerequisite
-            $isPrerequisite = $this->isContentPrerequisite($courseId, $contentId, 'audio');
-            
-            if ($isPrerequisite) {
-                $completionService->startPrerequisiteTracking($userId, $courseId, $contentId, 'audio', $clientId);
-            }
-        } catch (Exception $e) {
-            error_log("Error in startPrerequisiteTrackingIfApplicable: " . $e->getMessage());
-        }
-    }
 
     /**
-     * Start module tracking if audio belongs to a module
+     * Get audio package ID for a given content ID
      */
-    private function startModuleTrackingIfApplicable($userId, $courseId, $contentId, $contentType, $clientId) {
+    private function getAudioPackageId($contentId) {
         try {
-            require_once 'models/CompletionTrackingService.php';
-            $completionService = new CompletionTrackingService();
-            
-            // Start module tracking if this content belongs to a module
-            $completionService->startModuleTrackingIfApplicable($userId, $courseId, $contentId, $contentType, $clientId);
-        } catch (Exception $e) {
-            error_log("Error in startModuleTrackingIfApplicable: " . $e->getMessage());
-        }
-    }
+            require_once 'config/Database.php';
+            $database = new Database();
+            $conn = $database->connect();
 
-    /**
-     * Check if audio is a prerequisite and mark as complete
-     */
-    private function markPrerequisiteCompleteIfApplicable($userId, $courseId, $contentId, $clientId) {
-        try {
-            require_once 'models/CompletionTrackingService.php';
-            $completionService = new CompletionTrackingService();
-            
-            // Check if this audio is a prerequisite
-            $isPrerequisite = $this->isContentPrerequisite($courseId, $contentId, 'audio');
-            
-            if ($isPrerequisite) {
-                $completionService->markPrerequisiteComplete($userId, $courseId, $contentId, 'audio', $clientId);
+            // First try course_module_content
+            $sql = "SELECT content_id as audio_package_id FROM course_module_content 
+                    WHERE id = ? AND content_type = 'audio'";
+            $stmt = $conn->prepare($sql);
+            $stmt->execute([$contentId]);
+            $result = $stmt->fetch(PDO::FETCH_ASSOC);
+
+            if (!$result) {
+                // If not found in course_module_content, try course_prerequisites
+                $sql = "SELECT prerequisite_id as audio_package_id FROM course_prerequisites 
+                        WHERE id = ? AND prerequisite_type = 'audio'";
+                $stmt = $conn->prepare($sql);
+                $stmt->execute([$contentId]);
+                $result = $stmt->fetch(PDO::FETCH_ASSOC);
             }
+
+            return $result ? $result['audio_package_id'] : null;
         } catch (Exception $e) {
-            error_log("Error in markPrerequisiteCompleteIfApplicable: " . $e->getMessage());
+            error_log("Error getting audio package ID: " . $e->getMessage());
+            return null;
         }
     }
 
@@ -707,6 +761,272 @@ class AudioProgressController {
         } catch (Exception $e) {
             error_log("Error checking if content is prerequisite: " . $e->getMessage());
             return false;
+        }
+    }
+    
+    /**
+     * Handle shared audio completion (auto-complete if same audio exists in modules/prerequisites)
+     */
+    private function handleSharedAudioCompletion($userId, $courseId, $contentId, $clientId, $contentType, $prerequisiteId = null, $audioPackageId = null) {
+        try {
+            // Determine the actual audio package ID that was completed
+            $completedAudioId = null;
+            
+            if ($contentType === 'prerequisite' && $audioPackageId) {
+                $completedAudioId = $audioPackageId;
+            } else {
+                $completedAudioId = $contentId;
+            }
+            
+            if (!$completedAudioId) {
+                error_log("[AUDIO] handleSharedAudioCompletion - No audio ID to work with");
+                return;
+            }
+            
+            error_log("[AUDIO] handleSharedAudioCompletion - Processing audio ID: $completedAudioId for user: $userId, course: $courseId");
+            
+            // Get the latest audio progress for this audio package
+            $audioProgress = $this->getLatestAudioProgress($completedAudioId, $userId, $courseId, $clientId);
+            
+            if (!$audioProgress) {
+                error_log("[AUDIO] handleSharedAudioCompletion - No audio progress found");
+                return;
+            }
+            
+            // Check if this audio also exists in modules (if completed as prerequisite)
+            if ($contentType === 'prerequisite') {
+                $moduleContents = $this->getModuleContentsForAudio($courseId, $completedAudioId);
+                
+                if (!empty($moduleContents)) {
+                    // Create duplicate entries for each module content
+                    foreach ($moduleContents as $moduleContent) {
+                        $this->createModuleAudioProgress($audioProgress, $moduleContent, $userId, $courseId, $clientId);
+                    }
+                    
+                    error_log("[AUDIO] Created module audio progress for shared audio $completedAudioId in course $courseId for user $userId");
+                }
+            }
+            
+            // Check if this audio also exists as a prerequisite (if completed as module)
+            if ($contentType !== 'prerequisite') {
+                $prerequisiteIds = $this->getPrerequisiteIdsForAudio($courseId, $completedAudioId);
+                
+                if (!empty($prerequisiteIds)) {
+                    // Create duplicate entries for each prerequisite
+                    foreach ($prerequisiteIds as $prereqId) {
+                        $this->createPrerequisiteAudioProgress($audioProgress, $prereqId, $userId, $courseId, $clientId);
+                    }
+                    
+                    error_log("[AUDIO] Created prerequisite audio progress for shared audio $completedAudioId in course $courseId for user $userId");
+                }
+            }
+            
+        } catch (Exception $e) {
+            error_log("[AUDIO] Error handling shared audio completion: " . $e->getMessage());
+        }
+    }
+    
+    /**
+     * Get the latest audio progress for a given audio package
+     */
+    private function getLatestAudioProgress($audioId, $userId, $courseId, $clientId) {
+        try {
+            require_once 'config/Database.php';
+            $database = new Database();
+            $conn = $database->connect();
+            
+            // Try to find progress by content_id first (for module content)
+            $sql = "SELECT * FROM audio_progress 
+                    WHERE user_id = ? AND course_id = ? AND content_id = ? AND client_id = ?
+                    ORDER BY updated_at DESC LIMIT 1";
+            $stmt = $conn->prepare($sql);
+            $stmt->execute([$userId, $courseId, $audioId, $clientId]);
+            $result = $stmt->fetch(PDO::FETCH_ASSOC);
+            
+            if ($result) {
+                return $result;
+            }
+            
+            // If not found, try by prerequisite_id (for prerequisite content)
+            $sql = "SELECT * FROM audio_progress 
+                    WHERE user_id = ? AND course_id = ? AND prerequisite_id = ? AND client_id = ?
+                    ORDER BY updated_at DESC LIMIT 1";
+            $stmt = $conn->prepare($sql);
+            $stmt->execute([$userId, $courseId, $audioId, $clientId]);
+            $result = $stmt->fetch(PDO::FETCH_ASSOC);
+            
+            if ($result) {
+                return $result;
+            }
+            
+            // If still not found, try by audio_package_id (for any content with this audio package)
+            $sql = "SELECT * FROM audio_progress 
+                    WHERE user_id = ? AND course_id = ? AND audio_package_id = ? AND client_id = ?
+                    ORDER BY updated_at DESC LIMIT 1";
+            $stmt = $conn->prepare($sql);
+            $stmt->execute([$userId, $courseId, $audioId, $clientId]);
+            $result = $stmt->fetch(PDO::FETCH_ASSOC);
+            
+            return $result;
+            
+        } catch (Exception $e) {
+            error_log("[AUDIO] Error getting latest audio progress: " . $e->getMessage());
+            return null;
+        }
+    }
+    
+    /**
+     * Get module contents that contain this audio
+     */
+    private function getModuleContentsForAudio($courseId, $audioId) {
+        try {
+            require_once 'config/Database.php';
+            $database = new Database();
+            $conn = $database->connect();
+            
+            $sql = "SELECT cmc.id as content_id, cmc.module_id, cmc.content_id as audio_id
+                    FROM course_module_content cmc
+                    JOIN course_modules cm ON cmc.module_id = cm.id
+                    WHERE cm.course_id = ? AND cmc.content_id = ? AND cmc.content_type = 'audio' 
+                    AND cmc.deleted_at IS NULL AND cm.deleted_at IS NULL";
+            
+            $stmt = $conn->prepare($sql);
+            $stmt->execute([$courseId, $audioId]);
+            return $stmt->fetchAll(PDO::FETCH_ASSOC);
+        } catch (Exception $e) {
+            error_log("[AUDIO] Error getting module contents for audio: " . $e->getMessage());
+            return [];
+        }
+    }
+    
+    /**
+     * Get prerequisite IDs that contain this audio
+     */
+    private function getPrerequisiteIdsForAudio($courseId, $audioId) {
+        try {
+            require_once 'config/Database.php';
+            $database = new Database();
+            $conn = $database->connect();
+            
+            $sql = "SELECT cp.id as prerequisite_id
+                    FROM course_prerequisites cp
+                    WHERE cp.course_id = ? AND cp.prerequisite_id = ? AND cp.prerequisite_type = 'audio'
+                    AND cp.deleted_at IS NULL";
+            
+            $stmt = $conn->prepare($sql);
+            $stmt->execute([$courseId, $audioId]);
+            return $stmt->fetchAll(PDO::FETCH_ASSOC);
+        } catch (Exception $e) {
+            error_log("[AUDIO] Error getting prerequisite IDs for audio: " . $e->getMessage());
+            return [];
+        }
+    }
+    
+    /**
+     * Create audio progress entry for module content
+     */
+    private function createModuleAudioProgress($audioProgress, $moduleContent, $userId, $courseId, $clientId) {
+        try {
+            require_once 'config/Database.php';
+            $database = new Database();
+            $conn = $database->connect();
+            
+            // Check if progress already exists for this module content
+            $checkSql = "SELECT id FROM audio_progress 
+                        WHERE user_id = ? AND course_id = ? AND content_id = ? AND client_id = ?";
+            $checkStmt = $conn->prepare($checkSql);
+            $checkStmt->execute([$userId, $courseId, $moduleContent['content_id'], $clientId]);
+            
+            if ($checkStmt->fetch()) {
+                error_log("[AUDIO] Module audio progress already exists for content {$moduleContent['content_id']}");
+                return;
+            }
+            
+            // Create new progress entry for module content
+            $sql = "INSERT INTO audio_progress (
+                        user_id, course_id, content_id, audio_package_id, client_id,
+                        started_at, `current_time`, duration, listened_percentage, completion_threshold,
+                        is_completed, audio_status, playback_status, play_count, last_listened_at,
+                        playback_speed, notes, created_at, updated_at
+                    ) VALUES (
+                        ?, ?, ?, ?, ?,
+                        ?, ?, ?, ?, ?,
+                        ?, ?, ?, ?, ?,
+                        ?, ?, NOW(), NOW()
+                    )";
+            
+            $stmt = $conn->prepare($sql);
+            $result = $stmt->execute([
+                $userId, $courseId, $moduleContent['content_id'], $audioProgress['audio_package_id'], $clientId,
+                $audioProgress['started_at'], $audioProgress['current_time'], $audioProgress['duration'], 
+                $audioProgress['listened_percentage'], $audioProgress['completion_threshold'],
+                $audioProgress['is_completed'], $audioProgress['audio_status'], $audioProgress['playback_status'],
+                $audioProgress['play_count'], $audioProgress['last_listened_at'],
+                $audioProgress['playback_speed'], $audioProgress['notes']
+            ]);
+            
+            if ($result) {
+                error_log("[AUDIO] Created module audio progress for content {$moduleContent['content_id']}");
+            } else {
+                error_log("[AUDIO] Failed to create module audio progress for content {$moduleContent['content_id']}");
+            }
+            
+        } catch (Exception $e) {
+            error_log("[AUDIO] Error creating module audio progress: " . $e->getMessage());
+        }
+    }
+    
+    /**
+     * Create audio progress entry for prerequisite
+     */
+    private function createPrerequisiteAudioProgress($audioProgress, $prerequisiteId, $userId, $courseId, $clientId) {
+        try {
+            require_once 'config/Database.php';
+            $database = new Database();
+            $conn = $database->connect();
+            
+            // Check if progress already exists for this prerequisite
+            $checkSql = "SELECT id FROM audio_progress 
+                        WHERE user_id = ? AND course_id = ? AND prerequisite_id = ? AND client_id = ?";
+            $checkStmt = $conn->prepare($checkSql);
+            $checkStmt->execute([$userId, $courseId, $prerequisiteId, $clientId]);
+            
+            if ($checkStmt->fetch()) {
+                error_log("[AUDIO] Prerequisite audio progress already exists for prerequisite {$prerequisiteId}");
+                return;
+            }
+            
+            // Create new progress entry for prerequisite
+            $sql = "INSERT INTO audio_progress (
+                        user_id, course_id, prerequisite_id, audio_package_id, client_id,
+                        started_at, `current_time`, duration, listened_percentage, completion_threshold,
+                        is_completed, audio_status, playback_status, play_count, last_listened_at,
+                        playback_speed, notes, created_at, updated_at
+                    ) VALUES (
+                        ?, ?, ?, ?, ?,
+                        ?, ?, ?, ?, ?,
+                        ?, ?, ?, ?, ?,
+                        ?, ?, NOW(), NOW()
+                    )";
+            
+            $stmt = $conn->prepare($sql);
+            $result = $stmt->execute([
+                $userId, $courseId, $prerequisiteId, $audioProgress['audio_package_id'], $clientId,
+                $audioProgress['started_at'], $audioProgress['current_time'], $audioProgress['duration'], 
+                $audioProgress['listened_percentage'], $audioProgress['completion_threshold'],
+                $audioProgress['is_completed'], $audioProgress['audio_status'], $audioProgress['playback_status'],
+                $audioProgress['play_count'], $audioProgress['last_listened_at'],
+                $audioProgress['playback_speed'], $audioProgress['notes']
+            ]);
+            
+            if ($result) {
+                error_log("[AUDIO] Created prerequisite audio progress for prerequisite {$prerequisiteId}");
+            } else {
+                error_log("[AUDIO] Failed to create prerequisite audio progress for prerequisite {$prerequisiteId}");
+            }
+            
+        } catch (Exception $e) {
+            error_log("[AUDIO] Error creating prerequisite audio progress: " . $e->getMessage());
         }
     }
 }

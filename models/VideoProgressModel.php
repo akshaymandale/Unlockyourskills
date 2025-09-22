@@ -17,8 +17,32 @@ class VideoProgressModel {
      * Get or create video progress record
      */
     public function getOrCreateProgress($userId, $courseId, $contentId, $videoPackageId, $clientId) {
-        try {
-            // Check if progress record exists
+        // First check if this is a prerequisite by looking for it in course_prerequisites
+        $isPrerequisite = $this->isContentPrerequisite($courseId, $contentId, 'video');
+        
+        if ($isPrerequisite) {
+            // For prerequisites, look for records with prerequisite_id = contentId
+            $sql = "SELECT * FROM video_progress 
+                    WHERE user_id = ? AND course_id = ? AND prerequisite_id = ? AND client_id = ?";
+            $stmt = $this->conn->prepare($sql);
+            $stmt->execute([$userId, $courseId, $contentId, $clientId]);
+            $progress = $stmt->fetch(PDO::FETCH_ASSOC);
+
+            if (!$progress) {
+                // Create new progress record for prerequisite
+                // For prerequisites, only set prerequisite_id and leave content_id as NULL
+                $sql = "INSERT INTO video_progress (user_id, course_id, prerequisite_id, content_id, video_package_id, client_id, 
+                        started_at, `current_time`, duration, watched_percentage, completion_threshold, is_completed, video_status,
+                        play_count, last_watched_at, created_at, updated_at) 
+                        VALUES (?, ?, ?, NULL, ?, ?, NOW(), 0, 0, 0, 80, 0, 'not_started', 0, NOW(), NOW(), NOW())";
+                $stmt = $this->conn->prepare($sql);
+                $stmt->execute([$userId, $courseId, $contentId, $videoPackageId, $clientId]);
+                
+                $progressId = $this->conn->lastInsertId();
+                return $this->getProgressById($progressId);
+            }
+        } else {
+            // For regular modules, look for records with content_id = contentId
             $sql = "SELECT * FROM video_progress 
                     WHERE user_id = ? AND course_id = ? AND content_id = ? AND client_id = ?";
             $stmt = $this->conn->prepare($sql);
@@ -26,28 +50,47 @@ class VideoProgressModel {
             $progress = $stmt->fetch(PDO::FETCH_ASSOC);
 
             if (!$progress) {
-                // Create new progress record
-                $sql = "INSERT INTO video_progress 
-                        (user_id, course_id, content_id, video_package_id, client_id, 
-                         started_at, `current_time`, duration, watched_percentage, completion_threshold, 
-                         is_completed, video_status, play_count, last_watched_at, created_at, updated_at) 
+                // Create new progress record for module
+                $sql = "INSERT INTO video_progress (user_id, course_id, content_id, video_package_id, client_id, 
+                        started_at, `current_time`, duration, watched_percentage, completion_threshold, is_completed, video_status,
+                        play_count, last_watched_at, created_at, updated_at) 
                         VALUES (?, ?, ?, ?, ?, NOW(), 0, 0, 0, 80, 0, 'not_started', 0, NOW(), NOW(), NOW())";
                 $stmt = $this->conn->prepare($sql);
                 $stmt->execute([$userId, $courseId, $contentId, $videoPackageId, $clientId]);
                 
-                // Get the newly created record
-                $sql = "SELECT * FROM video_progress 
-                        WHERE user_id = ? AND course_id = ? AND content_id = ? AND client_id = ?";
-                $stmt = $this->conn->prepare($sql);
-                $stmt->execute([$userId, $courseId, $contentId, $clientId]);
-                $progress = $stmt->fetch(PDO::FETCH_ASSOC);
+                $progressId = $this->conn->lastInsertId();
+                return $this->getProgressById($progressId);
             }
+        }
 
-            return $progress;
+        return $progress;
+    }
+
+    /**
+     * Check if content is a prerequisite
+     */
+    private function isContentPrerequisite($courseId, $contentId, $contentType) {
+        try {
+            $sql = "SELECT COUNT(*) FROM course_prerequisites 
+                    WHERE course_id = ? AND id = ? AND prerequisite_type = ?";
+            $stmt = $this->conn->prepare($sql);
+            $stmt->execute([$courseId, $contentId, $contentType]);
+            
+            return $stmt->fetchColumn() > 0;
         } catch (Exception $e) {
-            error_log("Error in getOrCreateProgress: " . $e->getMessage());
+            error_log("Error checking if content is prerequisite: " . $e->getMessage());
             return false;
         }
+    }
+
+    /**
+     * Get progress by ID
+     */
+    public function getProgressById($progressId) {
+        $sql = "SELECT * FROM video_progress WHERE id = ?";
+        $stmt = $this->conn->prepare($sql);
+        $stmt->execute([$progressId]);
+        return $stmt->fetch(PDO::FETCH_ASSOC);
     }
 
     /**
@@ -67,21 +110,44 @@ class VideoProgressModel {
                 $setCompletedAt = ", completed_at = NOW()";
             }
             
-            $sql = "UPDATE video_progress SET 
-                    `current_time` = ?,
-                    duration = ?,
-                    watched_percentage = ?,
-                    completion_threshold = ?,
-                    is_completed = ?,
-                    video_status = ?,
-                    play_count = ?,
-                    last_watched_at = NOW(),
-                    bookmarks = ?,
-                    notes = ?,
-                    updated_at = NOW()
-                    $setStartedAt
-                    $setCompletedAt
-                    WHERE user_id = ? AND course_id = ? AND content_id = ? AND client_id = ?";
+            // Check if this is a prerequisite by looking for it in course_prerequisites
+            $isPrerequisite = $this->isContentPrerequisite($courseId, $contentId, 'video');
+            
+            if ($isPrerequisite) {
+                // For prerequisites, update records with prerequisite_id = contentId
+                $sql = "UPDATE video_progress SET 
+                        `current_time` = ?,
+                        duration = ?,
+                        watched_percentage = ?,
+                        completion_threshold = ?,
+                        is_completed = ?,
+                        video_status = ?,
+                        play_count = ?,
+                        last_watched_at = NOW(),
+                        bookmarks = ?,
+                        notes = ?,
+                        updated_at = NOW()
+                        $setStartedAt
+                        $setCompletedAt
+                        WHERE user_id = ? AND course_id = ? AND prerequisite_id = ? AND client_id = ?";
+            } else {
+                // For regular modules, update records with content_id = contentId
+                $sql = "UPDATE video_progress SET 
+                        `current_time` = ?,
+                        duration = ?,
+                        watched_percentage = ?,
+                        completion_threshold = ?,
+                        is_completed = ?,
+                        video_status = ?,
+                        play_count = ?,
+                        last_watched_at = NOW(),
+                        bookmarks = ?,
+                        notes = ?,
+                        updated_at = NOW()
+                        $setStartedAt
+                        $setCompletedAt
+                        WHERE user_id = ? AND course_id = ? AND content_id = ? AND client_id = ?";
+            }
 
             $stmt = $this->conn->prepare($sql);
             $result = $stmt->execute([

@@ -62,14 +62,15 @@ class DocumentProgressTracker {
             this.initializeUI();
             
             // Start tracking if we have all required data
-            if (this.courseId && this.contentId) {
+            if (this.courseId && (this.contentId || this.prerequisiteId)) {
                 console.log('✅ Required parameters found, starting tracking...');
                 this.startTracking();
             } else {
                 console.warn('⚠️ Missing required parameters for document tracking');
                 console.warn('Missing:', {
                     courseId: !this.courseId,
-                    contentId: !this.contentId
+                    contentId: !this.contentId,
+                    prerequisiteId: !this.prerequisiteId
                 });
             }
             
@@ -105,12 +106,14 @@ class DocumentProgressTracker {
         this.courseId = urlParams.get('course_id');
         this.moduleId = urlParams.get('module_id');
         this.contentId = urlParams.get('content_id');
+        this.prerequisiteId = urlParams.get('prerequisite_id');
         this.documentPackageId = urlParams.get('document_package_id');
         
         console.log('📋 URL parameters:', {
             courseId: this.courseId,
             moduleId: this.moduleId,
             contentId: this.contentId,
+            prerequisiteId: this.prerequisiteId,
             documentPackageId: this.documentPackageId
         });
     }
@@ -377,8 +380,8 @@ class DocumentProgressTracker {
             if (this.isTracking) {
                 timeOnCurrentPage += 1;
                 
-                // Estimate page change based on time (every 30 seconds = new page)
-                const estimatedPage = Math.min(this.totalPages, Math.floor(timeOnCurrentPage / 30) + 1);
+                // Estimate page change based on time (every 15 seconds = new page for faster detection)
+                const estimatedPage = Math.min(this.totalPages, Math.floor(timeOnCurrentPage / 15) + 1);
                 
                 if (estimatedPage > lastPage && estimatedPage <= this.totalPages) {
                     console.log('📄 Fallback: Estimated page change to:', estimatedPage, 'based on time spent');
@@ -402,18 +405,34 @@ class DocumentProgressTracker {
     }
 
     setupScrollListeners() {
+        // Throttle scroll events to improve performance
+        let scrollTimeout;
+        const throttledScrollHandler = () => {
+            if (scrollTimeout) {
+                clearTimeout(scrollTimeout);
+            }
+            scrollTimeout = setTimeout(() => {
+                this.handleScroll(window);
+            }, 100); // Throttle to every 100ms
+        };
+        
         // Listen for scroll events on the main document
-        window.addEventListener('scroll', () => {
-            this.handleScroll(window);
-        });
+        window.addEventListener('scroll', throttledScrollHandler, { passive: true });
         
         // Also listen for scroll events on the iframe if available
         const iframe = document.querySelector('iframe.viewer-frame');
         if (iframe) {
             try {
-                iframe.addEventListener('scroll', () => {
-                    this.handleScroll(iframe.contentWindow);
-                });
+                const iframeScrollHandler = () => {
+                    if (scrollTimeout) {
+                        clearTimeout(scrollTimeout);
+                    }
+                    scrollTimeout = setTimeout(() => {
+                        this.handleScroll(iframe.contentWindow);
+                    }, 100);
+                };
+                
+                iframe.addEventListener('scroll', iframeScrollHandler, { passive: true });
                 console.log('✅ Iframe scroll listener added');
             } catch (error) {
                 console.log('⚠️ Cannot add iframe scroll listener (cross-origin):', error.message);
@@ -421,9 +440,10 @@ class DocumentProgressTracker {
         }
         
         // Add wheel event listener for better scroll detection
-        window.addEventListener('wheel', (event) => {
-            this.handleScroll(window);
-        });
+        window.addEventListener('wheel', throttledScrollHandler, { passive: true });
+        
+        // Add touch events for mobile devices
+        window.addEventListener('touchmove', throttledScrollHandler, { passive: true });
         
         console.log('✅ Scroll listeners set up');
     }
@@ -460,6 +480,7 @@ class DocumentProgressTracker {
                 courseId: this.courseId,
                 moduleId: this.moduleId,
                 contentId: this.contentId,
+                prerequisiteId: this.prerequisiteId,
                 documentPackageId: this.documentPackageId,
                 totalPages: this.totalPages
             });
@@ -478,6 +499,7 @@ class DocumentProgressTracker {
                     course_id: this.courseId,
                     module_id: this.moduleId,
                     content_id: this.contentId,
+                    prerequisite_id: this.prerequisiteId,
                     document_package_id: this.documentPackageId,
                     total_pages: this.totalPages
                 })
@@ -625,18 +647,21 @@ class DocumentProgressTracker {
             
             const scrollPercentage = Math.min(100, (scrollTop + clientHeight) / scrollHeight * 100);
             
-            // Estimate current page based on scroll
-            const estimatedPage = Math.ceil((scrollPercentage / 100) * this.totalPages);
+            // Estimate current page based on scroll with more aggressive detection
+            const estimatedPage = Math.max(1, Math.min(this.totalPages, Math.ceil((scrollPercentage / 100) * this.totalPages)));
             
-            console.log('📖 Scroll tracking:', {
-                scrollTop,
-                scrollHeight,
-                clientHeight,
-                scrollPercentage,
-                estimatedPage,
-                currentPage: this.currentPage,
-                totalPages: this.totalPages
-            });
+            // Only log if there's a significant change to avoid spam
+            if (Math.abs(estimatedPage - this.currentPage) >= 1) {
+                console.log('📖 Scroll tracking:', {
+                    scrollTop,
+                    scrollHeight,
+                    clientHeight,
+                    scrollPercentage: scrollPercentage.toFixed(1),
+                    estimatedPage,
+                    currentPage: this.currentPage,
+                    totalPages: this.totalPages
+                });
+            }
             
             // Mark all pages up to the estimated page as viewed
             if (estimatedPage > 0 && estimatedPage <= this.totalPages) {
@@ -722,6 +747,7 @@ class DocumentProgressTracker {
             const progressData = {
                 course_id: this.courseId,
                 content_id: this.contentId,
+                prerequisite_id: this.prerequisiteId,
                 current_page: this.currentPage,
                 pages_viewed: Array.from(this.pagesViewed),
                 time_spent: this.timeSpent, // Send total time spent, not just session time
@@ -774,7 +800,8 @@ class DocumentProgressTracker {
                 credentials: 'include',
                 body: JSON.stringify({
                     course_id: this.courseId,
-                    content_id: this.contentId
+                    content_id: this.contentId,
+                    prerequisite_id: this.prerequisiteId
                 })
             });
             

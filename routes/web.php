@@ -43,6 +43,11 @@ Router::middleware(['Auth'])->group(function() {
 
     // Manage Portal
     Router::get('/manage-portal', 'ManagePortalController@index');
+    Router::get('/assessment-details', 'AssessmentDetailsController@index');
+    Router::get('/assessment-details/contexts', 'AssessmentDetailsController@getAssessmentContexts');
+    Router::get('/assessment-details/users', 'AssessmentDetailsController@getFailedUsers');
+    Router::post('/assessment-details/increase-attempts', 'AssessmentDetailsController@increaseAttempts');
+    Router::get('/assessment-details/history', 'AssessmentDetailsController@getHistory');
     
     // ===================================
     // USER MANAGEMENT

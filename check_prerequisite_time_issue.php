@@ -4,7 +4,7 @@
  */
 
 require_once 'config/Database.php';
-require_once 'models/PrerequisiteCompletionModel.php';
+// Note: Completion tracking has been removed
 
 echo "Checking Prerequisite Time Calculation Issue\n";
 echo "===========================================\n\n";
@@ -12,7 +12,7 @@ echo "===========================================\n\n";
 try {
     $database = new Database();
     $conn = $database->connect();
-    $prerequisiteModel = new PrerequisiteCompletionModel();
+    // Note: Completion tracking has been removed
     
     // Check for external prerequisites with time_spent = 0
     $sql = "SELECT 
