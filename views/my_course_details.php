@@ -13,6 +13,7 @@ function getAudioProgressData($courseId, $contentId, $userId) {
         $database = new Database();
         $conn = $database->connect();
         
+        // First try with content_id (for module content)
         $sql = "SELECT ap.*, 
                        ap.audio_status,
                        ap.playback_status,
@@ -27,6 +28,24 @@ function getAudioProgressData($courseId, $contentId, $userId) {
         $stmt = $conn->prepare($sql);
         $stmt->execute([$courseId, $contentId, $userId]);
         $progress = $stmt->fetch(PDO::FETCH_ASSOC);
+        
+        // If no progress found with content_id, try with prerequisite_id (for prerequisite content)
+        if (!$progress) {
+            $sql = "SELECT ap.*, 
+                           ap.audio_status,
+                           ap.playback_status,
+                           ap.is_completed,
+                           ap.listened_percentage,
+                           ap.last_listened_at,
+                           ap.play_count,
+                           ap.updated_at
+                    FROM audio_progress ap
+                    WHERE ap.course_id = ? AND ap.prerequisite_id = ? AND ap.user_id = ?";
+            
+            $stmt = $conn->prepare($sql);
+            $stmt->execute([$courseId, $contentId, $userId]);
+            $progress = $stmt->fetch(PDO::FETCH_ASSOC);
+        }
         
         if ($progress) {
             // Determine status based on completion and playback
@@ -276,6 +295,423 @@ function hasUserSubmittedFeedback($courseId, $userId, $feedbackPackageId) {
         
     } catch (Exception $e) {
         echo "<!-- Feedback submission check error: " . $e->getMessage() . " -->";
+        return false;
+    }
+}
+
+/**
+ * Check if video content is completed
+ */
+function isVideoCompleted($courseId, $contentId, $userId) {
+    try {
+        $database = new Database();
+        $conn = $database->connect();
+        
+        // First try with content_id (for module content)
+        $sql = "SELECT is_completed FROM video_progress 
+                WHERE course_id = ? AND content_id = ? AND user_id = ?";
+        $stmt = $conn->prepare($sql);
+        $stmt->execute([$courseId, $contentId, $userId]);
+        $result = $stmt->fetch(PDO::FETCH_ASSOC);
+        
+        // If no progress found with content_id, try with prerequisite_id (for prerequisite content)
+        if (!$result) {
+            $sql = "SELECT is_completed FROM video_progress 
+                    WHERE course_id = ? AND prerequisite_id = ? AND user_id = ?";
+            $stmt = $conn->prepare($sql);
+            $stmt->execute([$courseId, $contentId, $userId]);
+            $result = $stmt->fetch(PDO::FETCH_ASSOC);
+        }
+        
+        return $result && $result['is_completed'] == 1;
+    } catch (Exception $e) {
+        error_log("Error checking video completion: " . $e->getMessage());
+        return false;
+    }
+}
+
+/**
+ * Check if document content is completed
+ */
+function isDocumentCompleted($courseId, $contentId, $userId) {
+    try {
+        $database = new Database();
+        $conn = $database->connect();
+        
+        // First try with content_id (for module content - this is now the junction ID)
+        $sql = "SELECT is_completed FROM document_progress 
+                WHERE course_id = ? AND content_id = ? AND user_id = ?";
+        $stmt = $conn->prepare($sql);
+        $stmt->execute([$courseId, $contentId, $userId]);
+        $result = $stmt->fetch(PDO::FETCH_ASSOC);
+        
+        // If no progress found with content_id, try with prerequisite_id (for prerequisite content)
+        if (!$result) {
+            $sql = "SELECT is_completed FROM document_progress 
+                    WHERE course_id = ? AND prerequisite_id = ? AND user_id = ?";
+            $stmt = $conn->prepare($sql);
+            $stmt->execute([$courseId, $contentId, $userId]);
+            $result = $stmt->fetch(PDO::FETCH_ASSOC);
+        }
+        
+        return $result && $result['is_completed'] == 1;
+    } catch (Exception $e) {
+        error_log("Error checking document completion: " . $e->getMessage());
+        return false;
+    }
+}
+
+/**
+ * Check if audio content is completed
+ */
+function isAudioCompleted($courseId, $contentId, $userId) {
+    try {
+        $database = new Database();
+        $conn = $database->connect();
+        
+        // First try with content_id (for module content)
+        $sql = "SELECT is_completed FROM audio_progress 
+                WHERE course_id = ? AND content_id = ? AND user_id = ?";
+        $stmt = $conn->prepare($sql);
+        $stmt->execute([$courseId, $contentId, $userId]);
+        $result = $stmt->fetch(PDO::FETCH_ASSOC);
+        
+        // If no progress found with content_id, try with prerequisite_id (for prerequisite content)
+        if (!$result) {
+            $sql = "SELECT is_completed FROM audio_progress 
+                    WHERE course_id = ? AND prerequisite_id = ? AND user_id = ?";
+            $stmt = $conn->prepare($sql);
+            $stmt->execute([$courseId, $contentId, $userId]);
+            $result = $stmt->fetch(PDO::FETCH_ASSOC);
+        }
+        
+        return $result && $result['is_completed'] == 1;
+    } catch (Exception $e) {
+        error_log("Error checking audio completion: " . $e->getMessage());
+        return false;
+    }
+}
+
+
+/**
+ * Check if image content is completed
+ */
+function isImageCompleted($courseId, $contentId, $userId) {
+    try {
+        $database = new Database();
+        $conn = $database->connect();
+        
+        // First try with content_id (for module content - this is now the junction ID)
+        $sql = "SELECT is_completed FROM image_progress 
+                WHERE course_id = ? AND content_id = ? AND user_id = ?";
+        $stmt = $conn->prepare($sql);
+        $stmt->execute([$courseId, $contentId, $userId]);
+        $result = $stmt->fetch(PDO::FETCH_ASSOC);
+        
+        // If no progress found with content_id, try with prerequisite_id (for prerequisite content)
+        if (!$result) {
+            $sql = "SELECT is_completed FROM image_progress 
+                    WHERE course_id = ? AND prerequisite_id = ? AND user_id = ?";
+            $stmt = $conn->prepare($sql);
+            $stmt->execute([$courseId, $contentId, $userId]);
+            $result = $stmt->fetch(PDO::FETCH_ASSOC);
+        }
+        
+        return $result && $result['is_completed'] == 1;
+    } catch (Exception $e) {
+        error_log("Error checking image completion: " . $e->getMessage());
+        return false;
+    }
+}
+
+/**
+ * Check if SCORM content is completed
+ */
+function isScormCompleted($courseId, $contentId, $userId) {
+    try {
+        $database = new Database();
+        $conn = $database->connect();
+        
+        $sql = "SELECT lesson_status, completed_at FROM scorm_progress 
+                WHERE course_id = ? AND content_id = ? AND user_id = ?";
+        $stmt = $conn->prepare($sql);
+        $stmt->execute([$courseId, $contentId, $userId]);
+        $result = $stmt->fetch(PDO::FETCH_ASSOC);
+        
+        return $result && 
+               ($result['lesson_status'] === 'completed' || $result['lesson_status'] === 'passed') && 
+               !empty($result['completed_at']);
+    } catch (Exception $e) {
+        error_log("Error checking SCORM completion: " . $e->getMessage());
+        return false;
+    }
+}
+
+/**
+ * Check if assessment is completed
+ */
+function isAssessmentCompleted($courseId, $contentId, $userId) {
+    try {
+        $database = new Database();
+        $conn = $database->connect();
+        
+        $sql = "SELECT passed FROM assessment_results 
+                WHERE course_id = ? AND assessment_id = ? AND user_id = ? AND passed = 1";
+        $stmt = $conn->prepare($sql);
+        $stmt->execute([$courseId, $contentId, $userId]);
+        $result = $stmt->fetch(PDO::FETCH_ASSOC);
+        
+        return $result && $result['passed'] == 1;
+    } catch (Exception $e) {
+        error_log("Error checking assessment completion: " . $e->getMessage());
+        return false;
+    }
+}
+
+/**
+ * Check if assignment is completed
+ */
+function isAssignmentCompleted($courseId, $contentId, $userId) {
+    try {
+        $database = new Database();
+        $conn = $database->connect();
+        
+        $sql = "SELECT is_completed FROM assignment_submissions 
+                WHERE course_id = ? AND assignment_package_id = ? AND user_id = ? AND is_deleted = 0";
+        $stmt = $conn->prepare($sql);
+        $stmt->execute([$courseId, $contentId, $userId]);
+        $result = $stmt->fetch(PDO::FETCH_ASSOC);
+        
+        return $result && $result['is_completed'] == 1;
+    } catch (Exception $e) {
+        error_log("Error checking assignment completion: " . $e->getMessage());
+        return false;
+    }
+}
+
+/**
+ * Calculate module progress based on content completion
+ */
+function calculateModuleProgress($module, $courseId, $userId) {
+    try {
+        if (empty($module['content'])) {
+            return 0;
+        }
+        
+        $totalContentCount = 0;
+        $completedContentCount = 0;
+        
+        foreach ($module['content'] as $content) {
+            $totalContentCount++;
+            
+            $contentCompleted = false;
+            
+            // Check completion based on content type
+            // For SCORM and audio content, use junction ID (course_module_content.id) instead of content_id
+            // because progress is stored with the junction ID
+            switch ($content['content_type']) {
+                case 'video':
+                    // Use junction ID for video content as progress is stored with course_module_content.id
+                    $contentCompleted = isVideoCompleted($courseId, $content['id'], $userId);
+                    break;
+                case 'audio':
+                    // Use junction ID for audio content as progress is stored with course_module_content.id
+                    $contentCompleted = isAudioCompleted($courseId, $content['id'], $userId);
+                    break;
+                case 'document':
+                    // Use junction ID for document content as progress is stored with course_module_content.id
+                    $contentCompleted = isDocumentCompleted($courseId, $content['id'], $userId);
+                    break;
+                case 'image':
+                    // Use junction ID for image content as progress is stored with course_module_content.id
+                    $contentCompleted = isImageCompleted($courseId, $content['id'], $userId);
+                    break;
+                case 'scorm':
+                    // Use junction ID for SCORM content as progress is stored with course_module_content.id
+                    $contentCompleted = isScormCompleted($courseId, $content['id'], $userId);
+                    break;
+                case 'assessment':
+                    $contentCompleted = isAssessmentCompleted($courseId, $content['content_id'], $userId);
+                    break;
+                case 'assignment':
+                    $contentCompleted = isAssignmentCompleted($courseId, $content['content_id'], $userId);
+                    break;
+                case 'external':
+                    // Use junction ID for external content as progress is stored with course_module_content.id
+                    $contentCompleted = isExternalCompleted($courseId, $content['id'], $userId);
+                    break;
+                case 'interactive':
+                    // Use junction ID for interactive content as progress is stored with course_module_content.id
+                    $contentCompleted = isInteractiveCompleted($courseId, $content['id'], $userId);
+                    break;
+            }
+            
+            if ($contentCompleted) {
+                $completedContentCount++;
+            }
+        }
+        
+        return $totalContentCount > 0 ? round(($completedContentCount / $totalContentCount) * 100) : 0;
+        
+    } catch (Exception $e) {
+        error_log("Error calculating module progress: " . $e->getMessage());
+        return 0;
+    }
+}
+
+/**
+ * Check if external content is completed
+ */
+function isExternalCompleted($courseId, $contentId, $userId) {
+    try {
+        $database = new Database();
+        $conn = $database->connect();
+        
+        // First try with content_id (for module content - this is now the junction ID)
+        $sql = "SELECT is_completed FROM external_progress 
+                WHERE course_id = ? AND content_id = ? AND user_id = ?";
+        $stmt = $conn->prepare($sql);
+        $stmt->execute([$courseId, $contentId, $userId]);
+        $result = $stmt->fetch(PDO::FETCH_ASSOC);
+        
+        // If no progress found with content_id, try with prerequisite_id (for prerequisite content)
+        if (!$result) {
+            $sql = "SELECT is_completed FROM external_progress 
+                    WHERE course_id = ? AND prerequisite_id = ? AND user_id = ?";
+            $stmt = $conn->prepare($sql);
+            $stmt->execute([$courseId, $contentId, $userId]);
+            $result = $stmt->fetch(PDO::FETCH_ASSOC);
+        }
+        
+        return $result && $result['is_completed'] == 1;
+    } catch (Exception $e) {
+        error_log("Error checking external completion: " . $e->getMessage());
+        return false;
+    }
+}
+
+/**
+ * Check if interactive content is completed
+ */
+function isInteractiveCompleted($courseId, $contentId, $userId) {
+    try {
+        $database = new Database();
+        $conn = $database->connect();
+        
+        // First try with content_id (for module content - this is now the junction ID)
+        $sql = "SELECT is_completed FROM interactive_progress 
+                WHERE course_id = ? AND content_id = ? AND user_id = ?";
+        $stmt = $conn->prepare($sql);
+        $stmt->execute([$courseId, $contentId, $userId]);
+        $result = $stmt->fetch(PDO::FETCH_ASSOC);
+        
+        // If no progress found with content_id, try with prerequisite_id (for prerequisite content)
+        if (!$result) {
+            $sql = "SELECT is_completed FROM interactive_progress 
+                    WHERE course_id = ? AND prerequisite_id = ? AND user_id = ?";
+            $stmt = $conn->prepare($sql);
+            $stmt->execute([$courseId, $contentId, $userId]);
+            $result = $stmt->fetch(PDO::FETCH_ASSOC);
+        }
+        
+        return $result && $result['is_completed'] == 1;
+    } catch (Exception $e) {
+        error_log("Error checking interactive completion: " . $e->getMessage());
+        return false;
+    }
+}
+
+/**
+ * Check if prerequisite is completed based on its type
+ */
+function isPrerequisiteCompleted($userId, $courseId, $prerequisiteId, $prerequisiteType, $clientId) {
+    try {
+        $database = new Database();
+        $conn = $database->connect();
+        
+        $tableMap = [
+            'course' => 'course_completion',
+            'video' => 'video_progress',
+            'audio' => 'audio_progress',
+            'document' => 'document_progress',
+            'image' => 'image_progress',
+            'scorm' => 'scorm_progress',
+            'assessment' => 'assessment_results',
+            'assignment' => 'assignment_submissions',
+            'external' => 'external_progress',
+            'interactive' => 'interactive_progress',
+            'survey' => 'course_survey_responses',
+            'feedback' => 'course_feedback_responses'
+        ];
+        
+        $table = $tableMap[$prerequisiteType] ?? null;
+        if (!$table) {
+            return false;
+        }
+        
+        if ($prerequisiteType === 'course') {
+            $sql = "SELECT is_completed FROM $table 
+                    WHERE user_id = ? AND course_id = ? AND client_id = ?";
+            $params = [$userId, $prerequisiteId, $clientId];
+        } elseif ($prerequisiteType === 'survey') {
+            $sql = "SELECT completed_at FROM $table 
+                    WHERE user_id = ? AND course_id = ? AND survey_package_id = ? AND client_id = ? AND completed_at IS NOT NULL";
+            $params = [$userId, $courseId, $prerequisiteId, $clientId];
+        } elseif ($prerequisiteType === 'feedback') {
+            $sql = "SELECT completed_at FROM $table 
+                    WHERE user_id = ? AND course_id = ? AND feedback_package_id = ? AND client_id = ? AND completed_at IS NOT NULL";
+            $params = [$userId, $courseId, $prerequisiteId, $clientId];
+        } elseif ($prerequisiteType === 'scorm') {
+            $sql = "SELECT lesson_status, completed_at FROM $table 
+                    WHERE user_id = ? AND course_id = ? AND scorm_package_id = ? AND client_id = ?";
+            $params = [$userId, $courseId, $prerequisiteId, $clientId];
+        } elseif ($prerequisiteType === 'assessment') {
+            $sql = "SELECT passed FROM $table 
+                    WHERE user_id = ? AND course_id = ? AND assessment_id = ? AND client_id = ? AND passed = 1";
+            $params = [$userId, $courseId, $prerequisiteId, $clientId];
+        } elseif ($prerequisiteType === 'assignment') {
+            $sql = "SELECT is_completed FROM $table 
+                    WHERE user_id = ? AND course_id = ? AND assignment_package_id = ? AND client_id = ? AND is_deleted = 0";
+            $params = [$userId, $courseId, $prerequisiteId, $clientId];
+        } elseif (in_array($prerequisiteType, ['audio', 'video', 'document', 'image', 'interactive'])) {
+            // For content prerequisites, we need to find the prerequisite record ID first
+            $prereqSql = "SELECT id FROM course_prerequisites 
+                         WHERE course_id = ? AND prerequisite_id = ? AND prerequisite_type = ?";
+            $prereqStmt = $conn->prepare($prereqSql);
+            $prereqStmt->execute([$courseId, $prerequisiteId, $prerequisiteType]);
+            $prereqRecord = $prereqStmt->fetch(PDO::FETCH_ASSOC);
+            
+            if (!$prereqRecord) {
+                return false;
+            }
+            
+            $sql = "SELECT is_completed FROM $table 
+                    WHERE user_id = ? AND course_id = ? AND prerequisite_id = ? AND client_id = ?";
+            $params = [$userId, $courseId, $prereqRecord['id'], $clientId];
+        } else {
+            $sql = "SELECT is_completed FROM $table 
+                    WHERE user_id = ? AND course_id = ? AND content_id = ? AND client_id = ?";
+            $params = [$userId, $courseId, $prerequisiteId, $clientId];
+        }
+        
+        $stmt = $conn->prepare($sql);
+        $stmt->execute($params);
+        $result = $stmt->fetch(PDO::FETCH_ASSOC);
+        
+        if (in_array($prerequisiteType, ['survey', 'feedback'])) {
+            return $result && !empty($result['completed_at']);
+        } elseif ($prerequisiteType === 'scorm') {
+            return $result && 
+                   ($result['lesson_status'] === 'completed' || $result['lesson_status'] === 'passed') && 
+                   !empty($result['completed_at']);
+        } elseif ($prerequisiteType === 'assessment') {
+            return $result && $result['passed'] == 1;
+        } else {
+            return $result && $result['is_completed'] == 1;
+        }
+        
+    } catch (Exception $e) {
+        error_log("Error checking prerequisite completion: " . $e->getMessage());
         return false;
     }
 }
@@ -882,14 +1318,56 @@ function hasUserSubmittedFeedback($courseId, $userId, $feedbackPackageId) {
                     
                     // Check video_progress using is_completed
                     $sql = "SELECT is_completed FROM video_progress 
-                            WHERE user_id = ? AND course_id = ? AND content_id = ? AND client_id = ? AND is_completed = 1";
+                            WHERE user_id = ? AND course_id = ? AND prerequisite_id = ? AND client_id = ? AND is_completed = 1";
                     $stmt = $db->prepare($sql);
                     $stmt->execute([$userId, $courseId, $prereqRecord['course_prerequisite_id'], $clientId]);
                     
                     $result = $stmt->fetch(PDO::FETCH_ASSOC);
                     return $result && $result['is_completed'] == 1;
                 } catch (Exception $e) {
-                    error_log("Error checking video content completion: " . $e->getMessage());
+                    error_log("Error checking video completion: " . $e->getMessage());
+                    return false;
+                }
+            }
+        }
+
+        // Helper to check if document content is completed
+        if (!function_exists('hasUserCompletedDocumentContent')) {
+            function hasUserCompletedDocumentContent($courseId, $userId, $prerequisiteId, $clientId = null) {
+                try {
+                    if ($clientId === null) {
+                        $clientId = $_SESSION['user']['client_id'] ?? $_SESSION['client_id'] ?? 2;
+                    }
+                    
+                    $db = new PDO(
+                        'mysql:unix_socket=/Applications/XAMPP/xamppfiles/var/mysql/mysql.sock;dbname=unlockyourskills',
+                        'root',
+                        ''
+                    );
+                    $db->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+                    
+                    // For document prerequisites, we need to find the course_prerequisites.id
+                    $sql = "SELECT cp.id as course_prerequisite_id 
+                            FROM course_prerequisites cp 
+                            WHERE cp.course_id = ? AND cp.prerequisite_id = ? AND cp.prerequisite_type = 'document'";
+                    $stmt = $db->prepare($sql);
+                    $stmt->execute([$courseId, $prerequisiteId]);
+                    $prereqRecord = $stmt->fetch(PDO::FETCH_ASSOC);
+                    
+                    if (!$prereqRecord) {
+                        return false;
+                    }
+                    
+                    // Check document_progress using is_completed
+                    $sql = "SELECT is_completed FROM document_progress 
+                            WHERE user_id = ? AND course_id = ? AND prerequisite_id = ? AND client_id = ? AND is_completed = 1";
+                    $stmt = $db->prepare($sql);
+                    $stmt->execute([$userId, $courseId, $prereqRecord['course_prerequisite_id'], $clientId]);
+                    
+                    $result = $stmt->fetch(PDO::FETCH_ASSOC);
+                    return $result && $result['is_completed'] == 1;
+                } catch (Exception $e) {
+                    error_log("Error checking document content completion: " . $e->getMessage());
                     return false;
                 }
             }
@@ -920,7 +1398,7 @@ function hasUserSubmittedFeedback($courseId, $userId, $feedbackPackageId) {
                     }
                     
                     $sql = "SELECT is_completed FROM audio_progress 
-                            WHERE user_id = ? AND course_id = ? AND content_id = ? AND client_id = ? AND is_completed = 1";
+                            WHERE user_id = ? AND course_id = ? AND prerequisite_id = ? AND client_id = ? AND is_completed = 1";
                     $stmt = $db->prepare($sql);
                     $stmt->execute([$userId, $courseId, $prereqRecord['course_prerequisite_id'], $clientId]);
                     
@@ -958,7 +1436,7 @@ function hasUserSubmittedFeedback($courseId, $userId, $feedbackPackageId) {
                     }
                     
                     $sql = "SELECT is_completed FROM document_progress 
-                            WHERE user_id = ? AND course_id = ? AND content_id = ? AND client_id = ? AND is_completed = 1";
+                            WHERE user_id = ? AND course_id = ? AND prerequisite_id = ? AND client_id = ? AND is_completed = 1";
                     $stmt = $db->prepare($sql);
                     $stmt->execute([$userId, $courseId, $prereqRecord['course_prerequisite_id'], $clientId]);
                     
@@ -996,7 +1474,7 @@ function hasUserSubmittedFeedback($courseId, $userId, $feedbackPackageId) {
                     }
                     
                     $sql = "SELECT is_completed FROM image_progress 
-                            WHERE user_id = ? AND course_id = ? AND content_id = ? AND client_id = ? AND is_completed = 1";
+                            WHERE user_id = ? AND course_id = ? AND prerequisite_id = ? AND client_id = ? AND is_completed = 1";
                     $stmt = $db->prepare($sql);
                     $stmt->execute([$userId, $courseId, $prereqRecord['course_prerequisite_id'], $clientId]);
                     
@@ -1333,6 +1811,20 @@ function hasUserSubmittedFeedback($courseId, $userId, $feedbackPackageId) {
             }
         }
         
+        // Helper to get effective max attempts considering user overrides
+        if (!function_exists('getEffectiveMaxAttempts')) {
+            function getEffectiveMaxAttempts($courseId, $assessmentId, $contextType, $contextId, $userId, $clientId) {
+                try {
+                    require_once 'models/AssessmentAttemptIncreaseModel.php';
+                    $model = new AssessmentAttemptIncreaseModel();
+                    return $model->getEffectiveMaxAttempts($userId, $courseId, $assessmentId, $contextType, $contextId, $clientId);
+                } catch (Exception $e) {
+                    error_log("Error getting effective max attempts: " . $e->getMessage());
+                    return 3; // Fallback to default
+                }
+            }
+        }
+
         // Helper to get assessment progress status
         if (!function_exists('getAssessmentProgressStatus')) {
             function getAssessmentProgressStatus($courseId, $contentId, $userId) {
@@ -1650,28 +2142,84 @@ function hasUserSubmittedFeedback($courseId, $userId, $feedbackPackageId) {
                     
                     switch ($prerequisiteType) {
                         case 'assessment':
-                            // For assessments, only show progress if there are actual results
+                            // For assessments, check if user has passed OR exhausted all attempts
                             // Don't show "not started" status to match module behavior
+                            // IMPORTANT: Include course_id to ensure we only show completion for THIS course's prerequisite
+                            
+                            // First, get the latest completed attempt
                             $stmt = $db->prepare("
-                                SELECT aa.id, aa.status, aa.updated_at 
+                                SELECT aa.id, aa.status, aa.updated_at, aa.attempt_number
                                 FROM assessment_attempts aa
-                                WHERE aa.assessment_id = ? AND aa.user_id = ? AND aa.status = 'completed'
+                                WHERE aa.assessment_id = ? AND aa.user_id = ? AND aa.course_id = ? AND aa.status = 'completed'
                                 ORDER BY aa.updated_at DESC
                                 LIMIT 1
                             ");
-                            $stmt->execute([$prerequisiteId, $userId]);
-                            $progress = $stmt->fetch(PDO::FETCH_ASSOC);
+                            $stmt->execute([$prerequisiteId, $userId, $courseId]);
+                            $latestAttempt = $stmt->fetch(PDO::FETCH_ASSOC);
                             
-                            if ($progress) {
-                                $hasProgress = true;
-                                $lastUpdated = $progress['updated_at'];
-                                $details = $progress;
+                            if ($latestAttempt) {
+                                // Check if user passed this attempt
+                                $stmt = $db->prepare("
+                                    SELECT ar.passed, ar.score, ar.max_score, ar.percentage
+                                    FROM assessment_results ar
+                                    WHERE ar.assessment_id = ? AND ar.user_id = ? AND ar.course_id = ? 
+                                    AND ar.attempt_number = ?
+                                    ORDER BY ar.completed_at DESC
+                                    LIMIT 1
+                                ");
+                                $stmt->execute([$prerequisiteId, $userId, $courseId, $latestAttempt['attempt_number']]);
+                                $result = $stmt->fetch(PDO::FETCH_ASSOC);
                                 
-                                // Only show completed status for assessments
-                                $status = 'completed';
-                                $progressPercentage = 100;
+                                if ($result) {
+                                    $hasProgress = true;
+                                    $lastUpdated = $latestAttempt['updated_at'];
+                                    $details = $latestAttempt;
+                                    $score = $result['score'];
+                                    $maxScore = $result['max_score'];
+                                    
+                                    // Check if user passed
+                                    if ($result['passed']) {
+                                        // User passed - show completed
+                                        $status = 'completed';
+                                        $progressPercentage = 100;
+                                    } else {
+                                        // User failed - check if they have attempts remaining
+                                        $stmt = $db->prepare("
+                                            SELECT ap.num_attempts
+                                            FROM assessment_package ap
+                                            WHERE ap.id = ?
+                                        ");
+                                        $stmt->execute([$prerequisiteId]);
+                                        $package = $stmt->fetch(PDO::FETCH_ASSOC);
+                                        $maxAttempts = $package['num_attempts'] ?? 3;
+                                        
+                                        // Count total attempts used
+                                        $stmt = $db->prepare("
+                                            SELECT COUNT(*) as attempt_count
+                                            FROM assessment_attempts aa
+                                            WHERE aa.assessment_id = ? AND aa.user_id = ? AND aa.course_id = ? 
+                                            AND aa.status = 'completed'
+                                        ");
+                                        $stmt->execute([$prerequisiteId, $userId, $courseId]);
+                                        $attemptCount = $stmt->fetch(PDO::FETCH_ASSOC)['attempt_count'];
+                                        
+                                        if ($attemptCount >= $maxAttempts) {
+                                            // User exhausted all attempts and failed - show completed
+                                            $status = 'completed';
+                                            $progressPercentage = 100;
+                                        } else {
+                                            // User failed but has attempts remaining - don't show completed
+                                            $status = 'no_status';
+                                            $progressPercentage = 0;
+                                        }
+                                    }
+                                } else {
+                                    // No result found - don't show completed
+                                    $status = 'no_status';
+                                    $progressPercentage = 0;
+                                }
                             } else {
-                                // No progress data - don't show any status for assessments
+                                // No completed attempts - don't show any status for assessments
                                 $status = 'no_status';
                                 $progressPercentage = 0;
                             }
@@ -2307,22 +2855,17 @@ function hasUserSubmittedFeedback($courseId, $userId, $feedbackPackageId) {
             </div>
             
             <?php 
-            // Show completion status using prerequisite completion tracking
+            // Calculate prerequisite completion status from progress tables
             $completedCount = 0;
             $totalCount = count($course['prerequisites']);
-            $userId = $_SESSION['user']['id'] ?? $_SESSION['id'] ?? 75; // Fallback to known user ID
-            $clientId = $_SESSION['user']['client_id'] ?? $_SESSION['client_id'] ?? 1; // Fallback to known client ID
-            
-            // Use prerequisite completion tracking
-            require_once 'models/PrerequisiteCompletionModel.php';
-            $prereqCompletionModel = new PrerequisiteCompletionModel();
-            
+            $userId = $_SESSION['user']['id'] ?? $_SESSION['id'] ?? 75;
+            $clientId = $_SESSION['user']['client_id'] ?? $_SESSION['client_id'] ?? 1;
+
             foreach ($course['prerequisites'] as $pre) {
-                // Use completion tables for ALL prerequisite types
-                $isCompleted = $prereqCompletionModel->isPrerequisiteCompleted(
+                $isCompleted = isPrerequisiteCompleted(
                     $userId, 
                     $course['id'], 
-                    $pre['id'], 
+                    $pre['prerequisite_id'], 
                     $pre['prerequisite_type'], 
                     $clientId
                 );
@@ -2417,8 +2960,8 @@ function hasUserSubmittedFeedback($courseId, $userId, $feedbackPackageId) {
                                     $maxScore = $prereqProgress['max_score'] ?? 100;
                                     ?>
                                     
-                                    <!-- Progress Display -->
-                                    <?php if ($status !== 'no_status'): ?>
+                                    <!-- Progress Display - Removed for prerequisite assessments -->
+                                    <?php if (false): // Never show progress display for prerequisite assessments ?>
                                     <div class="prerequisite-progress mt-2">
                                         <div class="progress-info d-flex justify-content-between align-items-center mb-1">
                                             <span class="progress-text small">
@@ -2611,17 +3154,15 @@ function hasUserSubmittedFeedback($courseId, $userId, $feedbackPackageId) {
                                     } elseif ($pre['prerequisite_type'] === 'document') {
                                         // For document prerequisites, check if user has completed it
                                         $userId = $_SESSION['user']['id'] ?? $_SESSION['id'] ?? 75;
-                                        $clientId = $_SESSION['user']['client_id'] ?? $_SESSION['client_id'] ?? 1;
+                                        $clientId = $_SESSION['user']['client_id'] ?? $_SESSION['client_id'] ?? 2;
                                         
-                                        // Check if document is completed using completion tracking
-                                        require_once 'models/PrerequisiteCompletionModel.php';
-                                        $prereqCompletionModel = new PrerequisiteCompletionModel();
-                                        $isCompleted = $prereqCompletionModel->isPrerequisiteCompleted($userId, $GLOBALS['course']['id'], $pre['prerequisite_id'], 'document', $clientId);
+                                        // Check if document is completed
+                                        $isDocumentCompleted = hasUserCompletedDocumentContent($GLOBALS['course']['id'], $userId, $pre['prerequisite_id'], $clientId);
                                         
-                                        if ($isCompleted) {
-                                            // Show completed button
-                                            echo "<button class='prerequisite-action-btn prerequisite-action-disabled' disabled title='Document completed'>";
-                                            echo "<i class='fas fa-check me-1'></i>Completed";
+                                        if ($isDocumentCompleted) {
+                                            // Document completed - show completed button
+                                            echo "<button class='prerequisite-action-btn btn-success' disabled title='Document content completed'>";
+                                            echo "<i class='fas fa-check-circle me-1'></i>Completed";
                                             echo "</button>";
                                         } else {
                                             // Get document data to construct proper URL
@@ -2642,8 +3183,8 @@ function hasUserSubmittedFeedback($courseId, $userId, $feedbackPackageId) {
                                                         ? $file
                                                         : ('uploads/documents/' . $file);
                                                     
-                                                    // Construct the proper document viewer URL (same as module content)
-                                                    $viewer = UrlHelper::url('my-courses/view-content') . '?type=document&title=' . urlencode($docData['title']) . '&src=' . urlencode($resolved) . '&course_id=' . $GLOBALS['course']['id'] . '&content_id=' . $pre['prerequisite_id'] . '&document_package_id=' . $pre['prerequisite_id'] . '&prerequisite_id=' . $pre['prerequisite_id'];
+                                                    // Construct the proper document viewer URL for prerequisites
+                                                    $viewer = UrlHelper::url('my-courses/view-content') . '?type=document&title=' . urlencode($docData['title']) . '&src=' . urlencode($resolved) . '&course_id=' . $GLOBALS['course']['id'] . '&prerequisite_id=' . $pre['id'] . '&document_package_id=' . $pre['prerequisite_id'];
                                                     
                                                     // Show view document button
                                                     echo "<a class='prerequisite-action-btn {$config['class']} launch-content-btn' target='_blank' href='" . htmlspecialchars($viewer) . "' data-type='document' data-content-id='" . $pre['prerequisite_id'] . "' data-prerequisite-id='" . $pre['prerequisite_id'] . "'>";
@@ -2659,6 +3200,78 @@ function hasUserSubmittedFeedback($courseId, $userId, $feedbackPackageId) {
                                                 // Document not found
                                                 echo "<span class='prerequisite-status text-muted'>";
                                                 echo "<i class='fas fa-exclamation-triangle me-1'></i>Document not found";
+                                                echo "</span>";
+                                            }
+                                        }
+                                    } elseif ($pre['prerequisite_type'] === 'audio') {
+                                        // For audio prerequisites, check completion status and show appropriate button
+                                        $userId = $_SESSION['user']['id'] ?? $_SESSION['id'] ?? 75;
+                                        $clientId = $_SESSION['user']['client_id'] ?? $_SESSION['client_id'] ?? 1;
+                                        
+                                        // Check if audio is completed
+                                        $isAudioCompleted = hasUserCompletedAudioContent($GLOBALS['course']['id'], $userId, $pre['prerequisite_id']);
+                                        
+                                        if ($isAudioCompleted) {
+                                            // Audio completed - show completed button
+                                            echo "<button class='prerequisite-action-btn btn-success' disabled title='Audio content completed'>";
+                                            echo "<i class='fas fa-check-circle me-1'></i>Completed";
+                                            echo "</button>";
+                                        } else {
+                                            // Audio not completed - show start button
+                                            require_once 'models/AudioProgressModel.php';
+                                            $audioModel = new AudioProgressModel();
+                                            $audioPackage = $audioModel->getAudioPackageById($pre['prerequisite_id']);
+                                            
+                                            if ($audioPackage) {
+                                                // Construct audio file path
+                                                $audioFileName = $audioPackage['audio_file'];
+                                                $audioSrc = '/Unlockyourskills/uploads/audio/' . $audioFileName;
+                                                
+                                                // Use view-content with proper parameters
+                                                $viewer = UrlHelper::url('my-courses/view-content') . '?type=audio&title=' . urlencode($audioPackage['title']) . '&src=' . urlencode($audioSrc) . '&course_id=' . $GLOBALS['course']['id'] . '&content_id=' . $pre['id'] . '&audio_package_id=' . $pre['prerequisite_id'] . '&prerequisite_id=' . $pre['id'] . '&client_id=' . ($_SESSION['user']['client_id'] ?? '');
+                                                
+                                                echo "<a class='prerequisite-action-btn {$config['class']} launch-content-btn' target='_blank' href='" . htmlspecialchars($viewer) . "' data-type='audio' data-content-id='" . $pre['id'] . "' data-prerequisite-id='" . $pre['id'] . "'>";
+                                                echo "<i class='fas {$config['icon']} me-1'></i>{$config['label']}";
+                                                echo "</a>";
+                                            } else {
+                                                echo "<span class='prerequisite-action-btn prerequisite-action-disabled' disabled title='Audio package not found'>";
+                                                echo "<i class='fas {$config['icon']} me-1'></i>{$config['label']}";
+                                                echo "</span>";
+                                            }
+                                        }
+                                    } elseif ($pre['prerequisite_type'] === 'video') {
+                                        // For video prerequisites, check completion status and show appropriate button
+                                        $userId = $_SESSION['user']['id'] ?? $_SESSION['id'] ?? 75;
+                                        $clientId = $_SESSION['user']['client_id'] ?? $_SESSION['client_id'] ?? 1;
+                                        
+                                        // Check if video is completed
+                                        $isVideoCompleted = hasUserCompletedVideoContent($GLOBALS['course']['id'], $userId, $pre['prerequisite_id']);
+                                        
+                                        if ($isVideoCompleted) {
+                                            // Video completed - show completed button
+                                            echo "<button class='prerequisite-action-btn btn-success' disabled title='Video content completed'>";
+                                            echo "<i class='fas fa-check-circle me-1'></i>Completed";
+                                            echo "</button>";
+                                        } else {
+                                            // Video not completed - show start button
+                                            require_once 'models/VideoProgressModel.php';
+                                            $videoModel = new VideoProgressModel();
+                                            $videoPackage = $videoModel->getVideoPackageById($pre['prerequisite_id']);
+                                            
+                                            if ($videoPackage) {
+                                                // Construct video file path
+                                                $videoFileName = $videoPackage['video_file'];
+                                                $videoSrc = '/Unlockyourskills/uploads/video/' . $videoFileName;
+                                                
+                                                // Use view-content with proper parameters
+                                                $viewer = UrlHelper::url('my-courses/view-content') . '?type=video&title=' . urlencode($videoPackage['title']) . '&src=' . urlencode($videoSrc) . '&course_id=' . $GLOBALS['course']['id'] . '&content_id=' . $pre['id'] . '&video_package_id=' . $pre['prerequisite_id'] . '&prerequisite_id=' . $pre['id'] . '&client_id=' . ($_SESSION['user']['client_id'] ?? '');
+                                                
+                                                echo "<a class='prerequisite-action-btn {$config['class']} launch-content-btn' target='_blank' href='" . htmlspecialchars($viewer) . "' data-type='video' data-content-id='" . $pre['id'] . "' data-prerequisite-id='" . $pre['id'] . "'>";
+                                                echo "<i class='fas {$config['icon']} me-1'></i>{$config['label']}";
+                                                echo "</a>";
+                                            } else {
+                                                echo "<span class='prerequisite-action-btn prerequisite-action-disabled' disabled title='Video package not found'>";
+                                                echo "<i class='fas {$config['icon']} me-1'></i>{$config['label']}";
                                                 echo "</span>";
                                             }
                                         }
@@ -2720,7 +3333,8 @@ function hasUserSubmittedFeedback($courseId, $userId, $feedbackPackageId) {
                             $assessmentDetails = $GLOBALS['assessmentDetails'][$assessmentId] ?? [];
                             
                             if (!empty($assessmentDetails)) {
-                                $maxAttempts = $assessmentDetails['num_attempts'] ?? 3;
+                                // Get effective max attempts considering user overrides
+                                $maxAttempts = getEffectiveMaxAttempts($courseId, $assessmentId, 'prerequisite', $pre['id'], $userId, $clientId);
                                 $attemptCount = count($assessmentAttempts);
                                 $hasExceededAttempts = $attemptCount >= $maxAttempts;
                                 
@@ -2780,25 +3394,88 @@ function hasUserSubmittedFeedback($courseId, $userId, $feedbackPackageId) {
             </div>
             
             <?php 
-            // Show modules and course completion status from completion tables (no dynamic calculations)
-            require_once 'models/CourseCompletionModel.php';
-            require_once 'models/ModuleCompletionModel.php';
-
+            // Calculate course progress from modules and their content
             $userId = $_SESSION['user']['id'] ?? $_SESSION['id'] ?? null;
             $clientId = $_SESSION['user']['client_id'] ?? $_SESSION['client_id'] ?? null;
-
-            $courseCompletionModel = new CourseCompletionModel();
-            $courseCompletion = $courseCompletionModel->getCompletion($userId, $course['id'], $clientId);
-            $overallModuleProgress = isset($courseCompletion['completion_percentage']) ? (int)$courseCompletion['completion_percentage'] : 0;
-
-            $moduleCompletionModel = new ModuleCompletionModel();
-            $moduleCompletions = $moduleCompletionModel->getCourseModuleCompletions($userId, $course['id'], $clientId);
-            $modulesTotalCount = count($moduleCompletions);
+            
+            // Get all modules for this course
+            $modulesTotalCount = count($course['modules']);
             $modulesCompletedCount = 0;
-            $moduleIdToCompletion = [];
-            foreach ($moduleCompletions as $mc) {
-                if (!empty($mc['is_completed'])) { $modulesCompletedCount++; }
-                $moduleIdToCompletion[$mc['module_id']] = $mc;
+            $totalContentCount = 0;
+            $completedContentCount = 0;
+            $overallModuleProgress = 0;
+            
+            if ($modulesTotalCount > 0) {
+                foreach ($course['modules'] as $module) {
+                    $moduleCompleted = true;
+                    $moduleContentCount = 0;
+                    $moduleCompletedContentCount = 0;
+                    
+                    // Check if all content in this module is completed
+                    if (!empty($module['content'])) {
+                        foreach ($module['content'] as $content) {
+                            // Check all content, not just required content
+                            $moduleContentCount++;
+                            $totalContentCount++;
+                            
+                            $contentCompleted = false;
+                            
+                            // Check completion based on content type
+                            // For SCORM and audio content, use junction ID (course_module_content.id) instead of content_id
+                            // because progress is stored with the junction ID
+                            switch ($content['content_type']) {
+                                case 'video':
+                                    // Use junction ID for video content as progress is stored with course_module_content.id
+                                    $contentCompleted = isVideoCompleted($course['id'], $content['id'], $userId);
+                                    break;
+                                case 'audio':
+                                    // Use junction ID for audio content as progress is stored with course_module_content.id
+                                    $contentCompleted = isAudioCompleted($course['id'], $content['id'], $userId);
+                                    break;
+                                case 'document':
+                                    // Use junction ID for document content as progress is stored with course_module_content.id
+                                    $contentCompleted = isDocumentCompleted($course['id'], $content['id'], $userId);
+                                    break;
+                                case 'image':
+                                    // Use junction ID for image content as progress is stored with course_module_content.id
+                                    $contentCompleted = isImageCompleted($course['id'], $content['id'], $userId);
+                                    break;
+                                case 'scorm':
+                                    // Use junction ID for SCORM content as progress is stored with course_module_content.id
+                                    $contentCompleted = isScormCompleted($course['id'], $content['id'], $userId);
+                                    break;
+                                case 'assessment':
+                                    $contentCompleted = isAssessmentCompleted($course['id'], $content['content_id'], $userId);
+                                    break;
+                                case 'assignment':
+                                    $contentCompleted = isAssignmentCompleted($course['id'], $content['content_id'], $userId);
+                                    break;
+                                case 'external':
+                                    // Use junction ID for external content as progress is stored with course_module_content.id
+                                    $contentCompleted = isExternalCompleted($course['id'], $content['id'], $userId);
+                                    break;
+                                case 'interactive':
+                                    // Use junction ID for interactive content as progress is stored with course_module_content.id
+                                    $contentCompleted = isInteractiveCompleted($course['id'], $content['id'], $userId);
+                                    break;
+                            }
+                            
+                            if ($contentCompleted) {
+                                $moduleCompletedContentCount++;
+                                $completedContentCount++;
+                            } else {
+                                $moduleCompleted = false;
+                            }
+                        }
+                    }
+                    
+                    if ($moduleCompleted) {
+                        $modulesCompletedCount++;
+                    }
+                }
+                
+                // Calculate progress based on content completion, not module completion
+                $overallModuleProgress = $totalContentCount > 0 ? round(($completedContentCount / $totalContentCount) * 100) : 0;
             }
             ?>
             
@@ -2815,7 +3492,7 @@ function hasUserSubmittedFeedback($courseId, $userId, $feedbackPackageId) {
                 </div>
                 <div class="d-flex align-items-center justify-content-between mt-1">
                     <span class="text-muted small">
-                        <i class="fas fa-layer-group me-1"></i><?= $modulesCompletedCount ?>/<?= $modulesTotalCount ?> Modules Completed
+                        <i class="fas fa-layer-group me-1"></i><?= $completedContentCount ?>/<?= $totalContentCount ?> Content Items Completed
                     </span>
                     <?php if ($overallModuleProgress === 100): ?>
                         <span class="text-success small">
@@ -2852,9 +3529,8 @@ function hasUserSubmittedFeedback($courseId, $userId, $feedbackPackageId) {
                                             <div class="progress-info">
                                                 <div class="progress-text">
                                                     <?php 
-                                                    // Read module progress from module_completion table
-                                                    $mc = $moduleIdToCompletion[$module['id']] ?? null;
-                                                    $realProgress = $mc ? (int)$mc['completion_percentage'] : 0;
+                                                    // Calculate module progress dynamically from content completion
+                                                    $realProgress = calculateModuleProgress($module, $course['id'], $userId);
                                                     echo $realProgress . '% Complete';
                                                     ?>
                                                 </div>
@@ -3103,13 +3779,26 @@ function hasUserSubmittedFeedback($courseId, $userId, $feedbackPackageId) {
                                                                         }
                                                                         $statusHtml .= "</div>";
                                                                         
-                                                                        $viewer = UrlHelper::url('my-courses/view-content') . '?type=audio&title=' . urlencode($content['title']) . '&src=' . urlencode($resolved) . '&course_id=' . $GLOBALS['course']['id'] . '&module_id=' . $module['id'] . '&content_id=' . $content['id'];
+                                                                        // Get audio package ID for module content
+                                                                        require_once 'models/AudioProgressModel.php';
+                                                                        $audioModel = new AudioProgressModel();
+                                                                        $audioPackage = $audioModel->getAudioPackageById($content['content_id']);
+                                                                        
+                                                                        if ($audioPackage) {
+                                                                            $viewer = UrlHelper::url('my-courses/view-content') . '?type=audio&title=' . urlencode($content['title']) . '&src=' . urlencode($resolved) . '&course_id=' . $GLOBALS['course']['id'] . '&module_id=' . $module['id'] . '&content_id=' . $content['id'] . '&audio_package_id=' . $content['content_id'] . '&client_id=' . ($_SESSION['user']['client_id'] ?? '');
+                                                                        } else {
+                                                                            $viewer = '#';
+                                                                        }
                                                                         
                                                                         // Show completed badge if audio is completed
                                                                         if ($audioStatus['status'] === 'completed') {
                                                                             $statusHtml .= "<div class='document-completed-badge'><span class='badge bg-success'><i class='fas fa-check-circle me-1'></i>Audio Completed</span></div>";
                                                                         } else {
-                                                                            $actionsHtml .= "<a href='" . htmlspecialchars($viewer) . "' target='_blank' class='postrequisite-action-btn btn-warning launch-content-btn' data-module-id='" . $module['id'] . "' data-content-id='" . $content['id'] . "' data-type='audio'><i class='fas fa-headphones me-1'></i>Listen Audio</a>";
+                                                                            if ($audioPackage) {
+                                                                                $actionsHtml .= "<a href='" . htmlspecialchars($viewer) . "' target='_blank' class='postrequisite-action-btn btn-warning launch-content-btn' data-module-id='" . $module['id'] . "' data-content-id='" . $content['id'] . "' data-type='audio'><i class='fas fa-headphones me-1'></i>Listen Audio</a>";
+                                                                            } else {
+                                                                                $statusHtml .= "<span class='content-error'><i class='fas fa-exclamation-triangle me-1'></i>Audio package not found</span>";
+                                                                            }
                                                                         }
                                                                     } else {
                                                                         $statusHtml .= "<span class='content-error'><i class='fas fa-exclamation-triangle me-1'></i>No audio file</span>";
@@ -3256,7 +3945,8 @@ function hasUserSubmittedFeedback($courseId, $userId, $feedbackPackageId) {
                                                                     $assessmentDetails = $GLOBALS['assessmentDetails'][$assessmentId] ?? [];
                                                                     $assessmentResults = $GLOBALS['assessmentResults'][$assessmentId] ?? null;
                                                                     $hasPassed = $assessmentResults && $assessmentResults['passed'];
-                                                                    $maxAttempts = $assessmentDetails['num_attempts'] ?? 3;
+                                                                    // Get effective max attempts considering user overrides
+                                                                    $maxAttempts = getEffectiveMaxAttempts($courseId, $assessmentId, 'module', $content['id'], $userId, $clientId);
                                                                     $attemptCount = count($assessmentAttempts);
                                                                     $hasExceededAttempts = $attemptCount >= $maxAttempts;
                                                                     // Status
@@ -3496,7 +4186,8 @@ function hasUserSubmittedFeedback($courseId, $userId, $feedbackPackageId) {
                                 $hasPassed = $assessmentResults && $assessmentResults['passed'];
                                 
                                 // Check if user has exceeded maximum attempts
-                                $maxAttempts = $assessmentDetails['num_attempts'] ?? 3;
+                                // Get effective max attempts considering user overrides
+                                $maxAttempts = getEffectiveMaxAttempts($courseId, $assessmentId, 'post_requisite', $post['id'], $userId, $clientId);
                                 $attemptCount = count($assessmentAttempts);
                                 $hasExceededAttempts = $attemptCount >= $maxAttempts;
                                 
@@ -3665,7 +4356,8 @@ function hasUserSubmittedFeedback($courseId, $userId, $feedbackPackageId) {
                             $assessmentDetails = $GLOBALS['assessmentDetails'][$assessmentId] ?? [];
                             
                             if (!empty($assessmentDetails)) {
-                                $maxAttempts = $assessmentDetails['num_attempts'] ?? 3;
+                                // Get effective max attempts considering user overrides
+                                $maxAttempts = getEffectiveMaxAttempts($courseId, $assessmentId, 'post_requisite', $post['id'], $userId, $clientId);
                                 $attemptCount = count($assessmentAttempts);
                                 $hasExceededAttempts = $attemptCount >= $maxAttempts;
                                 

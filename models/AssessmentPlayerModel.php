@@ -222,16 +222,21 @@ class AssessmentPlayerModel
         $attemptResult = $stmt->fetch(PDO::FETCH_ASSOC);
         $attemptNumber = $attemptResult['next_attempt'];
 
+        // Determine assessment context (prerequisite, module content, or post-requisite)
+        $context = $this->getAssessmentContext($assessmentId, $courseId);
+        
         // Create new attempt
         $stmt = $db->prepare("
             INSERT INTO assessment_attempts (
                 user_id, client_id, assessment_id, course_id, attempt_number, status, 
                 started_at, time_limit, time_remaining, 
-                current_question, answers, created_at, updated_at
+                current_question, answers, prerequisite_id, postrequisite_id, content_id,
+                created_at, updated_at
             ) VALUES (
                 ?, ?, ?, ?, ?, 'in_progress', 
                 NOW(), ?, ?, 
-                1, '{}', NOW(), NOW()
+                1, '{}', ?, ?, ?,
+                NOW(), NOW()
             )
         ");
         
@@ -242,7 +247,10 @@ class AssessmentPlayerModel
             $courseId,
             $attemptNumber,
             $timeLimit, 
-            $timeLimit * 60 // Convert to seconds
+            $timeLimit * 60, // Convert to seconds
+            $context['prerequisite_id'],
+            $context['postrequisite_id'],
+            $context['content_id']
         ]);
 
         return $db->lastInsertId();
@@ -396,13 +404,17 @@ class AssessmentPlayerModel
             return ['success' => false, 'message' => 'Failed to update attempt'];
         }
 
+        // Get assessment context for results
+        $context = $this->getAssessmentContext($attempt['assessment_id'], $attempt['course_id']);
+        
         // Save results to assessment_results table
         $stmt = $db->prepare("
             INSERT INTO assessment_results (
                 course_id, user_id, client_id, assessment_id, attempt_number, score, max_score,
-                percentage, passed, time_taken, started_at, completed_at, answers
+                percentage, passed, time_taken, started_at, completed_at, answers,
+                prerequisite_id, postrequisite_id, content_id
             ) VALUES (
-                ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), ?
+                ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), ?, ?, ?, ?
             )
         ");
         
@@ -423,7 +435,10 @@ class AssessmentPlayerModel
             $passed ? 1 : 0,
             $timeTaken,
             $attempt['started_at'],
-            json_encode($answers)
+            json_encode($answers),
+            $context['prerequisite_id'],
+            $context['postrequisite_id'],
+            $context['content_id']
         ]);
         
         if (!$resultInserted) {
@@ -565,6 +580,58 @@ class AssessmentPlayerModel
     {
         $db = $this->conn;
 
+        // If courseId is provided, try to get effective max attempts considering user overrides
+        if ($courseId && $clientId) {
+            try {
+                require_once 'models/AssessmentAttemptIncreaseModel.php';
+                $attemptModel = new AssessmentAttemptIncreaseModel();
+                
+                // Try to find the context for this assessment in this course
+                $context = $this->getAssessmentContext($assessmentId, $courseId);
+                
+                if ($context) {
+                    // Determine context type and ID
+                    $contextType = null;
+                    $contextId = null;
+                    
+                    if ($context['prerequisite_id']) {
+                        $contextType = 'prerequisite';
+                        $contextId = $context['prerequisite_id'];
+                    } elseif ($context['postrequisite_id']) {
+                        $contextType = 'post_requisite';
+                        $contextId = $context['postrequisite_id'];
+                    } elseif ($context['content_id']) {
+                        $contextType = 'module';
+                        $contextId = $context['content_id'];
+                    }
+                    
+                    if ($contextType && $contextId) {
+                        $maxAttempts = $attemptModel->getEffectiveMaxAttempts($userId, $courseId, $assessmentId, $contextType, $contextId, $clientId);
+                        
+                        // Count attempts for this course
+                        $stmt = $db->prepare("
+                            SELECT COUNT(*) as attempt_count 
+                            FROM assessment_attempts 
+                            WHERE assessment_id = ? 
+                            AND user_id = ? 
+                            AND course_id = ?
+                            AND status = 'completed'
+                            AND is_deleted = 0
+                        ");
+                        $stmt->execute([$assessmentId, $userId, $courseId]);
+                        $result = $stmt->fetch(PDO::FETCH_ASSOC);
+                        $attemptCount = intval($result['attempt_count']);
+                        
+                        return $attemptCount >= $maxAttempts;
+                    }
+                }
+            } catch (Exception $e) {
+                error_log("Error getting effective max attempts: " . $e->getMessage());
+                // Fall through to original logic
+            }
+        }
+
+        // Fallback to original logic for backward compatibility
         // Get assessment max attempts
         $stmt = $db->prepare("
             SELECT num_attempts FROM assessment_package 
@@ -744,5 +811,67 @@ class AssessmentPlayerModel
         
         $stmt->execute($params);
         return $stmt->fetch(PDO::FETCH_ASSOC);
+    }
+
+    /**
+     * Determine assessment context (prerequisite, module content, or post-requisite)
+     * Returns array with prerequisite_id, postrequisite_id, and content_id
+     */
+    private function getAssessmentContext($assessmentId, $courseId)
+    {
+        $db = $this->conn;
+        
+        $context = [
+            'prerequisite_id' => null,
+            'postrequisite_id' => null,
+            'content_id' => null
+        ];
+        
+        try {
+            // Check if assessment is a prerequisite
+            $stmt = $db->prepare("
+                SELECT id FROM course_prerequisites 
+                WHERE course_id = ? AND prerequisite_id = ? AND prerequisite_type = 'assessment' 
+                AND (deleted_at IS NULL OR deleted_at = '0000-00-00 00:00:00')
+            ");
+            $stmt->execute([$courseId, $assessmentId]);
+            $prerequisite = $stmt->fetch(PDO::FETCH_ASSOC);
+            if ($prerequisite) {
+                $context['prerequisite_id'] = $prerequisite['id'];
+                return $context; // Return early if found as prerequisite
+            }
+            
+            // Check if assessment is a post-requisite
+            $stmt = $db->prepare("
+                SELECT id FROM course_post_requisites 
+                WHERE course_id = ? AND content_id = ? AND content_type = 'assessment' 
+                AND is_deleted = 0
+            ");
+            $stmt->execute([$courseId, $assessmentId]);
+            $postrequisite = $stmt->fetch(PDO::FETCH_ASSOC);
+            if ($postrequisite) {
+                $context['postrequisite_id'] = $postrequisite['id'];
+                return $context; // Return early if found as post-requisite
+            }
+            
+            // Check if assessment is module content
+            $stmt = $db->prepare("
+                SELECT cmc.id FROM course_module_content cmc
+                JOIN course_modules cm ON cmc.module_id = cm.id
+                WHERE cm.course_id = ? AND cmc.content_id = ? AND cmc.content_type = 'assessment'
+                AND cmc.deleted_at IS NULL AND cm.deleted_at IS NULL
+            ");
+            $stmt->execute([$courseId, $assessmentId]);
+            $content = $stmt->fetch(PDO::FETCH_ASSOC);
+            if ($content) {
+                $context['content_id'] = $content['id'];
+                return $context; // Return early if found as module content
+            }
+            
+        } catch (Exception $e) {
+            error_log("Error determining assessment context: " . $e->getMessage());
+        }
+        
+        return $context; // Return with all null values if not found in any context
     }
 } 

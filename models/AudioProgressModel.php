@@ -13,23 +13,50 @@ class AudioProgressModel {
      * Get or create audio progress record
      */
     public function getOrCreateProgress($userId, $courseId, $contentId, $audioPackageId, $clientId) {
-        $sql = "SELECT * FROM audio_progress 
-                WHERE user_id = ? AND course_id = ? AND content_id = ? AND client_id = ?";
-        $stmt = $this->conn->prepare($sql);
-        $stmt->execute([$userId, $courseId, $contentId, $clientId]);
-        $progress = $stmt->fetch(PDO::FETCH_ASSOC);
-
-        if (!$progress) {
-            // Create new progress record
-            $sql = "INSERT INTO audio_progress (user_id, course_id, content_id, audio_package_id, client_id, 
-                    started_at, `current_time`, duration, listened_percentage, completion_threshold, is_completed, audio_status, playback_status,
-                    play_count, last_listened_at, playback_speed, notes, created_at, updated_at) 
-                    VALUES (?, ?, ?, ?, ?, NOW(), 0, 0, 0, 80, 0, 'not_started', 'not_started', 0, NOW(), 1.0, '', NOW(), NOW())";
+        // First check if this is a prerequisite by looking for it in course_prerequisites
+        $isPrerequisite = $this->isContentPrerequisite($courseId, $contentId, 'audio');
+        
+        if ($isPrerequisite) {
+            // For prerequisites, look for records with prerequisite_id = contentId
+            $sql = "SELECT * FROM audio_progress 
+                    WHERE user_id = ? AND course_id = ? AND prerequisite_id = ? AND client_id = ?";
             $stmt = $this->conn->prepare($sql);
-            $stmt->execute([$userId, $courseId, $contentId, $audioPackageId, $clientId]);
-            
-            $progressId = $this->conn->lastInsertId();
-            return $this->getProgressById($progressId);
+            $stmt->execute([$userId, $courseId, $contentId, $clientId]);
+            $progress = $stmt->fetch(PDO::FETCH_ASSOC);
+
+            if (!$progress) {
+                // Create new progress record for prerequisite
+                // For prerequisites, only set prerequisite_id and leave content_id as NULL
+                $sql = "INSERT INTO audio_progress (user_id, course_id, prerequisite_id, content_id, audio_package_id, client_id, 
+                        started_at, `current_time`, duration, listened_percentage, completion_threshold, is_completed, audio_status, playback_status,
+                        play_count, last_listened_at, playback_speed, notes, created_at, updated_at) 
+                        VALUES (?, ?, ?, NULL, ?, ?, NOW(), 0, 0, 0, 80, 0, 'not_started', 'not_started', 0, NOW(), 1.0, '', NOW(), NOW())";
+                $stmt = $this->conn->prepare($sql);
+                $stmt->execute([$userId, $courseId, $contentId, $audioPackageId, $clientId]);
+                
+                $progressId = $this->conn->lastInsertId();
+                return $this->getProgressById($progressId);
+            }
+        } else {
+            // For regular modules, look for records with content_id = contentId
+            $sql = "SELECT * FROM audio_progress 
+                    WHERE user_id = ? AND course_id = ? AND content_id = ? AND client_id = ?";
+            $stmt = $this->conn->prepare($sql);
+            $stmt->execute([$userId, $courseId, $contentId, $clientId]);
+            $progress = $stmt->fetch(PDO::FETCH_ASSOC);
+
+            if (!$progress) {
+                // Create new progress record for module
+                $sql = "INSERT INTO audio_progress (user_id, course_id, content_id, audio_package_id, client_id, 
+                        started_at, `current_time`, duration, listened_percentage, completion_threshold, is_completed, audio_status, playback_status,
+                        play_count, last_listened_at, playback_speed, notes, created_at, updated_at) 
+                        VALUES (?, ?, ?, ?, ?, NOW(), 0, 0, 0, 80, 0, 'not_started', 'not_started', 0, NOW(), 1.0, '', NOW(), NOW())";
+                $stmt = $this->conn->prepare($sql);
+                $stmt->execute([$userId, $courseId, $contentId, $audioPackageId, $clientId]);
+                
+                $progressId = $this->conn->lastInsertId();
+                return $this->getProgressById($progressId);
+            }
         }
 
         return $progress;
@@ -135,6 +162,24 @@ class AudioProgressModel {
         return $stmt->fetch(PDO::FETCH_ASSOC);
     }
 
+
+    /**
+     * Check if content is a prerequisite
+     */
+    private function isContentPrerequisite($courseId, $contentId, $contentType) {
+        try {
+            $sql = "SELECT COUNT(*) FROM course_prerequisites 
+                    WHERE course_id = ? AND id = ? AND prerequisite_type = ?";
+            $stmt = $this->conn->prepare($sql);
+            $stmt->execute([$courseId, $contentId, $contentType]);
+            
+            return $stmt->fetchColumn() > 0;
+        } catch (Exception $e) {
+            error_log("Error checking if content is prerequisite: " . $e->getMessage());
+            return false;
+        }
+    }
+
     /**
      * Mark audio as completed
      */
@@ -195,6 +240,22 @@ class AudioProgressModel {
         $sql = "DELETE FROM audio_progress WHERE id = ?";
         $stmt = $this->conn->prepare($sql);
         return $stmt->execute([$progressId]);
+    }
+
+    /**
+     * Get audio package by ID
+     */
+    public function getAudioPackageById($audioPackageId) {
+        try {
+            $sql = "SELECT id, title, audio_file, version, language, time_limit, description, tags, mobile_support, client_id, created_by, created_at, updated_by, updated_at, is_deleted FROM audio_package WHERE id = ? AND (is_deleted IS NULL OR is_deleted = 0)";
+            $stmt = $this->conn->prepare($sql);
+            $stmt->execute([$audioPackageId]);
+            
+            return $stmt->fetch(PDO::FETCH_ASSOC);
+        } catch (Exception $e) {
+            error_log("Error in getAudioPackageById: " . $e->getMessage());
+            return false;
+        }
     }
 }
 ?>

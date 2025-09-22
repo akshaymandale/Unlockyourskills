@@ -110,15 +110,64 @@ class MyCoursesModel {
                             SELECT 1 FROM assignment_submissions asub 
                             WHERE asub.assignment_package_id = cp.prerequisite_id 
                             AND asub.user_id = ? AND asub.course_id = ? AND asub.client_id = ?
+                            AND asub.submission_status IN ('submitted', 'graded', 'returned') AND asub.is_deleted = 0
                         ))
-                        OR (cp.prerequisite_type = 'external')
+                        OR (cp.prerequisite_type = 'external' AND EXISTS (
+                            SELECT 1 FROM external_progress ep 
+                            WHERE ep.prerequisite_id = cp.id 
+                            AND ep.user_id = ? AND ep.course_id = ? AND ep.client_id = ?
+                            AND ep.is_completed = 1
+                        ))
+                        OR (cp.prerequisite_type = 'scorm' AND EXISTS (
+                            SELECT 1 FROM scorm_progress sp 
+                            WHERE sp.scorm_package_id = cp.prerequisite_id 
+                            AND sp.user_id = ? AND sp.course_id = ? AND sp.client_id = ?
+                            AND sp.lesson_status IN ('completed', 'passed') AND sp.completed_at IS NOT NULL
+                        ))
+                        OR (cp.prerequisite_type = 'video' AND EXISTS (
+                            SELECT 1 FROM video_progress vp 
+                            WHERE vp.prerequisite_id = cp.id 
+                            AND vp.user_id = ? AND vp.course_id = ? AND vp.client_id = ?
+                            AND vp.is_completed = 1
+                        ))
+                        OR (cp.prerequisite_type = 'audio' AND EXISTS (
+                            SELECT 1 FROM audio_progress ap 
+                            WHERE ap.prerequisite_id = cp.id 
+                            AND ap.user_id = ? AND ap.course_id = ? AND ap.client_id = ?
+                            AND ap.is_completed = 1
+                        ))
+                        OR (cp.prerequisite_type = 'document' AND EXISTS (
+                            SELECT 1 FROM document_progress dp 
+                            WHERE dp.prerequisite_id = cp.id 
+                            AND dp.user_id = ? AND dp.course_id = ? AND dp.client_id = ?
+                            AND dp.is_completed = 1
+                        ))
+                        OR (cp.prerequisite_type = 'image' AND EXISTS (
+                            SELECT 1 FROM image_progress ip 
+                            WHERE ip.prerequisite_id = cp.id 
+                            AND ip.user_id = ? AND ip.course_id = ? AND ip.client_id = ?
+                            AND ip.is_completed = 1
+                        ))
+                        OR (cp.prerequisite_type = 'interactive' AND EXISTS (
+                            SELECT 1 FROM interactive_progress inp 
+                            WHERE inp.prerequisite_id = cp.id 
+                            AND inp.user_id = ? AND inp.course_id = ? AND inp.client_id = ?
+                            AND inp.is_completed = 1
+                        ))
                     )
                 ");
                 $prereqMetStmt->execute([
                     $courseId, $userId, $clientId, // assessment
                     $userId, $clientId, // survey
                     $userId, $clientId, // feedback
-                    $userId, $courseId, $clientId  // assignment
+                    $userId, $courseId, $clientId, // assignment
+                    $userId, $courseId, $clientId, // external
+                    $userId, $courseId, $clientId, // scorm
+                    $userId, $courseId, $clientId, // video
+                    $userId, $courseId, $clientId, // audio
+                    $userId, $courseId, $clientId, // document
+                    $userId, $courseId, $clientId, // image
+                    $userId, $courseId, $clientId  // interactive
                 ]);
                 $prereqMetResult = $prereqMetStmt->fetch(PDO::FETCH_ASSOC);
                 
@@ -237,12 +286,8 @@ class MyCoursesModel {
             $params[':client_id'] = $clientId;
         }
         
-        // Derive a reasonable custom field value from session (e.g., department or role)
-        $userDepartment = '';
-        if (isset($_SESSION['user']['user_role']) && !empty($_SESSION['user']['user_role'])) {
-            $userDepartment = $_SESSION['user']['user_role'];
-        }
-        $params[':user_department'] = $userDepartment;
+        // Get user's custom field values for matching
+        $userCustomFields = $this->getUserCustomFieldValues($userId, $clientId);
 
         // Build base query with client_id filtering
         $sql = "SELECT 
@@ -270,7 +315,13 @@ class MyCoursesModel {
         $sql .= " AND (
                     ca.applicability_type = 'all'
                     OR (ca.applicability_type = 'user' AND ca.user_id = :user_id)
-                    OR (ca.applicability_type = 'custom_field' AND ca.custom_field_value = :user_department)
+                    OR (ca.applicability_type = 'custom_field' AND EXISTS (
+                        SELECT 1 FROM custom_field_values cfv 
+                        WHERE cfv.user_id = :user_id 
+                        AND cfv.custom_field_id = ca.custom_field_id 
+                        AND cfv.field_value COLLATE utf8mb4_unicode_ci = ca.custom_field_value COLLATE utf8mb4_unicode_ci
+                        AND cfv.is_deleted = 0
+                    ))
                 )";
 
         // Note: Status filtering will be done after determining actual course status
@@ -281,7 +332,7 @@ class MyCoursesModel {
             $params[':search'] = '%' . $search . '%';
         }
 
-        $sql .= " GROUP BY c.id ORDER BY c.name ASC";
+        $sql .= " GROUP BY c.id ORDER BY ca.created_at DESC, c.name ASC";
         $stmt = $this->conn->prepare($sql);
         foreach ($params as $k => $v) {
             $stmt->bindValue($k, $v);
@@ -378,7 +429,13 @@ class MyCoursesModel {
         $sql .= " AND (
                     ca.applicability_type = 'all'
                     OR (ca.applicability_type = 'user' AND ca.user_id = :user_id)
-                    OR (ca.applicability_type = 'custom_field' AND ca.custom_field_value = :user_department)
+                    OR (ca.applicability_type = 'custom_field' AND EXISTS (
+                        SELECT 1 FROM custom_field_values cfv 
+                        WHERE cfv.user_id = :user_id 
+                        AND cfv.custom_field_id = ca.custom_field_id 
+                        AND cfv.field_value COLLATE utf8mb4_unicode_ci = ca.custom_field_value COLLATE utf8mb4_unicode_ci
+                        AND cfv.is_deleted = 0
+                    ))
                 )";
 
         // Filter by status
@@ -496,7 +553,7 @@ class MyCoursesModel {
             
             // Get prerequisites
             $stmt = $this->conn->prepare("
-                SELECT cp.id, cp.prerequisite_id, cp.prerequisite_type, 'prerequisite' as content_category
+                SELECT cp.id, cp.prerequisite_id as content_id, cp.prerequisite_type as content_type, 'prerequisite' as content_category
                 FROM course_prerequisites cp
                 WHERE cp.course_id = ? AND cp.deleted_at IS NULL
             ");
@@ -506,7 +563,7 @@ class MyCoursesModel {
             
             // Get module content
             $stmt = $this->conn->prepare("
-                SELECT cmc.id as content_id, cmc.content_id as scorm_package_id, cmc.content_type, 'module' as content_category
+                SELECT cmc.id as content_id, cmc.content_type, 'module' as content_category
                 FROM course_module_content cmc
                 INNER JOIN course_modules cm ON cmc.module_id = cm.id
                 WHERE cm.course_id = ? AND cmc.deleted_at IS NULL
@@ -550,14 +607,14 @@ class MyCoursesModel {
             }
             
             if ($content['content_category'] === 'prerequisite') {
-                $contentType = $content['prerequisite_type'];
-                $contentId = $content['id']; // Use the prerequisite record ID
+                $contentType = $content['content_type'];
+                $contentId = $content['content_id']; // Use the prerequisite content ID
             } elseif ($content['content_category'] === 'module') {
                 $contentType = $content['content_type'];
                 $contentId = $content['content_id']; // Use the module content ID
             } elseif ($content['content_category'] === 'post_requisite') {
                 $contentType = $content['content_type'];
-                $contentId = $content['id']; // Use the post-requisite record ID
+                $contentId = $content['content_id']; // Use the post-requisite content ID (assessment ID)
             } else {
                 error_log("Unknown content category: " . $content['content_category']);
                 return false;
@@ -589,6 +646,8 @@ class MyCoursesModel {
                     return $this->isInteractiveContentCompleted($contentId, $userId, $courseId, $clientId);
                 case 'assignment':
                     return $this->isAssignmentCompleted($contentId, $userId, $courseId, $clientId);
+                case 'assessment':
+                    return $this->isAssessmentCompleted($contentId, $userId, $courseId, $clientId);
                 case 'survey':
                     return $this->isSurveyCompleted($contentId, $userId, $courseId, $clientId);
                 case 'feedback':
@@ -962,9 +1021,23 @@ class MyCoursesModel {
      */
     private function isVideoContentCompleted($contentId, $userId, $courseId, $clientId) {
         try {
+            // First try to find by content_id (for module content)
             $stmt = $this->conn->prepare("
                 SELECT is_completed FROM video_progress 
                 WHERE content_id = ? AND user_id = ? AND course_id = ? AND client_id = ?
+            ");
+            $stmt->execute([$contentId, $userId, $courseId, $clientId]);
+            $result = $stmt->fetch(PDO::FETCH_ASSOC);
+            
+            if ($result) {
+                return $result['is_completed'] == 1;
+            }
+            
+            // If not found by content_id, try to find by video_package_id (for prerequisite content)
+            // For prerequisites, the contentId is actually the video package ID
+            $stmt = $this->conn->prepare("
+                SELECT is_completed FROM video_progress 
+                WHERE video_package_id = ? AND user_id = ? AND course_id = ? AND client_id = ?
             ");
             $stmt->execute([$contentId, $userId, $courseId, $clientId]);
             $result = $stmt->fetch(PDO::FETCH_ASSOC);
@@ -987,12 +1060,44 @@ class MyCoursesModel {
      */
     private function isAudioContentCompleted($contentId, $userId, $courseId, $clientId) {
         try {
+            // For audio content, we need to handle both module and prerequisite cases
+            // First try with content_id (for module content)
             $stmt = $this->conn->prepare("
                 SELECT is_completed FROM audio_progress 
                 WHERE content_id = ? AND user_id = ? AND course_id = ? AND client_id = ?
             ");
             $stmt->execute([$contentId, $userId, $courseId, $clientId]);
             $result = $stmt->fetch(PDO::FETCH_ASSOC);
+            
+            // If no progress found with content_id, try with prerequisite_id (for prerequisite content)
+            if (!$result) {
+                $stmt = $this->conn->prepare("
+                    SELECT is_completed FROM audio_progress 
+                    WHERE prerequisite_id = ? AND user_id = ? AND course_id = ? AND client_id = ?
+                ");
+                $stmt->execute([$contentId, $userId, $courseId, $clientId]);
+                $result = $stmt->fetch(PDO::FETCH_ASSOC);
+            }
+            
+            // If still no result, check if this is a prerequisite by looking up the prerequisite record
+            if (!$result) {
+                $stmt = $this->conn->prepare("
+                    SELECT cp.id FROM course_prerequisites cp 
+                    WHERE cp.course_id = ? AND cp.prerequisite_id = ? AND cp.prerequisite_type = 'audio'
+                ");
+                $stmt->execute([$courseId, $contentId]);
+                $prereqRecord = $stmt->fetch(PDO::FETCH_ASSOC);
+                
+                if ($prereqRecord) {
+                    // This is an audio prerequisite, check with the prerequisite record ID
+                    $stmt = $this->conn->prepare("
+                        SELECT is_completed FROM audio_progress 
+                        WHERE prerequisite_id = ? AND user_id = ? AND course_id = ? AND client_id = ?
+                    ");
+                    $stmt->execute([$prereqRecord['id'], $userId, $courseId, $clientId]);
+                    $result = $stmt->fetch(PDO::FETCH_ASSOC);
+                }
+            }
             
             return $result && $result['is_completed'] == 1;
             
@@ -1012,6 +1117,7 @@ class MyCoursesModel {
      */
     private function isDocumentContentCompleted($contentId, $userId, $courseId, $clientId) {
         try {
+            // First try to find by content_id (for module content)
             $stmt = $this->conn->prepare("
                 SELECT is_completed FROM document_progress 
                 WHERE content_id = ? AND user_id = ? AND course_id = ? AND client_id = ?
@@ -1019,7 +1125,31 @@ class MyCoursesModel {
             $stmt->execute([$contentId, $userId, $courseId, $clientId]);
             $result = $stmt->fetch(PDO::FETCH_ASSOC);
             
-            return $result && $result['is_completed'] == 1;
+            if ($result) {
+                return $result['is_completed'] == 1;
+            }
+            
+            // If not found by content_id, check if this is a prerequisite and get the course_prerequisites.id
+            $stmt = $this->conn->prepare("
+                SELECT id FROM course_prerequisites 
+                WHERE course_id = ? AND prerequisite_id = ? AND prerequisite_type = 'document'
+            ");
+            $stmt->execute([$courseId, $contentId]);
+            $prereqResult = $stmt->fetch(PDO::FETCH_ASSOC);
+            
+            if ($prereqResult) {
+                // For prerequisites, look for records with prerequisite_id = course_prerequisites.id
+                $stmt = $this->conn->prepare("
+                    SELECT is_completed FROM document_progress 
+                    WHERE prerequisite_id = ? AND user_id = ? AND course_id = ? AND client_id = ?
+                ");
+                $stmt->execute([$prereqResult['id'], $userId, $courseId, $clientId]);
+                $result = $stmt->fetch(PDO::FETCH_ASSOC);
+                
+                return $result && $result['is_completed'] == 1;
+            }
+            
+            return false;
             
         } catch (Exception $e) {
             error_log("Error checking document content completion: " . $e->getMessage());
@@ -1310,6 +1440,73 @@ class MyCoursesModel {
         } catch (Exception $e) {
             error_log("Error getting course module count: " . $e->getMessage());
             return 0;
+        }
+    }
+    
+    /**
+     * Check if assessment is completed
+     * @param int $assessmentId
+     * @param int $userId
+     * @param int $courseId
+     * @param int $clientId
+     * @return bool
+     */
+    private function isAssessmentCompleted($assessmentId, $userId, $courseId, $clientId) {
+        try {
+            // For assessments, we need to check the LATEST result to see if it's passed
+            // because the same assessment can appear in different contexts
+            // Also, we should not filter by client_id for assessments as they may be completed with different client_ids
+            $stmt = $this->conn->prepare("
+                SELECT 
+                    ar.passed,
+                    ROW_NUMBER() OVER (ORDER BY ar.completed_at DESC) as rn
+                FROM assessment_results ar
+                WHERE (ar.assessment_id = ? OR ar.content_id = ?) 
+                AND ar.user_id = ? 
+                AND ar.course_id = ?
+                ORDER BY ar.completed_at DESC
+                LIMIT 1
+            ");
+            $stmt->execute([$assessmentId, $assessmentId, $userId, $courseId]);
+            $result = $stmt->fetch(PDO::FETCH_ASSOC);
+            
+            // Return true only if the latest result exists and is passed
+            return $result && $result['passed'] == 1;
+        } catch (Exception $e) {
+            error_log("Error checking assessment completion: " . $e->getMessage());
+            return false;
+        }
+    }
+
+    /**
+     * Get user's custom field values for course applicability matching
+     */
+    private function getUserCustomFieldValues($userId, $clientId = null) {
+        try {
+            $sql = "SELECT cfv.custom_field_id, cfv.field_value
+                    FROM custom_field_values cfv
+                    JOIN custom_fields cf ON cfv.custom_field_id = cf.id
+                    WHERE cfv.user_id = :user_id AND cfv.is_deleted = 0 AND cf.is_active = 1";
+            
+            $params = [':user_id' => $userId];
+            
+            if ($clientId) {
+                $sql .= " AND cf.client_id = :client_id";
+                $params[':client_id'] = $clientId;
+            }
+            
+            $stmt = $this->conn->prepare($sql);
+            $stmt->execute($params);
+            
+            $values = [];
+            while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
+                $values[$row['custom_field_id']] = $row['field_value'];
+            }
+            
+            return $values;
+        } catch (Exception $e) {
+            error_log("Error getting user custom field values: " . $e->getMessage());
+            return [];
         }
     }
 } 

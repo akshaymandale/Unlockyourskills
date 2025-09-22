@@ -4,12 +4,15 @@ if (session_status() === PHP_SESSION_NONE) {
 }
 
 require_once 'models/ImageProgressModel.php';
+require_once 'models/SharedContentCompletionService.php';
 
 class ImageProgressController {
     private $imageProgressModel;
+    private $sharedContentService;
 
     public function __construct() {
         $this->imageProgressModel = new ImageProgressModel();
+        $this->sharedContentService = new SharedContentCompletionService();
     }
 
     /**
@@ -64,6 +67,11 @@ class ImageProgressController {
             if ($success) {
                 // Mark prerequisite as complete if applicable
                 $this->markPrerequisiteCompleteIfApplicable($userId, $courseId, $contentId, $clientId);
+                
+                // Handle shared content completion
+                $this->sharedContentService->handleSharedContentCompletion(
+                    $userId, $courseId, $contentId, $clientId, 'image', 'module'
+                );
                 
                 header('Content-Type: application/json');
                 echo json_encode(['success' => true, 'message' => 'Image marked as viewed']);
@@ -164,9 +172,10 @@ class ImageProgressController {
             if ($success) {
                 // If image is completed, update completion tracking
                 if (isset($updateData['is_completed']) && $updateData['is_completed']) {
-                    require_once 'models/CompletionTrackingService.php';
-                    $completionService = new CompletionTrackingService();
-                    $completionService->handleContentCompletion($userId, $courseId, $contentId, 'image', $clientId);
+                    // Handle shared content completion
+                    $this->sharedContentService->handleSharedContentCompletion(
+                        $userId, $courseId, $contentId, $clientId, 'image', 'module'
+                    );
                 }
 
                 header('Content-Type: application/json');
@@ -183,58 +192,6 @@ class ImageProgressController {
         }
     }
 
-    /**
-     * Check if image is a prerequisite and start tracking
-     */
-    private function startPrerequisiteTrackingIfApplicable($userId, $courseId, $contentId, $clientId) {
-        try {
-            require_once 'models/CompletionTrackingService.php';
-            $completionService = new CompletionTrackingService();
-            
-            // Check if this image is a prerequisite
-            $isPrerequisite = $this->isContentPrerequisite($courseId, $contentId, 'image');
-            
-            if ($isPrerequisite) {
-                $completionService->startPrerequisiteTracking($userId, $courseId, $contentId, 'image', $clientId);
-            }
-        } catch (Exception $e) {
-            error_log("Error in startPrerequisiteTrackingIfApplicable: " . $e->getMessage());
-        }
-    }
-
-    /**
-     * Start module tracking if image belongs to a module
-     */
-    private function startModuleTrackingIfApplicable($userId, $courseId, $contentId, $contentType, $clientId) {
-        try {
-            require_once 'models/CompletionTrackingService.php';
-            $completionService = new CompletionTrackingService();
-            
-            // Start module tracking if this content belongs to a module
-            $completionService->startModuleTrackingIfApplicable($userId, $courseId, $contentId, $contentType, $clientId);
-        } catch (Exception $e) {
-            error_log("Error in startModuleTrackingIfApplicable: " . $e->getMessage());
-        }
-    }
-
-    /**
-     * Check if image is a prerequisite and mark as complete
-     */
-    private function markPrerequisiteCompleteIfApplicable($userId, $courseId, $contentId, $clientId) {
-        try {
-            require_once 'models/CompletionTrackingService.php';
-            $completionService = new CompletionTrackingService();
-            
-            // Check if this image is a prerequisite
-            $isPrerequisite = $this->isContentPrerequisite($courseId, $contentId, 'image');
-            
-            if ($isPrerequisite) {
-                $completionService->markPrerequisiteComplete($userId, $courseId, $contentId, 'image', $clientId);
-            }
-        } catch (Exception $e) {
-            error_log("Error in markPrerequisiteCompleteIfApplicable: " . $e->getMessage());
-        }
-    }
 
     /**
      * Check if content is a prerequisite

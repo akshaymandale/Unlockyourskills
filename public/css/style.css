@@ -5623,6 +5623,32 @@ body select:focus,
 
 #vlrSelectionModal .vlr-content-item {
     transition: opacity 0.2s ease;
+    align-items: flex-start !important;
+    min-height: 80px;
+}
+
+#vlrSelectionModal .vlr-content-item .form-check {
+    align-self: center;
+    flex-shrink: 0;
+    margin-left: auto;
+}
+
+/* Ensure proper layout for very long titles */
+#vlrSelectionModal .vlr-content-item .flex-grow-1 {
+    min-width: 0; /* Allow text truncation to work properly */
+    overflow: hidden;
+}
+
+/* Responsive adjustments for smaller screens */
+@media (max-width: 768px) {
+    #vlrSelectionModal .vlr-content-item {
+        min-height: 70px;
+        padding: 12px;
+    }
+    
+    #vlrSelectionModal .vlr-content-item .form-check {
+        min-width: 2em;
+    }
 }
 
 #vlrSelectionModal .vlr-content-item[style*="display: none"] {
@@ -9392,5 +9418,198 @@ body select:focus,
     
     .filter-label {
         font-size: 0.8rem;
+    }
+}
+
+/* ========================================
+   ASSESSMENT DETAILS PAGE STYLES
+   ======================================== */
+
+/* Assessment Details Page Layout */
+.assessment-details .card {
+    transition: transform 0.2s ease-in-out;
+}
+
+.assessment-details .card:hover {
+    transform: translateY(-2px);
+}
+
+.assessment-details .text-purple {
+    color: #6f42c1 !important;
+}
+
+/* Context and User Item Interactions */
+.context-item:hover, .user-item:hover {
+    background-color: #f8f9fa !important;
+}
+
+.context-item.selected, .user-item.selected {
+    background-color: #e3f2fd !important;
+}
+
+.user-checkbox {
+    margin-right: 10px;
+}
+
+#selectedUsersCount {
+    font-weight: bold;
+    color: #6f42c1;
+}
+
+/* Table Hover Effects */
+.table-hover tbody tr:hover {
+    background-color: #f8f9fa;
+}
+
+.table-active {
+    background-color: #e3f2fd !important;
+}
+
+/* ========================================
+   AUTOCOMPLETE SEARCH STYLES
+   ======================================== */
+
+/* Autocomplete Container */
+.autocomplete-container {
+    position: relative;
+    width: 100%;
+}
+
+/* Autocomplete Dropdown */
+.autocomplete-dropdown {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    background: white;
+    border: 1px solid #dee2e6;
+    border-top: none;
+    border-radius: 0 0 0.375rem 0.375rem;
+    box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+    max-height: 300px;
+    overflow-y: auto;
+    z-index: 1000;
+}
+
+/* Course Item in Dropdown */
+.course-item {
+    padding: 12px 16px;
+    cursor: pointer;
+    border-bottom: 1px solid #f8f9fa;
+    transition: background-color 0.2s ease;
+}
+
+.course-item:hover {
+    background-color: #f8f9fa;
+}
+
+.course-item:last-child {
+    border-bottom: none;
+}
+
+/* Course Name in Dropdown */
+.course-name {
+    font-weight: 600;
+    color: #212529;
+    margin-bottom: 4px;
+}
+
+/* Course Stats in Dropdown */
+.course-stats {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.course-stats .badge {
+    font-size: 0.75rem;
+}
+
+/* Selected Course Display */
+.selected-course {
+    background-color: #e3f2fd;
+    border: 1px solid #6f42c1;
+    border-radius: 0.375rem;
+    padding: 8px 12px;
+    margin-top: 8px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.selected-course .course-info {
+    flex: 1;
+}
+
+.selected-course .course-name {
+    font-weight: 600;
+    color: #6f42c1;
+    margin: 0;
+}
+
+.selected-course .course-stats {
+    margin: 4px 0 0 0;
+}
+
+/* Remove Button for Selected Course */
+.selected-course .remove-btn {
+    background: none;
+    border: none;
+    color: #6c757d;
+    cursor: pointer;
+    padding: 4px;
+    border-radius: 50%;
+    transition: all 0.2s ease;
+}
+
+.selected-course .remove-btn:hover {
+    background-color: #f8f9fa;
+    color: #dc3545;
+}
+
+/* ========================================
+   RESPONSIVE DESIGN FOR ASSESSMENT DETAILS
+   ======================================== */
+
+@media (max-width: 768px) {
+    .autocomplete-dropdown {
+        max-height: 250px;
+    }
+    
+    .course-item {
+        padding: 10px 12px;
+    }
+    
+    .course-stats {
+        gap: 6px;
+    }
+    
+    .course-stats .badge {
+        font-size: 0.7rem;
+    }
+    
+    .selected-course {
+        padding: 6px 10px;
+    }
+    
+    .selected-course .course-name {
+        font-size: 0.9rem;
+    }
+}
+
+@media (max-width: 576px) {
+    .course-stats {
+        flex-direction: column;
+        gap: 4px;
+    }
+    
+    .selected-course {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 8px;
+    }
+    
+    .selected-course .remove-btn {
+        align-self: flex-end;
     }
 }

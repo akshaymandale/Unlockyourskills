@@ -4,12 +4,15 @@ if (session_status() === PHP_SESSION_NONE) {
 }
 
 require_once 'models/ExternalProgressModel.php';
+require_once 'models/SharedContentCompletionService.php';
 
 class ExternalProgressController {
     private $externalProgressModel;
+    private $sharedContentService;
 
     public function __construct() {
         $this->externalProgressModel = new ExternalProgressModel();
+        $this->sharedContentService = new SharedContentCompletionService();
     }
 
     /**
@@ -141,12 +144,10 @@ class ExternalProgressController {
             );
 
             if ($result) {
-                // Update completion tracking
-                require_once 'models/CompletionTrackingService.php';
-                $completionService = new CompletionTrackingService();
-                $completionService->handleContentCompletion($userId, $courseId, $contentId, 'external', $clientId);
-                
-                // Completion tracking is already handled by handleContentCompletion above
+                // Handle shared content completion
+                $this->sharedContentService->handleSharedContentCompletion(
+                    $userId, $courseId, $contentId, $clientId, 'external', 'module'
+                );
 
                 echo json_encode(['success' => true, 'message' => 'Content marked as completed']);
             } else {
@@ -434,58 +435,7 @@ class ExternalProgressController {
         }
     }
 
-    /**
-     * Check if external content is a prerequisite and start tracking
-     */
-    private function startPrerequisiteTrackingIfApplicable($userId, $courseId, $contentId, $clientId) {
-        try {
-            require_once 'models/CompletionTrackingService.php';
-            $completionService = new CompletionTrackingService();
-            
-            // Check if this external content is a prerequisite
-            $isPrerequisite = $this->isContentPrerequisite($courseId, $contentId, 'external');
-            
-            if ($isPrerequisite) {
-                $completionService->startPrerequisiteTracking($userId, $courseId, $contentId, 'external', $clientId);
-            }
-        } catch (Exception $e) {
-            error_log("Error in startPrerequisiteTrackingIfApplicable: " . $e->getMessage());
-        }
-    }
 
-    /**
-     * Start module tracking if external content belongs to a module
-     */
-    private function startModuleTrackingIfApplicable($userId, $courseId, $contentId, $contentType, $clientId) {
-        try {
-            require_once 'models/CompletionTrackingService.php';
-            $completionService = new CompletionTrackingService();
-            
-            // Start module tracking if this content belongs to a module
-            $completionService->startModuleTrackingIfApplicable($userId, $courseId, $contentId, $contentType, $clientId);
-        } catch (Exception $e) {
-            error_log("Error in startModuleTrackingIfApplicable: " . $e->getMessage());
-        }
-    }
-
-    /**
-     * Check if external content is a prerequisite and mark as complete
-     */
-    private function markPrerequisiteCompleteIfApplicable($userId, $courseId, $contentId, $clientId) {
-        try {
-            require_once 'models/CompletionTrackingService.php';
-            $completionService = new CompletionTrackingService();
-            
-            // Check if this external content is a prerequisite
-            $isPrerequisite = $this->isContentPrerequisite($courseId, $contentId, 'external');
-            
-            if ($isPrerequisite) {
-                $completionService->markPrerequisiteComplete($userId, $courseId, $contentId, 'external', $clientId);
-            }
-        } catch (Exception $e) {
-            error_log("Error in markPrerequisiteCompleteIfApplicable: " . $e->getMessage());
-        }
-    }
 
     /**
      * Check if content is a prerequisite
@@ -508,22 +458,4 @@ class ExternalProgressController {
         }
     }
 
-    /**
-     * Update prerequisite completion if external content is a prerequisite
-     */
-    private function updatePrerequisiteCompletionIfApplicable($userId, $courseId, $contentId, $clientId) {
-        try {
-            require_once 'models/CompletionTrackingService.php';
-            $completionService = new CompletionTrackingService();
-            
-            // Check if this external content is a prerequisite
-            $isPrerequisite = $this->isContentPrerequisite($courseId, $contentId, 'external');
-            
-            if ($isPrerequisite) {
-                $completionService->updatePrerequisiteCompletion($userId, $courseId, $contentId, 'external', $clientId);
-            }
-        } catch (Exception $e) {
-            error_log("Error in updatePrerequisiteCompletionIfApplicable: " . $e->getMessage());
-        }
-    }
 }

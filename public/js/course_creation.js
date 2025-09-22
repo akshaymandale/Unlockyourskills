@@ -1286,7 +1286,7 @@ window.addModuleContent = function(moduleId) {
             break;
         default:
             console.log('[DEBUG] No course type selected.');
-            showToast('Please select a course type first.', 'error');
+            showErrorToast('Please select a course type first.');
             return;
     }
     console.log('[DEBUG] Selected course type:', courseType);
@@ -1427,7 +1427,7 @@ window.updateModuleDescription = function(moduleId, description) {
 window.showVLRModal = function(context, moduleIdOrType) {
     // VLR content should be loaded globally as window.vlrContent
     if (!window.vlrContent || Object.keys(window.vlrContent).length === 0) {
-        showToast('VLR content not available', 'error');
+        showErrorToast('VLR content not available');
         return;
     }
     let title = 'Select VLR Content';
@@ -1444,6 +1444,11 @@ window.showVLRModal = function(context, moduleIdOrType) {
         console.log('[DEBUG] showVLRModal preselectedIds for module_content:', preselectedIds);
         // Filter allowed types by course type
         const courseType = document.getElementById('course_type')?.value;
+        if (!courseType) {
+            console.log('[DEBUG] No course type selected in showVLRModal.');
+            showErrorToast('Please select a course type first.');
+            return;
+        }
         if (courseType === 'e-learning') {
             allowedTypes = ['scorm', 'non_scorm', 'document', 'external', 'interactive', 'audio', 'video', 'image'];
         } else if (courseType === 'blended') {
@@ -1545,7 +1550,7 @@ function showVLRContentModal(title, content, type, moduleId = null, preselectedI
                                 </div>
                                 <div class="row g-3" id="content-grid-${contentType}">
                                     ${groupedContent[contentType].map(item => `
-                                        <div class="col-md-6 col-lg-4 vlr-content-item d-flex align-items-center gap-3 p-3 border rounded bg-white position-relative" 
+                                        <div class="col-md-6 col-lg-4 vlr-content-item d-flex gap-3 p-3 border rounded bg-white position-relative" 
                                              tabindex="0" role="option" aria-label="${item.title}" 
                                              data-vlr-id="${item.id}" 
                                              data-vlr-type="${item.type}"
@@ -1562,7 +1567,7 @@ function showVLRContentModal(title, content, type, moduleId = null, preselectedI
                                                     ${item.fileSize ? `<span class="badge bg-info-subtle text-info small" title="File Size">${item.fileSize}</span>` : ''}
                                                 </div>
                                             </div>
-                                            <div class="form-check ms-2 flex-shrink-0" style="min-width:2.5em;">
+                                            <div class="form-check flex-shrink-0" style="min-width:2.5em;">
                                                 <input class="form-check-input vlr-checkbox" type="checkbox" value="${item.id}" id="vlr-${item.id}" aria-label="Select ${item.title}" style="accent-color: var(--bs-primary, #4b0082); width:1.3em; height:1.3em;">
                                                 <label class="form-check-label visually-hidden" for="vlr-${item.id}">Select</label>
                                             </div>

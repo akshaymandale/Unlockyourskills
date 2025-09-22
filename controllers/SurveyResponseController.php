@@ -1,14 +1,17 @@
 <?php
 require_once 'controllers/BaseController.php';
 require_once 'models/SurveyResponseModel.php';
+require_once 'models/SharedContentCompletionService.php';
 require_once 'core/IdEncryption.php';
 require_once 'config/Database.php';
 
 class SurveyResponseController extends BaseController {
     private $surveyResponseModel;
+    private $sharedContentService;
 
     public function __construct() {
         $this->surveyResponseModel = new SurveyResponseModel();
+        $this->sharedContentService = new SharedContentCompletionService();
     }
 
     /**
@@ -226,18 +229,10 @@ class SurveyResponseController extends BaseController {
                 $result = $this->surveyResponseModel->completeSurvey($clientId, $courseId, $userId, $surveyPackageId, $processedResponses);
                 
                 if ($result) {
-                    // Trigger completion tracking for prerequisites/post-requisites (same as assignments)
-                    try {
-                        require_once 'models/CompletionTrackingService.php';
-                        $completionService = new CompletionTrackingService();
-                        $completionService->handleContentCompletion($userId, $courseId, $surveyPackageId, 'survey', $clientId);
-                        
-                        // Mark prerequisite as complete if applicable
-                        $this->markPrerequisiteCompleteIfApplicable($userId, $courseId, $surveyPackageId, $clientId);
-                    } catch (Exception $e) {
-                        error_log("Error in survey completion tracking: " . $e->getMessage());
-                        // Don't fail the survey submission if completion tracking fails
-                    }
+                    // Handle shared content completion
+                    $this->sharedContentService->handleSharedContentCompletion(
+                        $userId, $courseId, $surveyPackageId, $clientId, 'survey', 'module'
+                    );
                     
                     $this->jsonResponse([
                         'success' => true, 
@@ -263,24 +258,6 @@ class SurveyResponseController extends BaseController {
         }
     }
 
-    /**
-     * Check if survey is a prerequisite and mark as complete
-     */
-    private function markPrerequisiteCompleteIfApplicable($userId, $courseId, $surveyPackageId, $clientId) {
-        try {
-            require_once 'models/CompletionTrackingService.php';
-            $completionService = new CompletionTrackingService();
-            
-            // Check if this survey is a prerequisite
-            $isPrerequisite = $this->isContentPrerequisite($courseId, $surveyPackageId, 'survey');
-            
-            if ($isPrerequisite) {
-                $completionService->markPrerequisiteComplete($userId, $courseId, $surveyPackageId, 'survey', $clientId);
-            }
-        } catch (Exception $e) {
-            error_log("Error in markPrerequisiteCompleteIfApplicable: " . $e->getMessage());
-        }
-    }
 
     /**
      * Check if content is a prerequisite

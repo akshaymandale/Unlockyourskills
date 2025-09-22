@@ -33,7 +33,7 @@ class CourseApplicabilityModel {
             return $stmt->execute([
                 ':course_id' => $courseId,
                 ':field_id' => $data['custom_field_id'],
-                ':custom_field_value' => $data['custom_field_value'],
+                ':field_value' => $data['custom_field_value'],
                 ':client_id' => $clientId
             ]);
         } elseif ($type === 'user') {

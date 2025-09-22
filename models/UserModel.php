@@ -915,6 +915,30 @@ class UserModel {
     }
 
     /**
+     * Get users by custom field value
+     */
+    public function getUsersByCustomField($clientId, $fieldId, $value) {
+        try {
+            $sql = "SELECT id, full_name, email, profile_id FROM user_profiles 
+                    WHERE client_id = :client_id 
+                    AND customised_{$fieldId} = :field_value 
+                    AND is_deleted = 0
+                    ORDER BY full_name ASC";
+            
+            $stmt = $this->conn->prepare($sql);
+            $stmt->execute([
+                ':client_id' => $clientId,
+                ':field_value' => $value
+            ]);
+            
+            return $stmt->fetchAll(PDO::FETCH_ASSOC);
+        } catch (PDOException $e) {
+            error_log("UserModel getUsersByCustomField error: " . $e->getMessage());
+            return [];
+        }
+    }
+
+    /**
      * Get user emails for autocomplete search in reports_to field
      */
     public function getUserEmailsForAutocomplete($searchTerm = '', $clientId = null, $limit = 20, $offset = 0) {

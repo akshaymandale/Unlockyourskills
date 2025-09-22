@@ -1369,13 +1369,20 @@ class ProgressTrackingModel {
         try {
             $stmt = $this->conn->prepare("
                 SELECT COUNT(*) FROM course_applicability 
-                WHERE course_id = ?
+                WHERE course_id = ? AND client_id = ?
                 AND (
                     applicability_type = 'all' 
                     OR (applicability_type = 'user' AND user_id = ?)
+                    OR (applicability_type = 'custom_field' AND EXISTS (
+                        SELECT 1 FROM custom_field_values cfv 
+                        WHERE cfv.user_id = ? 
+                        AND cfv.custom_field_id = course_applicability.custom_field_id 
+                        AND cfv.field_value COLLATE utf8mb4_unicode_ci = course_applicability.custom_field_value COLLATE utf8mb4_unicode_ci
+                        AND cfv.is_deleted = 0
+                    ))
                 )
             ");
-            $stmt->execute([$courseId, $userId]);
+            $stmt->execute([$courseId, $clientId, $userId, $userId]);
             return $stmt->fetchColumn() > 0;
         } catch (PDOException $e) {
             error_log("ProgressTrackingModel::hasCourseAccess error: " . $e->getMessage());

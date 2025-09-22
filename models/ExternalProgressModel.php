@@ -283,7 +283,6 @@ class ExternalProgressModel {
 
     /**
      * Calculate time spent from started_at and completed_at timestamps
-     * (Same logic as PrerequisiteCompletionModel::calculateTimeSpent)
      */
     private function calculateTimeSpentFromTimestamps($userId, $courseId, $contentId, $clientId) {
         try {

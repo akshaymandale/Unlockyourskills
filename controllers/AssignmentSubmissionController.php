@@ -7,14 +7,17 @@
 
 require_once 'controllers/BaseController.php';
 require_once 'models/AssignmentSubmissionModel.php';
+require_once 'models/SharedContentCompletionService.php';
 require_once 'core/IdEncryption.php';
 
 class AssignmentSubmissionController extends BaseController {
     private $assignmentSubmissionModel;
     private $conn;
+    private $sharedContentService;
 
     public function __construct() {
         $this->assignmentSubmissionModel = new AssignmentSubmissionModel();
+        $this->sharedContentService = new SharedContentCompletionService();
         
         // Initialize database connection
         require_once 'config/Database.php';
@@ -570,13 +573,10 @@ class AssignmentSubmissionController extends BaseController {
                         $progressModel->calculateCourseProgress($userId, $courseId, $clientId);
                     }
                     
-                    // Trigger completion tracking for prerequisites/post-requisites (always trigger)
-                    require_once 'models/CompletionTrackingService.php';
-                    $completionService = new CompletionTrackingService();
-                    $completionService->handleContentCompletion($userId, $courseId, $assignmentPackageId, 'assignment', $clientId);
-                    
-                    // Mark prerequisite as complete if applicable
-                    $this->markPrerequisiteCompleteIfApplicable($userId, $courseId, $assignmentPackageId, $clientId);
+                    // Handle shared content completion
+                    $this->sharedContentService->handleSharedContentCompletion(
+                        $userId, $courseId, $assignmentPackageId, $clientId, 'assignment', 'module'
+                    );
                 } catch (Exception $e) {
                     error_log("Error updating assignment progress: " . $e->getMessage());
                     // Don't fail the submission if progress tracking fails
@@ -779,58 +779,7 @@ class AssignmentSubmissionController extends BaseController {
         exit;
     }
 
-    /**
-     * Check if assignment is a prerequisite and start tracking
-     */
-    private function startPrerequisiteTrackingIfApplicable($userId, $courseId, $assignmentPackageId, $clientId) {
-        try {
-            require_once 'models/CompletionTrackingService.php';
-            $completionService = new CompletionTrackingService();
-            
-            // Check if this assignment is a prerequisite
-            $isPrerequisite = $this->isContentPrerequisite($courseId, $assignmentPackageId, 'assignment');
-            
-            if ($isPrerequisite) {
-                $completionService->startPrerequisiteTracking($userId, $courseId, $assignmentPackageId, 'assignment', $clientId);
-            }
-        } catch (Exception $e) {
-            error_log("Error in startPrerequisiteTrackingIfApplicable: " . $e->getMessage());
-        }
-    }
 
-    /**
-     * Start module tracking if assignment belongs to a module
-     */
-    private function startModuleTrackingIfApplicable($userId, $courseId, $assignmentPackageId, $contentType, $clientId) {
-        try {
-            require_once 'models/CompletionTrackingService.php';
-            $completionService = new CompletionTrackingService();
-            
-            // Start module tracking if this content belongs to a module
-            $completionService->startModuleTrackingIfApplicable($userId, $courseId, $assignmentPackageId, $contentType, $clientId);
-        } catch (Exception $e) {
-            error_log("Error in startModuleTrackingIfApplicable: " . $e->getMessage());
-        }
-    }
-
-    /**
-     * Check if assignment is a prerequisite and mark as complete
-     */
-    private function markPrerequisiteCompleteIfApplicable($userId, $courseId, $assignmentPackageId, $clientId) {
-        try {
-            require_once 'models/CompletionTrackingService.php';
-            $completionService = new CompletionTrackingService();
-            
-            // Check if this assignment is a prerequisite
-            $isPrerequisite = $this->isContentPrerequisite($courseId, $assignmentPackageId, 'assignment');
-            
-            if ($isPrerequisite) {
-                $completionService->markPrerequisiteComplete($userId, $courseId, $assignmentPackageId, 'assignment', $clientId);
-            }
-        } catch (Exception $e) {
-            error_log("Error in markPrerequisiteCompleteIfApplicable: " . $e->getMessage());
-        }
-    }
 
     /**
      * Check if content is a prerequisite

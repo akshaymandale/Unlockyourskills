@@ -1,12 +1,15 @@
 <?php
 require_once 'models/ProgressTrackingModel.php';
+require_once 'models/SharedContentCompletionService.php';
 require_once 'config/Localization.php';
 
 class ProgressTrackingController {
     private $progressModel;
+    private $sharedContentService;
 
     public function __construct() {
         $this->progressModel = new ProgressTrackingModel();
+        $this->sharedContentService = new SharedContentCompletionService();
     }
 
     // =====================================================
@@ -473,6 +476,13 @@ class ProgressTrackingController {
             $result = $this->progressModel->updateInteractiveProgress($userId, $courseId, $contentId, $clientId, $data);
             
             if ($result) {
+                // Handle shared content completion if interactive content is completed
+                if (isset($data['is_completed']) && $data['is_completed'] == 1) {
+                    $this->sharedContentService->handleSharedContentCompletion(
+                        $userId, $courseId, $contentId, $clientId, 'interactive', 'module'
+                    );
+                }
+                
                 $this->jsonResponse([
                     'success' => true,
                     'message' => 'Interactive content progress updated successfully'
