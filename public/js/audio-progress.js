@@ -926,14 +926,30 @@ class AudioProgressTracker {
 
 // Initialize audio progress tracking when DOM is loaded
 document.addEventListener('DOMContentLoaded', function() {
+    console.log('AudioProgressTracker: DOMContentLoaded event fired');
+    
     // Check if we're on an audio content page
     const audioElement = document.querySelector('audio');
     if (audioElement) {
+        console.log('AudioProgressTracker: Audio element found');
+        
         // Get progress tracking parameters from the page
         const urlParams = new URLSearchParams(window.location.search);
         const courseId = urlParams.get('course_id');
         const moduleId = urlParams.get('module_id');
         const contentId = urlParams.get('content_id');
+        const type = urlParams.get('type');
+        
+        console.log('AudioProgressTracker: URL parameters:', { courseId, moduleId, contentId, type });
+        
+        // Skip AudioProgressTracker initialization for external content
+        // External content should use ExternalProgressTracker instead
+        if (type === 'external') {
+            console.log('AudioProgressTracker: Skipping initialization for external content');
+            return;
+        }
+        
+        console.log('AudioProgressTracker: Proceeding with initialization for non-external content');
         
         // For audio content, we need to get the actual audio package ID
         // We'll need to make an AJAX call to get this information or pass it as a parameter
@@ -964,6 +980,8 @@ document.addEventListener('DOMContentLoaded', function() {
         } else {
             console.warn('AudioProgressTracker: Missing required parameters for progress tracking');
         }
+    } else {
+        console.log('AudioProgressTracker: No audio element found, skipping initialization');
     }
 });
 

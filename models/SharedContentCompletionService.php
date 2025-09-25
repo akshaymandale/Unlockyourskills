@@ -164,13 +164,26 @@ class SharedContentCompletionService {
                 $sql = "SELECT * FROM {$table} 
                         WHERE document_package_id = ? AND user_id = ? AND course_id = ? AND client_id = ? 
                         ORDER BY completed_at DESC, updated_at DESC LIMIT 1";
-            } elseif (in_array($contentType, ['image', 'interactive'])) {
-                // For other content types that support prerequisites, try both content_id and prerequisite_id
+            } elseif ($contentType === 'image') {
+                // For image content, look by image_package_id since that's the actual content identifier
+                $sql = "SELECT * FROM {$table} 
+                        WHERE image_package_id = ? AND user_id = ? AND course_id = ? AND client_id = ? 
+                        ORDER BY completed_at DESC, updated_at DESC LIMIT 1";
+            } elseif ($contentType === 'interactive') {
+                // For interactive content, try both content_id and prerequisite_id
                 $sql = "SELECT * FROM {$table} 
                         WHERE (content_id = ? OR prerequisite_id = ?) AND user_id = ? AND course_id = ? AND client_id = ? 
                         ORDER BY completed_at DESC, updated_at DESC LIMIT 1";
                 $stmt = $this->conn->prepare($sql);
                 $stmt->execute([$contentId, $contentId, $userId, $courseId, $clientId]);
+                return $stmt->fetch(PDO::FETCH_ASSOC);
+            } elseif ($contentType === 'external') {
+                // For external content, look by external_package_id since that's the actual content identifier
+                $sql = "SELECT * FROM {$table} 
+                        WHERE external_package_id = ? AND user_id = ? AND course_id = ? AND client_id = ? 
+                        ORDER BY completed_at DESC, updated_at DESC LIMIT 1";
+                $stmt = $this->conn->prepare($sql);
+                $stmt->execute([$contentId, $userId, $courseId, $clientId]);
                 return $stmt->fetch(PDO::FETCH_ASSOC);
             } else {
                 $sql = "SELECT * FROM {$table} 
@@ -456,40 +469,36 @@ class SharedContentCompletionService {
     private function insertImageModuleProgress($userId, $courseId, $moduleContent, $clientId, $progressData) {
         $sql = "INSERT INTO image_progress (
                     user_id, course_id, content_id, image_package_id, client_id,
-                    started_at, current_image, total_images, images_viewed, viewed_percentage,
-                    completion_threshold, is_completed, status, time_spent, last_viewed_at,
-                    completed_at, created_at, updated_at
+                    started_at, image_status, is_completed, view_count, viewed_at,
+                    created_at, updated_at
                 ) VALUES (
-                    ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW()
+                    ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW()
                 )";
         
         $stmt = $this->conn->prepare($sql);
         $stmt->execute([
             $userId, $courseId, $moduleContent['content_id'], $progressData['image_package_id'], $clientId,
-            $progressData['started_at'], $progressData['current_image'], $progressData['total_images'], 
-            $progressData['images_viewed'], $progressData['viewed_percentage'], $progressData['completion_threshold'],
-            $progressData['is_completed'], $progressData['status'], $progressData['time_spent'], 
-            $progressData['last_viewed_at'], $progressData['completed_at']
+            $progressData['started_at'], $progressData['image_status'] ?? 'viewed', 
+            $progressData['is_completed'], $progressData['view_count'] ?? 1, 
+            $progressData['viewed_at'] ?? date('Y-m-d H:i:s')
         ]);
     }
     
     private function insertImagePrerequisiteProgress($userId, $courseId, $prerequisiteId, $clientId, $progressData) {
         $sql = "INSERT INTO image_progress (
                     user_id, course_id, prerequisite_id, image_package_id, client_id,
-                    started_at, current_image, total_images, images_viewed, viewed_percentage,
-                    completion_threshold, is_completed, status, time_spent, last_viewed_at,
+                    started_at, image_status, is_completed, view_count, viewed_at,
                     completed_at, created_at, updated_at
                 ) VALUES (
-                    ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW()
+                    ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW()
                 )";
         
         $stmt = $this->conn->prepare($sql);
         $stmt->execute([
             $userId, $courseId, $prerequisiteId, $progressData['image_package_id'], $clientId,
-            $progressData['started_at'], $progressData['current_image'], $progressData['total_images'], 
-            $progressData['images_viewed'], $progressData['viewed_percentage'], $progressData['completion_threshold'],
-            $progressData['is_completed'], $progressData['status'], $progressData['time_spent'], 
-            $progressData['last_viewed_at'], $progressData['completed_at']
+            $progressData['started_at'], $progressData['image_status'] ?? 'viewed', 
+            $progressData['is_completed'], $progressData['view_count'] ?? 1, 
+            $progressData['viewed_at'] ?? date('Y-m-d H:i:s'), $progressData['completed_at'] ?? date('Y-m-d H:i:s')
         ]);
     }
     
@@ -541,35 +550,44 @@ class SharedContentCompletionService {
     // External Progress Methods
     private function insertExternalModuleProgress($userId, $courseId, $moduleContent, $clientId, $progressData) {
         $sql = "INSERT INTO external_progress (
-                    user_id, course_id, content_id, client_id,
-                    started_at, time_spent, is_completed, status, last_accessed_at,
-                    completed_at, created_at, updated_at
+                    user_id, course_id, content_id, external_package_id, client_id,
+                    started_at, time_spent, is_completed, external_url, visit_count,
+                    last_visited_at, completed_at, completion_notes, created_at, updated_at
                 ) VALUES (
-                    ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW()
+                    ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW()
                 )";
         
         $stmt = $this->conn->prepare($sql);
         $stmt->execute([
-            $userId, $courseId, $moduleContent['content_id'], $clientId,
-            $progressData['started_at'], $progressData['time_spent'], $progressData['is_completed'], 
-            $progressData['status'], $progressData['last_accessed_at'], $progressData['completed_at']
+            $userId, $courseId, $moduleContent['content_id'], $moduleContent['actual_content_id'], $clientId,
+            $progressData['started_at'] ?? null, $progressData['time_spent'] ?? 0, $progressData['is_completed'] ?? 0, 
+            $progressData['external_url'] ?? '', $progressData['visit_count'] ?? 0,
+            $progressData['last_visited_at'] ?? null, $progressData['completed_at'] ?? null, 
+            $progressData['completion_notes'] ?? null
         ]);
     }
     
     private function insertExternalPrerequisiteProgress($userId, $courseId, $prerequisiteId, $clientId, $progressData) {
+        // Get the external_package_id from the prerequisite
+        $stmt = $this->conn->prepare("SELECT prerequisite_id FROM course_prerequisites WHERE id = ?");
+        $stmt->execute([$prerequisiteId]);
+        $externalPackageId = $stmt->fetchColumn();
+        
         $sql = "INSERT INTO external_progress (
-                    user_id, course_id, prerequisite_id, client_id,
-                    started_at, time_spent, is_completed, status, last_accessed_at,
-                    completed_at, created_at, updated_at
+                    user_id, course_id, prerequisite_id, external_package_id, client_id,
+                    started_at, time_spent, is_completed, external_url, visit_count,
+                    last_visited_at, completed_at, completion_notes, created_at, updated_at
                 ) VALUES (
-                    ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW()
+                    ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW()
                 )";
         
         $stmt = $this->conn->prepare($sql);
         $stmt->execute([
-            $userId, $courseId, $prerequisiteId, $clientId,
-            $progressData['started_at'], $progressData['time_spent'], $progressData['is_completed'], 
-            $progressData['status'], $progressData['last_accessed_at'], $progressData['completed_at']
+            $userId, $courseId, $prerequisiteId, $externalPackageId, $clientId,
+            $progressData['started_at'] ?? null, $progressData['time_spent'] ?? 0, $progressData['is_completed'] ?? 0, 
+            $progressData['external_url'] ?? '', $progressData['visit_count'] ?? 0,
+            $progressData['last_visited_at'] ?? null, $progressData['completed_at'] ?? null, 
+            $progressData['completion_notes'] ?? null
         ]);
     }
     

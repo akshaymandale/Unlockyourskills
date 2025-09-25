@@ -1222,9 +1222,9 @@ function isPrerequisiteCompleted($userId, $courseId, $prerequisiteId, $prerequis
                         return false; // Prerequisite not found
                     }
                     
-                    // Now check external_progress using the course_prerequisites.id
+                    // Now check external_progress using the course_prerequisites.id as prerequisite_id
                     $sql = "SELECT is_completed FROM external_progress 
-                            WHERE user_id = ? AND course_id = ? AND content_id = ? AND client_id = ?";
+                            WHERE user_id = ? AND course_id = ? AND prerequisite_id = ? AND client_id = ?";
                     $stmt = $db->prepare($sql);
                     $stmt->execute([$userId, $courseId, $prereqRecord['course_prerequisite_id'], $clientId]);
                     
@@ -3276,22 +3276,55 @@ function isPrerequisiteCompleted($userId, $courseId, $prerequisiteId, $prerequis
                                             }
                                         }
                                     } elseif ($pre['prerequisite_type'] === 'external') {
-                                        // For external content prerequisites, use view-content with proper parameters
-                                        $viewer = UrlHelper::url('my-courses/view-content') . '?type=external&title=' . urlencode($pre['title']) . '&src=' . urlencode($pre['external_url'] ?? '') . '&course_id=' . $GLOBALS['course']['id'] . '&content_id=' . $pre['id'] . '&external_package_id=' . $pre['prerequisite_id'] . '&prerequisite_id=' . $pre['id'];
+                                        // For external prerequisites, check completion status and show appropriate button
+                                        $userId = $_SESSION['user']['id'] ?? $_SESSION['id'] ?? 75;
+                                        $clientId = $_SESSION['user']['client_id'] ?? $_SESSION['client_id'] ?? 1;
                                         
-                                        // Add progress tracking attributes for external content
-                                        $progressAttrs = "data-external-content='true' " .
-                                                       "data-course-id='" . $GLOBALS['course']['id'] . "' " .
-                                                       "data-content-id='" . $pre['id'] . "' " .
-                                                       "data-external-package-id='" . $pre['prerequisite_id'] . "' " .
-                                                       "data-client-id='" . ($_SESSION['user']['client_id'] ?? '') . "' " .
-                                                       "data-user-id='" . ($_SESSION['user']['id'] ?? '') . "' " .
-                                                       "data-content-type='external' " .
-                                                       "data-auto-complete='false'";
+                                        // Check if external content is completed
+                                        $isExternalCompleted = hasUserCompletedExternalContent($GLOBALS['course']['id'], $userId, $pre['prerequisite_id']);
                                         
-                                        echo "<a class='prerequisite-action-btn {$config['class']} launch-content-btn external-content-launch' target='_blank' href='" . htmlspecialchars($viewer) . "' data-type='external' data-content-id='" . $pre['id'] . "' data-prerequisite-id='" . $pre['id'] . "' " . $progressAttrs . ">";
-                                        echo "<i class='fas {$config['icon']} me-1'></i>{$config['label']}";
-                                        echo "</a>";
+                                        if ($isExternalCompleted) {
+                                            // External content completed - show completed button
+                                            echo "<button class='prerequisite-action-btn btn-success' disabled title='External content completed'>";
+                                            echo "<i class='fas fa-check-circle me-1'></i>Completed";
+                                            echo "</button>";
+                                        } else {
+                                            // External content not completed - show launch button
+                                            $viewer = UrlHelper::url('my-courses/view-content') . '?type=external&title=' . urlencode($pre['title']) . '&src=' . urlencode($pre['external_url'] ?? '') . '&course_id=' . $GLOBALS['course']['id'] . '&external_package_id=' . $pre['prerequisite_id'] . '&prerequisite_id=' . $pre['id'];
+                                            
+                                            // Add progress tracking attributes for external content
+                                            $progressAttrs = "data-external-content='true' " .
+                                                           "data-course-id='" . $GLOBALS['course']['id'] . "' " .
+                                                           "data-content-id='" . $pre['id'] . "' " .
+                                                           "data-external-package-id='" . $pre['prerequisite_id'] . "' " .
+                                                           "data-client-id='" . ($_SESSION['user']['client_id'] ?? '') . "' " .
+                                                           "data-user-id='" . ($_SESSION['user']['id'] ?? '') . "' " .
+                                                           "data-content-type='external' " .
+                                                           "data-auto-complete='false'";
+                                            
+                                            echo "<a class='prerequisite-action-btn {$config['class']} launch-content-btn external-content-launch' target='_blank' href='" . htmlspecialchars($viewer) . "' data-type='external' data-content-id='" . $pre['id'] . "' data-prerequisite-id='" . $pre['id'] . "' " . $progressAttrs . ">";
+                                            echo "<i class='fas {$config['icon']} me-1'></i>{$config['label']}";
+                                            echo "</a>";
+                                        }
+                                    } elseif ($pre['prerequisite_type'] === 'image') {
+                                        // For image prerequisites, check completion status and show appropriate button
+                                        $userId = $_SESSION['user']['id'] ?? $_SESSION['id'] ?? 75;
+                                        $clientId = $_SESSION['user']['client_id'] ?? $_SESSION['client_id'] ?? 1;
+                                        
+                                        // Check if image is completed
+                                        $isImageCompleted = hasUserCompletedImageContent($GLOBALS['course']['id'], $userId, $pre['prerequisite_id']);
+                                        
+                                        if ($isImageCompleted) {
+                                            // Image completed - show completed button
+                                            echo "<button class='prerequisite-action-btn btn-success' disabled title='Image content completed'>";
+                                            echo "<i class='fas fa-check-circle me-1'></i>Completed";
+                                            echo "</button>";
+                                        } else {
+                                            // Image not completed - show launch button
+                                            echo "<a class='prerequisite-action-btn {$config['class']} launch-content-btn' href='#' data-type='image' data-content-id='" . $pre['id'] . "' data-prerequisite-id='" . $pre['id'] . "' onclick='launchPrerequisiteImage(event, " . $GLOBALS['course']['id'] . ", " . $pre['id'] . ", " . $pre['prerequisite_id'] . ", \"" . addslashes($pre['title']) . "\")'>";
+                                            echo "<i class='fas {$config['icon']} me-1'></i>{$config['label']}";
+                                            echo "</a>";
+                                        }
                                     } elseif ($pre['prerequisite_type'] === 'scorm') {
                                         // For SCORM prerequisites, check completion status and show appropriate button
                                         $userId = $_SESSION['user']['id'] ?? $_SESSION['id'] ?? 75;
@@ -3917,7 +3950,7 @@ function isPrerequisiteCompleted($userId, $courseId, $prerequisiteId, $prerequis
                                                                         }
                                                                         $statusHtml .= "</div>";
                                                                         
-                                                                        $viewer = UrlHelper::url('my-courses/view-content') . '?type=external&title=' . urlencode($content['title']) . '&src=' . urlencode($resolved) . '&course_id=' . $GLOBALS['course']['id'] . '&module_id=' . $module['id'] . '&content_id=' . $content['id'];
+                                                                        $viewer = UrlHelper::url('my-courses/view-content') . '?type=external&title=' . urlencode($content['title']) . '&src=' . urlencode($resolved) . '&course_id=' . $GLOBALS['course']['id'] . '&module_id=' . $module['id'] . '&content_id=' . $content['id'] . '&external_package_id=' . $content['content_id'];
                                                                         
                                                                         // Add progress tracking attributes
                                                                         $progressAttrs = "data-external-content='true' " .
@@ -4841,6 +4874,64 @@ function launchPrerequisiteSCORM(event, courseId, prerequisiteId, scormPackageId
     return false;
 }
 
+// Function to handle image content in prerequisites
+function launchPrerequisiteImage(event, courseId, prerequisiteId, imagePackageId, title) {
+    event.preventDefault();
+    
+    console.log('Launching prerequisite image:', { courseId, prerequisiteId, imagePackageId, title });
+    
+    // Construct the image viewer URL
+    const viewerUrl = `/Unlockyourskills/my-courses/start?type=image&id=${imagePackageId}&course_id=${courseId}`;
+    
+    // Open the image viewer in a new window
+    const imageWindow = window.open(viewerUrl, '_blank', 'width=1200,height=800,scrollbars=yes,resizable=yes');
+    
+    if (imageWindow) {
+        console.log('Prerequisite image player window opened successfully');
+        
+        // Focus the new window
+        imageWindow.focus();
+        
+        // Add event listener for when the window is closed
+        let hasRefreshed = false; // Prevent multiple refreshes
+        let checkInterval = null;
+        
+        const checkClosed = setInterval(() => {
+            if (imageWindow.closed && !hasRefreshed) {
+                console.log('Prerequisite image player window closed');
+                clearInterval(checkClosed);
+                hasRefreshed = true;
+                
+                // Add return parameter and refresh to show updated image progress
+                const currentUrl = new URL(window.location);
+                currentUrl.searchParams.set('image_return', 'true');
+                window.history.replaceState({}, '', currentUrl);
+                
+                // Refresh after a short delay to show updated progress
+                setTimeout(() => {
+                    window.location.reload();
+                }, 500);
+            }
+        }, 1000);
+        
+        // Store the interval reference for cleanup
+        checkInterval = checkClosed;
+        
+        // Cleanup function to prevent memory leaks
+        window.addEventListener('beforeunload', () => {
+            if (checkInterval) {
+                clearInterval(checkInterval);
+            }
+        });
+        
+    } else {
+        console.error('Failed to open prerequisite image player window');
+        alert('Failed to open image viewer. Please check your popup blocker settings.');
+    }
+    
+    return false;
+}
+
 // Function to handle SCORM content in postrequisites
 function launchPostrequisiteSCORM(event, encryptedId, contentType) {
     event.preventDefault();
@@ -5406,11 +5497,31 @@ function startDocumentCloseMonitoring() {
                         window.location.reload();
                     }, 2000);
                 });
+            } else if (closedContentType === 'External') {
+                console.log('External content was closed - updating progress before refresh');
+                console.log('Calling refreshExternalProgress for content ID:', closedContentId);
+                
+                // Update progress and then refresh after it completes
+                refreshExternalProgress(closedContentId).then((result) => {
+                    console.log('External progress update completed with result:', result);
+                    // Wait a bit more for the progress update to complete, then refresh
+                    setTimeout(() => {
+                        console.log('External progress updated, refreshing page...');
+                        window.location.reload();
+                    }, 1000);
+                }).catch((error) => {
+                    console.error('External progress update failed with error:', error);
+                    // If progress update fails, still refresh after delay
+                    setTimeout(() => {
+                        console.log('External progress update failed, refreshing page anyway...');
+                        window.location.reload();
+                    }, 2000);
+                });
             } else {
                 // For other content types, refresh the page after a short delay
-                console.log('Non-audio/video content closed, refreshing page after delay...');
+                console.log('Non-audio/video/external content closed, refreshing page after delay...');
                 setTimeout(() => {
-                    console.log('Refreshing page for non-audio/video content...');
+                    console.log('Refreshing page for other content types...');
                     window.location.reload();
                 }, 2000);
             }
@@ -5569,6 +5680,78 @@ function refreshVideoProgress(contentId) {
 
 // Global function for external access
 window.refreshVideoProgress = refreshVideoProgress;
+
+/**
+ * Refresh external content progress
+ */
+function refreshExternalProgress(contentId) {
+    if (!contentId) return Promise.resolve();
+    
+    console.log('Refreshing external progress for:', contentId);
+    
+    // Find the content card
+    const contentCard = document.querySelector(`[data-content-id="${contentId}"]`).closest('.content-item-card');
+    if (!contentCard) return Promise.resolve();
+    
+    // Show loading state
+    const progressText = contentCard.querySelector('.content-progress-text');
+    const progressFill = contentCard.querySelector('.progress-fill');
+    
+    if (progressText) progressText.textContent = 'Updating...';
+    if (progressFill) progressFill.classList.add('updating');
+    
+    // Make AJAX request to get updated external progress
+    return fetch(`/Unlockyourskills/external-progress/statistics?course_id=${window.courseId || document.querySelector('[data-course-id]')?.dataset.courseId}&content_id=${contentId}`, {
+        method: 'GET',
+        headers: {
+            'X-Requested-With': 'XMLHttpRequest'
+        },
+        credentials: 'same-origin'
+    })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                const progressPercentage = data.progress_percentage || 0;
+                const isCompleted = data.is_completed || false;
+                const status = data.status || 'not_started';
+                
+                // Update progress display
+                if (progressText) {
+                    if (isCompleted) {
+                        progressText.textContent = 'Completed';
+                        progressText.style.color = '#28a745';
+                    } else if (status === 'in_progress') {
+                        progressText.textContent = `${progressPercentage}%`;
+                    } else {
+                        progressText.textContent = 'Not Started';
+                    }
+                }
+                
+                if (progressFill) {
+                    progressFill.style.width = `${progressPercentage}%`;
+                    progressFill.setAttribute('aria-valuenow', progressPercentage);
+                    if (isCompleted) {
+                        progressFill.style.backgroundColor = '#28a745';
+                    }
+                }
+                
+                console.log(`External progress refreshed: ${progressPercentage}%, completed: ${isCompleted}`);
+                return true; // Success
+            }
+            return false; // No success
+        })
+        .catch(error => {
+            console.error('Error refreshing external progress:', error);
+            if (progressText) progressText.textContent = 'Error';
+            throw error; // Re-throw for catch handling
+        })
+        .finally(() => {
+            if (progressFill) progressFill.classList.remove('updating');
+        });
+}
+
+// Global function for external access
+window.refreshExternalProgress = refreshExternalProgress;
 
 // Feedback Modal Functions
 function openFeedbackModal(feedbackId, courseId) {

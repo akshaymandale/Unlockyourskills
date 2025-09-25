@@ -1167,6 +1167,7 @@ class MyCoursesModel {
      */
     private function isImageContentCompleted($contentId, $userId, $courseId, $clientId) {
         try {
+            // First try to find by content_id (for module content)
             $stmt = $this->conn->prepare("
                 SELECT is_completed FROM image_progress 
                 WHERE content_id = ? AND user_id = ? AND course_id = ? AND client_id = ?
@@ -1174,7 +1175,31 @@ class MyCoursesModel {
             $stmt->execute([$contentId, $userId, $courseId, $clientId]);
             $result = $stmt->fetch(PDO::FETCH_ASSOC);
             
-            return $result && $result['is_completed'] == 1;
+            if ($result) {
+                return $result['is_completed'] == 1;
+            }
+            
+            // If not found by content_id, check if this is a prerequisite and get the course_prerequisites.id
+            $stmt = $this->conn->prepare("
+                SELECT id FROM course_prerequisites 
+                WHERE course_id = ? AND prerequisite_id = ? AND prerequisite_type = 'image'
+            ");
+            $stmt->execute([$courseId, $contentId]);
+            $prereqResult = $stmt->fetch(PDO::FETCH_ASSOC);
+            
+            if ($prereqResult) {
+                // For prerequisites, look for records with prerequisite_id = course_prerequisites.id
+                $stmt = $this->conn->prepare("
+                    SELECT is_completed FROM image_progress 
+                    WHERE prerequisite_id = ? AND user_id = ? AND course_id = ? AND client_id = ?
+                ");
+                $stmt->execute([$prereqResult['id'], $userId, $courseId, $clientId]);
+                $result = $stmt->fetch(PDO::FETCH_ASSOC);
+                
+                return $result && $result['is_completed'] == 1;
+            }
+            
+            return false;
             
         } catch (Exception $e) {
             error_log("Error checking image content completion: " . $e->getMessage());
@@ -1192,6 +1217,7 @@ class MyCoursesModel {
      */
     private function isExternalContentCompleted($contentId, $userId, $courseId, $clientId) {
         try {
+            // First try to find by content_id (for module content)
             $stmt = $this->conn->prepare("
                 SELECT is_completed FROM external_progress 
                 WHERE content_id = ? AND user_id = ? AND course_id = ? AND client_id = ?
@@ -1199,7 +1225,31 @@ class MyCoursesModel {
             $stmt->execute([$contentId, $userId, $courseId, $clientId]);
             $result = $stmt->fetch(PDO::FETCH_ASSOC);
             
-            return $result && $result['is_completed'] == 1;
+            if ($result) {
+                return $result['is_completed'] == 1;
+            }
+            
+            // If not found by content_id, check if this is a prerequisite and get the course_prerequisites.id
+            $stmt = $this->conn->prepare("
+                SELECT id FROM course_prerequisites 
+                WHERE course_id = ? AND prerequisite_id = ? AND prerequisite_type = 'external'
+            ");
+            $stmt->execute([$courseId, $contentId]);
+            $prereqResult = $stmt->fetch(PDO::FETCH_ASSOC);
+            
+            if ($prereqResult) {
+                // For prerequisites, look for records with prerequisite_id = course_prerequisites.id
+                $stmt = $this->conn->prepare("
+                    SELECT is_completed FROM external_progress 
+                    WHERE prerequisite_id = ? AND user_id = ? AND course_id = ? AND client_id = ?
+                ");
+                $stmt->execute([$prereqResult['id'], $userId, $courseId, $clientId]);
+                $result = $stmt->fetch(PDO::FETCH_ASSOC);
+                
+                return $result && $result['is_completed'] == 1;
+            }
+            
+            return false;
             
         } catch (Exception $e) {
             error_log("Error checking external content completion: " . $e->getMessage());
@@ -1217,6 +1267,7 @@ class MyCoursesModel {
      */
     private function isInteractiveContentCompleted($contentId, $userId, $courseId, $clientId) {
         try {
+            // First try to find by content_id (for module content)
             $stmt = $this->conn->prepare("
                 SELECT is_completed FROM interactive_progress 
                 WHERE content_id = ? AND user_id = ? AND course_id = ? AND client_id = ?
@@ -1224,7 +1275,31 @@ class MyCoursesModel {
             $stmt->execute([$contentId, $userId, $courseId, $clientId]);
             $result = $stmt->fetch(PDO::FETCH_ASSOC);
             
-            return $result && $result['is_completed'] == 1;
+            if ($result) {
+                return $result['is_completed'] == 1;
+            }
+            
+            // If not found by content_id, check if this is a prerequisite and get the course_prerequisites.id
+            $stmt = $this->conn->prepare("
+                SELECT id FROM course_prerequisites 
+                WHERE course_id = ? AND prerequisite_id = ? AND prerequisite_type = 'interactive'
+            ");
+            $stmt->execute([$courseId, $contentId]);
+            $prereqResult = $stmt->fetch(PDO::FETCH_ASSOC);
+            
+            if ($prereqResult) {
+                // For prerequisites, look for records with prerequisite_id = course_prerequisites.id
+                $stmt = $this->conn->prepare("
+                    SELECT is_completed FROM interactive_progress 
+                    WHERE prerequisite_id = ? AND user_id = ? AND course_id = ? AND client_id = ?
+                ");
+                $stmt->execute([$prereqResult['id'], $userId, $courseId, $clientId]);
+                $result = $stmt->fetch(PDO::FETCH_ASSOC);
+                
+                return $result && $result['is_completed'] == 1;
+            }
+            
+            return false;
             
         } catch (Exception $e) {
             error_log("Error checking interactive content completion: " . $e->getMessage());

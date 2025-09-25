@@ -258,10 +258,25 @@ class ExternalProgressTracker {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/x-www-form-urlencoded',
+                'X-Requested-With': 'XMLHttpRequest'
             },
+            credentials: 'same-origin',
             body: new URLSearchParams(data)
         })
-        .then(response => response.json())
+        .then(response => {
+            // First get the response as text to see what we're actually getting
+            return response.text().then(text => {
+                console.log('ExternalProgressTracker: Raw server response:', text.substring(0, 200) + (text.length > 200 ? '...' : ''));
+                
+                // Try to parse as JSON
+                try {
+                    return JSON.parse(text);
+                } catch (e) {
+                    console.error('ExternalProgressTracker: Server returned non-JSON response:', text);
+                    throw new Error('Server returned non-JSON response: ' + text.substring(0, 100));
+                }
+            });
+        })
         .then(result => {
             if (result.success) {
                 console.log('External progress saved - Time spent:', this.formatTime(this.currentProgress.time_spent));
@@ -307,6 +322,8 @@ class ExternalProgressTracker {
                 console.log('External content marked as completed');
                 this.showCompletionNotification();
                 this.saveProgress(); // Save final progress
+                // Set close flag when content is completed
+                this.setExternalCloseFlag();
             } else {
                 console.error('Failed to mark as completed:', result.message);
                 this.currentProgress.is_completed = false; // Revert on failure
@@ -422,6 +439,8 @@ class ExternalProgressTracker {
             if (this.currentProgress.time_spent > 0 && !this.currentProgress.is_completed) {
                 this.beaconSave();
             }
+            // Set close flag to notify parent page
+            this.setExternalCloseFlag();
         });
 
         // Page hide event
@@ -429,6 +448,8 @@ class ExternalProgressTracker {
             if (this.currentProgress.time_spent > 0 && !this.currentProgress.is_completed) {
                 this.beaconSave();
             }
+            // Set close flag to notify parent page
+            this.setExternalCloseFlag();
         });
 
         // Unload event
@@ -436,6 +457,8 @@ class ExternalProgressTracker {
             if (this.currentProgress.time_spent > 0 && !this.currentProgress.is_completed) {
                 this.beaconSave();
             }
+            // Set close flag to notify parent page
+            this.setExternalCloseFlag();
         });
     }
 
@@ -481,6 +504,26 @@ class ExternalProgressTracker {
 
         // Save to localStorage as backup
         this.saveToLocalStorage(data);
+    }
+
+    /**
+     * Set external content close flag to notify parent page
+     */
+    setExternalCloseFlag() {
+        try {
+            if (this.options.contentId) {
+                // Check if flag is already set to prevent duplicates
+                const existingFlag = localStorage.getItem('external_closed_' + this.options.contentId);
+                if (!existingFlag) {
+                    localStorage.setItem('external_closed_' + this.options.contentId, Date.now().toString());
+                    console.log('ExternalProgressTracker: External close flag set for:', this.options.contentId);
+                } else {
+                    console.log('ExternalProgressTracker: External close flag already exists for:', this.options.contentId);
+                }
+            }
+        } catch (error) {
+            console.error('ExternalProgressTracker: Error setting external close flag:', error);
+        }
     }
 
     /**

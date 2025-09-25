@@ -162,7 +162,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     if (window.ImageProgressTracker) {
                         window.imageProgressTracker = new window.ImageProgressTracker({
                             courseId: parseInt(courseId),
-                            moduleId: parseInt(moduleId),
+                            moduleId: moduleId ? parseInt(moduleId) : null,
                             contentId: parseInt(contentId),
                             imagePackageId: parseInt(imagePackageId),
                             clientId: parseInt(clientId)

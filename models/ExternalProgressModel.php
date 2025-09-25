@@ -60,54 +60,124 @@ class ExternalProgressModel {
      */
     public function getOrCreateProgress($userId, $courseId, $contentId, $externalPackageId, $clientId) {
         try {
-            // Check if progress record exists
-            $sql = "SELECT * FROM external_progress 
-                    WHERE user_id = ? AND course_id = ? AND content_id = ? AND client_id = ?";
-            $stmt = $this->conn->prepare($sql);
-            $stmt->execute([$userId, $courseId, $contentId, $clientId]);
-            $progress = $stmt->fetch(PDO::FETCH_ASSOC);
-
-            if (!$progress) {
-                // Get external content URL for the record
-                // contentId could be course_prerequisites.id or course_module_content.id
-                $actualContentId = $this->getActualContentId($contentId);
-                
-                $urlSql = "SELECT 
-                    CASE 
-                        WHEN audio_source = 'upload' AND audio_file IS NOT NULL THEN 
-                            CASE 
-                                WHEN audio_file LIKE 'http%' THEN audio_file
-                                WHEN audio_file LIKE 'uploads/%' THEN audio_file
-                                ELSE CONCAT('uploads/external/audio/', audio_file)
-                            END
-                        WHEN course_url IS NOT NULL THEN course_url
-                        WHEN video_url IS NOT NULL THEN video_url
-                        WHEN article_url IS NOT NULL THEN article_url
-                        WHEN audio_url IS NOT NULL THEN audio_url
-                        ELSE ''
-                    END as external_url
-                    FROM external_content 
-                    WHERE id = ?";
-                $urlStmt = $this->conn->prepare($urlSql);
-                $urlStmt->execute([$actualContentId]);
-                $urlData = $urlStmt->fetch(PDO::FETCH_ASSOC);
-                $externalUrl = $urlData['external_url'] ?? '';
-
-                // Create new progress record
-                $sql = "INSERT INTO external_progress 
-                        (user_id, course_id, content_id, external_package_id, client_id, 
-                         started_at, external_url, visit_count, time_spent, is_completed, 
-                         last_visited_at, created_at, updated_at) 
-                        VALUES (?, ?, ?, ?, ?, NOW(), ?, 0, 0, 0, NULL, NOW(), NOW())";
+            // First check if this is a prerequisite by looking for it in course_prerequisites
+            $isPrerequisite = $this->isContentPrerequisite($courseId, $contentId, 'external');
+            
+            if ($isPrerequisite) {
+                // For prerequisites, look for records with prerequisite_id = contentId
+                $sql = "SELECT * FROM external_progress 
+                        WHERE user_id = ? AND course_id = ? AND prerequisite_id = ? AND client_id = ?";
                 $stmt = $this->conn->prepare($sql);
-                $stmt->execute([$userId, $courseId, $contentId, $externalPackageId, $clientId, $externalUrl]);
-                
-                // Get the newly created record
+                $stmt->execute([$userId, $courseId, $contentId, $clientId]);
+                $progress = $stmt->fetch(PDO::FETCH_ASSOC);
+
+                if (!$progress) {
+                    // Double-check to prevent race conditions - another thread might have created the record
+                    $sql = "SELECT * FROM external_progress 
+                            WHERE user_id = ? AND course_id = ? AND prerequisite_id = ? AND client_id = ?";
+                    $stmt = $this->conn->prepare($sql);
+                    $stmt->execute([$userId, $courseId, $contentId, $clientId]);
+                    $progress = $stmt->fetch(PDO::FETCH_ASSOC);
+                    
+                    if (!$progress) {
+                        // Get external content URL for the record
+                        $actualContentId = $this->getActualContentId($contentId);
+                    
+                        $urlSql = "SELECT 
+                            CASE 
+                                WHEN audio_source = 'upload' AND audio_file IS NOT NULL THEN 
+                                    CASE 
+                                        WHEN audio_file LIKE 'http%' THEN audio_file
+                                        WHEN audio_file LIKE 'uploads/%' THEN audio_file
+                                        ELSE CONCAT('uploads/external/audio/', audio_file)
+                                    END
+                                WHEN course_url IS NOT NULL THEN course_url
+                                WHEN video_url IS NOT NULL THEN video_url
+                                WHEN article_url IS NOT NULL THEN article_url
+                                WHEN audio_url IS NOT NULL THEN audio_url
+                                ELSE ''
+                            END as external_url
+                            FROM external_content 
+                            WHERE id = ?";
+                        $urlStmt = $this->conn->prepare($urlSql);
+                        $urlStmt->execute([$actualContentId]);
+                        $urlData = $urlStmt->fetch(PDO::FETCH_ASSOC);
+                        $externalUrl = $urlData['external_url'] ?? '';
+
+                        // Create new progress record for prerequisite with duplicate prevention
+                        try {
+                            $sql = "INSERT INTO external_progress 
+                                    (user_id, course_id, prerequisite_id, content_id, external_package_id, client_id, 
+                                     started_at, external_url, visit_count, time_spent, is_completed, 
+                                     last_visited_at, created_at, updated_at) 
+                                    VALUES (?, ?, ?, NULL, ?, ?, NOW(), ?, 0, 0, 0, NULL, NOW(), NOW())";
+                            $stmt = $this->conn->prepare($sql);
+                            $stmt->execute([$userId, $courseId, $contentId, $externalPackageId, $clientId, $externalUrl]);
+                            
+                            // Get the newly created record
+                            return $this->getProgress($userId, $courseId, $contentId, $clientId);
+                        } catch (PDOException $e) {
+                            // If duplicate key error, try to get the existing record
+                            if (strpos($e->getMessage(), 'Duplicate entry') !== false) {
+                                error_log("Duplicate record detected, fetching existing record: " . $e->getMessage());
+                                return $this->getProgress($userId, $courseId, $contentId, $clientId);
+                            } else {
+                                throw $e; // Re-throw if it's not a duplicate key error
+                            }
+                        }
+                    } else {
+                        return $progress;
+                    }
+                } else {
+                    return $progress;
+                }
+            } else {
+                // For module content, use the existing logic
                 $sql = "SELECT * FROM external_progress 
                         WHERE user_id = ? AND course_id = ? AND content_id = ? AND client_id = ?";
                 $stmt = $this->conn->prepare($sql);
                 $stmt->execute([$userId, $courseId, $contentId, $clientId]);
                 $progress = $stmt->fetch(PDO::FETCH_ASSOC);
+
+                if (!$progress) {
+                    // Get external content URL for the record
+                    $actualContentId = $this->getActualContentId($contentId);
+                
+                    $urlSql = "SELECT 
+                        CASE 
+                            WHEN audio_source = 'upload' AND audio_file IS NOT NULL THEN 
+                                CASE 
+                                    WHEN audio_file LIKE 'http%' THEN audio_file
+                                    WHEN audio_file LIKE 'uploads/%' THEN audio_file
+                                    ELSE CONCAT('uploads/external/audio/', audio_file)
+                                END
+                            WHEN course_url IS NOT NULL THEN course_url
+                            WHEN video_url IS NOT NULL THEN video_url
+                            WHEN article_url IS NOT NULL THEN article_url
+                            WHEN audio_url IS NOT NULL THEN audio_url
+                            ELSE ''
+                        END as external_url
+                        FROM external_content 
+                        WHERE id = ?";
+                    $urlStmt = $this->conn->prepare($urlSql);
+                    $urlStmt->execute([$actualContentId]);
+                    $urlData = $urlStmt->fetch(PDO::FETCH_ASSOC);
+                    $externalUrl = $urlData['external_url'] ?? '';
+
+                    // Create new progress record for module content
+                    // For module content, only set content_id and leave prerequisite_id as NULL
+                    $sql = "INSERT INTO external_progress 
+                            (user_id, course_id, prerequisite_id, content_id, external_package_id, client_id, 
+                             started_at, external_url, visit_count, time_spent, is_completed, 
+                             last_visited_at, created_at, updated_at) 
+                            VALUES (?, ?, NULL, ?, ?, ?, NOW(), ?, 0, 0, 0, NULL, NOW(), NOW())";
+                    $stmt = $this->conn->prepare($sql);
+                    $stmt->execute([$userId, $courseId, $contentId, $externalPackageId, $clientId, $externalUrl]);
+                    
+                    return $this->getProgress($userId, $courseId, $contentId, $clientId);
+                } else {
+                    return $progress;
+                }
             }
 
             return $progress;
@@ -122,6 +192,9 @@ class ExternalProgressModel {
      */
     public function updateProgress($userId, $courseId, $contentId, $clientId, $data) {
         try {
+            // Check if this is a prerequisite
+            $isPrerequisite = $this->isContentPrerequisite($courseId, $contentId, 'external');
+            
             // Set started_at if not already set and external content is being visited
             $setStartedAt = "";
             if (isset($data['visit_count']) && $data['visit_count'] > 0) {
@@ -162,16 +235,31 @@ class ExternalProgressModel {
                 $setCompletedAt = ", completed_at = CASE WHEN completed_at IS NULL THEN NOW() ELSE completed_at END";
             }
             
-            $sql = "UPDATE external_progress SET 
-                    visit_count = ?,
-                    time_spent = ?,
-                    is_completed = ?,
-                    completion_notes = ?,
-                    last_visited_at = NOW(),
-                    updated_at = NOW()
-                    $setStartedAt
-                    $setCompletedAt
-                    WHERE user_id = ? AND course_id = ? AND content_id = ? AND client_id = ?";
+            if ($isPrerequisite) {
+                // For prerequisites, update using prerequisite_id
+                $sql = "UPDATE external_progress SET 
+                        visit_count = ?,
+                        time_spent = ?,
+                        is_completed = ?,
+                        completion_notes = ?,
+                        last_visited_at = NOW(),
+                        updated_at = NOW()
+                        $setStartedAt
+                        $setCompletedAt
+                        WHERE user_id = ? AND course_id = ? AND prerequisite_id = ? AND client_id = ?";
+            } else {
+                // For module content, update using content_id
+                $sql = "UPDATE external_progress SET 
+                        visit_count = ?,
+                        time_spent = ?,
+                        is_completed = ?,
+                        completion_notes = ?,
+                        last_visited_at = NOW(),
+                        updated_at = NOW()
+                        $setStartedAt
+                        $setCompletedAt
+                        WHERE user_id = ? AND course_id = ? AND content_id = ? AND client_id = ?";
+            }
 
             // Set default completion note if completing and none provided
             $completionNotes = $data['completion_notes'] ?? null;
@@ -203,12 +291,24 @@ class ExternalProgressModel {
      */
     public function getProgress($userId, $courseId, $contentId, $clientId) {
         try {
-            $sql = "SELECT * FROM external_progress 
-                    WHERE user_id = ? AND course_id = ? AND content_id = ? AND client_id = ?";
-            $stmt = $this->conn->prepare($sql);
-            $stmt->execute([$userId, $courseId, $contentId, $clientId]);
+            // Check if this is a prerequisite
+            $isPrerequisite = $this->isContentPrerequisite($courseId, $contentId, 'external');
+            
+            if ($isPrerequisite) {
+                // For prerequisites, look for records with prerequisite_id = contentId
+                $sql = "SELECT * FROM external_progress 
+                        WHERE user_id = ? AND course_id = ? AND prerequisite_id = ? AND client_id = ?";
+                $stmt = $this->conn->prepare($sql);
+                $stmt->execute([$userId, $courseId, $contentId, $clientId]);
+            } else {
+                // For module content, use content_id
+                $sql = "SELECT * FROM external_progress WHERE user_id = ? AND course_id = ? AND content_id = ? AND client_id = ?";
+                $stmt = $this->conn->prepare($sql);
+                $stmt->execute([$userId, $courseId, $contentId, $clientId]);
+            }
             
             return $stmt->fetch(PDO::FETCH_ASSOC);
+            
         } catch (Exception $e) {
             error_log("Error in getProgress: " . $e->getMessage());
             return false;
@@ -224,12 +324,24 @@ class ExternalProgressModel {
             $progress = $this->getOrCreateProgress($userId, $courseId, $contentId, $externalPackageId, $clientId);
             
             if ($progress) {
-                // Increment visit count
-                $sql = "UPDATE external_progress SET 
-                        visit_count = visit_count + 1,
-                        last_visited_at = NOW(),
-                        updated_at = NOW()
-                        WHERE user_id = ? AND course_id = ? AND content_id = ? AND client_id = ?";
+                // Check if this is a prerequisite
+                $isPrerequisite = $this->isContentPrerequisite($courseId, $contentId, 'external');
+                
+                if ($isPrerequisite) {
+                    // For prerequisites, update using prerequisite_id
+                    $sql = "UPDATE external_progress SET 
+                            visit_count = visit_count + 1,
+                            last_visited_at = NOW(),
+                            updated_at = NOW()
+                            WHERE user_id = ? AND course_id = ? AND prerequisite_id = ? AND client_id = ?";
+                } else {
+                    // For module content, update using content_id
+                    $sql = "UPDATE external_progress SET 
+                            visit_count = visit_count + 1,
+                            last_visited_at = NOW(),
+                            updated_at = NOW()
+                            WHERE user_id = ? AND course_id = ? AND content_id = ? AND client_id = ?";
+                }
                 
                 $stmt = $this->conn->prepare($sql);
                 $result = $stmt->execute([$userId, $courseId, $contentId, $clientId]);
@@ -340,25 +452,67 @@ class ExternalProgressModel {
                 $completionNotes = 'User marked as viewed/completed';
             }
             
-            // First, ensure we have a progress record (create if doesn't exist)
-            $progress = $this->getOrCreateProgress($userId, $courseId, $contentId, 1, $clientId); // 1 is default external_package_id
+            // Check if this is a prerequisite
+            $isPrerequisite = $this->isContentPrerequisite($courseId, $contentId, 'external');
+            
+            // Get the actual external package ID
+            $externalPackageId = null;
+            if ($isPrerequisite) {
+                // For prerequisites, get the prerequisite_id from course_prerequisites
+                $stmt = $this->conn->prepare("SELECT prerequisite_id FROM course_prerequisites WHERE course_id = ? AND id = ? AND prerequisite_type = 'external'");
+                $stmt->execute([$courseId, $contentId]);
+                $result = $stmt->fetch(PDO::FETCH_ASSOC);
+                $externalPackageId = $result ? $result['prerequisite_id'] : null;
+            } else {
+                // For module content, get the content_id from course_module_content
+                $stmt = $this->conn->prepare("SELECT content_id FROM course_module_content WHERE id = ? AND content_type = 'external'");
+                $stmt->execute([$contentId]);
+                $result = $stmt->fetch(PDO::FETCH_ASSOC);
+                $externalPackageId = $result ? $result['content_id'] : null;
+            }
+            
+            if (!$externalPackageId) {
+                error_log("Could not determine external package ID for contentId: $contentId");
+                return false;
+            }
+            
+            // First, check if we have a progress record
+            $progress = $this->getProgress($userId, $courseId, $contentId, $clientId);
             
             if (!$progress) {
-                error_log("Failed to create/get progress record for markCompleted");
-                return false;
+                // If no record exists, try to create one
+                $progress = $this->getOrCreateProgress($userId, $courseId, $contentId, $externalPackageId, $clientId);
+                
+                if (!$progress) {
+                    error_log("Failed to create/get progress record for markCompleted");
+                    return false;
+                }
             }
             
             // Calculate time_spent from started_at to current time when completing
             $calculatedTimeSpent = $this->calculateTimeSpentToNow($userId, $courseId, $contentId, $clientId);
             
-            $sql = "UPDATE external_progress SET 
-                    is_completed = 1,
-                    completed_at = NOW(),
-                    time_spent = ?,
-                    completion_notes = ?,
-                    last_visited_at = NOW(),
-                    updated_at = NOW()
-                    WHERE user_id = ? AND course_id = ? AND content_id = ? AND client_id = ?";
+            if ($isPrerequisite) {
+                // For prerequisites, update using prerequisite_id
+                $sql = "UPDATE external_progress SET 
+                        is_completed = 1,
+                        completed_at = NOW(),
+                        time_spent = ?,
+                        completion_notes = ?,
+                        last_visited_at = NOW(),
+                        updated_at = NOW()
+                        WHERE user_id = ? AND course_id = ? AND prerequisite_id = ? AND client_id = ?";
+            } else {
+                // For module content, update using content_id
+                $sql = "UPDATE external_progress SET 
+                        is_completed = 1,
+                        completed_at = NOW(),
+                        time_spent = ?,
+                        completion_notes = ?,
+                        last_visited_at = NOW(),
+                        updated_at = NOW()
+                        WHERE user_id = ? AND course_id = ? AND content_id = ? AND client_id = ?";
+            }
             
             $stmt = $this->conn->prepare($sql);
             $result = $stmt->execute([$calculatedTimeSpent, $completionNotes, $userId, $courseId, $contentId, $clientId]);
@@ -375,24 +529,50 @@ class ExternalProgressModel {
      */
     public function getContentStatistics($userId, $courseId, $contentId, $clientId) {
         try {
-            $sql = "SELECT 
-                        visit_count,
-                        time_spent,
-                        is_completed,
-                        last_visited_at,
-                        completion_notes,
-                        CASE 
-                            WHEN is_completed = 1 THEN 100
-                            WHEN visit_count > 0 THEN 50
-                            ELSE 0
-                        END as progress_percentage,
-                        CASE 
-                            WHEN is_completed = 1 THEN 'completed'
-                            WHEN visit_count > 0 THEN 'in_progress'
-                            ELSE 'not_started'
-                        END as status
-                    FROM external_progress 
-                    WHERE user_id = ? AND course_id = ? AND content_id = ? AND client_id = ?";
+            // Check if this is a prerequisite
+            $isPrerequisite = $this->isContentPrerequisite($courseId, $contentId, 'external');
+            
+            if ($isPrerequisite) {
+                // For prerequisites, look for records with prerequisite_id = contentId
+                $sql = "SELECT 
+                            visit_count,
+                            time_spent,
+                            is_completed,
+                            last_visited_at,
+                            completion_notes,
+                            CASE 
+                                WHEN is_completed = 1 THEN 100
+                                WHEN visit_count > 0 THEN 50
+                                ELSE 0
+                            END as progress_percentage,
+                            CASE 
+                                WHEN is_completed = 1 THEN 'completed'
+                                WHEN visit_count > 0 THEN 'in_progress'
+                                ELSE 'not_started'
+                            END as status
+                        FROM external_progress 
+                        WHERE user_id = ? AND course_id = ? AND prerequisite_id = ? AND client_id = ?";
+            } else {
+                // For module content, use content_id
+                $sql = "SELECT 
+                            visit_count,
+                            time_spent,
+                            is_completed,
+                            last_visited_at,
+                            completion_notes,
+                            CASE 
+                                WHEN is_completed = 1 THEN 100
+                                WHEN visit_count > 0 THEN 50
+                                ELSE 0
+                            END as progress_percentage,
+                            CASE 
+                                WHEN is_completed = 1 THEN 'completed'
+                                WHEN visit_count > 0 THEN 'in_progress'
+                                ELSE 'not_started'
+                            END as status
+                        FROM external_progress 
+                        WHERE user_id = ? AND course_id = ? AND content_id = ? AND client_id = ?";
+            }
             
             $stmt = $this->conn->prepare($sql);
             $stmt->execute([$userId, $courseId, $contentId, $clientId]);
@@ -516,6 +696,23 @@ class ExternalProgressModel {
             return $stmt->fetchAll(PDO::FETCH_ASSOC);
         } catch (Exception $e) {
             error_log("Error in getContentTypeProgress: " . $e->getMessage());
+            return false;
+        }
+    }
+
+    /**
+     * Check if content is a prerequisite
+     */
+    private function isContentPrerequisite($courseId, $contentId, $contentType) {
+        try {
+            $sql = "SELECT COUNT(*) FROM course_prerequisites 
+                    WHERE course_id = ? AND id = ? AND prerequisite_type = ?";
+            $stmt = $this->conn->prepare($sql);
+            $stmt->execute([$courseId, $contentId, $contentType]);
+            
+            return $stmt->fetchColumn() > 0;
+        } catch (Exception $e) {
+            error_log("Error checking if content is prerequisite: " . $e->getMessage());
             return false;
         }
     }

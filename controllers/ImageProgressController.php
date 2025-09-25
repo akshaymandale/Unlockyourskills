@@ -65,12 +65,21 @@ class ImageProgressController {
             $success = $this->imageProgressModel->markAsViewed($userId, $courseId, $contentId, $clientId);
 
             if ($success) {
-                // Mark prerequisite as complete if applicable
-                $this->markPrerequisiteCompleteIfApplicable($userId, $courseId, $contentId, $clientId);
-                
                 // Handle shared content completion
+                // Determine content type and IDs for shared completion
+                $contextType = 'module'; // Default to module
+                $prerequisiteId = null;
+                $sharedContentId = $contentId; // Default to contentId
+                
+                // Check if this is a prerequisite by looking at the progress record
+                if ($progress['prerequisite_id'] && !$progress['content_id']) {
+                    $contextType = 'prerequisite';
+                    $prerequisiteId = $progress['prerequisite_id'];
+                    $sharedContentId = $imagePackageId; // Use image package ID for shared content lookup
+                }
+                
                 $this->sharedContentService->handleSharedContentCompletion(
-                    $userId, $courseId, $contentId, $clientId, 'image', 'module'
+                    $userId, $courseId, $sharedContentId, $clientId, 'image', $contextType, $prerequisiteId
                 );
                 
                 header('Content-Type: application/json');
@@ -172,10 +181,28 @@ class ImageProgressController {
             if ($success) {
                 // If image is completed, update completion tracking
                 if (isset($updateData['is_completed']) && $updateData['is_completed']) {
-                    // Handle shared content completion
-                    $this->sharedContentService->handleSharedContentCompletion(
-                        $userId, $courseId, $contentId, $clientId, 'image', 'module'
-                    );
+                    // Get the progress record to determine context
+                    $progress = $this->imageProgressModel->getProgress($userId, $courseId, $contentId, $clientId);
+                    
+                    if ($progress) {
+                        // Determine content type and IDs for shared completion
+                        $contextType = 'module'; // Default to module
+                        $prerequisiteId = null;
+                        $sharedContentId = $contentId; // Default to contentId
+                        $imagePackageId = $input['image_package_id'] ?? null;
+                        
+                        // Check if this is a prerequisite by looking at the progress record
+                        if ($progress['prerequisite_id'] && !$progress['content_id']) {
+                            $contextType = 'prerequisite';
+                            $prerequisiteId = $progress['prerequisite_id'];
+                            $sharedContentId = $imagePackageId; // Use image package ID for shared content lookup
+                        }
+                        
+                        // Handle shared content completion
+                        $this->sharedContentService->handleSharedContentCompletion(
+                            $userId, $courseId, $sharedContentId, $clientId, 'image', $contextType, $prerequisiteId
+                        );
+                    }
                 }
 
                 header('Content-Type: application/json');

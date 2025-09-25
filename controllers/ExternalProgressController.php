@@ -89,7 +89,7 @@ class ExternalProgressController {
             $updateData = [
                 'visit_count' => 1, // Default visit count
                 'time_spent' => $timeSpent,
-                'is_completed' => $isCompleted !== null ? $isCompleted : $currentIsCompleted,
+                'is_completed' => $isCompleted === 1 ? 1 : $currentIsCompleted, // Only update to completed (1), preserve existing completion status otherwise
                 'completion_notes' => $currentCompletionNotes // Preserve existing completion notes
             ];
 
@@ -109,6 +109,60 @@ class ExternalProgressController {
 
         } catch (Exception $e) {
             error_log("Error in updateTimeSpent: " . $e->getMessage());
+            http_response_code(500);
+            echo json_encode(['success' => false, 'message' => 'Internal server error']);
+        }
+    }
+
+    /**
+     * Get completion status for external content
+     */
+    public function getStatus() {
+        if (!isset($_SESSION['user']['id'])) {
+            http_response_code(401);
+            echo json_encode(['success' => false, 'message' => 'Unauthorized']);
+            exit;
+        }
+
+        $userId = $_SESSION['user']['id'];
+        $courseId = $_POST['course_id'] ?? null;
+        $contentId = $_POST['content_id'] ?? null; // This can be course_prerequisites.id or course_module_content.id
+        $clientId = $_SESSION['user']['client_id'] ?? null;
+
+        if (!$userId || !$courseId || !$contentId || !$clientId) {
+            http_response_code(400);
+            echo json_encode(['success' => false, 'message' => 'Missing required parameters']);
+            exit;
+        }
+
+        try {
+            $progress = $this->externalProgressModel->getProgress($userId, $courseId, $contentId, $clientId);
+            
+            if ($progress) {
+                echo json_encode([
+                    'success' => true, 
+                    'data' => [
+                        'is_completed' => $progress['is_completed'] == 1,
+                        'completed_at' => $progress['completed_at'],
+                        'time_spent' => $progress['time_spent'],
+                        'visit_count' => $progress['visit_count']
+                    ]
+                ]);
+            } else {
+                // No progress record found - content is not completed
+                echo json_encode([
+                    'success' => true, 
+                    'data' => [
+                        'is_completed' => false,
+                        'completed_at' => null,
+                        'time_spent' => 0,
+                        'visit_count' => 0
+                    ]
+                ]);
+            }
+
+        } catch (Exception $e) {
+            error_log("Error in getStatus: " . $e->getMessage());
             http_response_code(500);
             echo json_encode(['success' => false, 'message' => 'Internal server error']);
         }
@@ -144,10 +198,40 @@ class ExternalProgressController {
             );
 
             if ($result) {
-                // Handle shared content completion
-                $this->sharedContentService->handleSharedContentCompletion(
-                    $userId, $courseId, $contentId, $clientId, 'external', 'module'
-                );
+                // Determine context type for shared content completion
+                $contextType = 'module'; // Default to module
+                $prerequisiteId = null;
+                
+                // Check if this is a prerequisite
+                require_once 'config/Database.php';
+                $database = new Database();
+                $conn = $database->connect();
+                
+                $stmt = $conn->prepare("SELECT COUNT(*) FROM course_prerequisites WHERE course_id = ? AND id = ? AND prerequisite_type = 'external'");
+                $stmt->execute([$courseId, $contentId]);
+                $isPrerequisite = $stmt->fetchColumn() > 0;
+                
+                if ($isPrerequisite) {
+                    $contextType = 'prerequisite';
+                    $prerequisiteId = $contentId; // contentId is the course_prerequisites.id for prerequisites
+                    
+                    // Get the actual external package ID for shared content completion
+                    $stmt = $conn->prepare("SELECT prerequisite_id FROM course_prerequisites WHERE id = ?");
+                    $stmt->execute([$contentId]);
+                    $actualContentId = $stmt->fetchColumn();
+                } else {
+                    // For module content, get the actual external package ID
+                    $stmt = $conn->prepare("SELECT content_id FROM course_module_content WHERE id = ? AND content_type = 'external'");
+                    $stmt->execute([$contentId]);
+                    $actualContentId = $stmt->fetchColumn();
+                }
+                
+                // Handle shared content completion with the actual external package ID
+                if ($actualContentId) {
+                    $this->sharedContentService->handleSharedContentCompletion(
+                        $userId, $courseId, $actualContentId, $clientId, 'external', $contextType, $prerequisiteId
+                    );
+                }
 
                 echo json_encode(['success' => true, 'message' => 'Content marked as completed']);
             } else {
@@ -455,6 +539,38 @@ class ExternalProgressController {
         } catch (Exception $e) {
             error_log("Error checking if content is prerequisite: " . $e->getMessage());
             return false;
+        }
+    }
+
+    /**
+     * Update prerequisite completion if this external content is a prerequisite
+     */
+    private function updatePrerequisiteCompletionIfApplicable($userId, $courseId, $contentId, $clientId) {
+        try {
+            // Get the progress record to determine context
+            $progress = $this->externalProgressModel->getProgress($userId, $courseId, $contentId, $clientId);
+            
+            if ($progress && $progress['is_completed']) {
+                // Determine content type and IDs for shared completion
+                $contextType = 'module'; // Default to module
+                $prerequisiteId = null;
+                $sharedContentId = $contentId; // Default to contentId
+                $externalPackageId = $progress['external_package_id'] ?? null;
+                
+                // Check if this is a prerequisite by looking at the progress record
+                if ($progress['prerequisite_id'] && !$progress['content_id']) {
+                    $contextType = 'prerequisite';
+                    $prerequisiteId = $progress['prerequisite_id'];
+                    $sharedContentId = $externalPackageId; // Use external package ID for shared content lookup
+                }
+                
+                // Handle shared content completion
+                $this->sharedContentService->handleSharedContentCompletion(
+                    $userId, $courseId, $sharedContentId, $clientId, 'external', $contextType, $prerequisiteId
+                );
+            }
+        } catch (Exception $e) {
+            error_log("Error updating prerequisite completion: " . $e->getMessage());
         }
     }
 

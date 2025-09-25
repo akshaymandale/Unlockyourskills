@@ -509,7 +509,45 @@
       <?php elseif (($type ?? '') === 'external'): ?>
         <div class="external-content-container">
           <?php if (!empty($src)): ?>
-            <?php if (($GLOBALS['iframe_blocking_site'] ?? false) === true): ?>
+            <?php
+            // Check if this is an audio file based on the source URL
+            $isAudioFile = preg_match('/\.(mp3|wav|ogg|m4a|aac|flac)$/i', $src);
+            $isVideoFile = preg_match('/\.(mp4|webm|ogg|avi|mov|wmv|flv)$/i', $src);
+            ?>
+            
+            <?php if ($isAudioFile): ?>
+              <!-- Audio Player for uploaded audio files -->
+              <div class="audio-container" style="width: 100%; height: calc(100vh - 48px); display: flex; align-items: center; justify-content: center; background: #f8f9fa;">
+                <div style="text-align: center; max-width: 600px; padding: 40px;">
+                  <i class="fas fa-volume-up" style="font-size: 64px; color: #007bff; margin-bottom: 30px;"></i>
+                  <h3 style="color: #495057; margin-bottom: 20px;"><?= htmlspecialchars($title ?? 'Audio Content') ?></h3>
+                  <audio controls style="width: 100%; max-width: 500px; margin-bottom: 30px;" id="external-audio-player">
+                    <source src="<?= htmlspecialchars($src) ?>" type="audio/mpeg">
+                    <source src="<?= htmlspecialchars($src) ?>" type="audio/wav">
+                    <source src="<?= htmlspecialchars($src) ?>" type="audio/ogg">
+                    Your browser does not support the audio element.
+                  </audio>
+                  <div id="audio-debug-info" style="font-size: 12px; color: #666; margin-top: 10px;">
+                    <div>Audio Source: <?= htmlspecialchars($src) ?></div>
+                    <div id="audio-load-status">Loading...</div>
+                  </div>
+                  <p style="color: #6c757d; font-size: 14px;">
+                    <i class="fas fa-info-circle me-1"></i>
+                    Listen to the audio content above. You can mark it as complete when finished.
+                  </p>
+                </div>
+              </div>
+            <?php elseif ($isVideoFile): ?>
+              <!-- Video Player for uploaded video files -->
+              <div class="video-container" style="width: 100%; height: calc(100vh - 48px); display: flex; align-items: center; justify-content: center; background: #000;">
+                <video controls style="max-width: 100%; max-height: 100%;">
+                  <source src="<?= htmlspecialchars($src) ?>" type="video/mp4">
+                  <source src="<?= htmlspecialchars($src) ?>" type="video/webm">
+                  <source src="<?= htmlspecialchars($src) ?>" type="video/ogg">
+                  Your browser does not support the video tag.
+                </video>
+              </div>
+            <?php elseif (($GLOBALS['iframe_blocking_site'] ?? false) === true): ?>
               <!-- Show fallback immediately for known blocking sites -->
               <div class="iframe-fallback" style="height: calc(100vh - 48px); display: flex; align-items: center; justify-content: center; background: #f8f9fa;">
                 <div style="text-align: center; max-width: 600px; padding: 40px;">
@@ -589,7 +627,7 @@
     <div style="height: calc(100vh - 48px); display:flex; align-items:center; justify-content:center; color:#777; font-family: system-ui;">No content to display.</div>
   <?php endif; ?>
   
-  <script src="/Unlockyourskills/public/js/audio-progress.js"></script>
+  <script src="/Unlockyourskills/public/js/audio-progress.js?v=2"></script>
   <script src="/Unlockyourskills/public/js/video-progress.js"></script>
   <script src="/Unlockyourskills/public/js/image-progress.js"></script>
   <script src="/Unlockyourskills/public/js/external-progress.js"></script>
@@ -1769,18 +1807,21 @@
         // Check for prerequisite parameters as well
         const prerequisiteId = urlParams.get('prerequisite_id');
         const documentPackageId = urlParams.get('document_package_id');
+        const externalPackageId = urlParams.get('external_package_id');
         const hasModuleParams = !!(courseId && moduleId && contentId && contentType);
         const hasPrerequisiteParams = !!(courseId && prerequisiteId && documentPackageId && contentType);
+        const hasExternalParams = !!(courseId && contentId && externalPackageId && contentType === 'external');
         
         debugLog('⏳ Waiting for progress tracker...', {
           hasProgressTracker: !!window.progressTracker,
           isInitialized: window.progressTracker?.isInitialized,
           hasModuleParams: hasModuleParams,
           hasPrerequisiteParams: hasPrerequisiteParams,
-          hasAllParams: hasModuleParams || hasPrerequisiteParams
+          hasExternalParams: hasExternalParams,
+          hasAllParams: hasModuleParams || hasPrerequisiteParams || hasExternalParams
         });
         
-        if (window.progressTracker && window.progressTracker.isInitialized && (hasModuleParams || hasPrerequisiteParams)) {
+        if (window.progressTracker && window.progressTracker.isInitialized && (hasModuleParams || hasPrerequisiteParams || hasExternalParams)) {
           debugLog('✅ Progress tracker ready, setting course context');
           
           if (hasModuleParams) {
@@ -1789,6 +1830,9 @@
           } else if (hasPrerequisiteParams) {
             // Prerequisite content - use prerequisite_id as moduleId and document_package_id as contentId
             window.progressTracker.setCourseContext(courseId, prerequisiteId, documentPackageId, contentType);
+          } else if (hasExternalParams) {
+            // External content - use prerequisite_id as moduleId and external_package_id as contentId
+            window.progressTracker.setCourseContext(courseId, prerequisiteId, externalPackageId, contentType);
           }
           
           // Setup SCORM functionality
@@ -1856,6 +1900,7 @@
     console.log('Page is being unloaded - setting close flags');
     setDocumentCloseFlag();
     setAudioCloseFlag();
+    setExternalCloseFlag();
   });
 
   // Set close flags when page is hidden
@@ -1863,6 +1908,7 @@
     console.log('Page is being hidden - setting close flags');
     setDocumentCloseFlag();
     setAudioCloseFlag();
+    setExternalCloseFlag();
   });
 
   // Set close flags when window is unloaded
@@ -1870,6 +1916,7 @@
     console.log('Window is being unloaded - setting close flags');
     setDocumentCloseFlag();
     setAudioCloseFlag();
+    setExternalCloseFlag();
   });
 
   // Helper function to set document close flag
@@ -1925,6 +1972,21 @@
     }
   }
 
+  function setExternalCloseFlag() {
+    try {
+      const urlParams = new URLSearchParams(window.location.search);
+      const courseId = urlParams.get('course_id');
+      const contentId = urlParams.get('content_id') || urlParams.get('prerequisite_id');
+      
+      if (courseId && contentId) {
+        localStorage.setItem('external_closed_' + contentId, Date.now().toString());
+        console.log('External close flag set via event listener for:', contentId);
+      }
+    } catch (error) {
+      console.error('Error setting external close flag via event listener:', error);
+    }
+  }
+
   // Save progress on page unload
   window.addEventListener('beforeunload', function(e) {
     if (window.progressTracker && window.progressTracker.isInitialized && Object.keys(window.scormData).length > 0) {
@@ -1955,6 +2017,8 @@
     } else if (contentType === 'video') {
       // Video content will be handled by setDocumentCloseFlag() in the event listeners
       // No need to call it here as it's already handled by beforeunload, pagehide, and unload
+    } else if (contentType === 'external') {
+      setExternalCloseFlag();
     }
   });
 
@@ -2644,6 +2708,7 @@
     const courseId = '<?= $GLOBALS['course_id'] ?? '' ?>';
     const moduleId = '<?= $GLOBALS['module_id'] ?? '' ?>';
     const contentId = '<?= $GLOBALS['content_id'] ?? '' ?>';
+    const prerequisiteId = '<?= $GLOBALS['prerequisite_id'] ?? '' ?>';
     const externalPackageId = '<?= $GLOBALS['external_package_id'] ?? $GLOBALS['content_id'] ?? '' ?>';
     const clientId = '<?= $GLOBALS['client_id'] ?? '' ?>';
     const userId = '<?= $_SESSION['user']['id'] ?? '' ?>';
@@ -2652,40 +2717,159 @@
       courseId: courseId,
       moduleId: moduleId,
       contentId: contentId,
+      prerequisiteId: prerequisiteId,
       clientId: clientId,
       userId: userId
     });
     
-    // Check iframe loading
-    const iframe = document.querySelector('.viewer-frame');
-    if (iframe) {
-      console.log('Iframe found:', iframe);
-      console.log('Iframe src:', iframe.src);
+    // Check if this is audio or video content
+    const isAudioFile = /\.(mp3|wav|ogg|m4a|aac|flac)$/i.test('<?= $src ?? '' ?>');
+    const isVideoFile = /\.(mp4|webm|ogg|avi|mov|wmv|flv)$/i.test('<?= $src ?? '' ?>');
+    
+    if (isAudioFile) {
+      console.log('Audio file detected - setting up audio event tracking');
       
-      // Monitor iframe load events
-      iframe.addEventListener('load', function() {
-        console.log('Iframe loaded successfully');
-        // Hide fallback content when iframe loads successfully
-        const fallback = document.getElementById('iframeFallback');
-        if (fallback) {
-          fallback.style.display = 'none';
+      // For audio files, set up audio event tracking
+      const audioElement = document.querySelector('audio');
+      const audioDebugInfo = document.getElementById('audio-debug-info');
+      const audioLoadStatus = document.getElementById('audio-load-status');
+      
+      if (audioElement) {
+        console.log('External audio element found:', audioElement);
+        console.log('Audio source:', audioElement.src);
+        console.log('Audio readyState:', audioElement.readyState);
+        console.log('Audio networkState:', audioElement.networkState);
+        console.log('Audio controls enabled:', !audioElement.disabled);
+        
+        // Debug audio loading status
+        const updateAudioDebugStatus = () => {
+          if (audioLoadStatus) {
+            let status = `ReadyState: ${audioElement.readyState}, NetworkState: ${audioElement.networkState}`;
+            if (audioElement.readyState >= 2) {
+              status += `, Duration: ${audioElement.duration || 'unknown'}s`;
+            }
+            audioLoadStatus.textContent = status;
+          }
+        };
+        
+        // Update debug info immediately
+        updateAudioDebugStatus();
+        
+        // Listen for audio loading events
+        audioElement.addEventListener('loadstart', () => {
+          console.log('Audio load started');
+          updateAudioDebugStatus();
+        });
+        
+        audioElement.addEventListener('loadedmetadata', () => {
+          console.log('Audio metadata loaded, duration:', audioElement.duration);
+          updateAudioDebugStatus();
+        });
+        
+        audioElement.addEventListener('loadeddata', () => {
+          console.log('Audio data loaded');
+          updateAudioDebugStatus();
+        });
+        
+        audioElement.addEventListener('canplay', () => {
+          console.log('Audio can play');
+          updateAudioDebugStatus();
+        });
+        
+        audioElement.addEventListener('error', (e) => {
+          console.error('Audio error:', e);
+          if (audioLoadStatus) {
+            audioLoadStatus.textContent = `Error: ${e.target.error?.message || 'Unknown error'}`;
+          }
+        });
+        
+        if (markCompleteBtn && courseId && (contentId || prerequisiteId) && clientId && userId) {
+          console.log('Setting up audio progress tracking');
+          
+          // Auto-mark as completed when audio ends
+          audioElement.addEventListener('ended', function() {
+            console.log('Audio ended - auto-marking as completed');
+            if (markCompleteBtn && !markCompleteBtn.disabled && !isMarkingComplete) {
+              markCompleteBtn.click();
+            } else {
+              console.log('Auto-mark skipped - button disabled or already processing');
+            }
+          });
+          
+          // Optional: Track playback progress for time spent
+          audioElement.addEventListener('play', function() {
+            console.log('Audio started playing');
+          });
+          
+          audioElement.addEventListener('pause', function() {
+            console.log('Audio paused');
+          });
         }
-      });
-      
-      iframe.addEventListener('error', function() {
-        console.error('Iframe failed to load');
-        showIframeFallback();
-      });
-      
-      // Set a timeout to detect blocked iframes
-      setTimeout(function() {
-        if (iframe.contentWindow && iframe.contentWindow.location.href === 'about:blank') {
-          console.log('Iframe blocked - showing fallback');
-          showIframeFallback();
+      } else {
+        console.error('No audio element found for external content');
+        if (audioLoadStatus) {
+          audioLoadStatus.textContent = 'Error: No audio element found';
         }
-      }, 3000);
+      }
+    } else if (isVideoFile) {
+      console.log('Video file detected - setting up video event tracking');
+      
+      // For video files, set up video event tracking
+      const videoElement = document.querySelector('video');
+      if (videoElement && markCompleteBtn && courseId && contentId && clientId && userId) {
+        console.log('Setting up video progress tracking');
+        
+        // Auto-mark as completed when video ends
+        videoElement.addEventListener('ended', function() {
+          console.log('Video ended - auto-marking as completed');
+          if (markCompleteBtn && !markCompleteBtn.disabled && !isMarkingComplete) {
+            markCompleteBtn.click();
+          } else {
+            console.log('Auto-mark skipped - button disabled or already processing');
+          }
+        });
+        
+        // Optional: Track playback progress for time spent
+        videoElement.addEventListener('play', function() {
+          console.log('Video started playing');
+        });
+        
+        videoElement.addEventListener('pause', function() {
+          console.log('Video paused');
+        });
+      }
     } else {
-      console.error('Iframe not found');
+      // Check iframe loading for web content
+      const iframe = document.querySelector('.viewer-frame');
+      if (iframe) {
+        console.log('Iframe found:', iframe);
+        console.log('Iframe src:', iframe.src);
+        
+        // Monitor iframe load events
+        iframe.addEventListener('load', function() {
+          console.log('Iframe loaded successfully');
+          // Hide fallback content when iframe loads successfully
+          const fallback = document.getElementById('iframeFallback');
+          if (fallback) {
+            fallback.style.display = 'none';
+          }
+        });
+        
+        iframe.addEventListener('error', function() {
+          console.error('Iframe failed to load');
+          showIframeFallback();
+        });
+        
+        // Set a timeout to detect blocked iframes
+        setTimeout(function() {
+          if (iframe.contentWindow && iframe.contentWindow.location.href === 'about:blank') {
+            console.log('Iframe blocked - showing fallback');
+            showIframeFallback();
+          }
+        }, 3000);
+      } else {
+        console.error('Iframe not found');
+      }
     }
     
     // Function to show iframe fallback
@@ -2724,7 +2908,7 @@
       externalPackageId: externalPackageId
     });
 
-    if (markCompleteBtn && courseId && contentId && clientId && userId) {
+    if (markCompleteBtn && courseId && (contentId || prerequisiteId) && clientId && userId) {
       // Initialize external progress tracker
       const tracker = new ExternalProgressTracker({
         courseId: courseId,
@@ -2736,16 +2920,28 @@
         autoMarkCompleted: false
       });
 
-      // Handle mark as complete button click - SIMPLE APPROACH
+      // Handle mark as complete button click - SIMPLE APPROACH with duplicate prevention
+      let isMarkingComplete = false; // Flag to prevent multiple simultaneous calls
+      
       markCompleteBtn.addEventListener('click', function() {
+        // Prevent multiple simultaneous calls
+        if (isMarkingComplete || markCompleteBtn.disabled) {
+          console.log('Mark as complete already in progress or button disabled, ignoring click');
+          return;
+        }
+        
+        isMarkingComplete = true;
+        
         // Disable button to prevent multiple clicks
         markCompleteBtn.disabled = true;
         markCompleteBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Saving...';
         
+        console.log('Starting mark as complete process');
+        
         // Simple direct AJAX call to mark as completed
         const formData = new FormData();
         formData.append('course_id', courseId);
-        formData.append('content_id', contentId);
+        formData.append('content_id', contentId || prerequisiteId); // Use prerequisiteId for prerequisites
         formData.append('completion_notes', 'User marked as completed via button');
         
         fetch('/Unlockyourskills/external-progress/mark-completed', {
@@ -2761,7 +2957,7 @@
             markCompleteBtn.classList.add('btn-secondary');
             
             // Store in localStorage
-            localStorage.setItem(`external_completed_${contentId}`, 'true');
+            localStorage.setItem(`external_completed_${contentId || prerequisiteId}`, 'true');
             
             console.log('Content marked as completed successfully');
             
@@ -2769,6 +2965,7 @@
             closeTab();
           } else {
             // Re-enable button on error
+            isMarkingComplete = false; // Reset flag
             markCompleteBtn.disabled = false;
             markCompleteBtn.innerHTML = '<i class="fas fa-check-circle me-1"></i>Mark as Complete';
             alert('Failed to mark as completed. Please try again.');
@@ -2776,6 +2973,7 @@
         })
         .catch(error => {
           // Re-enable button on error
+          isMarkingComplete = false; // Reset flag
           markCompleteBtn.disabled = false;
           markCompleteBtn.innerHTML = '<i class="fas fa-check-circle me-1"></i>Mark as Complete';
           console.error('Error:', error);
@@ -2783,13 +2981,59 @@
         });
       });
 
-      // Check if already completed
-      if (localStorage.getItem(`external_completed_${contentId}`) === 'true') {
-        markCompleteBtn.innerHTML = '<i class="fas fa-check-circle me-1"></i>Completed';
-        markCompleteBtn.classList.remove('btn-success');
-        markCompleteBtn.classList.add('btn-secondary');
-        markCompleteBtn.disabled = true;
+      // Check actual completion status from server instead of localStorage
+      async function checkCompletionStatus() {
+        try {
+          const formData = new FormData();
+          formData.append('course_id', courseId);
+          formData.append('content_id', contentId || prerequisiteId);
+          
+          const response = await fetch('/Unlockyourskills/external-progress/get-status', {
+            method: 'POST',
+            body: formData,
+            credentials: 'same-origin'
+          });
+          
+          const result = await response.json();
+          if (result.success && result.data && result.data.is_completed) {
+            // Content is actually completed - update button state
+            markCompleteBtn.innerHTML = '<i class="fas fa-check-circle me-1"></i>Completed';
+            markCompleteBtn.classList.remove('btn-success');
+            markCompleteBtn.classList.add('btn-secondary');
+            markCompleteBtn.disabled = true;
+            
+            // Update localStorage to match database state
+            localStorage.setItem(`external_completed_${contentId || prerequisiteId}`, 'true');
+            
+            console.log('Content is already completed according to database');
+          } else {
+            // Content is not completed - ensure button is enabled
+            markCompleteBtn.innerHTML = '<i class="fas fa-check-circle me-1"></i>Mark as Complete';
+            markCompleteBtn.classList.remove('btn-secondary');
+            markCompleteBtn.classList.add('btn-success');
+            markCompleteBtn.disabled = false;
+            
+            // Clear localStorage to match database state
+            localStorage.removeItem(`external_completed_${contentId || prerequisiteId}`);
+            
+            console.log('Content is not completed according to database');
+          }
+        } catch (error) {
+          console.error('Error checking completion status:', error);
+          
+          // Fallback to localStorage check if server request fails
+          if (localStorage.getItem(`external_completed_${contentId || prerequisiteId}`) === 'true') {
+            markCompleteBtn.innerHTML = '<i class="fas fa-check-circle me-1"></i>Completed';
+            markCompleteBtn.classList.remove('btn-success');
+            markCompleteBtn.classList.add('btn-secondary');
+            markCompleteBtn.disabled = true;
+            console.log('Using localStorage fallback - content marked as completed');
+          }
+        }
       }
+      
+      // Check completion status on page load
+      checkCompletionStatus();
 
       console.log('External content progress tracker initialized:', {
         courseId: courseId,

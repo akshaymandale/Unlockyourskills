@@ -2,6 +2,22 @@
 // Course Preview Modal Content
 // This file is included by CourseCreationController@previewCourse
 
+// Helper function to get content type icons
+function getContentIcon($type) {
+    $icons = [
+        'scorm' => 'cube',
+        'video' => 'video',
+        'audio' => 'volume-up',
+        'document' => 'file-alt',
+        'image' => 'image',
+        'interactive' => 'gamepad',
+        'external' => 'external-link-alt',
+        'non_scorm' => 'archive'
+    ];
+    
+    return $icons[$type] ?? 'file';
+}
+
 // Check if course data is available
 if (!isset($course) || !$course) {
     echo '<div class="alert alert-danger"><i class="fas fa-exclamation-triangle me-2"></i>Course not found.</div>';
@@ -262,23 +278,6 @@ if (!isset($course) || !$course) {
     </div>
 </div>
 
-<?php
-// Helper function to get content type icons
-function getContentIcon($type) {
-    $icons = [
-        'scorm' => 'cube',
-        'video' => 'video',
-        'audio' => 'volume-up',
-        'document' => 'file-alt',
-        'image' => 'image',
-        'interactive' => 'gamepad',
-        'external' => 'external-link-alt',
-        'non_scorm' => 'archive'
-    ];
-    
-    return $icons[$type] ?? 'file';
-}
-?>
 
 <style>
 .course-preview {
