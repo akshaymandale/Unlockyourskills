@@ -289,7 +289,7 @@ class MyCoursesModel {
         // Get user's custom field values for matching
         $userCustomFields = $this->getUserCustomFieldValues($userId, $clientId);
 
-        // Build base query with client_id filtering
+        // Build base query with client_id filtering - include both course_applicability and course_enrollments
         $sql = "SELECT 
                     c.id, c.name, c.category_id, c.subcategory_id, c.thumbnail_image, c.course_status, c.difficulty_level,
                     c.created_by, c.created_at, c.updated_at, c.client_id,
@@ -322,17 +322,43 @@ class MyCoursesModel {
                         AND cfv.field_value COLLATE utf8mb4_unicode_ci = ca.custom_field_value COLLATE utf8mb4_unicode_ci
                         AND cfv.is_deleted = 0
                     ))
-                )";
-
-        // Note: Status filtering will be done after determining actual course status
-
-        // Search
-        if ($search) {
-            $sql .= " AND (c.name LIKE :search OR cat.name LIKE :search OR subcat.name LIKE :search)";
-            $params[':search'] = '%' . $search . '%';
+                )
+                
+                UNION
+                
+                SELECT 
+                    c.id, c.name, c.category_id, c.subcategory_id, c.thumbnail_image, c.course_status, c.difficulty_level,
+                    c.created_by, c.created_at, c.updated_at, c.client_id,
+                    cat.name AS category_name, subcat.name AS subcategory_name,
+                    0 AS progress, 'not_started' AS user_course_status
+                FROM courses c
+                INNER JOIN course_enrollments ce ON ce.course_id = c.id";
+        
+        if ($clientId) {
+            $sql .= " AND ce.client_id = :client_id";
+        }
+        
+        $sql .= " LEFT JOIN course_categories cat ON c.category_id = cat.id
+                LEFT JOIN course_subcategories subcat ON c.subcategory_id = subcat.id
+                WHERE c.is_deleted = 0 
+                AND ce.user_id = :user_id 
+                AND ce.status = 'approved' 
+                AND ce.deleted_at IS NULL";
+        
+        if ($clientId) {
+            $sql .= " AND c.client_id = :client_id";
         }
 
-        $sql .= " GROUP BY c.id ORDER BY ca.created_at DESC, c.name ASC";
+        // Search functionality - need to wrap in subquery for UNION
+        if ($search) {
+            $searchCondition = " AND (c.name LIKE :search OR cat.name LIKE :search OR subcat.name LIKE :search)";
+            $params[':search'] = '%' . $search . '%';
+        } else {
+            $searchCondition = "";
+        }
+
+        // Wrap the UNION in a subquery and add search condition
+        $sql = "SELECT * FROM (" . $sql . $searchCondition . ") as combined_courses ORDER BY created_at DESC, name ASC";
         $stmt = $this->conn->prepare($sql);
         foreach ($params as $k => $v) {
             $stmt->bindValue($k, $v);
@@ -409,10 +435,12 @@ class MyCoursesModel {
         }
         $params[':user_department'] = $userDepartment;
 
-        // Build count query with client_id filtering
+        // Build count query with client_id filtering - include both course_applicability and course_enrollments
         $sql = "SELECT COUNT(DISTINCT c.id) as total
-                FROM courses c
-                INNER JOIN course_applicability ca ON ca.course_id = c.id";
+                FROM (
+                    SELECT c.id
+                    FROM courses c
+                    INNER JOIN course_applicability ca ON ca.course_id = c.id";
         
         // Add client_id filter to course_applicability join
         if ($clientId) {
@@ -436,7 +464,28 @@ class MyCoursesModel {
                         AND cfv.field_value COLLATE utf8mb4_unicode_ci = ca.custom_field_value COLLATE utf8mb4_unicode_ci
                         AND cfv.is_deleted = 0
                     ))
-                )";
+                )
+                
+                UNION
+                
+                SELECT c.id
+                FROM courses c
+                INNER JOIN course_enrollments ce ON ce.course_id = c.id";
+        
+        if ($clientId) {
+            $sql .= " AND ce.client_id = :client_id";
+        }
+        
+        $sql .= " WHERE c.is_deleted = 0 
+                AND ce.user_id = :user_id 
+                AND ce.status = 'approved' 
+                AND ce.deleted_at IS NULL";
+        
+        if ($clientId) {
+            $sql .= " AND c.client_id = :client_id";
+        }
+        
+        $sql .= ") as c";
 
         // Filter by status
         if ($status === 'not_started') {

@@ -97,10 +97,29 @@ Router::get('/users/autocomplete', 'UserManagementController@getUserEmailsForAut
     Router::get('/my-courses', 'MyCoursesController@index');
     Router::get('/my-courses/list', 'MyCoursesController@getUserCourses');
     Router::get('/my-courses/count', 'MyCoursesController@getUserCoursesCount');
-    Router::get('/manage-portal', 'ManagePortalController@index');
     Router::get('/my-courses/details/{id}', 'MyCoursesController@details');
     Router::get('/my-courses/view-content', 'MyCoursesController@viewContent');
     Router::get('/my-courses/start', 'MyCoursesController@start');
+    
+    // SEARCH COURSES
+    // ===================================
+    Router::get('/search-courses', 'SearchCoursesController@index');
+    Router::get('/search-courses/list', 'SearchCoursesController@getCourses');
+    Router::get('/search-courses/count', 'SearchCoursesController@getCount');
+    
+    // COURSE ENROLLMENTS
+    // ===================================
+    Router::post('/course-enrollment/enroll', 'CourseEnrollmentController@enroll');
+    Router::get('/course-enrollment/user-enrollments', 'CourseEnrollmentController@getUserEnrollments');
+    Router::get('/course-enrollment/check', 'CourseEnrollmentController@checkEnrollment');
+    
+    // ENROLLMENT APPROVAL
+    // ===================================
+    Router::get('/enrollment-approval', 'EnrollmentApprovalController@index');
+    Router::get('/enrollment-approval/list', 'EnrollmentApprovalController@getEnrollments');
+    Router::post('/enrollment-approval/update', 'EnrollmentApprovalController@updateEnrollmentStatus');
+    Router::get('/enrollment-approval/stats', 'EnrollmentApprovalController@getEnrollmentStats');
+    Router::get('/manage-portal', 'ManagePortalController@index');
 
     // ===================================
     // AUDIO PROGRESS TRACKING
