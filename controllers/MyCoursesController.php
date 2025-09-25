@@ -377,10 +377,25 @@ class MyCoursesController {
             $contentId = $_GET['content_id'] ?? null;
             $imagePackageId = $_GET['image_package_id'] ?? null;
             $clientId = $_GET['client_id'] ?? null;
+            $prerequisiteId = $_GET['prerequisite_id'] ?? null;
             
             // Validate required parameters
-            if (!$courseId || !$moduleId || !$contentId || !$imagePackageId || !$clientId) {
+            if (!$courseId || !$imagePackageId || !$clientId) {
                 UrlHelper::redirect('my-courses');
+            }
+            
+            // Determine context: prerequisite vs module
+            if ($prerequisiteId) {
+                // This is a prerequisite - don't use content_id, use prerequisite_id
+                $contentId = null;
+                $moduleId = null;
+            } else {
+                // This is module content - prerequisite_id should not be set
+                $prerequisiteId = null;
+                // For module content, module_id and content_id are required
+                if (!$moduleId || !$contentId) {
+                    UrlHelper::redirect('my-courses');
+                }
             }
             
             // Get image file path from image_package table
@@ -402,6 +417,7 @@ class MyCoursesController {
             $GLOBALS['content_id'] = $contentId;
             $GLOBALS['image_package_id'] = $imagePackageId;
             $GLOBALS['client_id'] = $clientId;
+            $GLOBALS['prerequisite_id'] = $prerequisiteId;
         } elseif ($type === 'audio') {
             $courseId = $_GET['course_id'] ?? null;
             $moduleId = $_GET['module_id'] ?? null;
@@ -473,24 +489,23 @@ class MyCoursesController {
             $clientId = $_SESSION['user']['client_id'] ?? null;
             $prerequisiteId = $_GET['prerequisite_id'] ?? null;
             
-            // Use different IDs for prerequisites vs module content in external_progress
-            if ($prerequisiteId) {
-                // For prerequisites, use course_prerequisites.id
-                $contentId = $prerequisiteId;
-            } elseif ($contentId) {
-                // For module content, use course_module_content.id (keep as is)
-                // No conversion needed - contentId is already course_module_content.id
-            }
-            
-            // For external content, externalPackageId can come from either external_package_id or prerequisite_id
-            if (!$externalPackageId && $prerequisiteId) {
-                $externalPackageId = $prerequisiteId;
-            }
-            
-            // Validate required parameters for external content
-            // module_id is optional for prerequisites
-            if (!$courseId || !$contentId || !$clientId) {
+            // Validate required parameters
+            if (!$courseId || !$externalPackageId || !$clientId) {
                 UrlHelper::redirect('my-courses');
+            }
+            
+            // Determine context: prerequisite vs module
+            if ($prerequisiteId) {
+                // This is a prerequisite - don't use content_id, use prerequisite_id
+                $contentId = null;
+                $moduleId = null;
+            } else {
+                // This is module content - prerequisite_id should not be set
+                $prerequisiteId = null;
+                // For module content, module_id and content_id are required
+                if (!$moduleId || !$contentId) {
+                    UrlHelper::redirect('my-courses');
+                }
             }
             
             // Process the source URL for external content (convert YouTube to embed, etc.)
@@ -509,6 +524,7 @@ class MyCoursesController {
             $GLOBALS['course_id'] = $courseId;
             $GLOBALS['module_id'] = $moduleId;
             $GLOBALS['content_id'] = $contentId;
+            $GLOBALS['prerequisite_id'] = $prerequisiteId;
             $GLOBALS['external_package_id'] = $externalPackageId;
             $GLOBALS['client_id'] = $clientId;
         } else {
@@ -752,6 +768,22 @@ class MyCoursesController {
                     UrlHelper::redirect('my-courses');
                 }
                 
+                // Get the course_prerequisites.id for this prerequisite
+                require_once 'config/Database.php';
+                $database = new Database();
+                $conn = $database->connect();
+                
+                $stmt = $conn->prepare("
+                    SELECT id FROM course_prerequisites 
+                    WHERE course_id = ? AND prerequisite_id = ? AND prerequisite_type = 'image'
+                ");
+                $stmt->execute([$courseId, $id]);
+                $prereqResult = $stmt->fetch(PDO::FETCH_ASSOC);
+                
+                if (!$prereqResult) {
+                    UrlHelper::redirect('my-courses');
+                }
+                
                 // Get image package data
                 require_once 'models/ImageProgressModel.php';
                 $imageModel = new ImageProgressModel();
@@ -771,9 +803,9 @@ class MyCoursesController {
                     'title' => $imagePackage['title'],
                     'src' => $imageSrc,
                     'course_id' => $courseId,
-                    'content_id' => $id, // This is the prerequisite ID for prerequisites
-                    'image_package_id' => $id,
-                    'prerequisite_id' => $id,
+                    'content_id' => $prereqResult['id'], // This is the course_prerequisites.id
+                    'image_package_id' => $id, // This is the actual image package ID
+                    'prerequisite_id' => $prereqResult['id'], // This is the course_prerequisites.id
                     'client_id' => $clientId
                 ]);
                 
@@ -921,6 +953,28 @@ class MyCoursesController {
         // Site-root absolute path
         if ($url[0] === '/') {
             return $url;
+        }
+        
+        // Special handling for external content with uploaded audio files
+        if ($type === 'external' && strpos($url, 'uploads/external/') === 0 && !strpos($url, 'uploads/external/audio/')) {
+            // Check if this is an audio file by extension
+            $audioExtensions = ['mp3', 'wav', 'ogg', 'm4a', 'aac', 'flac'];
+            $extension = strtolower(pathinfo($url, PATHINFO_EXTENSION));
+            
+            if (in_array($extension, $audioExtensions)) {
+                // Fix the path to include /audio/ directory
+                $filename = basename($url);
+                $correctPath = 'uploads/external/audio/' . $filename;
+                
+                // Check if the file exists in the correct location
+                $fullPath = $_SERVER['DOCUMENT_ROOT'] . '/Unlockyourskills/' . $correctPath;
+                if (file_exists($fullPath)) {
+                    error_log("Fixed external audio path: $url -> $correctPath");
+                    return UrlHelper::url($correctPath);
+                } else {
+                    error_log("Audio file not found at corrected path: $fullPath");
+                }
+            }
         }
         
         // Relative path within project

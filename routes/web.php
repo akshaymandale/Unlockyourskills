@@ -137,6 +137,7 @@ Router::get('/users/autocomplete', 'UserManagementController@getUserEmailsForAut
     Router::post('/external-progress/record-visit', 'ExternalProgressController@recordVisit');
     Router::post('/external-progress/update-time-spent', 'ExternalProgressController@updateTimeSpent');
     Router::post('/external-progress/mark-completed', 'ExternalProgressController@markCompleted');
+    Router::post('/external-progress/get-status', 'ExternalProgressController@getStatus');
     Router::get('/external-progress/statistics', 'ExternalProgressController@getStatistics');
     Router::get('/external-progress/course-progress', 'ExternalProgressController@getCourseProgress');
     Router::post('/external-progress/update-progress', 'ExternalProgressController@updateProgress');

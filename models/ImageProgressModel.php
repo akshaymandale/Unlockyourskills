@@ -14,44 +14,88 @@ class ImageProgressModel {
      */
     public function getOrCreateProgress($userId, $courseId, $contentId, $imagePackageId, $clientId) {
         try {
-            // Check if progress record exists
-            $sql = "SELECT * FROM image_progress WHERE user_id = ? AND course_id = ? AND content_id = ? AND client_id = ?";
-            $stmt = $this->conn->prepare($sql);
-            $stmt->execute([$userId, $courseId, $contentId, $clientId]);
+            // First check if this is a prerequisite by looking for it in course_prerequisites
+            $isPrerequisite = $this->isContentPrerequisite($courseId, $contentId, 'image');
             
-            $progress = $stmt->fetch(PDO::FETCH_ASSOC);
-            
-            if ($progress) {
-                return $progress;
+            if ($isPrerequisite) {
+                // For prerequisites, look for records with prerequisite_id = contentId
+                $sql = "SELECT * FROM image_progress 
+                        WHERE user_id = ? AND course_id = ? AND prerequisite_id = ? AND client_id = ?";
+                $stmt = $this->conn->prepare($sql);
+                $stmt->execute([$userId, $courseId, $contentId, $clientId]);
+                $progress = $stmt->fetch(PDO::FETCH_ASSOC);
+
+                if (!$progress) {
+                    // Create new progress record for prerequisite
+                    // For prerequisites, only set prerequisite_id and leave content_id as NULL
+                    $sql = "INSERT INTO image_progress (
+                                user_id, course_id, prerequisite_id, content_id, image_package_id, client_id,
+                                started_at, image_status, is_completed, view_count
+                            ) VALUES (?, ?, ?, NULL, ?, ?, NOW(), 'not_viewed', 0, 0)";
+                    $stmt = $this->conn->prepare($sql);
+                    $stmt->execute([$userId, $courseId, $contentId, $imagePackageId, $clientId]);
+                    
+                    return $this->getProgress($userId, $courseId, $contentId, $clientId);
+                } else {
+                    return $progress;
+                }
+            } else {
+                // For module content, use the existing logic
+                $sql = "SELECT * FROM image_progress WHERE user_id = ? AND course_id = ? AND content_id = ? AND client_id = ?";
+                $stmt = $this->conn->prepare($sql);
+                $stmt->execute([$userId, $courseId, $contentId, $clientId]);
+                
+                $progress = $stmt->fetch(PDO::FETCH_ASSOC);
+                
+                if ($progress) {
+                    return $progress;
+                }
+                
+                // Create new progress record for module content
+                $sql = "INSERT INTO image_progress (user_id, course_id, content_id, image_package_id, client_id, started_at, image_status, is_completed, view_count) 
+                        VALUES (?, ?, ?, ?, ?, NOW(), 'not_viewed', 0, 0)";
+                $stmt = $this->conn->prepare($sql);
+                $stmt->execute([$userId, $courseId, $contentId, $imagePackageId, $clientId]);
+                
+                $progressId = $this->conn->lastInsertId();
+                
+                // Return the newly created record
+                return [
+                    'id' => $progressId,
+                    'user_id' => $userId,
+                    'course_id' => $courseId,
+                    'content_id' => $contentId,
+                    'image_package_id' => $imagePackageId,
+                    'client_id' => $clientId,
+                    'image_status' => 'not_viewed',
+                    'is_completed' => 0,
+                    'view_count' => 0,
+                    'viewed_at' => null,
+                    'notes' => null,
+                    'created_at' => date('Y-m-d H:i:s'),
+                    'updated_at' => date('Y-m-d H:i:s')
+                ];
             }
-            
-            // Create new progress record
-            $sql = "INSERT INTO image_progress (user_id, course_id, content_id, image_package_id, client_id, started_at, image_status, is_completed, view_count) 
-                    VALUES (?, ?, ?, ?, ?, NOW(), 'not_viewed', 0, 0)";
-            $stmt = $this->conn->prepare($sql);
-            $stmt->execute([$userId, $courseId, $contentId, $imagePackageId, $clientId]);
-            
-            $progressId = $this->conn->lastInsertId();
-            
-            // Return the newly created record
-            return [
-                'id' => $progressId,
-                'user_id' => $userId,
-                'course_id' => $courseId,
-                'content_id' => $contentId,
-                'image_package_id' => $imagePackageId,
-                'client_id' => $clientId,
-                'image_status' => 'not_viewed',
-                'is_completed' => 0,
-                'view_count' => 0,
-                'viewed_at' => null,
-                'notes' => null,
-                'created_at' => date('Y-m-d H:i:s'),
-                'updated_at' => date('Y-m-d H:i:s')
-            ];
             
         } catch (Exception $e) {
             error_log("Error in getOrCreateProgress: " . $e->getMessage());
+            return false;
+        }
+    }
+
+    /**
+     * Check if content is a prerequisite
+     */
+    private function isContentPrerequisite($courseId, $contentId, $contentType) {
+        try {
+            $sql = "SELECT COUNT(*) FROM course_prerequisites 
+                    WHERE course_id = ? AND id = ? AND prerequisite_type = ?";
+            $stmt = $this->conn->prepare($sql);
+            $stmt->execute([$courseId, $contentId, $contentType]);
+            
+            return $stmt->fetchColumn() > 0;
+        } catch (Exception $e) {
+            error_log("Error checking if content is prerequisite: " . $e->getMessage());
             return false;
         }
     }
@@ -61,6 +105,9 @@ class ImageProgressModel {
      */
     public function updateProgress($userId, $courseId, $contentId, $clientId, $data) {
         try {
+            // Check if this is a prerequisite
+            $isPrerequisite = $this->isContentPrerequisite($courseId, $contentId, 'image');
+            
             // Set started_at if not already set and image is being viewed
             $setStartedAt = "";
             if (isset($data['image_status']) && in_array($data['image_status'], ['viewed', 'completed'])) {
@@ -73,29 +120,57 @@ class ImageProgressModel {
                 $setCompletedAt = ", completed_at = NOW()";
             }
             
-            $sql = "UPDATE image_progress SET 
-                        image_status = ?,
-                        is_completed = ?,
-                        view_count = ?,
-                        viewed_at = ?,
-                        notes = ?,
-                        updated_at = CURRENT_TIMESTAMP
-                        $setStartedAt
-                        $setCompletedAt
-                    WHERE user_id = ? AND course_id = ? AND content_id = ? AND client_id = ?";
-            
-            $stmt = $this->conn->prepare($sql);
-            $stmt->execute([
-                $data['image_status'],
-                $data['is_completed'],
-                $data['view_count'],
-                $data['viewed_at'],
-                $data['notes'] ?? null,
-                $userId,
-                $courseId,
-                $contentId,
-                $clientId
-            ]);
+            if ($isPrerequisite) {
+                // For prerequisites, update using prerequisite_id
+                $sql = "UPDATE image_progress SET 
+                            image_status = ?,
+                            is_completed = ?,
+                            view_count = ?,
+                            viewed_at = ?,
+                            notes = ?,
+                            updated_at = CURRENT_TIMESTAMP
+                            $setStartedAt
+                            $setCompletedAt
+                        WHERE user_id = ? AND course_id = ? AND prerequisite_id = ? AND client_id = ?";
+                
+                $stmt = $this->conn->prepare($sql);
+                $stmt->execute([
+                    $data['image_status'],
+                    $data['is_completed'],
+                    $data['view_count'],
+                    $data['viewed_at'],
+                    $data['notes'] ?? null,
+                    $userId,
+                    $courseId,
+                    $contentId,
+                    $clientId
+                ]);
+            } else {
+                // For module content, update using content_id
+                $sql = "UPDATE image_progress SET 
+                            image_status = ?,
+                            is_completed = ?,
+                            view_count = ?,
+                            viewed_at = ?,
+                            notes = ?,
+                            updated_at = CURRENT_TIMESTAMP
+                            $setStartedAt
+                            $setCompletedAt
+                        WHERE user_id = ? AND course_id = ? AND content_id = ? AND client_id = ?";
+                
+                $stmt = $this->conn->prepare($sql);
+                $stmt->execute([
+                    $data['image_status'],
+                    $data['is_completed'],
+                    $data['view_count'],
+                    $data['viewed_at'],
+                    $data['notes'] ?? null,
+                    $userId,
+                    $courseId,
+                    $contentId,
+                    $clientId
+                ]);
+            }
             
             return $stmt->rowCount() > 0;
             
@@ -110,9 +185,21 @@ class ImageProgressModel {
      */
     public function getProgress($userId, $courseId, $contentId, $clientId) {
         try {
-            $sql = "SELECT * FROM image_progress WHERE user_id = ? AND course_id = ? AND content_id = ? AND client_id = ?";
-            $stmt = $this->conn->prepare($sql);
-            $stmt->execute([$userId, $courseId, $contentId, $clientId]);
+            // Check if this is a prerequisite
+            $isPrerequisite = $this->isContentPrerequisite($courseId, $contentId, 'image');
+            
+            if ($isPrerequisite) {
+                // For prerequisites, look for records with prerequisite_id = contentId
+                $sql = "SELECT * FROM image_progress 
+                        WHERE user_id = ? AND course_id = ? AND prerequisite_id = ? AND client_id = ?";
+                $stmt = $this->conn->prepare($sql);
+                $stmt->execute([$userId, $courseId, $contentId, $clientId]);
+            } else {
+                // For module content, use content_id
+                $sql = "SELECT * FROM image_progress WHERE user_id = ? AND course_id = ? AND content_id = ? AND client_id = ?";
+                $stmt = $this->conn->prepare($sql);
+                $stmt->execute([$userId, $courseId, $contentId, $clientId]);
+            }
             
             return $stmt->fetch(PDO::FETCH_ASSOC);
             
@@ -127,17 +214,36 @@ class ImageProgressModel {
      */
     public function markAsViewed($userId, $courseId, $contentId, $clientId) {
         try {
-            $sql = "UPDATE image_progress SET 
-                        image_status = 'viewed',
-                        is_completed = 1,
-                        view_count = view_count + 1,
-                        viewed_at = COALESCE(viewed_at, CURRENT_TIMESTAMP),
-                        completed_at = NOW(),
-                        updated_at = CURRENT_TIMESTAMP
-                    WHERE user_id = ? AND course_id = ? AND content_id = ? AND client_id = ?";
+            // Check if this is a prerequisite
+            $isPrerequisite = $this->isContentPrerequisite($courseId, $contentId, 'image');
             
-            $stmt = $this->conn->prepare($sql);
-            $stmt->execute([$userId, $courseId, $contentId, $clientId]);
+            if ($isPrerequisite) {
+                // For prerequisites, update using prerequisite_id
+                $sql = "UPDATE image_progress SET 
+                            image_status = 'viewed',
+                            is_completed = 1,
+                            view_count = view_count + 1,
+                            viewed_at = COALESCE(viewed_at, CURRENT_TIMESTAMP),
+                            completed_at = NOW(),
+                            updated_at = CURRENT_TIMESTAMP
+                        WHERE user_id = ? AND course_id = ? AND prerequisite_id = ? AND client_id = ?";
+                
+                $stmt = $this->conn->prepare($sql);
+                $stmt->execute([$userId, $courseId, $contentId, $clientId]);
+            } else {
+                // For module content, use content_id
+                $sql = "UPDATE image_progress SET 
+                            image_status = 'viewed',
+                            is_completed = 1,
+                            view_count = view_count + 1,
+                            viewed_at = COALESCE(viewed_at, CURRENT_TIMESTAMP),
+                            completed_at = NOW(),
+                            updated_at = CURRENT_TIMESTAMP
+                        WHERE user_id = ? AND course_id = ? AND content_id = ? AND client_id = ?";
+                
+                $stmt = $this->conn->prepare($sql);
+                $stmt->execute([$userId, $courseId, $contentId, $clientId]);
+            }
             
             return $stmt->rowCount() > 0;
             
