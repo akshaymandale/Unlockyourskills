@@ -561,15 +561,35 @@ class MyCoursesModel {
             $prerequisites = $stmt->fetchAll(PDO::FETCH_ASSOC);
             $allContent = array_merge($allContent, $prerequisites);
             
-            // Get module content
+            // Get module content with content-type aware ID mapping
             $stmt = $this->conn->prepare("
-                SELECT cmc.id as content_id, cmc.content_type, 'module' as content_category
+                SELECT cmc.id, cmc.content_id, cmc.content_type, 'module' as content_category
                 FROM course_module_content cmc
                 INNER JOIN course_modules cm ON cmc.module_id = cm.id
                 WHERE cm.course_id = ? AND cmc.deleted_at IS NULL
             ");
             $stmt->execute([$courseId]);
-            $moduleContent = $stmt->fetchAll(PDO::FETCH_ASSOC);
+            $rawModuleContent = $stmt->fetchAll(PDO::FETCH_ASSOC);
+            
+            // Apply content-type specific logic for correct ID mapping
+            $moduleContent = [];
+            foreach ($rawModuleContent as $content) {
+                if (in_array($content['content_type'], ['assessment', 'assignment'])) {
+                    // For assessment and assignment, use package ID (cmc.content_id)
+                    $moduleContent[] = [
+                        'content_id' => $content['content_id'],
+                        'content_type' => $content['content_type'],
+                        'content_category' => $content['content_category']
+                    ];
+                } else {
+                    // For other content types (audio, video, document, image, external, interactive, scorm), use junction ID (cmc.id)
+                    $moduleContent[] = [
+                        'content_id' => $content['id'],
+                        'content_type' => $content['content_type'],
+                        'content_category' => $content['content_category']
+                    ];
+                }
+            }
             $allContent = array_merge($allContent, $moduleContent);
             
             // Get post-requisites

@@ -476,13 +476,40 @@ function isAssignmentCompleted($courseId, $contentId, $userId) {
         $database = new Database();
         $conn = $database->connect();
         
-        $sql = "SELECT is_completed FROM assignment_submissions 
-                WHERE course_id = ? AND assignment_package_id = ? AND user_id = ? AND is_deleted = 0";
-        $stmt = $conn->prepare($sql);
-        $stmt->execute([$courseId, $contentId, $userId]);
-        $result = $stmt->fetch(PDO::FETCH_ASSOC);
+        // Get client_id from session
+        $clientId = $_SESSION['user']['client_id'] ?? $_SESSION['client_id'] ?? 1;
         
-        return $result && $result['is_completed'] == 1;
+        // For module content, check if this contentId is a junction ID (course_module_content.id)
+        // If so, we need to check for module-specific submissions
+        $stmt = $conn->prepare("
+            SELECT cmc.id as junction_id, cmc.content_id as assignment_package_id
+            FROM course_module_content cmc
+            WHERE cmc.id = ? AND cmc.content_type = 'assignment'
+        ");
+        $stmt->execute([$contentId]);
+        $moduleContent = $stmt->fetch(PDO::FETCH_ASSOC);
+        
+        if ($moduleContent) {
+            // This is a module content junction ID, check for module-specific submission
+            $sql = "SELECT submission_status FROM assignment_submissions 
+                    WHERE course_id = ? AND user_id = ? AND assignment_package_id = ? AND client_id = ?
+                    AND prerequisite_id IS NULL AND content_id = ? AND postrequisite_id IS NULL
+                    AND submission_status IN ('submitted', 'graded', 'returned')
+                    AND is_deleted = 0";
+            $stmt = $conn->prepare($sql);
+            $stmt->execute([$courseId, $userId, $moduleContent['assignment_package_id'], $clientId, $contentId]);
+        } else {
+            // This is likely an assignment package ID directly, check for any submission
+            $sql = "SELECT submission_status FROM assignment_submissions 
+                    WHERE course_id = ? AND assignment_package_id = ? AND user_id = ? AND client_id = ?
+                    AND submission_status IN ('submitted', 'graded', 'returned')
+                    AND is_deleted = 0";
+            $stmt = $conn->prepare($sql);
+            $stmt->execute([$courseId, $contentId, $userId, $clientId]);
+        }
+        
+        $result = $stmt->fetch(PDO::FETCH_ASSOC);
+        return $result !== false;
     } catch (Exception $e) {
         error_log("Error checking assignment completion: " . $e->getMessage());
         return false;
@@ -670,9 +697,25 @@ function isPrerequisiteCompleted($userId, $courseId, $prerequisiteId, $prerequis
                     WHERE user_id = ? AND course_id = ? AND assessment_id = ? AND client_id = ? AND passed = 1";
             $params = [$userId, $courseId, $prerequisiteId, $clientId];
         } elseif ($prerequisiteType === 'assignment') {
-            $sql = "SELECT is_completed FROM $table 
-                    WHERE user_id = ? AND course_id = ? AND assignment_package_id = ? AND client_id = ? AND is_deleted = 0";
-            $params = [$userId, $courseId, $prerequisiteId, $clientId];
+            // For assignment prerequisites, check for prerequisite-specific submissions
+            $sql = "SELECT submission_status FROM $table 
+                    WHERE user_id = ? AND course_id = ? AND assignment_package_id = ? AND client_id = ? 
+                    AND prerequisite_id = ? AND content_id IS NULL AND postrequisite_id IS NULL
+                    AND submission_status IN ('submitted', 'graded', 'returned')
+                    AND is_deleted = 0";
+            
+            // Get the prerequisite record ID from course_prerequisites table
+            $prereqSql = "SELECT id FROM course_prerequisites 
+                         WHERE course_id = ? AND prerequisite_id = ? AND prerequisite_type = ?";
+            $prereqStmt = $conn->prepare($prereqSql);
+            $prereqStmt->execute([$courseId, $prerequisiteId, $prerequisiteType]);
+            $prereqRecord = $prereqStmt->fetch(PDO::FETCH_ASSOC);
+            
+            if (!$prereqRecord) {
+                return false;
+            }
+            
+            $params = [$userId, $courseId, $prerequisiteId, $clientId, $prereqRecord['id']];
         } elseif (in_array($prerequisiteType, ['audio', 'video', 'document', 'image', 'interactive'])) {
             // For content prerequisites, we need to find the prerequisite record ID first
             $prereqSql = "SELECT id FROM course_prerequisites 
@@ -706,6 +749,8 @@ function isPrerequisiteCompleted($userId, $courseId, $prerequisiteId, $prerequis
                    !empty($result['completed_at']);
         } elseif ($prerequisiteType === 'assessment') {
             return $result && $result['passed'] == 1;
+        } elseif ($prerequisiteType === 'assignment') {
+            return $result !== false;
         } else {
             return $result && $result['is_completed'] == 1;
         }
@@ -1915,12 +1960,19 @@ function isPrerequisiteCompleted($userId, $courseId, $prerequisiteId, $prerequis
                     
                     $assignmentId = $contentData['content_id'];
                     
-                    // Use AssignmentSubmissionModel for consistency with CourseModel
-                    require_once 'models/AssignmentSubmissionModel.php';
-                    $assignmentModel = new AssignmentSubmissionModel();
-                    $hasSubmitted = $assignmentModel->hasUserSubmittedAssignment($courseId, $userId, $assignmentId);
+                    // Check for module-specific assignment submission (content_id IS NOT NULL)
+                    $stmt = $db->prepare("
+                        SELECT COUNT(*) as count 
+                        FROM assignment_submissions 
+                        WHERE course_id = ? AND user_id = ? AND assignment_package_id = ? AND client_id = ?
+                        AND prerequisite_id IS NULL AND content_id = ? AND postrequisite_id IS NULL
+                        AND submission_status IN ('submitted', 'graded', 'returned')
+                        AND is_deleted = 0
+                    ");
+                    $stmt->execute([$courseId, $userId, $assignmentId, $clientId, $contentId]);
+                    $hasModuleSubmission = $stmt->fetchColumn() > 0;
                     
-                    return $hasSubmitted ? 100 : 0; // 100% if submitted, 0% if not
+                    return $hasModuleSubmission ? 100 : 0; // 100% if module submission exists, 0% if not
                     
                 } catch (Exception $e) {
                     error_log("Error getting assignment progress status: " . $e->getMessage());
@@ -3137,17 +3189,17 @@ function isPrerequisiteCompleted($userId, $courseId, $prerequisiteId, $prerequis
                                         
                                         if ($isAssignmentSubmitted) {
                                             // Show submitted assignment button
-                                            echo "<a class='prerequisite-action-btn btn-info' href='#' onclick='openAssignmentModal(\"" . addslashes($encryptedPrereqId) . "\", \"" . addslashes(IdEncryption::encrypt($GLOBALS['course']['id'])) . "\")' title='View submitted assignment'>";
+                                            echo "<a class='prerequisite-action-btn btn-info' href='#' onclick='openAssignmentModal(\"" . addslashes($encryptedPrereqId) . "\", \"" . addslashes(IdEncryption::encrypt($GLOBALS['course']['id'])) . "\", \"prerequisite\")' title='View submitted assignment'>";
                                             echo "<i class='fas fa-check me-1'></i>View Submitted Assignment";
                                             echo "</a>";
                                         } elseif ($isAssignmentInProgress) {
                                             // Show continue assignment button
-                                            echo "<a class='prerequisite-action-btn btn-warning' href='#' onclick='openAssignmentModal(\"" . addslashes($encryptedPrereqId) . "\", \"" . addslashes(IdEncryption::encrypt($GLOBALS['course']['id'])) . "\")' title='Continue working on assignment'>";
+                                            echo "<a class='prerequisite-action-btn btn-warning' href='#' onclick='openAssignmentModal(\"" . addslashes($encryptedPrereqId) . "\", \"" . addslashes(IdEncryption::encrypt($GLOBALS['course']['id'])) . "\", \"prerequisite\")' title='Continue working on assignment'>";
                                             echo "<i class='fas fa-edit me-1'></i>Continue Assignment";
                                             echo "</a>";
                                         } else {
                                             // Show start assignment button
-                                            echo "<a class='prerequisite-action-btn {$config['class']}' href='#' onclick='openAssignmentModal(\"" . addslashes($encryptedPrereqId) . "\", \"" . addslashes(IdEncryption::encrypt($GLOBALS['course']['id'])) . "\")'>";
+                                            echo "<a class='prerequisite-action-btn {$config['class']}' href='#' onclick='openAssignmentModal(\"" . addslashes($encryptedPrereqId) . "\", \"" . addslashes(IdEncryption::encrypt($GLOBALS['course']['id'])) . "\", \"prerequisite\")'>";
                                             echo "<i class='fas {$config['icon']} me-1'></i>{$config['label']}";
                                             echo "</a>";
                                         }
@@ -4036,13 +4088,13 @@ function isPrerequisiteCompleted($userId, $courseId, $prerequisiteId, $prerequis
                                                                     
                                                                     if ($isAssignmentSubmitted) {
                                                                         // Show submitted assignment button
-                                                                        $actionsHtml .= "<a class='postrequisite-action-btn btn-info' href='#' onclick='openAssignmentModal(\"" . addslashes($encryptedId) . "\", \"" . addslashes($courseId) . "\")' title='View submitted assignment'><i class='fas fa-check me-1'></i>View Submitted Assignment</a>";
+                                                                        $actionsHtml .= "<a class='postrequisite-action-btn btn-info' href='#' onclick='openAssignmentModal(\"" . addslashes($encryptedId) . "\", \"" . addslashes($courseId) . "\", \"module\")' title='View submitted assignment'><i class='fas fa-check me-1'></i>View Submitted Assignment</a>";
                                                                     } elseif ($isAssignmentInProgress) {
                                                                         // Show continue assignment button
-                                                                        $actionsHtml .= "<a class='postrequisite-action-btn btn-warning' href='#' onclick='openAssignmentModal(\"" . addslashes($encryptedId) . "\", \"" . addslashes($courseId) . "\")' title='Continue working on assignment'><i class='fas fa-edit me-1'></i>Continue Assignment</a>";
+                                                                        $actionsHtml .= "<a class='postrequisite-action-btn btn-warning' href='#' onclick='openAssignmentModal(\"" . addslashes($encryptedId) . "\", \"" . addslashes($courseId) . "\", \"module\")' title='Continue working on assignment'><i class='fas fa-edit me-1'></i>Continue Assignment</a>";
                                                                     } else {
                                                                         // Show start assignment button
-                                                                        $actionsHtml .= "<a href='#' onclick='openAssignmentModal(\"" . addslashes($encryptedId) . "\", \"" . addslashes($courseId) . "\")' class='postrequisite-action-btn btn-primary'><i class='fas fa-file-pen me-1'></i>Start Assignment</a>";
+                                                                        $actionsHtml .= "<a href='#' onclick='openAssignmentModal(\"" . addslashes($encryptedId) . "\", \"" . addslashes($courseId) . "\", \"module\")' class='postrequisite-action-btn btn-primary'><i class='fas fa-file-pen me-1'></i>Start Assignment</a>";
                                                                     }
                                                                     break;
                                                                 default:
@@ -4358,17 +4410,17 @@ function isPrerequisiteCompleted($userId, $courseId, $prerequisiteId, $prerequis
                                     
                                     if ($isAssignmentSubmitted) {
                                         // Show submitted assignment button
-                                        echo "<a class='postrequisite-action-btn btn-info' href='#' onclick='openAssignmentModal(\"" . addslashes($encryptedPostreqId) . "\", \"" . addslashes(IdEncryption::encrypt($GLOBALS['course']['id'])) . "\")' title='View submitted assignment'>";
+                                        echo "<a class='postrequisite-action-btn btn-info' href='#' onclick='openAssignmentModal(\"" . addslashes($encryptedPostreqId) . "\", \"" . addslashes(IdEncryption::encrypt($GLOBALS['course']['id'])) . "\", \"postrequisite\")' title='View submitted assignment'>";
                                         echo "<i class='fas fa-check me-1'></i>View Submitted Assignment";
                                         echo "</a>";
                                     } elseif ($isAssignmentInProgress) {
                                         // Show continue assignment button
-                                        echo "<a class='postrequisite-action-btn btn-warning' href='#' onclick='openAssignmentModal(\"" . addslashes($encryptedPostreqId) . "\", \"" . addslashes(IdEncryption::encrypt($GLOBALS['course']['id'])) . "\")' title='Continue working on assignment'>";
+                                        echo "<a class='postrequisite-action-btn btn-warning' href='#' onclick='openAssignmentModal(\"" . addslashes($encryptedPostreqId) . "\", \"" . addslashes(IdEncryption::encrypt($GLOBALS['course']['id'])) . "\", \"postrequisite\")' title='Continue working on assignment'>";
                                         echo "<i class='fas fa-edit me-1'></i>Continue Assignment";
                                         echo "</a>";
                                     } else {
                                         // Show start assignment button
-                                        echo "<a class='postrequisite-action-btn {$config['class']}' href='#' onclick='openAssignmentModal(\"" . addslashes($encryptedPostreqId) . "\", \"" . addslashes(IdEncryption::encrypt($GLOBALS['course']['id'])) . "\")'>";
+                                        echo "<a class='postrequisite-action-btn {$config['class']}' href='#' onclick='openAssignmentModal(\"" . addslashes($encryptedPostreqId) . "\", \"" . addslashes(IdEncryption::encrypt($GLOBALS['course']['id'])) . "\", \"postrequisite\")'>";
                                         echo "<i class='fas {$config['icon']} me-1'></i>{$config['label']}";
                                         echo "</a>";
                                     }
@@ -6405,7 +6457,7 @@ function openSurveyModal(surveyId, courseId) {
         });
 }
 
-function openAssignmentModal(assignmentId, courseId) {
+function openAssignmentModal(assignmentId, courseId, context = null) {
     
     // Show loading state
     const modal = document.getElementById('assignmentModal');
@@ -6448,7 +6500,9 @@ function openAssignmentModal(assignmentId, courseId) {
         }
         
         // Load assignment form content
-        return fetch(`/unlockyourskills/assignment-submission/modal-content?assignment_id=${encodeURIComponent(assignmentId)}&course_id=${encodeURIComponent(courseId)}`);
+        const url = `/unlockyourskills/assignment-submission/modal-content?assignment_id=${encodeURIComponent(assignmentId)}&course_id=${encodeURIComponent(courseId)}`;
+        const finalUrl = context ? `${url}&context=${encodeURIComponent(context)}` : url;
+        return fetch(finalUrl);
     })
     .then(response => response.json())
     .then(data => {
