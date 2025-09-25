@@ -349,16 +349,21 @@ class MyCoursesModel {
             $sql .= " AND c.client_id = :client_id";
         }
 
-        // Search functionality - need to wrap in subquery for UNION
+        // Build search condition
+        $searchCondition = "";
         if ($search) {
             $searchCondition = " AND (c.name LIKE :search OR cat.name LIKE :search OR subcat.name LIKE :search)";
             $params[':search'] = '%' . $search . '%';
-        } else {
-            $searchCondition = "";
         }
 
-        // Wrap the UNION in a subquery and add search condition
-        $sql = "SELECT * FROM (" . $sql . $searchCondition . ") as combined_courses ORDER BY created_at DESC, name ASC";
+        // Apply search condition to the first part of UNION (course_applicability)
+        $sql = str_replace("WHERE c.is_deleted = 0", "WHERE c.is_deleted = 0" . $searchCondition, $sql);
+        
+        // Apply search condition to the second part of UNION (course_enrollments)
+        $sql = str_replace("WHERE c.is_deleted = 0 \n                AND ce.user_id = :user_id", "WHERE c.is_deleted = 0 \n                AND ce.user_id = :user_id" . $searchCondition, $sql);
+
+        // Wrap the UNION in a subquery
+        $sql = "SELECT * FROM (" . $sql . ") as combined_courses ORDER BY created_at DESC, name ASC";
         $stmt = $this->conn->prepare($sql);
         foreach ($params as $k => $v) {
             $stmt->bindValue($k, $v);
@@ -421,94 +426,25 @@ class MyCoursesModel {
      * @return int
      */
     public function getUserCoursesCount($userId, $status = '', $search = '', $clientId = null) {
-        $params = [':user_id' => $userId];
+        // Get all courses first (same logic as getUserCourses but without pagination)
+        $courses = $this->getUserCourses($userId, '', $search, 1, 999999, $clientId);
         
-        // Add client_id parameter if provided
-        if ($clientId) {
-            $params[':client_id'] = $clientId;
-        }
-        
-        // Derive a reasonable custom field value from session
-        $userDepartment = '';
-        if (isset($_SESSION['user']['user_role']) && !empty($_SESSION['user']['user_role'])) {
-            $userDepartment = $_SESSION['user']['user_role'];
-        }
-        $params[':user_department'] = $userDepartment;
-
-        // Build count query with client_id filtering - include both course_applicability and course_enrollments
-        $sql = "SELECT COUNT(DISTINCT c.id) as total
-                FROM (
-                    SELECT c.id
-                    FROM courses c
-                    INNER JOIN course_applicability ca ON ca.course_id = c.id";
-        
-        // Add client_id filter to course_applicability join
-        if ($clientId) {
-            $sql .= " AND ca.client_id = :client_id";
-        }
-        
-        $sql .= " WHERE c.is_deleted = 0";
-        
-        // Add client_id filter to courses table as well for double security
-        if ($clientId) {
-            $sql .= " AND c.client_id = :client_id";
-        }
-        
-        $sql .= " AND (
-                    ca.applicability_type = 'all'
-                    OR (ca.applicability_type = 'user' AND ca.user_id = :user_id)
-                    OR (ca.applicability_type = 'custom_field' AND EXISTS (
-                        SELECT 1 FROM custom_field_values cfv 
-                        WHERE cfv.user_id = :user_id 
-                        AND cfv.custom_field_id = ca.custom_field_id 
-                        AND cfv.field_value COLLATE utf8mb4_unicode_ci = ca.custom_field_value COLLATE utf8mb4_unicode_ci
-                        AND cfv.is_deleted = 0
-                    ))
-                )
-                
-                UNION
-                
-                SELECT c.id
-                FROM courses c
-                INNER JOIN course_enrollments ce ON ce.course_id = c.id";
-        
-        if ($clientId) {
-            $sql .= " AND ce.client_id = :client_id";
-        }
-        
-        $sql .= " WHERE c.is_deleted = 0 
-                AND ce.user_id = :user_id 
-                AND ce.status = 'approved' 
-                AND ce.deleted_at IS NULL";
-        
-        if ($clientId) {
-            $sql .= " AND c.client_id = :client_id";
-        }
-        
-        $sql .= ") as c";
-
-        // Filter by status
+        // Filter by status after determining actual status (same logic as getUserCourses)
         if ($status === 'not_started') {
-            $sql .= " AND (uc.status IS NULL OR uc.status IN ('enrolled'))";
+            $courses = array_filter($courses, function($course) {
+                return $course['user_course_status'] === 'not_started';
+            });
         } elseif ($status === 'in_progress') {
-            $sql .= " AND uc.status = 'in_progress'";
+            $courses = array_filter($courses, function($course) {
+                return $course['user_course_status'] === 'in_progress';
+            });
         } elseif ($status === 'completed') {
-            $sql .= " AND uc.status = 'completed'";
+            $courses = array_filter($courses, function($course) {
+                return $course['user_course_status'] === 'completed';
+            });
         }
-
-        // Search
-        if ($search) {
-            $sql .= " AND (c.name LIKE :search)";
-            $params[':search'] = '%' . $search . '%';
-        }
-
-        $stmt = $this->conn->prepare($sql);
-        foreach ($params as $k => $v) {
-            $stmt->bindValue($k, $v);
-        }
-        $stmt->execute();
-        $result = $stmt->fetch(PDO::FETCH_ASSOC);
-        return (int)($result['total'] ?? 0);
+        
+        return count($courses);
     }
 
     /**
@@ -911,7 +847,7 @@ class MyCoursesModel {
      * @param int $courseId
      * @return int
      */
-    private function getPrerequisiteProgress($prereq, $userId, $clientId, $courseId) {
+    public function getPrerequisiteProgress($prereq, $userId, $clientId, $courseId) {
         $prereqType = $prereq['prerequisite_type'];
         $prereqId = $prereq['prerequisite_id'];
         
@@ -925,7 +861,7 @@ class MyCoursesModel {
             case 'feedback':
                 return $this->getFeedbackProgress($prereqId, $userId, $clientId, $courseId);
             case 'external':
-                return 100; // External prerequisites are considered completed by default
+                return $this->getExternalPrerequisiteProgress($prereq['id'], $userId, $clientId, $courseId);
             default:
                 return 0;
         }
@@ -1323,6 +1259,37 @@ class MyCoursesModel {
         } catch (Exception $e) {
             error_log("Error checking external content completion: " . $e->getMessage());
             return false;
+        }
+    }
+    
+    /**
+     * Get external prerequisite progress
+     * @param int $prerequisiteId (course_prerequisites.id)
+     * @param int $userId
+     * @param int $clientId
+     * @param int $courseId
+     * @return int
+     */
+    private function getExternalPrerequisiteProgress($prerequisiteId, $userId, $clientId, $courseId) {
+        try {
+            // Check if the external prerequisite is completed
+            $stmt = $this->conn->prepare("
+                SELECT is_completed FROM external_progress 
+                WHERE prerequisite_id = ? AND user_id = ? AND course_id = ? AND client_id = ?
+            ");
+            $stmt->execute([$prerequisiteId, $userId, $courseId, $clientId]);
+            $result = $stmt->fetch(PDO::FETCH_ASSOC);
+            
+            if ($result) {
+                return $result['is_completed'] == 1 ? 100 : 0;
+            }
+            
+            // If no progress record exists, return 0 (not started)
+            return 0;
+            
+        } catch (Exception $e) {
+            error_log("Error getting external prerequisite progress: " . $e->getMessage());
+            return 0;
         }
     }
     
