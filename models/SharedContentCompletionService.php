@@ -212,9 +212,16 @@ class SharedContentCompletionService {
                         WHERE user_id = ? AND course_id = ? AND content_id = ? AND client_id = ?";
             $checkStmt = $this->conn->prepare($checkSql);
             $checkStmt->execute([$userId, $courseId, $moduleContent['content_id'], $clientId]);
+            $existingRecord = $checkStmt->fetch(PDO::FETCH_ASSOC);
             
-            if ($checkStmt->fetch()) {
-                error_log("[SharedContent] Module {$contentType} progress already exists for content {$moduleContent['content_id']}");
+            if ($existingRecord) {
+                // For assignments, update existing record with submission details if they're missing
+                if ($contentType === 'assignment') {
+                    $this->updateExistingAssignmentSubmission($existingRecord['id'], $progressData);
+                    error_log("[SharedContent] Updated existing module assignment submission {$existingRecord['id']} with submission details");
+                } else {
+                    error_log("[SharedContent] Module {$contentType} progress already exists for content {$moduleContent['content_id']}");
+                }
                 return;
             }
             
@@ -662,33 +669,129 @@ class SharedContentCompletionService {
     }
     
     // Assignment Progress Methods
+    private function updateExistingAssignmentSubmission($submissionId, $progressData) {
+        try {
+            // Get the submission details from the prerequisite submission instead of progressData
+            // because progressData might not contain the actual submission details
+            $prereqStmt = $this->conn->prepare("
+                SELECT submission_type, submission_file, submission_text, submission_url
+                FROM assignment_submissions 
+                WHERE assignment_package_id = ? AND prerequisite_id IS NOT NULL 
+                ORDER BY created_at DESC LIMIT 1
+            ");
+            $prereqStmt->execute([$progressData['assignment_package_id']]);
+            $prereqDetails = $prereqStmt->fetch(PDO::FETCH_ASSOC);
+            
+            if ($prereqDetails) {
+                // Update existing assignment submission with submission details from prerequisite
+                $updateSql = "UPDATE assignment_submissions SET 
+                                submission_type = ?, submission_file = ?, submission_text = ?, submission_url = ?,
+                                updated_at = NOW()
+                              WHERE id = ? AND (submission_type IS NULL OR submission_file IS NULL OR submission_text IS NULL OR submission_url IS NULL)";
+                
+                $stmt = $this->conn->prepare($updateSql);
+                $stmt->execute([
+                    $prereqDetails['submission_type'],
+                    $prereqDetails['submission_file'],
+                    $prereqDetails['submission_text'],
+                    $prereqDetails['submission_url'],
+                    $submissionId
+                ]);
+                
+                if ($stmt->rowCount() > 0) {
+                    error_log("[SharedContent] Updated assignment submission {$submissionId} with submission details from prerequisite");
+                } else {
+                    error_log("[SharedContent] Assignment submission {$submissionId} already has all submission details");
+                }
+            } else {
+                error_log("[SharedContent] No prerequisite submission found for assignment package {$progressData['assignment_package_id']}");
+            }
+            
+        } catch (Exception $e) {
+            error_log("[SharedContent] Error updating existing assignment submission: " . $e->getMessage());
+        }
+    }
+    
     private function insertAssignmentModuleProgress($userId, $courseId, $moduleContent, $clientId, $progressData) {
-        $sql = "INSERT INTO assignment_submissions (
-                    user_id, course_id, assignment_package_id, client_id,
-                    submission_status, submitted_at, created_at, updated_at
-                ) VALUES (
-                    ?, ?, ?, ?, ?, ?, NOW(), NOW()
-                )";
+        // For assignments, we need to handle the unique constraint differently
+        // Check if there's already a submission for this assignment package
+        $checkStmt = $this->conn->prepare("
+            SELECT id, attempt_number, submission_type, submission_file, submission_text, submission_url,
+                   due_date, is_late, started_at
+            FROM assignment_submissions 
+            WHERE user_id = ? AND course_id = ? AND assignment_package_id = ? AND client_id = ?
+            ORDER BY attempt_number DESC LIMIT 1
+        ");
+        $checkStmt->execute([$userId, $courseId, $progressData['assignment_package_id'], $clientId]);
+        $existingSubmission = $checkStmt->fetch(PDO::FETCH_ASSOC);
         
-        $stmt = $this->conn->prepare($sql);
-        $stmt->execute([
-            $userId, $courseId, $moduleContent['actual_content_id'], $clientId,
-            $progressData['submission_status'], $progressData['submitted_at']
-        ]);
+        if ($existingSubmission) {
+            // Create new submission with next attempt number for module context
+            $nextAttempt = $existingSubmission['attempt_number'] + 1;
+            
+            $sql = "INSERT INTO assignment_submissions (
+                        user_id, course_id, assignment_package_id, client_id,
+                        prerequisite_id, content_id, postrequisite_id,
+                        submission_type, submission_file, submission_text, submission_url,
+                        submission_status, due_date, is_late, attempt_number,
+                        started_at, submitted_at, completed_at, created_at, updated_at
+                    ) VALUES (
+                        ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW()
+                    )";
+            
+            $stmt = $this->conn->prepare($sql);
+            $stmt->execute([
+                $userId, $courseId, $progressData['assignment_package_id'], $clientId,
+                null, $moduleContent['content_id'], null, // Set content_id for module content
+                $existingSubmission['submission_type'], $existingSubmission['submission_file'], 
+                $existingSubmission['submission_text'], $existingSubmission['submission_url'],
+                $progressData['submission_status'] ?? 'submitted', $existingSubmission['due_date'], 
+                $existingSubmission['is_late'], $nextAttempt,
+                $existingSubmission['started_at'], $progressData['submitted_at'], $progressData['completed_at'] ?? null
+            ]);
+            
+            error_log("[SharedContent] Created new assignment submission for module context with attempt {$nextAttempt} (copied submission details from prerequisite)");
+        } else {
+            // No existing submission - create first one
+            $sql = "INSERT INTO assignment_submissions (
+                        user_id, course_id, assignment_package_id, client_id,
+                        prerequisite_id, content_id, postrequisite_id,
+                        submission_type, submission_file, submission_text, submission_url,
+                        submission_status, due_date, is_late, attempt_number,
+                        started_at, submitted_at, completed_at, created_at, updated_at
+                    ) VALUES (
+                        ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW()
+                    )";
+            
+            $stmt = $this->conn->prepare($sql);
+            $stmt->execute([
+                $userId, $courseId, $progressData['assignment_package_id'], $clientId,
+                null, $moduleContent['content_id'], null, // Set content_id for module content
+                $progressData['submission_type'] ?? null, $progressData['submission_file'] ?? null, 
+                $progressData['submission_text'] ?? null, $progressData['submission_url'] ?? null,
+                $progressData['submission_status'] ?? 'submitted', $progressData['due_date'] ?? null, 
+                $progressData['is_late'] ?? null, 1,
+                $progressData['started_at'] ?? null, $progressData['submitted_at'], $progressData['completed_at'] ?? null
+            ]);
+            
+            error_log("[SharedContent] Created new assignment submission for module context with attempt 1");
+        }
     }
     
     private function insertAssignmentPrerequisiteProgress($userId, $courseId, $prerequisiteId, $clientId, $progressData) {
         $sql = "INSERT INTO assignment_submissions (
                     user_id, course_id, assignment_package_id, client_id,
-                    submission_status, submitted_at, created_at, updated_at
+                    prerequisite_id, content_id, postrequisite_id,
+                    submission_status, submitted_at, completed_at, created_at, updated_at
                 ) VALUES (
-                    ?, ?, ?, ?, ?, ?, NOW(), NOW()
+                    ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW()
                 )";
         
         $stmt = $this->conn->prepare($sql);
         $stmt->execute([
             $userId, $courseId, $progressData['assignment_package_id'], $clientId,
-            $progressData['submission_status'], $progressData['submitted_at']
+            $prerequisiteId, null, null, // Set prerequisite_id for prerequisite content
+            $progressData['submission_status'] ?? 'submitted', $progressData['submitted_at'], $progressData['completed_at'] ?? null
         ]);
     }
     

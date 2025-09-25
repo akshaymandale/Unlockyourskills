@@ -33,11 +33,13 @@ class AssignmentSubmissionModel {
             if ($submissionStatus === 'submitted') {
                 $sql = "INSERT INTO assignment_submissions (
                     client_id, course_id, user_id, assignment_package_id,
+                    prerequisite_id, content_id, postrequisite_id,
                     submission_type, submission_file, submission_text, submission_url,
                     submission_status, due_date, is_late, attempt_number,
                     started_at, submitted_at, completed_at, updated_at
                 ) VALUES (
                     :client_id, :course_id, :user_id, :assignment_package_id,
+                    :prerequisite_id, :content_id, :postrequisite_id,
                     :submission_type, :submission_file, :submission_text, :submission_url,
                     :submission_status, :due_date, :is_late, :attempt_number,
                     :started_at, NOW(), NOW(), NOW()
@@ -45,11 +47,13 @@ class AssignmentSubmissionModel {
             } else {
                 $sql = "INSERT INTO assignment_submissions (
                     client_id, course_id, user_id, assignment_package_id,
+                    prerequisite_id, content_id, postrequisite_id,
                     submission_type, submission_file, submission_text, submission_url,
                     submission_status, due_date, is_late, attempt_number,
                     started_at, updated_at
                 ) VALUES (
                     :client_id, :course_id, :user_id, :assignment_package_id,
+                    :prerequisite_id, :content_id, :postrequisite_id,
                     :submission_type, :submission_file, :submission_text, :submission_url,
                     :submission_status, :due_date, :is_late, :attempt_number,
                     :started_at, NOW()
@@ -62,6 +66,9 @@ class AssignmentSubmissionModel {
                 ':course_id' => $data['course_id'],
                 ':user_id' => $data['user_id'],
                 ':assignment_package_id' => $data['assignment_package_id'],
+                ':prerequisite_id' => $data['prerequisite_id'] ?? null,
+                ':content_id' => $data['content_id'] ?? null,
+                ':postrequisite_id' => $data['postrequisite_id'] ?? null,
                 ':submission_type' => $data['submission_type'],
                 ':submission_file' => $data['submission_file'] ?? null,
                 ':submission_text' => $data['submission_text'] ?? null,
@@ -88,7 +95,7 @@ class AssignmentSubmissionModel {
     /**
      * Get assignment submissions for a specific course and user
      */
-    public function getSubmissionsByCourseAndUser($courseId, $userId, $assignmentPackageId = null) {
+    public function getSubmissionsByCourseAndUser($courseId, $userId, $assignmentPackageId = null, $context = null) {
         try {
             $sql = "SELECT 
                 s.*,
@@ -110,6 +117,21 @@ class AssignmentSubmissionModel {
             if ($assignmentPackageId) {
                 $sql .= " AND s.assignment_package_id = ?";
                 $params[] = $assignmentPackageId;
+            }
+            
+            // Filter by context if provided
+            if ($context) {
+                switch ($context) {
+                    case 'prerequisite':
+                        $sql .= " AND s.prerequisite_id IS NOT NULL AND s.content_id IS NULL";
+                        break;
+                    case 'module':
+                        $sql .= " AND s.prerequisite_id IS NULL AND s.content_id IS NOT NULL";
+                        break;
+                    case 'postrequisite':
+                        $sql .= " AND s.prerequisite_id IS NULL AND s.content_id IS NULL AND s.postrequisite_id IS NOT NULL";
+                        break;
+                }
             }
             
             $sql .= " ORDER BY s.submitted_at DESC";
@@ -456,10 +478,12 @@ class AssignmentSubmissionModel {
             // Create new in-progress submission
             $sql = "INSERT INTO assignment_submissions (
                 client_id, course_id, user_id, assignment_package_id,
+                prerequisite_id, content_id, postrequisite_id,
                 submission_type, submission_status, started_at, attempt_number,
                 created_at, updated_at
             ) VALUES (
                 :client_id, :course_id, :user_id, :assignment_package_id,
+                :prerequisite_id, :content_id, :postrequisite_id,
                 :submission_type, :submission_status, NOW(), :attempt_number,
                 NOW(), NOW()
             )";
@@ -470,6 +494,9 @@ class AssignmentSubmissionModel {
                 ':course_id' => $data['course_id'],
                 ':user_id' => $data['user_id'],
                 ':assignment_package_id' => $data['assignment_package_id'],
+                ':prerequisite_id' => $data['prerequisite_id'] ?? null,
+                ':content_id' => $data['content_id'] ?? null,
+                ':postrequisite_id' => $data['postrequisite_id'] ?? null,
                 ':submission_type' => $data['submission_type'] ?? null,
                 ':submission_status' => 'in-progress',
                 ':attempt_number' => $data['attempt_number'] ?? 1
@@ -490,15 +517,33 @@ class AssignmentSubmissionModel {
     /**
      * Get in-progress submission for a user and assignment
      */
-    public function getInProgressSubmission($courseId, $userId, $assignmentPackageId) {
+    public function getInProgressSubmission($courseId, $userId, $assignmentPackageId, $context = null) {
         try {
             $sql = "SELECT * FROM assignment_submissions 
                     WHERE course_id = ? AND user_id = ? AND assignment_package_id = ? 
-                    AND submission_status = 'in-progress' AND is_deleted = 0
-                    ORDER BY created_at DESC LIMIT 1";
+                    AND submission_status = 'in-progress' AND is_deleted = 0";
+            
+            $params = [$courseId, $userId, $assignmentPackageId];
+            
+            // Filter by context if provided
+            if ($context) {
+                switch ($context) {
+                    case 'prerequisite':
+                        $sql .= " AND prerequisite_id IS NOT NULL AND content_id IS NULL";
+                        break;
+                    case 'module':
+                        $sql .= " AND prerequisite_id IS NULL AND content_id IS NOT NULL";
+                        break;
+                    case 'postrequisite':
+                        $sql .= " AND prerequisite_id IS NULL AND content_id IS NULL AND postrequisite_id IS NOT NULL";
+                        break;
+                }
+            }
+            
+            $sql .= " ORDER BY created_at DESC LIMIT 1";
             
             $stmt = $this->conn->prepare($sql);
-            $stmt->execute([$courseId, $userId, $assignmentPackageId]);
+            $stmt->execute($params);
             
             return $stmt->fetch(PDO::FETCH_ASSOC);
         } catch (PDOException $e) {
@@ -605,6 +650,21 @@ class AssignmentSubmissionModel {
             
             $stmt = $this->conn->prepare($sql);
             return $stmt->execute([$status, $grade, $feedback, $submissionId]);
+        } catch (PDOException $e) {
+            $this->lastErrorMessage = $e->getMessage();
+            return false;
+        }
+    }
+
+    /**
+     * Get assignment submission by ID
+     */
+    public function getSubmissionById($submissionId) {
+        try {
+            $sql = "SELECT * FROM assignment_submissions WHERE id = ?";
+            $stmt = $this->conn->prepare($sql);
+            $stmt->execute([$submissionId]);
+            return $stmt->fetch(PDO::FETCH_ASSOC);
         } catch (PDOException $e) {
             $this->lastErrorMessage = $e->getMessage();
             return false;

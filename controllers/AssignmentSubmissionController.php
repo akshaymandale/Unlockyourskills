@@ -104,6 +104,9 @@ class AssignmentSubmissionController extends BaseController {
 
             // Note: Completion tracking is now handled only when content is actually completed
 
+            // Determine context (prerequisite, module, or post-requisite) and get appropriate IDs
+            $contextData = $this->determineAssignmentContext($courseId, $assignmentPackageId);
+            
             // Start assignment tracking
             $trackingData = [
                 'client_id' => $clientId,
@@ -111,7 +114,10 @@ class AssignmentSubmissionController extends BaseController {
                 'user_id' => $userId,
                 'assignment_package_id' => $assignmentPackageId,
                 'submission_type' => $submissionType,
-                'attempt_number' => $attemptCount + 1
+                'attempt_number' => $attemptCount + 1,
+                'prerequisite_id' => $contextData['prerequisite_id'] ?? null,
+                'content_id' => $contextData['content_id'] ?? null,
+                'postrequisite_id' => $contextData['postrequisite_id'] ?? null
             ];
 
             $submissionId = $this->assignmentSubmissionModel->startAssignmentTracking($trackingData);
@@ -245,6 +251,9 @@ class AssignmentSubmissionController extends BaseController {
             } else {
                 // Note: Completion tracking is now handled only when content is actually completed
                 
+                // Determine context (prerequisite, module, or post-requisite) and get appropriate IDs
+                $contextData = $this->determineAssignmentContext($courseId, $assignmentPackageId);
+                
                 // Create new in-progress submission
                 $trackingData = [
                     'client_id' => $clientId,
@@ -255,7 +264,10 @@ class AssignmentSubmissionController extends BaseController {
                     'submission_file' => $submissionFile,
                     'submission_text' => $submissionText,
                     'submission_url' => $submissionUrl,
-                    'attempt_number' => 1
+                    'attempt_number' => 1,
+                    'prerequisite_id' => $contextData['prerequisite_id'] ?? null,
+                    'content_id' => $contextData['content_id'] ?? null,
+                    'postrequisite_id' => $contextData['postrequisite_id'] ?? null
                 ];
 
                 $submissionId = $this->assignmentSubmissionModel->startAssignmentTracking($trackingData);
@@ -344,6 +356,7 @@ class AssignmentSubmissionController extends BaseController {
         try {
             $assignmentId = $_GET['assignment_id'] ?? '';
             $courseId = $_GET['course_id'] ?? '';
+            $context = $_GET['context'] ?? ''; // 'prerequisite', 'module', or 'postrequisite'
 
             if (empty($assignmentId) || empty($courseId)) {
                 $this->jsonResponse(['success' => false, 'message' => 'Missing required parameters']);
@@ -369,7 +382,7 @@ class AssignmentSubmissionController extends BaseController {
 
             // Get user's existing submissions
             $userId = $_SESSION['id'];
-            $existingSubmissions = $this->assignmentSubmissionModel->getSubmissionsByCourseAndUser($courseId, $userId, $assignmentId);
+            $existingSubmissions = $this->assignmentSubmissionModel->getSubmissionsByCourseAndUser($courseId, $userId, $assignmentId, $context);
             
             // Check if user has completed submissions (not just in-progress)
             $hasSubmitted = false;
@@ -381,7 +394,7 @@ class AssignmentSubmissionController extends BaseController {
             }
 
             // Get in-progress submission data for pre-populating form
-            $inProgressSubmission = $this->assignmentSubmissionModel->getInProgressSubmission($courseId, $userId, $assignmentId);
+            $inProgressSubmission = $this->assignmentSubmissionModel->getInProgressSubmission($courseId, $userId, $assignmentId, $context);
             $hasInProgress = !empty($inProgressSubmission);
 
             $data = [
@@ -574,8 +587,24 @@ class AssignmentSubmissionController extends BaseController {
                     }
                     
                     // Handle shared content completion
+                    // Determine context type based on the submission record
+                    $contextType = 'module'; // Default to module
+                    $prerequisiteId = null;
+                    
+                    // Get the submission record to determine context
+                    $submission = $this->assignmentSubmissionModel->getSubmissionById($submissionId);
+                    if ($submission) {
+                        if ($submission['prerequisite_id']) {
+                            $contextType = 'prerequisite';
+                            $prerequisiteId = $submission['prerequisite_id'];
+                        } elseif ($submission['postrequisite_id']) {
+                            $contextType = 'postrequisite';
+                            $prerequisiteId = $submission['postrequisite_id'];
+                        }
+                    }
+                    
                     $this->sharedContentService->handleSharedContentCompletion(
-                        $userId, $courseId, $assignmentPackageId, $clientId, 'assignment', 'module'
+                        $userId, $courseId, $assignmentPackageId, $clientId, 'assignment', $contextType, $prerequisiteId
                     );
                 } catch (Exception $e) {
                     error_log("Error updating assignment progress: " . $e->getMessage());
@@ -780,6 +809,81 @@ class AssignmentSubmissionController extends BaseController {
     }
 
 
+
+    /**
+     * Determine assignment context (prerequisite, module, or post-requisite) and return appropriate IDs
+     */
+    private function determineAssignmentContext($courseId, $assignmentPackageId) {
+        try {
+            require_once 'config/Database.php';
+            $database = new Database();
+            $conn = $database->connect();
+            
+            // Check if this assignment is used as a prerequisite
+            $sql = "SELECT id FROM course_prerequisites 
+                    WHERE course_id = ? AND prerequisite_id = ? AND prerequisite_type = 'assignment' 
+                    AND (deleted_at IS NULL OR deleted_at = '0000-00-00 00:00:00')";
+            $stmt = $conn->prepare($sql);
+            $stmt->execute([$courseId, $assignmentPackageId]);
+            $prerequisiteId = $stmt->fetchColumn();
+            
+            if ($prerequisiteId) {
+                return [
+                    'prerequisite_id' => $prerequisiteId,
+                    'content_id' => null,
+                    'postrequisite_id' => null
+                ];
+            }
+            
+            // Check if this assignment is used as module content
+            $sql = "SELECT cmc.id FROM course_module_content cmc
+                    JOIN course_modules cm ON cmc.module_id = cm.id
+                    WHERE cm.course_id = ? AND cmc.content_id = ? AND cmc.content_type = 'assignment' 
+                    AND cmc.deleted_at IS NULL AND cm.deleted_at IS NULL";
+            $stmt = $conn->prepare($sql);
+            $stmt->execute([$courseId, $assignmentPackageId]);
+            $contentId = $stmt->fetchColumn();
+            
+            if ($contentId) {
+                return [
+                    'prerequisite_id' => null,
+                    'content_id' => $contentId,
+                    'postrequisite_id' => null
+                ];
+            }
+            
+            // Check if this assignment is used as a post-requisite
+            $sql = "SELECT id FROM course_post_requisites 
+                    WHERE course_id = ? AND content_id = ? AND content_type = 'assignment' 
+                    AND is_deleted = 0";
+            $stmt = $conn->prepare($sql);
+            $stmt->execute([$courseId, $assignmentPackageId]);
+            $postrequisiteId = $stmt->fetchColumn();
+            
+            if ($postrequisiteId) {
+                return [
+                    'prerequisite_id' => null,
+                    'content_id' => null,
+                    'postrequisite_id' => $postrequisiteId
+                ];
+            }
+            
+            // Default: no specific context found
+            return [
+                'prerequisite_id' => null,
+                'content_id' => null,
+                'postrequisite_id' => null
+            ];
+            
+        } catch (Exception $e) {
+            error_log("Error determining assignment context: " . $e->getMessage());
+            return [
+                'prerequisite_id' => null,
+                'content_id' => null,
+                'postrequisite_id' => null
+            ];
+        }
+    }
 
     /**
      * Check if content is a prerequisite
