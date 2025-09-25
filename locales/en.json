@@ -17,6 +17,8 @@
     "manage_portal": "Manage Portal",
     "my_courses": "My Courses",
     "search_courses": "Search Courses",
+    "search_courses_placeholder": "Search for courses...",
+    "enrollment_approval": "Enrollment Course Approval",
     "_comment5": "Manage_portal.php",
     "user_details": "User Details",
     "course_details": "Course Details",

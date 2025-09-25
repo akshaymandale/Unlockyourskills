@@ -4947,11 +4947,277 @@ body select:focus,
     color: #6a0dad;
     border-radius: 0.3rem;
     padding: 0.5rem 1rem;
-    font-size: 1rem;
-    margin-bottom: 0.5rem;
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
+}
+
+/* ========================================
+   ENROLLMENT APPROVAL MODERN STYLES
+   ======================================== */
+
+/* Statistics Cards */
+.stats-card {
+    border-radius: 15px;
+    transition: all 0.3s ease;
+    position: relative;
+    overflow: hidden;
+}
+
+.clickable-card {
+    cursor: pointer;
+    user-select: none;
+}
+
+.clickable-card:hover {
+    transform: translateY(-8px);
+    box-shadow: 0 15px 35px rgba(0,0,0,0.2) !important;
+}
+
+.clickable-card.active {
+    transform: translateY(-5px);
+    box-shadow: 0 10px 25px rgba(0,0,0,0.15) !important;
+    border: 3px solid #6A0DAD;
+}
+
+.stats-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 4px;
+    background: linear-gradient(90deg, #6A0DAD, #9B59B6);
+}
+
+.stats-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 10px 25px rgba(0,0,0,0.15) !important;
+}
+
+.stats-pending {
+    background: linear-gradient(135deg, #FFC107, #FF9800);
+    color: white;
+}
+
+.stats-approved {
+    background: linear-gradient(135deg, #28A745, #20C997);
+    color: white;
+}
+
+.stats-rejected {
+    background: linear-gradient(135deg, #DC3545, #E74C3C);
+    color: white;
+}
+
+.stats-total {
+    background: linear-gradient(135deg, #6A0DAD, #9B59B6);
+    color: white;
+}
+
+.stats-icon {
+    font-size: 2.5rem;
+    opacity: 0.8;
+    transition: all 0.3s ease;
+}
+
+.stats-card:hover .stats-icon {
+    transform: scale(1.1);
+    opacity: 1;
+}
+
+/* Filter Section */
+.filter-section h6 {
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.filter-buttons {
+    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    border-radius: 10px;
+    overflow: hidden;
+}
+
+.filter-btn {
+    background: white;
+    border: 2px solid #e9ecef;
+    color: #6c757d;
+    font-weight: 500;
+    padding: 12px 20px;
+    transition: all 0.3s ease;
+    position: relative;
+}
+
+.filter-btn:hover {
+    background: #f8f9fa;
+    border-color: #6A0DAD;
+    color: #6A0DAD;
+    transform: translateY(-2px);
+}
+
+.filter-btn.active {
+    background: #6A0DAD;
+    border-color: #6A0DAD;
+    color: white;
+    box-shadow: 0 4px 15px rgba(106, 13, 173, 0.3);
+}
+
+.filter-btn .badge {
+    font-size: 0.75rem;
+    padding: 4px 8px;
+}
+
+/* Modern Card */
+.modern-card {
+    border-radius: 15px;
+    overflow: hidden;
+    border: none;
+}
+
+.modern-header {
+    background: linear-gradient(135deg, #6A0DAD, #9B59B6);
+    border: none;
+    padding: 20px 25px;
+}
+
+.modern-header h5 {
+    font-weight: 600;
+    font-size: 1.25rem;
+}
+
+.header-actions .badge {
+    font-size: 0.875rem;
+    padding: 8px 12px;
+    border-radius: 20px;
+}
+
+/* Table Styling */
+.table {
+    margin-bottom: 0;
+}
+
+.table thead th {
+    background: #f8f9fa;
+    border: none;
+    font-weight: 600;
+    color: #495057;
+    padding: 15px 20px;
+    text-transform: uppercase;
+    font-size: 0.875rem;
+    letter-spacing: 0.5px;
+}
+
+.table tbody tr {
+    transition: all 0.3s ease;
+    border-bottom: 1px solid #f1f3f4;
+}
+
+.table tbody tr:hover {
+    background: #f8f9fa;
+    transform: scale(1.01);
+}
+
+.table tbody td {
+    padding: 20px;
+    vertical-align: middle;
+    border: none;
+}
+
+/* Action Buttons */
+.btn-group-sm .btn {
+    padding: 8px 12px;
+    border-radius: 8px;
+    font-weight: 500;
+    transition: all 0.3s ease;
+}
+
+.btn-group-sm .btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+}
+
+/* Modal Styles */
+.modern-modal {
+    border-radius: 15px;
+    border: none;
+    box-shadow: 0 20px 40px rgba(0,0,0,0.15);
+}
+
+.modern-modal-header {
+    background: linear-gradient(135deg, #DC3545, #E74C3C);
+    border: none;
+    padding: 20px 25px;
+    border-radius: 15px 15px 0 0;
+}
+
+.modern-modal-header h5 {
+    font-weight: 600;
+    font-size: 1.25rem;
+}
+
+.modern-modal-footer {
+    background: #f8f9fa;
+    border: none;
+    padding: 20px 25px;
+    border-radius: 0 0 15px 15px;
+}
+
+.modern-textarea {
+    border: 2px solid #e9ecef;
+    border-radius: 10px;
+    padding: 15px;
+    font-size: 0.95rem;
+    transition: all 0.3s ease;
+}
+
+.modern-textarea:focus {
+    border-color: #6A0DAD;
+    box-shadow: 0 0 0 0.2rem rgba(106, 13, 173, 0.25);
+}
+
+/* Pagination */
+.pagination .page-link {
+    border: none;
+    color: #6A0DAD;
+    padding: 10px 15px;
+    margin: 0 2px;
+    border-radius: 8px;
+    transition: all 0.3s ease;
+}
+
+.pagination .page-link:hover {
+    background: #6A0DAD;
+    color: white;
+    transform: translateY(-2px);
+}
+
+.pagination .page-item.active .page-link {
+    background: #6A0DAD;
+    color: white;
+    box-shadow: 0 4px 12px rgba(106, 13, 173, 0.3);
+}
+
+/* Loading States */
+.spinner-border.text-purple {
+    color: #6A0DAD !important;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+    .stats-card {
+        margin-bottom: 15px;
+    }
+    
+    .filter-buttons {
+        flex-direction: column;
+    }
+    
+    .filter-btn {
+        border-radius: 8px !important;
+        margin-bottom: 5px;
+    }
+    
+    .table-responsive {
+        font-size: 0.875rem;
+    }
 }
 
 /* Pagination */
@@ -9613,3 +9879,6 @@ body select:focus,
         align-self: flex-end;
     }
 }
+
+/* ===== SEARCH COURSES STYLES ===== */
+/* Search courses uses the same styling as my-courses */

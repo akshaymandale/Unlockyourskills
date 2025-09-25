@@ -77,8 +77,8 @@ function isCurrentPage($route) {
                 <i class="fas fa-book"></i> <span><?= Localization::translate('my_courses'); ?></span>
             </a>
         </li>
-        <li class="list-group-item">
-            <a href="#">
+        <li class="list-group-item<?= isCurrentPage('search-courses') ? ' active' : '' ?>">
+            <a href="<?= UrlHelper::url('search-courses') ?>">
                 <i class="fas fa-search"></i> <span><?= Localization::translate('search_courses'); ?></span>
             </a>
         </li>

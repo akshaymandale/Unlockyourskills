@@ -102,6 +102,19 @@ if ($currentUser) {
                     </div>
                 </div>
 
+                <div class="row mt-3">
+                    <div class="col-md-6">
+                        <div class="card user-box shadow-sm" onclick="window.location.href='<?= UrlHelper::url('enrollment-approval') ?>'">
+                            <h5><i class="fas fa-user-check text-purple"></i> <?= Localization::translate('enrollment_approval'); ?></h5>
+                            <p><small class="text-muted">Approve or reject course enrollment requests from users</small></p>
+                            <div class="mt-2">
+                                <span class="badge bg-warning">Pending</span>
+                                <span class="badge bg-light text-dark">New Feature</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
                 <h3 class="text-purple mt-4"><?= Localization::translate('course_categories.title'); ?></h3>
                 <div class="row">
                     <div class="col-md-6">
