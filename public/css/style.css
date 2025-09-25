@@ -6474,6 +6474,114 @@ body select:focus,
     background-color: #6a0dad;
 }
 
+/* My Courses Pagination Styles */
+.my-courses .pagination {
+    margin-bottom: 0;
+}
+
+.my-courses .pagination .page-link {
+    color: #6a0dad;
+    border: 1px solid #dee2e6;
+    padding: 0.5rem 0.75rem;
+    font-weight: 500;
+    transition: all 0.3s ease;
+}
+
+.my-courses .pagination .page-link:hover {
+    color: #fff;
+    background-color: #6a0dad;
+    border-color: #6a0dad;
+    transform: translateY(-1px);
+    box-shadow: 0 2px 4px rgba(106, 13, 173, 0.3);
+}
+
+.my-courses .pagination .page-item.active .page-link {
+    background-color: #6a0dad;
+    border-color: #6a0dad;
+    color: #fff;
+    box-shadow: 0 2px 4px rgba(106, 13, 173, 0.3);
+}
+
+.my-courses .pagination .page-item.disabled .page-link {
+    color: #6c757d;
+    background-color: #fff;
+    border-color: #dee2e6;
+    cursor: not-allowed;
+}
+
+.my-courses .pagination .page-item.disabled .page-link:hover {
+    color: #6c757d;
+    background-color: #fff;
+    border-color: #dee2e6;
+    transform: none;
+    box-shadow: none;
+}
+
+.my-courses .pagination .page-link i {
+    font-size: 0.875rem;
+}
+
+/* Course count info styling */
+.my-courses .pagination + div {
+    color: #6c757d;
+    font-size: 0.875rem;
+    margin-top: 1rem;
+}
+
+/* Search Courses Pagination Styles */
+.search-courses .pagination {
+    margin-bottom: 0;
+}
+
+.search-courses .pagination .page-link {
+    color: #6a0dad;
+    border: 1px solid #dee2e6;
+    padding: 0.5rem 0.75rem;
+    font-weight: 500;
+    transition: all 0.3s ease;
+}
+
+.search-courses .pagination .page-link:hover {
+    color: #fff;
+    background-color: #6a0dad;
+    border-color: #6a0dad;
+    transform: translateY(-1px);
+    box-shadow: 0 2px 4px rgba(106, 13, 173, 0.3);
+}
+
+.search-courses .pagination .page-item.active .page-link {
+    background-color: #6a0dad;
+    border-color: #6a0dad;
+    color: #fff;
+    box-shadow: 0 2px 4px rgba(106, 13, 173, 0.3);
+}
+
+.search-courses .pagination .page-item.disabled .page-link {
+    color: #6c757d;
+    background-color: #fff;
+    border-color: #dee2e6;
+    cursor: not-allowed;
+}
+
+.search-courses .pagination .page-item.disabled .page-link:hover {
+    color: #6c757d;
+    background-color: #fff;
+    border-color: #dee2e6;
+    transform: none;
+    box-shadow: none;
+}
+
+.search-courses .pagination .page-link i {
+    font-size: 0.875rem;
+}
+
+/* Course count info styling for search courses */
+.search-courses .pagination + div {
+    color: #6c757d;
+    font-size: 0.875rem;
+    margin-top: 1rem;
+}
+
 /* === Course Details Page Enhancements === */
 .course-details .banner-overlay {
   position: absolute;

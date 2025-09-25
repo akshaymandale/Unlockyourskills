@@ -716,7 +716,7 @@ function isPrerequisiteCompleted($userId, $courseId, $prerequisiteId, $prerequis
             }
             
             $params = [$userId, $courseId, $prerequisiteId, $clientId, $prereqRecord['id']];
-        } elseif (in_array($prerequisiteType, ['audio', 'video', 'document', 'image', 'interactive'])) {
+        } elseif (in_array($prerequisiteType, ['audio', 'video', 'document', 'image', 'interactive', 'external'])) {
             // For content prerequisites, we need to find the prerequisite record ID first
             $prereqSql = "SELECT id FROM course_prerequisites 
                          WHERE course_id = ? AND prerequisite_id = ? AND prerequisite_type = ?";

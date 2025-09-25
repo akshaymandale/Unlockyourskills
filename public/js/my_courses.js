@@ -13,6 +13,8 @@ document.addEventListener('DOMContentLoaded', function() {
     let isGridView = true;
     let currentPage = 1;
     let perPage = 12;
+    let totalCourses = 0;
+    let totalPages = 0;
 
     // Add a welcome message above the tabs
     const container = document.getElementById('myCoursesPage');
@@ -30,19 +32,27 @@ document.addEventListener('DOMContentLoaded', function() {
     function fetchCourses() {
         coursesList.innerHTML = '<div class="text-center py-5 w-100"><div class="spinner-border text-primary"></div></div>';
         pagination.innerHTML = '';
-        fetch(`/Unlockyourskills/my-courses/list?status=${encodeURIComponent(currentStatus)}&search=${encodeURIComponent(currentSearch)}&page=${currentPage}&per_page=${perPage}`)
-            .then(res => res.json())
-            .then(data => {
-                if (data.success && Array.isArray(data.courses)) {
-                    renderCourses(data.courses);
-                    // TODO: handle pagination if backend returns total/pages
-                } else {
-                    coursesList.innerHTML = '<div class="text-danger">Failed to load courses.</div>';
-                }
-            })
-            .catch(() => {
+        
+        // Fetch both courses and total count in parallel
+        Promise.all([
+            fetch(`/Unlockyourskills/my-courses/list?status=${encodeURIComponent(currentStatus)}&search=${encodeURIComponent(currentSearch)}&page=${currentPage}&per_page=${perPage}`)
+                .then(res => res.json()),
+            fetch(`/Unlockyourskills/my-courses/count?status=${encodeURIComponent(currentStatus)}&search=${encodeURIComponent(currentSearch)}`)
+                .then(res => res.json())
+        ])
+        .then(([coursesData, countData]) => {
+            if (coursesData.success && Array.isArray(coursesData.courses)) {
+                totalCourses = countData.success ? countData.total : 0;
+                totalPages = Math.ceil(totalCourses / perPage);
+                renderCourses(coursesData.courses);
+                renderPagination();
+            } else {
                 coursesList.innerHTML = '<div class="text-danger">Failed to load courses.</div>';
-            });
+            }
+        })
+        .catch(() => {
+            coursesList.innerHTML = '<div class="text-danger">Failed to load courses.</div>';
+        });
     }
 
     function renderCourses(courses) {
@@ -153,6 +163,82 @@ document.addEventListener('DOMContentLoaded', function() {
         if (status === 'completed') return 'View';
         if (status === 'in_progress') return 'Continue';
         return 'Start';
+    }
+
+    function renderPagination() {
+        if (totalPages <= 1) {
+            pagination.innerHTML = '';
+            return;
+        }
+
+        let paginationHTML = '<nav aria-label="Courses pagination"><ul class="pagination justify-content-center">';
+        
+        // Previous button
+        const prevDisabled = currentPage === 1 ? 'disabled' : '';
+        paginationHTML += `<li class="page-item ${prevDisabled}">
+            <a class="page-link" href="#" data-page="${currentPage - 1}" ${prevDisabled ? 'tabindex="-1" aria-disabled="true"' : ''}>
+                <i class="fas fa-chevron-left"></i> Previous
+            </a>
+        </li>`;
+
+        // Page numbers
+        const startPage = Math.max(1, currentPage - 2);
+        const endPage = Math.min(totalPages, currentPage + 2);
+
+        // First page and ellipsis
+        if (startPage > 1) {
+            paginationHTML += `<li class="page-item"><a class="page-link" href="#" data-page="1">1</a></li>`;
+            if (startPage > 2) {
+                paginationHTML += `<li class="page-item disabled"><span class="page-link">...</span></li>`;
+            }
+        }
+
+        // Page numbers around current page
+        for (let i = startPage; i <= endPage; i++) {
+            const activeClass = i === currentPage ? 'active' : '';
+            paginationHTML += `<li class="page-item ${activeClass}">
+                <a class="page-link" href="#" data-page="${i}">${i}</a>
+            </li>`;
+        }
+
+        // Last page and ellipsis
+        if (endPage < totalPages) {
+            if (endPage < totalPages - 1) {
+                paginationHTML += `<li class="page-item disabled"><span class="page-link">...</span></li>`;
+            }
+            paginationHTML += `<li class="page-item"><a class="page-link" href="#" data-page="${totalPages}">${totalPages}</a></li>`;
+        }
+
+        // Next button
+        const nextDisabled = currentPage === totalPages ? 'disabled' : '';
+        paginationHTML += `<li class="page-item ${nextDisabled}">
+            <a class="page-link" href="#" data-page="${currentPage + 1}" ${nextDisabled ? 'tabindex="-1" aria-disabled="true"' : ''}>
+                Next <i class="fas fa-chevron-right"></i>
+            </a>
+        </li>`;
+
+        paginationHTML += '</ul></nav>';
+
+        // Add course count info
+        const startCourse = (currentPage - 1) * perPage + 1;
+        const endCourse = Math.min(currentPage * perPage, totalCourses);
+        paginationHTML += `<div class="text-center mt-3 text-muted small">
+            Showing ${startCourse}-${endCourse} of ${totalCourses} courses
+        </div>`;
+
+        pagination.innerHTML = paginationHTML;
+
+        // Add event listeners to pagination links
+        pagination.querySelectorAll('.page-link[data-page]').forEach(link => {
+            link.addEventListener('click', function(e) {
+                e.preventDefault();
+                const page = parseInt(this.getAttribute('data-page'));
+                if (page >= 1 && page <= totalPages && page !== currentPage) {
+                    currentPage = page;
+                    fetchCourses();
+                }
+            });
+        });
     }
 
     // Tab switching
