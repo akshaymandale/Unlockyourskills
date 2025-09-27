@@ -513,6 +513,19 @@ Router::get('/users/autocomplete', 'UserManagementController@getUserEmailsForAut
     Router::get('/assignment-submission/course-assignments', 'AssignmentSubmissionController@getCourseAssignments');
 
     // ===================================
+    // SOCIAL DASHBOARD
+    // ===================================
+    Router::get('/social-dashboard', 'SocialDashboardController@index');
+
+    // ===================================
+    // USER ANNOUNCEMENTS
+    // ===================================
+    Router::get('/my-announcements', 'AnnouncementController@viewAnnouncements');
+    Router::get('/api/user-announcements', 'AnnouncementController@getUserAnnouncements');
+    Router::get('/api/announcement-details', 'AnnouncementController@getAnnouncementById');
+    Router::post('/api/acknowledge-announcement', 'AnnouncementController@acknowledgeAnnouncement');
+
+    // ===================================
     // OPINION POLLS
     // ===================================
 
@@ -522,6 +535,9 @@ Router::get('/users/autocomplete', 'UserManagementController@getUserEmailsForAut
     Router::get('/opinion-polls/{id}/edit', 'OpinionPollController@edit');
     Router::put('/opinion-polls/{id}', 'OpinionPollController@update');
     Router::delete('/opinion-polls/{id}', 'OpinionPollController@delete');
+    
+    // Custom Fields API for Opinion Polls
+    Router::get('/api/custom-fields/poll-fields', 'CustomFieldController@getPollFields');
 
     // Opinion Poll AJAX operations
     Router::post('/opinion-polls/ajax/search', 'OpinionPollController@ajaxSearch');
@@ -531,7 +547,7 @@ Router::get('/users/autocomplete', 'UserManagementController@getUserEmailsForAut
     // Opinion Poll Voting (for learners)
     Router::get('/polls', 'OpinionPollController@viewPolls');
     Router::post('/polls/{id}/vote', 'OpinionPollController@submitVote');
-    Router::get('/polls/{id}/results', 'OpinionPollController@viewResults');
+    Router::get('/polls/{id}/results', 'OpinionPollController@getResults');
 
     // ===================================
     // ANNOUNCEMENTS

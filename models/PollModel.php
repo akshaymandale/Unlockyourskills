@@ -107,7 +107,9 @@ class PollModel {
      */
     public function getPollById($id, $clientId = null) {
         $sql = "SELECT p.*,
-                       up.full_name as created_by_name
+                       up.full_name as created_by_name,
+                       (SELECT COUNT(*) FROM poll_votes pv WHERE pv.poll_id = p.id AND pv.is_deleted = 0) as total_votes,
+                       (SELECT COUNT(DISTINCT pv.user_id) FROM poll_votes pv WHERE pv.poll_id = p.id AND pv.is_deleted = 0 AND pv.user_id IS NOT NULL) as unique_voters
                 FROM polls p
                 LEFT JOIN user_profiles up ON p.created_by = up.id
                 WHERE p.id = ? AND p.is_deleted = 0";
@@ -130,9 +132,9 @@ class PollModel {
     public function createPoll($data) {
         $sql = "INSERT INTO polls (
                     client_id, title, description, type, target_audience, course_id, group_id,
-                    start_datetime, end_datetime, show_results, allow_anonymous, allow_vote_change,
-                    status, created_by
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+                    custom_field_id, custom_field_value, start_datetime, end_datetime, show_results, 
+                    allow_anonymous, allow_vote_change, status, created_by
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
 
         $stmt = $this->conn->prepare($sql);
         $result = $stmt->execute([
@@ -143,6 +145,8 @@ class PollModel {
             $data['target_audience'],
             $data['course_id'],
             $data['group_id'],
+            $data['custom_field_id'] ?? null,
+            $data['custom_field_value'] ?? null,
             $data['start_datetime'],
             $data['end_datetime'],
             $data['show_results'],
@@ -166,6 +170,8 @@ class PollModel {
                     target_audience = ?,
                     course_id = ?,
                     group_id = ?,
+                    custom_field_id = ?,
+                    custom_field_value = ?,
                     start_datetime = ?,
                     end_datetime = ?,
                     show_results = ?,
@@ -184,6 +190,8 @@ class PollModel {
             $data['target_audience'],
             $data['course_id'],
             $data['group_id'],
+            $data['custom_field_id'] ?? null,
+            $data['custom_field_value'] ?? null,
             $data['start_datetime'],
             $data['end_datetime'],
             $data['show_results'],
@@ -488,5 +496,155 @@ class PollModel {
             $data['poll_id'],
             $data['client_id']
         ]);
+    }
+
+    /**
+     * Get active polls for a specific user
+     */
+    public function getActivePollsForUser($userId, $clientId) {
+        try {
+            $sql = "SELECT p.*,
+                           up.full_name as created_by_name,
+                           (SELECT COUNT(*) FROM poll_votes pv WHERE pv.poll_id = p.id AND pv.is_deleted = 0) as total_votes,
+                           (SELECT COUNT(DISTINCT pv.user_id) FROM poll_votes pv WHERE pv.poll_id = p.id AND pv.is_deleted = 0 AND pv.user_id IS NOT NULL) as unique_voters
+                    FROM polls p
+                    LEFT JOIN user_profiles up ON p.created_by = up.id
+                    WHERE p.is_deleted = 0 
+                    AND p.client_id = ? 
+                    AND p.status = 'active'
+                    AND p.start_datetime <= NOW() 
+                    AND p.end_datetime >= NOW()
+                    AND (p.target_audience = 'global' 
+                         OR (p.target_audience = 'group_specific' AND p.custom_field_id IS NOT NULL AND p.custom_field_value IS NOT NULL))
+                    ORDER BY p.created_at DESC";
+
+            $stmt = $this->conn->prepare($sql);
+            $stmt->execute([$clientId]);
+            $polls = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+            // Get questions and options for each poll
+            foreach ($polls as &$poll) {
+                $poll['questions'] = $this->getPollQuestions($poll['id'], $clientId);
+                foreach ($poll['questions'] as &$question) {
+                    $question['options'] = $this->getPollOptions($question['id'], $clientId);
+                }
+            }
+
+            return $polls;
+        } catch (Exception $e) {
+            error_log("PollModel::getActivePollsForUser - Database error: " . $e->getMessage());
+            return [];
+        }
+    }
+
+    /**
+     * Get user's voting history
+     */
+    public function getUserVotes($userId, $clientId) {
+        $sql = "SELECT pv.poll_id, pv.question_id, pv.option_id, pv.created_at
+                FROM poll_votes pv
+                INNER JOIN polls p ON pv.poll_id = p.id
+                WHERE pv.user_id = ? 
+                AND pv.client_id = ? 
+                AND pv.is_deleted = 0
+                AND p.is_deleted = 0
+                ORDER BY pv.created_at DESC";
+
+        $stmt = $this->conn->prepare($sql);
+        $stmt->execute([$userId, $clientId]);
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
+
+    /**
+     * Submit a vote for a poll (updated method)
+     */
+    public function submitVoteNew($pollId, $questionId, $optionIds, $userId, $clientId) {
+        try {
+            $this->conn->beginTransaction();
+
+            // Check if user already voted for this question
+            $checkSql = "SELECT id FROM poll_votes 
+                        WHERE poll_id = ? AND question_id = ? AND user_id = ? AND client_id = ? AND is_deleted = 0";
+            $checkStmt = $this->conn->prepare($checkSql);
+            $checkStmt->execute([$pollId, $questionId, $userId, $clientId]);
+            
+            if ($checkStmt->fetch()) {
+                // User already voted, update existing vote
+                $updateSql = "UPDATE poll_votes 
+                             SET option_id = ?, updated_at = NOW() 
+                             WHERE poll_id = ? AND question_id = ? AND user_id = ? AND client_id = ? AND is_deleted = 0";
+                $updateStmt = $this->conn->prepare($updateSql);
+                $updateStmt->execute([$optionIds[0], $pollId, $questionId, $userId, $clientId]);
+            } else {
+                // Insert new vote
+                $insertSql = "INSERT INTO poll_votes (poll_id, question_id, option_id, user_id, client_id, created_at) 
+                             VALUES (?, ?, ?, ?, ?, NOW())";
+                $insertStmt = $this->conn->prepare($insertSql);
+                $insertStmt->execute([$pollId, $questionId, $optionIds[0], $userId, $clientId]);
+            }
+
+            $this->conn->commit();
+            return true;
+
+        } catch (Exception $e) {
+            $this->conn->rollback();
+            error_log("Vote submission error: " . $e->getMessage());
+            return false;
+        }
+    }
+
+    /**
+     * Get poll questions with results
+     */
+    public function getPollQuestionsWithResults($pollId, $clientId) {
+        $sql = "SELECT pq.*, 
+                       COUNT(pv.id) as total_votes
+                FROM poll_questions pq
+                LEFT JOIN poll_votes pv ON pq.id = pv.question_id AND pv.is_deleted = 0
+                WHERE pq.poll_id = ? AND pq.client_id = ? AND pq.is_deleted = 0
+                GROUP BY pq.id
+                ORDER BY pq.question_order";
+
+        $stmt = $this->conn->prepare($sql);
+        $stmt->execute([$pollId, $clientId]);
+        $questions = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+        // Get options with vote counts for each question
+        foreach ($questions as &$question) {
+            $question['options'] = $this->getPollOptionsWithResults($question['id'], $clientId);
+        }
+
+        return $questions;
+    }
+
+    /**
+     * Get poll options with vote counts
+     */
+    public function getPollOptionsWithResults($questionId, $clientId) {
+        $sql = "SELECT po.*, 
+                       COUNT(pv.id) as vote_count
+                FROM poll_options po
+                LEFT JOIN poll_votes pv ON po.id = pv.option_id AND pv.is_deleted = 0
+                WHERE po.question_id = ? AND po.client_id = ? AND po.is_deleted = 0
+                GROUP BY po.id
+                ORDER BY po.option_order";
+
+        $stmt = $this->conn->prepare($sql);
+        $stmt->execute([$questionId, $clientId]);
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
+
+    /**
+     * Get user's votes for a specific poll
+     */
+    public function getUserVotesForPoll($pollId, $userId, $clientId) {
+        $sql = "SELECT pv.question_id, pv.option_id, po.option_text
+                FROM poll_votes pv
+                LEFT JOIN poll_options po ON pv.option_id = po.id
+                WHERE pv.poll_id = ? AND pv.user_id = ? AND pv.client_id = ? AND pv.is_deleted = 0";
+
+        $stmt = $this->conn->prepare($sql);
+        $stmt->execute([$pollId, $userId, $clientId]);
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
 }

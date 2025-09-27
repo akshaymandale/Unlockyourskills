@@ -20,7 +20,13 @@ $canCreateAnnouncement = canCreate('announcements');
 include 'includes/header.php';
 include 'includes/navbar.php';
 include 'includes/sidebar.php';
+
+// Include custom editor components
+include 'views/components/custom-editor.php';
 ?>
+
+<!-- Include custom editor CSS -->
+<link rel="stylesheet" href="<?= UrlHelper::url('public/css/custom-editor.css') ?>">
 
 <div class="main-content" data-announcement-page="true">
     <div class="container add-question-container">
@@ -102,7 +108,6 @@ include 'includes/sidebar.php';
                                 <select class="form-select" id="audienceFilter">
                                     <option value="">All Audience</option>
                                     <option value="global">Global</option>
-                                    <option value="course_specific">Course Specific</option>
                                     <option value="group_specific">Group Specific</option>
                                 </select>
                             </div>
@@ -251,12 +256,13 @@ include 'includes/sidebar.php';
                     <div class="row mb-4">
                         <div class="col-12">
                             <label for="announcementBody" class="form-label">Message <span class="text-danger">*</span></label>
-                            <textarea class="form-control" id="announcementBody" name="body" rows="6"
-                                placeholder="Enter your announcement message..."></textarea>
-                            <div class="form-text">
-                                <span id="bodyCharCount">0</span> characters
-                            </div>
-                            <div class="invalid-feedback"></div>
+                            
+                            <?= renderCustomEditor('announcementBody', 'body', 'bodyCharCount', [
+                                'placeholder' => 'Enter your announcement message...',
+                                'minHeight' => 200,
+                                'maxHeight' => 400,
+                                'required' => true
+                            ]) ?>
                         </div>
                     </div>
 
@@ -269,7 +275,6 @@ include 'includes/sidebar.php';
                                 <?php if ($canCreateGlobal): ?>
                                 <option value="global">Global (All Users)</option>
                                 <?php endif; ?>
-                                <option value="course_specific">Course Specific</option>
                                 <option value="group_specific">Group Specific</option>
                             </select>
                             <div class="invalid-feedback"></div>
@@ -284,6 +289,29 @@ include 'includes/sidebar.php';
                             <label for="endDatetime" class="form-label">End Date & Time</label>
                             <input type="datetime-local" class="form-control" id="endDatetime" name="end_datetime">
                             <div class="form-text">Leave empty for no expiration</div>
+                            <div class="invalid-feedback"></div>
+                        </div>
+                    </div>
+
+                    <!-- Custom Field Selection (for Group Specific) -->
+                    <div class="row mb-4" id="customFieldSelection" style="display: none;">
+                        <div class="col-md-6 mb-3">
+                            <label for="customFieldId" class="form-label">Select Custom Field <span class="text-danger">*</span></label>
+                            <select class="form-select" id="customFieldId" name="custom_field_id">
+                                <option value="">Select custom field...</option>
+                                <?php foreach ($customFields as $field): ?>
+                                    <option value="<?= $field['id']; ?>" data-options="<?= htmlspecialchars(json_encode($field['field_options'] ?? [])); ?>">
+                                        <?= htmlspecialchars($field['field_label']); ?>
+                                    </option>
+                                <?php endforeach; ?>
+                            </select>
+                            <div class="invalid-feedback"></div>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="customFieldValue" class="form-label">Select Custom Field Value <span class="text-danger">*</span></label>
+                            <select class="form-select" id="customFieldValue" name="custom_field_value">
+                                <option value="">Select value...</option>
+                            </select>
                             <div class="invalid-feedback"></div>
                         </div>
                     </div>
@@ -380,12 +408,13 @@ include 'includes/sidebar.php';
                     <div class="row mb-4">
                         <div class="col-12">
                             <label for="editAnnouncementBody" class="form-label">Message <span class="text-danger">*</span></label>
-                            <textarea class="form-control" id="editAnnouncementBody" name="body" rows="6"
-                                placeholder="Enter your announcement message..."></textarea>
-                            <div class="form-text">
-                                <span id="editBodyCharCount">0</span> characters
-                            </div>
-                            <div class="invalid-feedback"></div>
+                            
+                            <?= renderCustomEditor('editAnnouncementBody', 'body', 'editBodyCharCount', [
+                                'placeholder' => 'Enter your announcement message...',
+                                'minHeight' => 200,
+                                'maxHeight' => 400,
+                                'required' => true
+                            ]) ?>
                         </div>
                     </div>
 
@@ -397,7 +426,6 @@ include 'includes/sidebar.php';
                                 <?php if ($canCreateGlobal): ?>
                                 <option value="global">Global (All Users)</option>
                                 <?php endif; ?>
-                                <option value="course_specific">Course Specific</option>
                                 <option value="group_specific">Group Specific</option>
                             </select>
                             <div class="invalid-feedback"></div>
@@ -415,6 +443,30 @@ include 'includes/sidebar.php';
                             <div class="invalid-feedback"></div>
                         </div>
                     </div>
+
+                    <!-- Custom Field Selection (for Group Specific) - Edit Modal -->
+                    <div class="row mb-4" id="editCustomFieldSelection" style="display: none;">
+                        <div class="col-md-6 mb-3">
+                            <label for="editCustomFieldId" class="form-label">Select Custom Field <span class="text-danger">*</span></label>
+                            <select class="form-select" id="editCustomFieldId" name="custom_field_id">
+                                <option value="">Select custom field...</option>
+                                <?php foreach ($customFields as $field): ?>
+                                    <option value="<?= $field['id']; ?>" data-options="<?= htmlspecialchars(json_encode($field['field_options'] ?? [])); ?>">
+                                        <?= htmlspecialchars($field['field_label']); ?>
+                                    </option>
+                                <?php endforeach; ?>
+                            </select>
+                            <div class="invalid-feedback"></div>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="editCustomFieldValue" class="form-label">Select Custom Field Value <span class="text-danger">*</span></label>
+                            <select class="form-select" id="editCustomFieldValue" name="custom_field_value">
+                                <option value="">Select value...</option>
+                            </select>
+                            <div class="invalid-feedback"></div>
+                        </div>
+                    </div>
+
 
                     <div class="row mb-4 d-none" id="editCourseSelectionRow">
                         <div class="col-12">
@@ -648,21 +700,100 @@ function initializeCharacterCounting() {
     }
 }
 
+// Function to toggle custom field selection visibility (Global scope)
+function toggleCustomFieldSelection(audienceSelect, customFieldDiv) {
+    if (audienceSelect.value === 'group_specific') {
+        customFieldDiv.style.display = 'block';
+    } else {
+        customFieldDiv.style.display = 'none';
+        // Clear selections when hidden
+        const fieldIdSelect = customFieldDiv.querySelector('select[name="custom_field_id"]');
+        const fieldValueSelect = customFieldDiv.querySelector('select[name="custom_field_value"]');
+        if (fieldIdSelect) fieldIdSelect.value = '';
+        if (fieldValueSelect) fieldValueSelect.value = '';
+    }
+}
+
+// Function to load custom field values (Global scope)
+function loadCustomFieldValues(fieldIdSelect, fieldValueSelect) {
+    const selectedOption = fieldIdSelect.options[fieldIdSelect.selectedIndex];
+    const optionsData = selectedOption.getAttribute('data-options');
+    
+    // Clear existing options
+    fieldValueSelect.innerHTML = '<option value="">Select value...</option>';
+    
+    if (optionsData) {
+        try {
+            const options = JSON.parse(optionsData);
+            
+            // Check if options is a string (contains \r\n) or an array
+            if (typeof options === 'string') {
+                // If it's a string with \r\n, split it
+                const splitOptions = options.split(/\r?\n/).filter(opt => opt.trim() !== '');
+                splitOptions.forEach(option => {
+                    const optionElement = document.createElement('option');
+                    optionElement.value = option.trim();
+                    optionElement.textContent = option.trim();
+                    fieldValueSelect.appendChild(optionElement);
+                });
+            } else if (Array.isArray(options)) {
+                // If it's already an array, use it directly
+                options.forEach(option => {
+                    const optionElement = document.createElement('option');
+                    optionElement.value = option;
+                    optionElement.textContent = option;
+                    fieldValueSelect.appendChild(optionElement);
+                });
+            }
+        } catch (e) {
+            // If JSON parsing fails, treat as newline-separated string
+            const options = optionsData.split(/\r?\n/).filter(opt => opt.trim() !== '');
+            options.forEach(option => {
+                const optionElement = document.createElement('option');
+                optionElement.value = option.trim();
+                optionElement.textContent = option.trim();
+                fieldValueSelect.appendChild(optionElement);
+            });
+        }
+    }
+}
+
 // Initialize modals
 function initializeModals() {
     // Audience type change handlers
     const audienceType = document.getElementById('audienceType');
     const editAudienceType = document.getElementById('editAudienceType');
+    const customFieldSelection = document.getElementById('customFieldSelection');
+    const customFieldId = document.getElementById('customFieldId');
+    const customFieldValue = document.getElementById('customFieldValue');
+    const editCustomFieldSelection = document.getElementById('editCustomFieldSelection');
+    const editCustomFieldId = document.getElementById('editCustomFieldId');
+    const editCustomFieldValue = document.getElementById('editCustomFieldValue');
+
 
     if (audienceType) {
         audienceType.addEventListener('change', function() {
             toggleCourseSelection(this.value, false);
+            toggleCustomFieldSelection(this, customFieldSelection);
         });
     }
 
     if (editAudienceType) {
         editAudienceType.addEventListener('change', function() {
             toggleCourseSelection(this.value, true);
+            toggleCustomFieldSelection(this, editCustomFieldSelection);
+        });
+    }
+
+    if (customFieldId) {
+        customFieldId.addEventListener('change', function() {
+            loadCustomFieldValues(customFieldId, customFieldValue);
+        });
+    }
+
+    if (editCustomFieldId) {
+        editCustomFieldId.addEventListener('change', function() {
+            loadCustomFieldValues(editCustomFieldId, editCustomFieldValue);
         });
     }
 
@@ -677,6 +808,27 @@ function initializeModals() {
     if (editForm) {
         editForm.addEventListener('submit', handleEditSubmit);
     }
+
+    // Initialize custom field selection on modal show
+    $('#createAnnouncementModal').on('shown.bs.modal', function() {
+        if (audienceType && customFieldSelection) {
+            toggleCustomFieldSelection(audienceType, customFieldSelection);
+        }
+    });
+
+    $('#editAnnouncementModal').on('shown.bs.modal', function() {
+        if (editAudienceType && editCustomFieldSelection) {
+            toggleCustomFieldSelection(editAudienceType, editCustomFieldSelection);
+        }
+    });
+    
+    // Also initialize on page load
+    if (audienceType && customFieldSelection) {
+        toggleCustomFieldSelection(audienceType, customFieldSelection);
+    }
+    if (editAudienceType && editCustomFieldSelection) {
+        toggleCustomFieldSelection(editAudienceType, editCustomFieldSelection);
+    }
 }
 
 // Toggle course selection based on audience type
@@ -685,17 +837,10 @@ function toggleCourseSelection(audienceType, isEdit = false) {
     const courseSelect = document.getElementById(isEdit ? 'editTargetCourses' : 'targetCourses');
 
     if (courseRow && courseSelect) {
-        if (audienceType === 'course_specific') {
-            courseRow.classList.remove('d-none');
-            courseSelect.required = true;
-            // Load courses if not already loaded
-            if (courseSelect.options.length === 0) {
-                loadCourses(courseSelect);
-            }
-        } else {
-            courseRow.classList.add('d-none');
-            courseSelect.required = false;
-        }
+        // Hide course selection for all audience types
+        courseRow.classList.add('d-none');
+        courseSelect.required = false;
+        courseSelect.selectedIndex = 0;
     }
 }
 
@@ -825,12 +970,12 @@ function createAnnouncementCard(announcement) {
                 </div>
                 <div class="card-body">
                     <h6 class="card-title">${escapeHtml(announcement.title)}</h6>
-                    <p class="card-text text-muted small">
-                        ${truncateText(stripHtml(announcement.body), 100)}
+                    <p class="card-text">
+                        ${truncateText(stripHtml(announcement.body), 120)}
                     </p>
 
                     <div class="announcement-meta">
-                        <div class="row text-muted small">
+                        <div class="row">
                             <div class="col-6">
                                 <i class="fas fa-user me-1"></i>
                                 ${escapeHtml(announcement.creator_name || 'Unknown')}
@@ -842,7 +987,7 @@ function createAnnouncementCard(announcement) {
                         </div>
 
                         ${announcement.require_acknowledgment ? `
-                        <div class="row mt-2 text-muted small">
+                        <div class="row mt-2">
                             <div class="col-12">
                                 <i class="fas fa-check-circle me-1"></i>
                                 ${announcement.acknowledgment_count || 0} acknowledgments
@@ -851,7 +996,7 @@ function createAnnouncementCard(announcement) {
                         ` : ''}
 
                         ${announcement.view_count ? `
-                        <div class="row mt-1 text-muted small">
+                        <div class="row mt-1">
                             <div class="col-12">
                                 <i class="fas fa-eye me-1"></i>
                                 ${announcement.view_count} views
@@ -1264,13 +1409,15 @@ function editAnnouncement(announcementId) {
 function populateEditForm(announcement, courses = []) {
     document.getElementById('edit_announcement_id').value = announcement.id;
     document.getElementById('editAnnouncementTitle').value = announcement.title || '';
-    document.getElementById('editAnnouncementBody').value = announcement.body || '';
+    
+    // Set editor content using custom editor function
+    setEditorContent('editAnnouncementBody', announcement.body || '');
+    
     document.getElementById('editUrgencyLevel').value = announcement.urgency || 'info';
     document.getElementById('editAudienceType').value = announcement.audience_type || '';
 
     // Update character counts
     document.getElementById('editTitleCharCount').textContent = (announcement.title || '').length;
-    document.getElementById('editBodyCharCount').textContent = (announcement.body || '').length;
 
     // Handle datetime fields
     if (announcement.start_datetime) {
@@ -1290,25 +1437,26 @@ function populateEditForm(announcement, courses = []) {
     document.getElementById('editCtaLabel').value = announcement.cta_label || '';
     document.getElementById('editCtaUrl').value = announcement.cta_url || '';
 
-    // Handle course selection
-    if (announcement.audience_type === 'course_specific') {
-        toggleCourseSelection('course_specific', true);
-
-        // Load courses and select the ones associated with this announcement
-        const courseSelect = document.getElementById('editTargetCourses');
-        loadCourses(courseSelect);
-
-        // Select associated courses
-        setTimeout(() => {
-            courses.forEach(course => {
-                const option = courseSelect.querySelector(`option[value="${course.course_id}"]`);
-                if (option) {
-                    option.selected = true;
+    // Handle course selection - hide for all audience types
+    toggleCourseSelection(announcement.audience_type, true);
+    
+    // Handle custom field selection
+    toggleCustomFieldSelection(document.getElementById('editAudienceType'), document.getElementById('editCustomFieldSelection'));
+    
+    // Populate custom field values if group_specific
+    if (announcement.audience_type === 'group_specific') {
+        if (announcement.custom_field_id) {
+            document.getElementById('editCustomFieldId').value = announcement.custom_field_id;
+            // Trigger change event to load custom field values
+            document.getElementById('editCustomFieldId').dispatchEvent(new Event('change'));
+            
+            // Set custom field value after a short delay to ensure options are loaded
+            setTimeout(() => {
+                if (announcement.custom_field_value) {
+                    document.getElementById('editCustomFieldValue').value = announcement.custom_field_value;
                 }
-            });
-        }, 100);
-    } else {
-        toggleCourseSelection(announcement.audience_type, true);
+            }, 100);
+        }
     }
 }
 
@@ -1434,8 +1582,36 @@ function debounce(func, wait) {
 }
 </script>
 
+<style>
+/* Ensure custom field section displays side by side */
+#customFieldSelection .col-md-6,
+#editCustomFieldSelection .col-md-6 {
+    display: inline-block;
+    width: 48%;
+    margin-right: 2%;
+    vertical-align: top;
+}
+
+#customFieldSelection .col-md-6:last-child,
+#editCustomFieldSelection .col-md-6:last-child {
+    margin-right: 0;
+}
+
+/* Responsive design for smaller screens */
+@media (max-width: 768px) {
+    #customFieldSelection .col-md-6,
+    #editCustomFieldSelection .col-md-6 {
+        display: block;
+        width: 100%;
+        margin-right: 0;
+        margin-bottom: 15px;
+    }
+}
+</style>
+
 <!-- Include necessary JavaScript files for proper functionality -->
 <script src="<?= UrlHelper::url('public/js/announcement_validation.js') ?>"></script>
 <script src="<?= UrlHelper::url('public/js/modules/announcement_confirmations.js') ?>"></script>
+<script src="<?= UrlHelper::url('public/js/custom-editor.js') ?>"></script>
 
 <?php include 'includes/footer.php'; ?>

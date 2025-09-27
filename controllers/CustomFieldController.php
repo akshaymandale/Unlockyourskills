@@ -332,4 +332,55 @@ class CustomFieldController {
     public function save() {
         return $this->create();
     }
+
+    /**
+     * Get custom fields for opinion polls
+     * Returns fields that have options (select, radio, checkbox)
+     */
+    public function getPollFields() {
+        header('Content-Type: application/json');
+        
+        // Check if user is logged in
+        if (!isset($_SESSION['user']['client_id'])) {
+            echo json_encode([
+                'success' => false,
+                'message' => 'Unauthorized access'
+            ]);
+            exit;
+        }
+
+        try {
+            $clientId = $_SESSION['user']['client_id'];
+            
+            // Get custom fields that have options
+            $customFields = $this->customFieldModel->getCustomFieldsByClient($clientId, true);
+            
+            // Filter fields that have options
+            $fieldsWithOptions = [];
+            foreach ($customFields as $field) {
+                if (in_array($field['field_type'], ['select', 'radio', 'checkbox']) && 
+                    !empty($field['field_options']) && 
+                    is_array($field['field_options'])) {
+                    $fieldsWithOptions[] = [
+                        'id' => $field['id'],
+                        'field_label' => $field['field_label'],
+                        'field_type' => $field['field_type'],
+                        'field_options' => $field['field_options']
+                    ];
+                }
+            }
+            
+            echo json_encode([
+                'success' => true,
+                'fields' => $fieldsWithOptions
+            ]);
+            
+        } catch (Exception $e) {
+            error_log("Error fetching custom fields for polls: " . $e->getMessage());
+            echo json_encode([
+                'success' => false,
+                'message' => 'Error fetching custom fields'
+            ]);
+        }
+    }
 }

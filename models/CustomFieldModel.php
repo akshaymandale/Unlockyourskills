@@ -1,7 +1,5 @@
 <?php
-
-// Database.php should be included by the calling script
-// require_once 'config/Database.php';
+require_once 'config/Database.php';
 
 class CustomFieldModel {
     private $conn;

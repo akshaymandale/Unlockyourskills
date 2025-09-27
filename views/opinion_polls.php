@@ -16,6 +16,7 @@ $canManageAll = in_array($systemRole, ['super_admin', 'admin']);
 ?>
 
 <?php include 'includes/header.php'; ?>
+
 <?php include 'includes/navbar.php'; ?>
 <?php include 'includes/sidebar.php'; ?>
 
@@ -107,7 +108,6 @@ $canManageAll = in_array($systemRole, ['super_admin', 'admin']);
                                 <select class="form-select" id="audienceFilter">
                                     <option value="">All Audience</option>
                                     <option value="global">Global</option>
-                                    <option value="course_specific">Course Specific</option>
                                     <option value="group_specific">Group Specific</option>
                                 </select>
                             </div>
@@ -260,7 +260,6 @@ $canManageAll = in_array($systemRole, ['super_admin', 'admin']);
                             <select class="form-select" id="targetAudience" name="target_audience">
                                 <option value="">Select audience...</option>
                                 <option value="global">Global (All Users)</option>
-                                <option value="course_specific">Course Specific</option>
                                 <option value="group_specific">Group Specific</option>
                             </select>
                             <div class="invalid-feedback"></div>
@@ -273,6 +272,29 @@ $canManageAll = in_array($systemRole, ['super_admin', 'admin']);
                         <div class="col-md-4">
                             <label for="endDatetime" class="form-label">End Date & Time <span class="text-danger">*</span></label>
                             <input type="datetime-local" class="form-control" id="endDatetime" name="end_datetime">
+                            <div class="invalid-feedback"></div>
+                        </div>
+                    </div>
+
+                    <!-- Custom Field Selection (for Group Specific) -->
+                    <div class="row mb-4" id="customFieldSelection" style="display: none;">
+                        <div class="col-md-6 mb-3">
+                            <label for="customFieldId" class="form-label">Select Custom Field <span class="text-danger">*</span></label>
+                            <select class="form-select" id="customFieldId" name="custom_field_id">
+                                <option value="">Select custom field...</option>
+                                <?php foreach ($customFields as $field): ?>
+                                    <option value="<?= $field['id']; ?>" data-options="<?= htmlspecialchars(json_encode($field['field_options'] ?? [])); ?>">
+                                        <?= htmlspecialchars($field['field_label']); ?>
+                                    </option>
+                                <?php endforeach; ?>
+                            </select>
+                            <div class="invalid-feedback"></div>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="customFieldValue" class="form-label">Select Custom Field Value <span class="text-danger">*</span></label>
+                            <select class="form-select" id="customFieldValue" name="custom_field_value">
+                                <option value="">Select value...</option>
+                            </select>
                             <div class="invalid-feedback"></div>
                         </div>
                     </div>
@@ -387,7 +409,6 @@ $canManageAll = in_array($systemRole, ['super_admin', 'admin']);
                             <select class="form-select" id="editTargetAudience" name="target_audience">
                                 <option value="">Select audience...</option>
                                 <option value="global">Global (All Users)</option>
-                                <option value="course_specific">Course Specific</option>
                                 <option value="group_specific">Group Specific</option>
                             </select>
                             <div class="invalid-feedback"></div>
@@ -400,6 +421,29 @@ $canManageAll = in_array($systemRole, ['super_admin', 'admin']);
                         <div class="col-md-4">
                             <label for="editEndDatetime" class="form-label">End Date & Time <span class="text-danger">*</span></label>
                             <input type="datetime-local" class="form-control" id="editEndDatetime" name="end_datetime">
+                            <div class="invalid-feedback"></div>
+                        </div>
+                    </div>
+
+                    <!-- Custom Field Selection (for Group Specific) - Edit Modal -->
+                    <div class="row mb-4" id="editCustomFieldSelection" style="display: none;">
+                        <div class="col-md-6 mb-3">
+                            <label for="editCustomFieldId" class="form-label">Select Custom Field <span class="text-danger">*</span></label>
+                            <select class="form-select" id="editCustomFieldId" name="custom_field_id">
+                                <option value="">Select custom field...</option>
+                                <?php foreach ($customFields as $field): ?>
+                                    <option value="<?= $field['id']; ?>" data-options="<?= htmlspecialchars(json_encode($field['field_options'] ?? [])); ?>">
+                                        <?= htmlspecialchars($field['field_label']); ?>
+                                    </option>
+                                <?php endforeach; ?>
+                            </select>
+                            <div class="invalid-feedback"></div>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="editCustomFieldValue" class="form-label">Select Custom Field Value <span class="text-danger">*</span></label>
+                            <select class="form-select" id="editCustomFieldValue" name="custom_field_value">
+                                <option value="">Select value...</option>
+                            </select>
                             <div class="invalid-feedback"></div>
                         </div>
                     </div>
@@ -462,5 +506,193 @@ $canManageAll = in_array($systemRole, ['super_admin', 'admin']);
 <script src="<?= UrlHelper::url('public/js/opinion_polls.js') ?>"></script>
 <script src="public/js/modules/opinion_poll_confirmations.js"></script>
 <script src="public/js/opinion_poll_validation.js"></script>
+
+<style>
+/* Ensure custom field section displays side by side */
+#customFieldSelection .col-md-6,
+#editCustomFieldSelection .col-md-6 {
+    display: inline-block;
+    width: 48%;
+    margin-right: 2%;
+    vertical-align: top;
+}
+
+#customFieldSelection .col-md-6:last-child,
+#editCustomFieldSelection .col-md-6:last-child {
+    margin-right: 0;
+}
+
+/* Responsive design for smaller screens */
+@media (max-width: 768px) {
+    #customFieldSelection .col-md-6,
+    #editCustomFieldSelection .col-md-6 {
+        display: block;
+        width: 100%;
+        margin-right: 0;
+        margin-bottom: 15px;
+    }
+}
+
+/* Fix badge overflow in poll cards */
+.poll-card .card-header {
+    flex-wrap: wrap;
+    min-height: auto;
+}
+
+.poll-card .card-header .d-flex.gap-1 {
+    flex-wrap: wrap;
+    gap: 0.25rem !important;
+}
+
+.poll-card .card-header .badge {
+    font-size: 0.75rem;
+    white-space: nowrap;
+    margin-bottom: 0.25rem;
+}
+
+/* Ensure badges don't overflow on smaller screens */
+@media (max-width: 576px) {
+    .poll-card .card-header {
+        flex-direction: column;
+        align-items: flex-start !important;
+    }
+    
+    .poll-card .card-header .d-flex.gap-1 {
+        margin-top: 0.5rem;
+        width: 100%;
+        justify-content: flex-start;
+    }
+}
+</style>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Handle target audience change for create modal
+    const targetAudience = document.getElementById('targetAudience');
+    const customFieldSelection = document.getElementById('customFieldSelection');
+    const customFieldId = document.getElementById('customFieldId');
+    const customFieldValue = document.getElementById('customFieldValue');
+
+    // Handle target audience change for edit modal
+    const editTargetAudience = document.getElementById('editTargetAudience');
+    const editCustomFieldSelection = document.getElementById('editCustomFieldSelection');
+    const editCustomFieldId = document.getElementById('editCustomFieldId');
+    const editCustomFieldValue = document.getElementById('editCustomFieldValue');
+
+    // Debug: Check if elements are found
+    console.log('Elements found:');
+    console.log('targetAudience:', targetAudience);
+    console.log('customFieldSelection:', customFieldSelection);
+    console.log('customFieldId:', customFieldId);
+    console.log('customFieldValue:', customFieldValue);
+
+    // Function to toggle custom field selection visibility
+    function toggleCustomFieldSelection(audienceSelect, customFieldDiv) {
+        if (audienceSelect.value === 'group_specific') {
+            customFieldDiv.style.display = 'block';
+        } else {
+            customFieldDiv.style.display = 'none';
+            // Clear selections when hidden
+            const fieldIdSelect = customFieldDiv.querySelector('select[name="custom_field_id"]');
+            const fieldValueSelect = customFieldDiv.querySelector('select[name="custom_field_value"]');
+            if (fieldIdSelect) fieldIdSelect.value = '';
+            if (fieldValueSelect) fieldValueSelect.value = '';
+        }
+    }
+
+    // Function to load custom field values
+    function loadCustomFieldValues(fieldIdSelect, fieldValueSelect) {
+        console.log('loadCustomFieldValues called');
+        console.log('fieldIdSelect:', fieldIdSelect);
+        console.log('fieldValueSelect:', fieldValueSelect);
+        
+        const selectedOption = fieldIdSelect.options[fieldIdSelect.selectedIndex];
+        console.log('selectedOption:', selectedOption);
+        console.log('selectedOption.dataset.options:', selectedOption?.dataset?.options);
+        
+        if (selectedOption && selectedOption.dataset.options) {
+            let options;
+            try {
+                options = JSON.parse(selectedOption.dataset.options);
+                console.log('parsed options:', options);
+            } catch (e) {
+                console.log('JSON parse failed, treating as string:', e);
+                // If JSON parse fails, treat as a string and split by newlines
+                const rawData = selectedOption.dataset.options;
+                options = rawData.split(/\r?\n/).filter(option => option.trim() !== '');
+                console.log('split options:', options);
+            }
+            
+            fieldValueSelect.innerHTML = '<option value="">Select value...</option>';
+            
+            // Handle both array and string cases
+            if (Array.isArray(options)) {
+                options.forEach(option => {
+                    const optionElement = document.createElement('option');
+                    optionElement.value = option;
+                    optionElement.textContent = option;
+                    fieldValueSelect.appendChild(optionElement);
+                });
+            } else if (typeof options === 'string') {
+                // If it's a string, split by newlines
+                const optionArray = options.split(/\r?\n/).filter(option => option.trim() !== '');
+                optionArray.forEach(option => {
+                    const optionElement = document.createElement('option');
+                    optionElement.value = option.trim();
+                    optionElement.textContent = option.trim();
+                    fieldValueSelect.appendChild(optionElement);
+                });
+            }
+        } else {
+            console.log('No options found or invalid data');
+            fieldValueSelect.innerHTML = '<option value="">Select value...</option>';
+        }
+    }
+
+    // Event listeners for create modal
+    if (targetAudience) {
+        targetAudience.addEventListener('change', function() {
+            toggleCustomFieldSelection(targetAudience, customFieldSelection);
+        });
+    }
+
+    if (customFieldId) {
+        customFieldId.addEventListener('change', function() {
+            console.log('Custom field changed, calling loadCustomFieldValues');
+            loadCustomFieldValues(customFieldId, customFieldValue);
+        });
+    }
+
+    // Event listeners for edit modal
+    if (editTargetAudience) {
+        editTargetAudience.addEventListener('change', function() {
+            toggleCustomFieldSelection(editTargetAudience, editCustomFieldSelection);
+        });
+    }
+
+    if (editCustomFieldId) {
+        editCustomFieldId.addEventListener('change', function() {
+            loadCustomFieldValues(editCustomFieldId, editCustomFieldValue);
+        });
+    }
+
+    // Initialize custom field selection on modal show
+    $('#createPollModal').on('shown.bs.modal', function() {
+        toggleCustomFieldSelection(targetAudience, customFieldSelection);
+    });
+
+    $('#editPollModal').on('shown.bs.modal', function() {
+        toggleCustomFieldSelection(editTargetAudience, editCustomFieldSelection);
+    });
+    
+    // Also initialize on page load
+    if (targetAudience && customFieldSelection) {
+        toggleCustomFieldSelection(targetAudience, customFieldSelection);
+    }
+    if (editTargetAudience && editCustomFieldSelection) {
+        toggleCustomFieldSelection(editTargetAudience, editCustomFieldSelection);
+    }
+});
+</script>
 
 <?php include 'includes/footer.php'; ?>

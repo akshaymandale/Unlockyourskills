@@ -159,7 +159,14 @@ function validateField(field, formType) {
             break;
             
         case 'body':
-            if (!fieldValue) {
+            // Handle custom editor content
+            let bodyContent = fieldValue;
+            const editor = document.getElementById(field.id.replace('Hidden', ''));
+            if (editor && editor.contentEditable === 'true') {
+                bodyContent = editor.textContent || editor.innerText || '';
+            }
+            
+            if (!bodyContent.trim()) {
                 showFieldError(field, 'Announcement message is required.');
                 return false;
             }

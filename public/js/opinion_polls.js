@@ -7,6 +7,64 @@
  * - Modal management
  */
 
+// Function to toggle custom field selection visibility (Global scope)
+function toggleCustomFieldSelection(audienceSelect, customFieldDiv) {
+    if (audienceSelect.value === 'group_specific') {
+        customFieldDiv.style.display = 'block';
+    } else {
+        customFieldDiv.style.display = 'none';
+        // Clear selections when hidden
+        const fieldIdSelect = customFieldDiv.querySelector('select[name="custom_field_id"]');
+        const fieldValueSelect = customFieldDiv.querySelector('select[name="custom_field_value"]');
+        if (fieldIdSelect) fieldIdSelect.value = '';
+        if (fieldValueSelect) fieldValueSelect.value = '';
+    }
+}
+
+// Function to load custom field values (Global scope)
+function loadCustomFieldValues(fieldIdSelect, fieldValueSelect) {
+    const selectedOption = fieldIdSelect.options[fieldIdSelect.selectedIndex];
+    const optionsData = selectedOption.getAttribute('data-options');
+    
+    // Clear existing options
+    fieldValueSelect.innerHTML = '<option value="">Select value...</option>';
+    
+    if (optionsData) {
+        try {
+            const options = JSON.parse(optionsData);
+            
+            // Check if options is a string (contains \r\n) or an array
+            if (typeof options === 'string') {
+                // If it's a string with \r\n, split it
+                const splitOptions = options.split(/\r?\n/).filter(opt => opt.trim() !== '');
+                splitOptions.forEach(option => {
+                    const optionElement = document.createElement('option');
+                    optionElement.value = option.trim();
+                    optionElement.textContent = option.trim();
+                    fieldValueSelect.appendChild(optionElement);
+                });
+            } else if (Array.isArray(options)) {
+                // If it's already an array, use it directly
+                options.forEach(option => {
+                    const optionElement = document.createElement('option');
+                    optionElement.value = option;
+                    optionElement.textContent = option;
+                    fieldValueSelect.appendChild(optionElement);
+                });
+            }
+        } catch (e) {
+            // If JSON parsing fails, treat as newline-separated string
+            const options = optionsData.split(/\r?\n/).filter(opt => opt.trim() !== '');
+            options.forEach(option => {
+                const optionElement = document.createElement('option');
+                optionElement.value = option.trim();
+                optionElement.textContent = option.trim();
+                fieldValueSelect.appendChild(optionElement);
+            });
+        }
+    }
+}
+
 // Create namespace for opinion polls to prevent variable conflicts
 window.opinionPollsState = {
     currentPage: 1,
@@ -478,7 +536,7 @@ function createPollCard(poll) {
                 <div class="d-flex gap-1">
                     ${pollState}
                     <span class="badge bg-${typeBadgeClass}">${poll.type === 'single_choice' ? 'Single Choice' : 'Multiple Choice'}</span>
-                    <span class="badge bg-${audienceBadgeClass}">${poll.target_audience === 'global' ? 'Global' : poll.target_audience === 'course_specific' ? 'Course Specific' : 'Group Specific'}</span>
+                    <span class="badge bg-${audienceBadgeClass}">${poll.target_audience === 'global' ? 'Global' : 'Group Specific'}</span>
                 </div>
             </div>
             <div class="card-body">
@@ -670,7 +728,6 @@ function getStatusBadgeClass(status) {
 function getAudienceBadgeClass(audience) {
     switch (audience) {
         case 'global': return 'primary';
-        case 'course_specific': return 'info';
         case 'group_specific': return 'warning';
         default: return 'secondary';
     }
@@ -925,6 +982,35 @@ function populateEditModal(poll, questions) {
 
     // Update character counts
     updateEditCharacterCounts();
+
+    // Handle custom field selection
+    const editTargetAudience = document.getElementById('editTargetAudience');
+    const editCustomFieldSelection = document.getElementById('editCustomFieldSelection');
+    
+    if (editTargetAudience && editCustomFieldSelection) {
+        // Toggle custom field visibility based on audience type
+        if (poll.target_audience === 'group_specific') {
+            editCustomFieldSelection.style.display = 'block';
+        } else {
+            editCustomFieldSelection.style.display = 'none';
+        }
+        
+        // Populate custom field values if group_specific
+        if (poll.target_audience === 'group_specific') {
+            if (poll.custom_field_id) {
+                document.getElementById('editCustomFieldId').value = poll.custom_field_id;
+                // Trigger change event to load custom field values
+                document.getElementById('editCustomFieldId').dispatchEvent(new Event('change'));
+                
+                // Set custom field value after a short delay to ensure options are loaded
+                setTimeout(() => {
+                    if (poll.custom_field_value) {
+                        document.getElementById('editCustomFieldValue').value = poll.custom_field_value;
+                    }
+                }, 100);
+            }
+        }
+    }
 
     // Populate questions
     const questionsContainer = document.getElementById('editQuestionsContainer');
