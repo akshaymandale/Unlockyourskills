@@ -45,9 +45,28 @@ function isCurrentPage($route) {
         return false;
     }
     
+    // Special handling for social pages
+    if ($route === 'social') {
+        $socialPages = [
+            'social-dashboard',
+            'polls',
+            'my-announcements',
+            'my-events',
+            'feed'
+        ];
+        
+        foreach ($socialPages as $socialPage) {
+            if ($currentUri === $socialPage || strpos($currentUri, $socialPage . '/') === 0) {
+                return true;
+            }
+        }
+        return false;
+    }
+    
     // Check if current URI starts with the route
     return $currentUri === $route || strpos($currentUri, $route . '/') === 0;
 }
+
 ?>
 
 <aside class="sidebar" id="sidebar">
@@ -80,6 +99,13 @@ function isCurrentPage($route) {
         <li class="list-group-item<?= isCurrentPage('search-courses') ? ' active' : '' ?>">
             <a href="<?= UrlHelper::url('search-courses') ?>">
                 <i class="fas fa-search"></i> <span><?= Localization::translate('search_courses'); ?></span>
+            </a>
+        </li>
+        
+        <!-- Social Menu - Consistent with other menu items -->
+        <li class="list-group-item<?= isCurrentPage('social') ? ' active' : '' ?>">
+            <a href="<?= UrlHelper::url('social-dashboard') ?>">
+                <i class="fas fa-globe"></i> <span><?= Localization::translate('social'); ?></span>
             </a>
         </li>
     </ul>

@@ -1,13 +1,21 @@
 <?php
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+}
 require_once 'models/PollModel.php';
+require_once 'models/CustomFieldModel.php';
 require_once 'controllers/BaseController.php';
 require_once 'includes/permission_helper.php';
+require_once 'core/UrlHelper.php';
+require_once 'config/Localization.php';
 
 class OpinionPollController extends BaseController {
     private $pollModel;
+    private $customFieldModel;
 
     public function __construct() {
         $this->pollModel = new PollModel();
+        $this->customFieldModel = new CustomFieldModel();
     }
 
     /**
@@ -36,6 +44,12 @@ class OpinionPollController extends BaseController {
         // Get unique values for filter dropdowns (client-specific)
         $uniqueStatuses = $this->pollModel->getUniqueStatuses($clientId);
         $uniqueTypes = $this->pollModel->getUniqueTypes($clientId);
+
+        // Get custom fields for group-specific polls (exact same as course applicability)
+        $allCustomFields = $this->customFieldModel->getCustomFieldsByClient($clientId);
+        $customFields = array_filter($allCustomFields, function($field) {
+            return $field['field_type'] === 'select';
+        });
 
         require 'views/opinion_polls.php';
     }
@@ -160,7 +174,7 @@ class OpinionPollController extends BaseController {
             }
 
             $targetAudience = $_POST['target_audience'] ?? '';
-            if (!in_array($targetAudience, ['global', 'course_specific', 'group_specific'])) {
+            if (!in_array($targetAudience, ['global', 'group_specific'])) {
                 $errors[] = 'Invalid target audience.';
             }
 
@@ -189,6 +203,20 @@ class OpinionPollController extends BaseController {
 
             $allowAnonymous = isset($_POST['allow_anonymous']) ? 1 : 0;
             $allowVoteChange = isset($_POST['allow_vote_change']) ? 1 : 0;
+
+            // Validate custom fields for group_specific target audience
+            if ($targetAudience === 'group_specific') {
+                $customFieldId = $_POST['custom_field_id'] ?? '';
+                $customFieldValue = $_POST['custom_field_value'] ?? '';
+                
+                if (empty($customFieldId)) {
+                    $errors[] = 'Custom field selection is required for group specific polls.';
+                }
+                
+                if (empty($customFieldValue)) {
+                    $errors[] = 'Custom field value selection is required for group specific polls.';
+                }
+            }
 
             // Validate questions and options
             $questions = $_POST['questions'] ?? [];
@@ -236,8 +264,10 @@ class OpinionPollController extends BaseController {
                 'description' => $description,
                 'type' => $type,
                 'target_audience' => $targetAudience,
-                'course_id' => $targetAudience === 'course_specific' ? ($_POST['course_id'] ?? null) : null,
+                'course_id' => null,
                 'group_id' => $targetAudience === 'group_specific' ? ($_POST['group_id'] ?? null) : null,
+                'custom_field_id' => $targetAudience === 'group_specific' ? ($_POST['custom_field_id'] ?? null) : null,
+                'custom_field_value' => $targetAudience === 'group_specific' ? ($_POST['custom_field_value'] ?? null) : null,
                 'start_datetime' => $startDatetime,
                 'end_datetime' => $endDatetime,
                 'show_results' => $showResults,
@@ -455,7 +485,7 @@ class OpinionPollController extends BaseController {
             }
 
             $targetAudience = $_POST['target_audience'] ?? '';
-            if (!in_array($targetAudience, ['global', 'course_specific', 'group_specific'])) {
+            if (!in_array($targetAudience, ['global', 'group_specific'])) {
                 $errors[] = 'Invalid target audience.';
             }
 
@@ -484,6 +514,20 @@ class OpinionPollController extends BaseController {
 
             $allowAnonymous = isset($_POST['allow_anonymous']) ? 1 : 0;
             $allowVoteChange = isset($_POST['allow_vote_change']) ? 1 : 0;
+
+            // Validate custom fields for group_specific target audience
+            if ($targetAudience === 'group_specific') {
+                $customFieldId = $_POST['custom_field_id'] ?? '';
+                $customFieldValue = $_POST['custom_field_value'] ?? '';
+                
+                if (empty($customFieldId)) {
+                    $errors[] = 'Custom field selection is required for group specific polls.';
+                }
+                
+                if (empty($customFieldValue)) {
+                    $errors[] = 'Custom field value selection is required for group specific polls.';
+                }
+            }
 
             // Validate questions and options
             $questions = $_POST['questions'] ?? [];
@@ -531,8 +575,10 @@ class OpinionPollController extends BaseController {
                 'description' => $description,
                 'type' => $type,
                 'target_audience' => $targetAudience,
-                'course_id' => $targetAudience === 'course_specific' ? ($_POST['course_id'] ?? null) : null,
+                'course_id' => null,
                 'group_id' => $targetAudience === 'group_specific' ? ($_POST['group_id'] ?? null) : null,
+                'custom_field_id' => $targetAudience === 'group_specific' ? ($_POST['custom_field_id'] ?? null) : null,
+                'custom_field_value' => $targetAudience === 'group_specific' ? ($_POST['custom_field_value'] ?? null) : null,
                 'start_datetime' => $startDatetime,
                 'end_datetime' => $endDatetime,
                 'show_results' => $showResults,
@@ -821,6 +867,298 @@ class OpinionPollController extends BaseController {
             } else {
                 $this->toastError('An unexpected error occurred.', 'index.php?controller=OpinionPollController');
             }
+        }
+    }
+
+    /**
+     * Display polls for users to view and vote
+     */
+    public function viewPolls() {
+        // Check if user is logged in
+        if (!isset($_SESSION['id']) || !isset($_SESSION['user'])) {
+            UrlHelper::redirect('login');
+            return;
+        }
+
+        $clientId = $_SESSION['user']['client_id'] ?? null;
+        $userId = $_SESSION['user']['id'];
+        
+        if (!$clientId) {
+            UrlHelper::redirect('login');
+            return;
+        }
+
+        // Get active polls for the user
+        $polls = $this->pollModel->getActivePollsForUser($userId, $clientId);
+        
+        // Get user's voting history
+        $userVotes = $this->pollModel->getUserVotes($userId, $clientId);
+
+        require 'views/user_polls.php';
+    }
+
+    /**
+     * Submit a vote for a poll
+     */
+    public function submitVote() {
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+            header('Content-Type: application/json');
+            echo json_encode([
+                'success' => false,
+                'message' => 'Invalid request method.'
+            ]);
+            exit;
+        }
+
+        // Check if user is logged in
+        if (!isset($_SESSION['id']) || !isset($_SESSION['user'])) {
+            header('Content-Type: application/json');
+            echo json_encode([
+                'success' => false,
+                'message' => 'Unauthorized access. Please log in.'
+            ]);
+            exit;
+        }
+
+        try {
+            $clientId = $_SESSION['user']['client_id'] ?? null;
+            $userId = $_SESSION['user']['id'];
+            
+            if (!$clientId) {
+                header('Content-Type: application/json');
+                echo json_encode([
+                    'success' => false,
+                    'message' => 'Client ID not found. Please log in again.'
+                ]);
+                exit;
+            }
+
+            // Get JSON input for new format, fallback to POST for old format
+            $input = json_decode(file_get_contents('php://input'), true);
+            
+            if ($input) {
+                // New JSON format with multiple questions
+                $pollId = $input['poll_id'] ?? null;
+                $votes = $input['votes'] ?? [];
+                
+                if (!$pollId || empty($votes)) {
+                    header('Content-Type: application/json');
+                    echo json_encode([
+                        'success' => false,
+                        'message' => 'Poll ID and votes are required.'
+                    ]);
+                    exit;
+                }
+                
+                $allSuccess = true;
+                $errorMessage = '';
+                
+                // Submit votes for each question
+                foreach ($votes as $questionId => $optionIds) {
+                    if (!is_array($optionIds)) {
+                        $optionIds = [$optionIds];
+                    }
+                    
+                    $result = $this->pollModel->submitVoteNew($pollId, $questionId, $optionIds, $userId, $clientId);
+                    if (!$result) {
+                        $allSuccess = false;
+                        $errorMessage = 'Failed to submit vote for question ' . $questionId;
+                        break;
+                    }
+                }
+                
+                if ($allSuccess) {
+                    header('Content-Type: application/json');
+                    echo json_encode([
+                        'success' => true,
+                        'message' => 'Vote submitted successfully!'
+                    ]);
+                } else {
+                    header('Content-Type: application/json');
+                    echo json_encode([
+                        'success' => false,
+                        'message' => $errorMessage
+                    ]);
+                }
+            } else {
+                // Old POST format for backward compatibility
+                $pollId = $_POST['poll_id'] ?? null;
+                $questionId = $_POST['question_id'] ?? null;
+                $optionIds = $_POST['option_ids'] ?? [];
+
+                if (!$pollId || !$questionId) {
+                    header('Content-Type: application/json');
+                    echo json_encode([
+                        'success' => false,
+                        'message' => 'Poll ID and Question ID are required.'
+                    ]);
+                    exit;
+                }
+
+                if (empty($optionIds)) {
+                    header('Content-Type: application/json');
+                    echo json_encode([
+                        'success' => false,
+                        'message' => 'Please select at least one option.'
+                    ]);
+                    exit;
+                }
+
+                // Convert to array if single option
+                if (!is_array($optionIds)) {
+                    $optionIds = [$optionIds];
+                }
+
+                // Submit vote
+                $result = $this->pollModel->submitVoteNew($pollId, $questionId, $optionIds, $userId, $clientId);
+
+                if ($result) {
+                    header('Content-Type: application/json');
+                    echo json_encode([
+                        'success' => true,
+                        'message' => 'Vote submitted successfully!'
+                    ]);
+                } else {
+                    header('Content-Type: application/json');
+                    echo json_encode([
+                        'success' => false,
+                        'message' => 'Failed to submit vote. Please try again.'
+                    ]);
+                }
+            }
+
+        } catch (Exception $e) {
+            error_log("Vote submission error: " . $e->getMessage());
+            header('Content-Type: application/json');
+            echo json_encode([
+                'success' => false,
+                'message' => 'An unexpected error occurred. Please try again.'
+            ]);
+        }
+        exit;
+    }
+
+    /**
+     * View poll results
+     */
+    public function viewResults() {
+        $pollId = $_GET['id'] ?? null;
+        
+        if (!$pollId) {
+            $this->toastError('Poll ID is required.', 'index.php?controller=OpinionPollController&action=viewPolls');
+            return;
+        }
+
+        // Check if user is logged in
+        if (!isset($_SESSION['id']) || !isset($_SESSION['user'])) {
+            $this->toastError('Unauthorized access. Please log in.', 'index.php?controller=LoginController');
+            return;
+        }
+
+        $clientId = $_SESSION['user']['client_id'] ?? null;
+        $userId = $_SESSION['user']['id'];
+        
+        if (!$clientId) {
+            $this->toastError('Client ID not found. Please log in again.', 'index.php?controller=LoginController');
+            return;
+        }
+
+        // Get poll details
+        $poll = $this->pollModel->getPollById($pollId, $clientId);
+        
+        if (!$poll) {
+            $this->toastError('Poll not found.', 'index.php?controller=OpinionPollController&action=viewPolls');
+            return;
+        }
+
+        // Get poll questions and options with vote counts
+        $questions = $this->pollModel->getPollQuestionsWithResults($pollId, $clientId);
+        
+        // Get user's votes for this poll
+        $userVotes = $this->pollModel->getUserVotesForPoll($pollId, $userId, $clientId);
+
+        require 'views/poll_results.php';
+    }
+
+    /**
+     * Get poll results for AJAX requests (returns JSON)
+     */
+    public function getResults($pollId = null) {
+        // If pollId is not passed as parameter, try to get from GET
+        if ($pollId === null) {
+            $pollId = $_GET['id'] ?? null;
+        }
+        
+        if (!$pollId) {
+            header('Content-Type: application/json');
+            echo json_encode([
+                'success' => false,
+                'message' => 'Poll ID is required.'
+            ]);
+            return;
+        }
+
+        // Check if user is logged in
+        if (!isset($_SESSION['id']) || !isset($_SESSION['user'])) {
+            header('Content-Type: application/json');
+            echo json_encode([
+                'success' => false,
+                'message' => 'Unauthorized access. Please log in.'
+            ]);
+            return;
+        }
+
+        $clientId = $_SESSION['user']['client_id'] ?? null;
+        $userId = $_SESSION['user']['id'];
+        
+        if (!$clientId) {
+            header('Content-Type: application/json');
+            echo json_encode([
+                'success' => false,
+                'message' => 'Client ID not found. Please log in again.'
+            ]);
+            return;
+        }
+
+        try {
+            // Get poll details
+            $poll = $this->pollModel->getPollById($pollId, $clientId);
+            
+            if (!$poll) {
+                header('Content-Type: application/json');
+                echo json_encode([
+                    'success' => false,
+                    'message' => 'Poll not found.'
+                ]);
+                return;
+            }
+
+            // Get poll questions and options with vote counts
+            $questions = $this->pollModel->getPollQuestionsWithResults($pollId, $clientId);
+            
+            // Get user's votes for this poll
+            $userVotes = $this->pollModel->getUserVotesForPoll($pollId, $userId, $clientId);
+
+            // Generate HTML for the modal content
+            ob_start();
+            include 'views/poll_results_modal.php';
+            $html = ob_get_clean();
+
+            header('Content-Type: application/json');
+            echo json_encode([
+                'success' => true,
+                'html' => $html,
+                'poll' => $poll,
+                'questions' => $questions
+            ]);
+
+        } catch (Exception $e) {
+            error_log("Poll results error: " . $e->getMessage());
+            header('Content-Type: application/json');
+            echo json_encode([
+                'success' => false,
+                'message' => 'An error occurred while loading poll results.'
+            ]);
         }
     }
 

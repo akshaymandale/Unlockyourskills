@@ -260,11 +260,16 @@ document.addEventListener("DOMContentLoaded", function () {
                 break;
 
             case "course_id":
-                // Only validate if target audience is course_specific
-                const targetAudience = field.form.querySelector('select[name="target_audience"]');
-                if (targetAudience && targetAudience.value === 'course_specific') {
+                // Course selection validation removed - course_specific option no longer available
+                hideError(field);
+                break;
+
+            case "group_id":
+                // Only validate if target audience is group_specific
+                const targetAudienceGroup = field.form.querySelector('select[name="target_audience"]');
+                if (targetAudienceGroup && targetAudienceGroup.value === 'group_specific') {
                     if (value === "") {
-                        showError(field, "Course selection is required for course-specific polls");
+                        showError(field, "Group selection is required for group-specific polls");
                         isValid = false;
                     } else {
                         hideError(field);
@@ -274,12 +279,27 @@ document.addEventListener("DOMContentLoaded", function () {
                 }
                 break;
 
-            case "group_id":
+            case "custom_field_id":
                 // Only validate if target audience is group_specific
-                const targetAudienceGroup = field.form.querySelector('select[name="target_audience"]');
-                if (targetAudienceGroup && targetAudienceGroup.value === 'group_specific') {
+                const targetAudienceCustom = field.form.querySelector('select[name="target_audience"]');
+                if (targetAudienceCustom && targetAudienceCustom.value === 'group_specific') {
                     if (value === "") {
-                        showError(field, "Group selection is required for group-specific polls");
+                        showError(field, "Custom field selection is required for group-specific polls");
+                        isValid = false;
+                    } else {
+                        hideError(field);
+                    }
+                } else {
+                    hideError(field);
+                }
+                break;
+
+            case "custom_field_value":
+                // Only validate if target audience is group_specific
+                const targetAudienceValue = field.form.querySelector('select[name="target_audience"]');
+                if (targetAudienceValue && targetAudienceValue.value === 'group_specific') {
+                    if (value === "") {
+                        showError(field, "Custom field value selection is required for group-specific polls");
                         isValid = false;
                     } else {
                         hideError(field);

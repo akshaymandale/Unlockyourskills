@@ -15,8 +15,9 @@ class AnnouncementModel {
     public function createAnnouncement($data) {
         $sql = "INSERT INTO announcements (
                     client_id, title, body, audience_type, urgency, require_acknowledgment,
-                    cta_label, cta_url, start_datetime, end_datetime, status, created_by
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+                    cta_label, cta_url, start_datetime, end_datetime, status, created_by,
+                    custom_field_id, custom_field_value
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
 
         $stmt = $this->conn->prepare($sql);
         $result = $stmt->execute([
@@ -31,7 +32,9 @@ class AnnouncementModel {
             $data['start_datetime'],
             $data['end_datetime'],
             $data['status'],
-            $data['created_by']
+            $data['created_by'],
+            $data['custom_field_id'] ?? null,
+            $data['custom_field_value'] ?? null
         ]);
 
         return $result ? $this->conn->lastInsertId() : false;
@@ -52,6 +55,8 @@ class AnnouncementModel {
                     start_datetime = ?,
                     end_datetime = ?,
                     status = ?,
+                    custom_field_id = ?,
+                    custom_field_value = ?,
                     updated_by = ?,
                     updated_at = NOW()
                 WHERE id = ? AND client_id = ? AND is_deleted = 0";
@@ -68,6 +73,8 @@ class AnnouncementModel {
             $data['start_datetime'],
             $data['end_datetime'],
             $data['status'],
+            $data['custom_field_id'] ?? null,
+            $data['custom_field_value'] ?? null,
             $data['updated_by'],
             $id,
             $data['client_id']
@@ -127,6 +134,142 @@ class AnnouncementModel {
         $stmt = $this->conn->prepare($sql);
         $stmt->execute($params);
         return $stmt->fetch(PDO::FETCH_ASSOC);
+    }
+
+    /**
+     * Get user-specific announcements with pagination and filters
+     */
+    public function getUserAnnouncements($userId, $clientId, $filters = [], $page = 1, $limit = 10) {
+        // First, update any expired announcements
+        $this->updateExpiredAnnouncements($clientId);
+        
+        $offset = ($page - 1) * $limit;
+        
+        $sql = "SELECT a.*,
+                       up.full_name as creator_name,
+                       up.email as creator_email,
+                       (SELECT COUNT(*) FROM announcement_acknowledgments aa
+                        WHERE aa.announcement_id = a.id AND aa.client_id = a.client_id) as acknowledgment_count,
+                       (SELECT COUNT(*) FROM announcement_views av
+                        WHERE av.announcement_id = a.id AND av.client_id = a.client_id) as view_count,
+                       (SELECT COUNT(*) FROM announcement_acknowledgments aa2
+                        WHERE aa2.announcement_id = a.id AND aa2.user_id = ? AND aa2.client_id = a.client_id) as user_acknowledged
+                FROM announcements a
+                LEFT JOIN user_profiles up ON a.created_by = up.id
+                WHERE a.client_id = ? AND a.is_deleted = 0 AND a.status = 'active'
+                AND (a.audience_type = 'global' 
+                     OR (a.audience_type = 'group_specific' AND a.custom_field_id IS NOT NULL AND a.custom_field_value IS NOT NULL
+                         AND EXISTS (
+                             SELECT 1 FROM custom_field_values cfv 
+                             WHERE cfv.user_id = ? AND cfv.custom_field_id = a.custom_field_id 
+                             AND cfv.field_value = a.custom_field_value AND cfv.is_deleted = 0
+                         )))";
+
+        $params = [$userId, $clientId, $userId];
+
+        // Apply filters
+        if (!empty($filters['urgency'])) {
+            $sql .= " AND a.urgency = ?";
+            $params[] = $filters['urgency'];
+        }
+
+        if (!empty($filters['search'])) {
+            $sql .= " AND (a.title LIKE ? OR a.body LIKE ?)";
+            $searchTerm = '%' . $filters['search'] . '%';
+            $params[] = $searchTerm;
+            $params[] = $searchTerm;
+        }
+
+        if (!empty($filters['date_from'])) {
+            $sql .= " AND a.created_at >= ?";
+            $params[] = $filters['date_from'];
+        }
+
+        if (!empty($filters['date_to'])) {
+            $sql .= " AND a.created_at <= ?";
+            $params[] = $filters['date_to'] . ' 23:59:59';
+        }
+
+        if (!empty($filters['acknowledged'])) {
+            if ($filters['acknowledged'] === 'yes') {
+                $sql .= " AND EXISTS (SELECT 1 FROM announcement_acknowledgments aa3 WHERE aa3.announcement_id = a.id AND aa3.user_id = ? AND aa3.client_id = a.client_id)";
+                $params[] = $userId;
+            } else {
+                $sql .= " AND NOT EXISTS (SELECT 1 FROM announcement_acknowledgments aa4 WHERE aa4.announcement_id = a.id AND aa4.user_id = ? AND aa4.client_id = a.client_id)";
+                $params[] = $userId;
+            }
+        }
+
+        // Order by urgency and creation date
+        $sql .= " ORDER BY
+                    CASE a.urgency
+                        WHEN 'urgent' THEN 1
+                        WHEN 'warning' THEN 2
+                        WHEN 'info' THEN 3
+                    END,
+                    a.created_at DESC
+                  LIMIT " . intval($limit) . " OFFSET " . intval($offset);
+
+        $stmt = $this->conn->prepare($sql);
+        $stmt->execute($params);
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
+
+    /**
+     * Get total count for user announcements pagination
+     */
+    public function getUserAnnouncementsCount($userId, $clientId, $filters = []) {
+        // First, update any expired announcements
+        $this->updateExpiredAnnouncements($clientId);
+        
+        $sql = "SELECT COUNT(*) FROM announcements a
+                WHERE a.client_id = ? AND a.is_deleted = 0 AND a.status = 'active'
+                AND (a.audience_type = 'global' 
+                     OR (a.audience_type = 'group_specific' AND a.custom_field_id IS NOT NULL AND a.custom_field_value IS NOT NULL
+                         AND EXISTS (
+                             SELECT 1 FROM custom_field_values cfv 
+                             WHERE cfv.user_id = ? AND cfv.custom_field_id = a.custom_field_id 
+                             AND cfv.field_value = a.custom_field_value AND cfv.is_deleted = 0
+                         )))";
+
+        $params = [$clientId, $userId];
+
+        // Apply filters
+        if (!empty($filters['urgency'])) {
+            $sql .= " AND a.urgency = ?";
+            $params[] = $filters['urgency'];
+        }
+
+        if (!empty($filters['search'])) {
+            $sql .= " AND (a.title LIKE ? OR a.body LIKE ?)";
+            $searchTerm = '%' . $filters['search'] . '%';
+            $params[] = $searchTerm;
+            $params[] = $searchTerm;
+        }
+
+        if (!empty($filters['date_from'])) {
+            $sql .= " AND a.created_at >= ?";
+            $params[] = $filters['date_from'];
+        }
+
+        if (!empty($filters['date_to'])) {
+            $sql .= " AND a.created_at <= ?";
+            $params[] = $filters['date_to'] . ' 23:59:59';
+        }
+
+        if (!empty($filters['acknowledged'])) {
+            if ($filters['acknowledged'] === 'yes') {
+                $sql .= " AND EXISTS (SELECT 1 FROM announcement_acknowledgments aa WHERE aa.announcement_id = a.id AND aa.user_id = ? AND aa.client_id = a.client_id)";
+                $params[] = $userId;
+            } else {
+                $sql .= " AND NOT EXISTS (SELECT 1 FROM announcement_acknowledgments aa WHERE aa.announcement_id = a.id AND aa.user_id = ? AND aa.client_id = a.client_id)";
+                $params[] = $userId;
+            }
+        }
+
+        $stmt = $this->conn->prepare($sql);
+        $stmt->execute($params);
+        return $stmt->fetchColumn();
     }
 
     /**

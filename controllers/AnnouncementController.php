@@ -1,13 +1,34 @@
 <?php
 
 require_once 'models/AnnouncementModel.php';
+require_once 'models/CustomFieldModel.php';
 require_once 'controllers/BaseController.php';
 
 class AnnouncementController extends BaseController {
     private $announcementModel;
+    private $customFieldModel;
 
     public function __construct() {
         $this->announcementModel = new AnnouncementModel();
+        $this->customFieldModel = new CustomFieldModel();
+    }
+
+    /**
+     * User-facing announcements page
+     */
+    public function viewAnnouncements() {
+        // Check if user is logged in
+        if (!isset($_SESSION['user']['client_id'])) {
+            $this->toastError('Unauthorized access. Please log in.', 'index.php?controller=LoginController');
+            return;
+        }
+
+        $clientId = $_SESSION['user']['client_id'];
+        $userId = $_SESSION['user']['id'];
+
+        // Set page title and include view
+        $pageTitle = 'My Announcements';
+        include 'views/my_announcements.php';
     }
 
     /**
@@ -20,6 +41,9 @@ class AnnouncementController extends BaseController {
             return;
         }
 
+        // Get client ID
+        $clientId = $_SESSION['user']['client_id'];
+
         // Check user role permissions
         $systemRole = $_SESSION['user']['system_role'] ?? '';
         if (!in_array($systemRole, ['super_admin', 'admin'])) {
@@ -27,9 +51,183 @@ class AnnouncementController extends BaseController {
             return;
         }
 
+        // Get custom fields for group-specific announcements (exact same as opinion polls)
+        $allCustomFields = $this->customFieldModel->getCustomFieldsByClient($clientId);
+        $customFields = array_filter($allCustomFields, function($field) {
+            return $field['field_type'] === 'select';
+        });
+
         // Set page title and include view
         $pageTitle = 'Announcement Management';
         include 'views/announcements.php';
+    }
+
+    /**
+     * Get user announcements with AJAX (for pagination and filtering)
+     */
+    public function getUserAnnouncements() {
+        // Check if user is logged in
+        if (!isset($_SESSION['user']['client_id'])) {
+            header('Content-Type: application/json');
+            echo json_encode(['error' => 'Unauthorized access']);
+            exit;
+        }
+
+        $clientId = $_SESSION['user']['client_id'];
+        $userId = $_SESSION['user']['id'];
+
+        try {
+            $page = intval($_GET['page'] ?? 1);
+            $limit = intval($_GET['limit'] ?? 10);
+            $filters = [
+                'urgency' => $_GET['urgency'] ?? '',
+                'search' => $_GET['search'] ?? '',
+                'date_from' => $_GET['date_from'] ?? '',
+                'date_to' => $_GET['date_to'] ?? '',
+                'acknowledged' => $_GET['acknowledged'] ?? ''
+            ];
+
+            // Remove empty filters
+            $filters = array_filter($filters, function($value) {
+                return $value !== '';
+            });
+
+            $announcements = $this->announcementModel->getUserAnnouncements($userId, $clientId, $filters, $page, $limit);
+            $totalCount = $this->announcementModel->getUserAnnouncementsCount($userId, $clientId, $filters);
+
+            header('Content-Type: application/json');
+            echo json_encode([
+                'success' => true,
+                'announcements' => $announcements,
+                'pagination' => [
+                    'current_page' => $page,
+                    'total_count' => $totalCount,
+                    'per_page' => $limit,
+                    'total_pages' => ceil($totalCount / $limit)
+                ]
+            ]);
+        } catch (Exception $e) {
+            header('Content-Type: application/json');
+            echo json_encode([
+                'success' => false,
+                'error' => 'Failed to load announcements: ' . $e->getMessage()
+            ]);
+        }
+    }
+
+    /**
+     * Get announcement by ID for user view
+     */
+    public function getAnnouncementById() {
+        // Check if user is logged in
+        if (!isset($_SESSION['user']['client_id'])) {
+            header('Content-Type: application/json');
+            echo json_encode(['error' => 'Unauthorized access']);
+            exit;
+        }
+
+        $clientId = $_SESSION['user']['client_id'];
+        $userId = $_SESSION['user']['id'];
+        $announcementId = $_GET['id'] ?? null;
+
+        if (!$announcementId) {
+            header('Content-Type: application/json');
+            echo json_encode(['error' => 'Announcement ID is required']);
+            exit;
+        }
+
+        try {
+            // Get announcement details
+            $announcement = $this->announcementModel->getAnnouncementById($announcementId, $clientId);
+            
+            if (!$announcement) {
+                header('Content-Type: application/json');
+                echo json_encode(['error' => 'Announcement not found']);
+                exit;
+            }
+
+            // Check if user can view this announcement
+            $userAnnouncements = $this->announcementModel->getUserAnnouncements($userId, $clientId, [], 1, 1000);
+            $canView = false;
+            
+            foreach ($userAnnouncements as $userAnn) {
+                if ($userAnn['id'] == $announcementId) {
+                    $canView = true;
+                    break;
+                }
+            }
+
+            if (!$canView) {
+                header('Content-Type: application/json');
+                echo json_encode(['error' => 'You do not have permission to view this announcement']);
+                exit;
+            }
+
+            // Check if user has acknowledged this announcement
+            $userAcknowledged = $this->announcementModel->hasUserAcknowledged($announcementId, $userId, $clientId);
+            $announcement['user_acknowledged'] = $userAcknowledged ? 1 : 0;
+
+            header('Content-Type: application/json');
+            echo json_encode([
+                'success' => true,
+                'announcement' => $announcement
+            ]);
+        } catch (Exception $e) {
+            header('Content-Type: application/json');
+            echo json_encode([
+                'success' => false,
+                'error' => 'Failed to load announcement: ' . $e->getMessage()
+            ]);
+        }
+    }
+
+    /**
+     * Acknowledge announcement
+     */
+    public function acknowledgeAnnouncement() {
+        // Check if user is logged in
+        if (!isset($_SESSION['user']['client_id'])) {
+            header('Content-Type: application/json');
+            echo json_encode(['error' => 'Unauthorized access']);
+            exit;
+        }
+
+        $clientId = $_SESSION['user']['client_id'];
+        $userId = $_SESSION['user']['id'];
+        $announcementId = $_POST['announcement_id'] ?? null;
+
+        if (!$announcementId) {
+            header('Content-Type: application/json');
+            echo json_encode(['error' => 'Announcement ID is required']);
+            exit;
+        }
+
+        try {
+            $ipAddress = $_SERVER['REMOTE_ADDR'] ?? null;
+            $userAgent = $_SERVER['HTTP_USER_AGENT'] ?? null;
+
+            $result = $this->announcementModel->acknowledgeAnnouncement($announcementId, $userId, $clientId, $ipAddress, $userAgent);
+
+            if ($result) {
+                header('Content-Type: application/json');
+                echo json_encode([
+                    'success' => true,
+                    'message' => 'Announcement acknowledged successfully'
+                ]);
+            } else {
+                header('Content-Type: application/json');
+                echo json_encode([
+                    'success' => false,
+                    'error' => 'Failed to acknowledge announcement'
+                ]);
+            }
+        } catch (Exception $e) {
+            header('Content-Type: application/json');
+            echo json_encode([
+                'success' => false,
+                'error' => 'Failed to acknowledge announcement: ' . $e->getMessage()
+            ]);
+        }
     }
 
     /**
@@ -140,13 +338,27 @@ class AnnouncementController extends BaseController {
             }
 
             $audienceType = $_POST['audience_type'] ?? '';
-            if (!in_array($audienceType, ['global', 'course_specific', 'group_specific'])) {
+            if (!in_array($audienceType, ['global', 'group_specific'])) {
                 $errors[] = 'Invalid audience type.';
             }
 
             // Role-based audience restrictions
             if ($systemRole === 'user' && $audienceType === 'global') {
                 $errors[] = 'Regular users cannot create global announcements.';
+            }
+
+            // Validate custom fields for group_specific target audience
+            if ($audienceType === 'group_specific') {
+                $customFieldId = $_POST['custom_field_id'] ?? '';
+                $customFieldValue = $_POST['custom_field_value'] ?? '';
+                
+                if (empty($customFieldId)) {
+                    $errors[] = 'Custom field selection is required for group specific announcements.';
+                }
+                
+                if (empty($customFieldValue)) {
+                    $errors[] = 'Custom field value selection is required for group specific announcements.';
+                }
             }
 
             $urgency = $_POST['urgency'] ?? 'info';
@@ -214,19 +426,15 @@ class AnnouncementController extends BaseController {
                 'start_datetime' => $startDatetime ?: null,
                 'end_datetime' => $endDatetime ?: null,
                 'status' => $status,
-                'created_by' => $userId
+                'created_by' => $userId,
+                'custom_field_id' => $audienceType === 'group_specific' ? ($_POST['custom_field_id'] ?? null) : null,
+                'custom_field_value' => $audienceType === 'group_specific' ? ($_POST['custom_field_value'] ?? null) : null
             ];
 
             // Create announcement
             $announcementId = $this->announcementModel->createAnnouncement($announcementData);
 
             if ($announcementId) {
-                // Handle course targets if course-specific
-                if ($audienceType === 'course_specific' && !empty($_POST['target_courses'])) {
-                    $courseIds = $_POST['target_courses'];
-                    $this->announcementModel->addAnnouncementCourses($announcementId, $courseIds, $clientId);
-                }
-
                 $message = "Announcement created successfully!";
                 if ($status === 'scheduled') {
                     $message .= " It will be published on " . date('M j, Y g:i A', strtotime($startDatetime)) . ".";
@@ -323,11 +531,8 @@ class AnnouncementController extends BaseController {
             return;
         }
 
-        // Get course targets if course-specific
+        // No course-specific logic needed
         $courses = [];
-        if ($announcement['audience_type'] === 'course_specific') {
-            $courses = $this->announcementModel->getAnnouncementCourses($id, $clientId);
-        }
 
         // Return JSON data for AJAX request
         if ($this->isAjaxRequest()) {
@@ -423,13 +628,27 @@ class AnnouncementController extends BaseController {
             }
 
             $audienceType = $_POST['audience_type'] ?? '';
-            if (!in_array($audienceType, ['global', 'course_specific', 'group_specific'])) {
+            if (!in_array($audienceType, ['global', 'group_specific'])) {
                 $errors[] = 'Invalid audience type.';
             }
 
             // Role-based audience restrictions
             if ($systemRole === 'user' && $audienceType === 'global') {
                 $errors[] = 'Regular users cannot create global announcements.';
+            }
+
+            // Validate custom fields for group_specific target audience
+            if ($audienceType === 'group_specific') {
+                $customFieldId = $_POST['custom_field_id'] ?? '';
+                $customFieldValue = $_POST['custom_field_value'] ?? '';
+                
+                if (empty($customFieldId)) {
+                    $errors[] = 'Custom field selection is required for group specific announcements.';
+                }
+                
+                if (empty($customFieldValue)) {
+                    $errors[] = 'Custom field value selection is required for group specific announcements.';
+                }
             }
 
             $urgency = $_POST['urgency'] ?? 'info';
@@ -495,25 +714,15 @@ class AnnouncementController extends BaseController {
                 'start_datetime' => $startDatetime ?: null,
                 'end_datetime' => $endDatetime ?: null,
                 'status' => $status,
-                'updated_by' => $userId
+                'updated_by' => $userId,
+                'custom_field_id' => $audienceType === 'group_specific' ? ($_POST['custom_field_id'] ?? null) : null,
+                'custom_field_value' => $audienceType === 'group_specific' ? ($_POST['custom_field_value'] ?? null) : null
             ];
 
             // Update announcement
             $result = $this->announcementModel->updateAnnouncement($announcementId, $announcementData);
 
             if ($result) {
-                // Handle course targets if course-specific
-                if ($audienceType === 'course_specific') {
-                    // Remove existing course targets
-                    $this->announcementModel->removeAnnouncementCourses($announcementId, $clientId);
-
-                    // Add new course targets
-                    if (!empty($_POST['target_courses'])) {
-                        $courseIds = $_POST['target_courses'];
-                        $this->announcementModel->addAnnouncementCourses($announcementId, $courseIds, $clientId);
-                    }
-                }
-
                 if ($this->isAjaxRequest()) {
                     header('Content-Type: application/json');
                     echo json_encode([
