@@ -216,6 +216,16 @@ class SocialFeed {
             }
         });
 
+        // Create modal show - reset form when opened
+        $('#createPostModal').on('show.bs.modal', () => {
+            this.resetCreatePostForm();
+        });
+
+        // Create modal close
+        $('#createPostModal').on('hidden.bs.modal', () => {
+            this.resetCreatePostForm();
+        });
+
         // Edit modal close
         $('#editPostModal').on('hidden.bs.modal', () => {
             this.resetEditPostForm();
@@ -623,6 +633,39 @@ class SocialFeed {
                     <input type="text" class="form-control" name="poll_options[]" placeholder="Option 2">
                 </div>
             `;
+            
+            // Re-initialize poll options validation for new elements
+            // Add a small delay to ensure DOM is fully rendered
+            setTimeout(() => {
+                this.initializePollOptionsValidation();
+                // Trigger validation immediately to show errors for empty fields
+                this.validatePollOptions();
+                
+                // Also validate poll question
+                const pollQuestion = document.getElementById('pollQuestion');
+                if (pollQuestion && !pollQuestion.value.trim()) {
+                    this.showFieldError('pollQuestion', 'Poll question is required.');
+                }
+            }, 100);
+        } else {
+            // Clear validation errors when poll section is hidden
+            const pollQuestion = document.getElementById('pollQuestion');
+            if (pollQuestion) {
+                pollQuestion.classList.remove('is-invalid');
+                const errorMessage = pollQuestion.parentNode.querySelector('.invalid-feedback');
+                if (errorMessage) {
+                    errorMessage.remove();
+                }
+            }
+            
+            const pollOptions = document.querySelectorAll('#pollSection input[name="poll_options[]"]');
+            pollOptions.forEach(input => {
+                input.classList.remove('is-invalid');
+                const errorMessage = input.parentNode.querySelector('.invalid-feedback');
+                if (errorMessage) {
+                    errorMessage.remove();
+                }
+            });
         }
     }
 
@@ -646,6 +689,18 @@ class SocialFeed {
             </button>
         `;
         pollOptions.appendChild(newOption);
+        
+        // Add validation to the new poll option
+        const newInput = newOption.querySelector('input[name="poll_options[]"]');
+        if (newInput) {
+            newInput.addEventListener('input', () => {
+                this.validatePollOptions();
+            });
+            
+            newInput.addEventListener('blur', () => {
+                this.validatePollOptions();
+            });
+        }
     }
 
     initializeScheduleToggle() {
@@ -734,7 +789,6 @@ class SocialFeed {
             });
             
             const responseText = await response.text();
-            console.log('[SocialFeed] Raw AJAX response:', responseText); // DEBUG
             
             let data;
             try {
@@ -746,9 +800,7 @@ class SocialFeed {
                 return;
             }
             
-            console.log('[SocialFeed] Parsed data:', data); // DEBUG
             if (data.success) {
-                console.log('[SocialFeed] Posts array length:', data.posts.length); // DEBUG
                 this.renderPosts(data.posts);
                 this.renderPagination(data.pagination);
                 this.updateResultsInfo(data.pagination);
@@ -792,8 +844,9 @@ class SocialFeed {
     }
 
     renderPostCard(post) {
-        const mediaHTML = this.renderPostMedia(post.media);
-        const pollHTML = post.poll ? this.renderPoll(post.poll) : '';
+        // Media files are not displayed on the card - removed mediaHTML
+        // Don't show poll details on main feed page - only show poll indicator
+        const pollHTML = post.poll ? this.renderPollIndicator(post.poll) : '';
         const badgesHTML = this.renderPostBadges(post);
         const tagsHTML = this.renderPostTags(post.tags);
         const reportedClass = post.report_count > 0 ? ' reported' : '';
@@ -822,22 +875,21 @@ class SocialFeed {
                         ${this.truncateText(this.stripHtml(post.body), 100)}
                     </p>
                     ${badgesHTML}
-                    ${mediaHTML}
                     ${pollHTML}
                     ${tagsHTML}
 
-                    <!-- Social Interaction Buttons -->
+                    <!-- Social Interaction Buttons (Read-only) -->
                     <div class="post-actions mt-3">
                         <div class="d-flex gap-2 align-items-center">
-                            <button class="btn btn-sm btn-outline-primary" onclick="socialFeed.toggleReaction(${post.id}, 'like')">
+                            <button class="btn btn-sm btn-outline-primary" disabled title="Reactions available on /my-social-feed">
                                 <i class="fas fa-thumbs-up me-1"></i>
                                 <span class="reaction-count">${post.reactions.like || 0}</span>
                             </button>
-                            <button class="btn btn-sm btn-outline-danger" onclick="socialFeed.toggleReaction(${post.id}, 'love')">
+                            <button class="btn btn-sm btn-outline-danger" disabled title="Reactions available on /my-social-feed">
                                 <i class="fas fa-heart me-1"></i>
                                 <span class="reaction-count">${post.reactions.love || 0}</span>
                             </button>
-                            <button class="btn btn-sm btn-outline-info" onclick="socialFeed.toggleComments(${post.id})">
+                            <button class="btn btn-sm btn-outline-info" disabled title="Comments available on /my-social-feed">
                                 <i class="fas fa-comment me-1"></i>
                                 <span class="comment-count">${post.comment_count || 0}</span>
                             </button>
@@ -1083,6 +1135,35 @@ class SocialFeed {
         const schedulePost = document.getElementById('schedulePost').checked;
         const scheduleDateTime = document.getElementById('scheduleDateTime');
         
+        // Custom validation for poll fields
+        if (includePoll) {
+            const pollQuestion = document.getElementById('pollQuestion').value.trim();
+            if (!pollQuestion) {
+                this.showFieldError('pollQuestion', 'Poll question is required.');
+                return;
+            }
+            
+            const pollOptions = document.querySelectorAll('#pollSection input[name="poll_options[]"]');
+            const validOptions = Array.from(pollOptions).filter(input => input.value.trim() !== '');
+            if (validOptions.length < 2) {
+                // Highlight all poll option fields as invalid
+                pollOptions.forEach(input => {
+                    input.classList.add('is-invalid');
+                    // Remove existing error message
+                    const existingError = input.parentNode.querySelector('.invalid-feedback');
+                    if (existingError) {
+                        existingError.remove();
+                    }
+                    // Add error message
+                    const errorDiv = document.createElement('div');
+                    errorDiv.className = 'invalid-feedback';
+                    errorDiv.textContent = 'At least 2 poll options are required.';
+                    input.parentNode.appendChild(errorDiv);
+                });
+                return;
+            }
+        }
+        
         // Validate tags
         const tags = document.getElementById('tagList').value;
         if (tags) {
@@ -1119,9 +1200,22 @@ class SocialFeed {
         formData.append('tags', tags);
         formData.append('pin_post', form.pin_post.checked ? '1' : '0');
         formData.append('include_poll', includePoll ? '1' : '0');
+        
+        // Add custom field data for group specific posts
+        if (visibility === 'group_specific') {
+            const customFieldId = document.getElementById('customFieldId').value;
+            const customFieldValue = document.getElementById('customFieldValue').value;
+            formData.append('custom_field_id', customFieldId);
+            formData.append('custom_field_value', customFieldValue);
+        }
 
-        // Add poll options if poll is included
+        // Add poll data if poll is included
         if (includePoll) {
+            const pollQuestion = document.getElementById('pollQuestion').value.trim();
+            if (pollQuestion) {
+                formData.append('poll_question', pollQuestion);
+            }
+            
             const pollOptions = document.querySelectorAll('#pollSection input[name="poll_options[]"]');
             pollOptions.forEach(input => {
                 if (input.value.trim() !== '') {
@@ -1136,7 +1230,7 @@ class SocialFeed {
         }
 
         // Add media files
-        this.mediaFiles.forEach(file => {
+        this.mediaFiles.forEach((file, index) => {
             formData.append('media[]', file);
         });
 
@@ -1183,7 +1277,6 @@ class SocialFeed {
             } else {
                 // Handle validation errors without showing toast messages
                 // Server-side validation is kept but not displayed as toasts
-                console.log('Server validation error:', data.message);
                 
                 // Only show toast for non-validation errors (like server errors)
                 if (data.message && !data.message.includes('required') && !data.message.includes('Invalid')) {
@@ -1205,86 +1298,29 @@ class SocialFeed {
         document.getElementById('createMediaSection').style.display = 'none';
         document.getElementById('pollSection').style.display = 'none';
         document.getElementById('linkSection').style.display = 'none';
+        document.getElementById('customFieldSelection').style.display = 'none';
         document.getElementById('mediaPreview').innerHTML = '';
         document.getElementById('tagDisplay').innerHTML = '';
         document.getElementById('tagList').value = '';
         document.getElementById('charCounter').textContent = '0/2000';
         document.getElementById('titleCharCounter').textContent = '0/150';
+        this.mediaFiles = []; // Clear media files array
         this.clearValidationErrors('createPostForm');
     }
 
     async toggleReaction(postId, reactionType) {
-        try {
-            const response = await fetch('index.php?controller=SocialFeedController&action=reaction', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({
-                    post_id: postId,
-                    reaction_type: reactionType
-                })
-            });
-            
-            const data = await response.json();
-            
-            if (data.success) {
-                // Update the reaction count in the UI
-                const reactionButton = document.querySelector(`[data-post-id="${postId}"][data-reaction="${reactionType}"]`);
-                if (reactionButton) {
-                    const countElement = reactionButton.querySelector('.reaction-count');
-                    if (countElement) {
-                        countElement.textContent = data.reaction_count || 0;
-                    }
-                }
-                
-                // Reload posts to update all reaction counts
-                this.loadPosts();
-            } else {
-                if (typeof showSimpleToast === 'function') {
-                    showSimpleToast(data.message || 'Failed to update reaction', 'error');
-                }
-            }
-        } catch (error) {
-            console.error('Error updating reaction:', error);
-            if (typeof showSimpleToast === 'function') {
-                showSimpleToast('Failed to update reaction. Please try again.', 'error');
-            }
+        // Reaction functionality disabled on main social feed page
+        // Users can react to posts on /my-social-feed page only
+        if (typeof showSimpleToast === 'function') {
+            showSimpleToast('Reactions are available on the My Social Feed page', 'info');
         }
     }
 
     async toggleComments(postId) {
-        const postCard = document.querySelector(`[data-post-id="${postId}"]`);
-        let commentsSection = postCard.querySelector('.comments-section');
-        
-        // If comments section exists and is visible, hide it
-        if (commentsSection && commentsSection.style.display !== 'none') {
-            commentsSection.style.display = 'none';
-            return;
-        }
-        
-        // If comments section doesn't exist or is hidden, show it
-        try {
-            const response = await fetch(`index.php?controller=SocialFeedController&action=comments&post_id=${postId}`);
-            const data = await response.json();
-            
-            if (data.success) {
-                this.renderComments(postId, data.comments);
-                // Ensure the comments section is visible
-                const newCommentsSection = postCard.querySelector('.comments-section');
-                if (newCommentsSection) {
-                    newCommentsSection.style.display = 'block';
-                }
-            } else {
-                if (typeof showSimpleToast === 'function') {
-                    showSimpleToast(data.message || 'Failed to load comments', 'error');
-                }
-            }
-        } catch (error) {
-            console.error('Error loading comments:', error);
-            if (typeof showSimpleToast === 'function') {
-                showSimpleToast('Failed to load comments. Please try again.', 'error');
-            }
+        // Comment functionality disabled on main social feed page
+        // Users can comment on posts on /my-social-feed page only
+        if (typeof showSimpleToast === 'function') {
+            showSimpleToast('Comments are available on the My Social Feed page', 'info');
         }
     }
 
@@ -1333,43 +1369,10 @@ class SocialFeed {
     }
 
     async addComment(postId) {
-        const input = document.getElementById(`commentInput_${postId}`);
-        const content = input.value.trim();
-        
-        if (!content) {
-            if (typeof showSimpleToast === 'function') {
-                showSimpleToast('Please enter a comment', 'warning');
-            }
-            return;
-        }
-        
-        try {
-            const response = await fetch('index.php?controller=SocialFeedController&action=comment', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({
-                    post_id: postId,
-                    content: content
-                })
-            });
-            
-            const data = await response.json();
-            
-            if (data.success) {
-                input.value = '';
-                this.toggleComments(postId); // Reload comments
-            } else {
-                if (typeof showSimpleToast === 'function') {
-                    showSimpleToast(data.message || 'Failed to add comment', 'error');
-                }
-            }
-        } catch (error) {
-            console.error('Error adding comment:', error);
-            if (typeof showSimpleToast === 'function') {
-                showSimpleToast('Failed to add comment. Please try again.', 'error');
-            }
+        // Comment functionality disabled on main social feed page
+        // Users can comment on posts on /my-social-feed page only
+        if (typeof showSimpleToast === 'function') {
+            showSimpleToast('Comments are available on the My Social Feed page', 'info');
         }
     }
 
@@ -1575,9 +1578,9 @@ class SocialFeed {
         if (mediaContainer && post.media && post.media.length > 0) {
             const mediaHTML = post.media.map(item => {
                 if (item.type && item.type.startsWith('image/')) {
-                    return `<img src="${item.url}" alt="Post media" class="img-fluid post-detail-media mb-2">`;
+                    return `<img src="${item.url}" alt="Post media" class="post-detail-media mb-2" style="max-width: 300px; max-height: 200px; width: auto; height: auto; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">`;
                 } else if (item.type && item.type.startsWith('video/')) {
-                    return `<video src="${item.url}" controls class="img-fluid mb-2"></video>`;
+                    return `<video src="${item.url}" controls class="mb-2" style="max-width: 300px; max-height: 200px; width: auto; height: auto; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);"></video>`;
                 } else {
                     return `<a href="${item.url}" class="btn btn-outline-primary mb-2" target="_blank">
                         <i class="fas fa-file-download me-1"></i>${item.filename || 'Download File'}
@@ -1718,6 +1721,33 @@ class SocialFeed {
         document.getElementById('editVisibility').value = post.visibility;
         document.getElementById('editPinPost').checked = post.is_pinned;
         
+        // Handle custom fields for group specific posts
+        if (post.visibility === 'group_specific') {
+            // Show custom field selection
+            const customFieldSelection = document.getElementById('editCustomFieldSelection');
+            customFieldSelection.style.display = 'block';
+            
+            // Set custom field values if they exist
+            if (post.custom_field_id) {
+                document.getElementById('editCustomFieldId').value = post.custom_field_id;
+                // Trigger change event to load custom field values
+                const customFieldIdSelect = document.getElementById('editCustomFieldId');
+                const event = new Event('change', { bubbles: true });
+                customFieldIdSelect.dispatchEvent(event);
+                
+                // Set custom field value after a short delay to allow values to load
+                setTimeout(() => {
+                    if (post.custom_field_value) {
+                        document.getElementById('editCustomFieldValue').value = post.custom_field_value;
+                    }
+                }, 100);
+            }
+        } else {
+            // Hide custom field selection for non-group specific posts
+            const customFieldSelection = document.getElementById('editCustomFieldSelection');
+            customFieldSelection.style.display = 'none';
+        }
+        
         // Show/hide media section based on post type
         const mediaSection = document.getElementById('editMediaSection');
         if (post.post_type === 'media') {
@@ -1780,19 +1810,41 @@ class SocialFeed {
     }
 
     toggleEditPollSection(show) {
-        document.getElementById('editPollSection').style.display = show ? 'block' : 'none';
+        const editPollSection = document.getElementById('editPollSection');
+        editPollSection.style.display = show ? 'block' : 'none';
     }
 
     populateEditPollData(poll) {
+        // Set poll question
+        if (poll.question) {
+            document.getElementById('editPollQuestion').value = poll.question;
+        }
+        
         const pollContainer = document.getElementById('editPollOptions');
-        pollContainer.innerHTML = poll.options.map((option, index) => `
+        
+        // Handle both old format (array of strings) and new format (array of objects)
+        const options = poll.options.map(option => {
+            if (typeof option === 'string') {
+                return option;
+            } else if (option && option.text) {
+                return option.text;
+            }
+            return '';
+        });
+        
+        pollContainer.innerHTML = options.map((option, index) => `
             <div class="input-group mb-2">
-                <input type="text" class="form-control" name="edit_poll_options[]" value="${option.text}" placeholder="Poll option ${index + 1}">
+                <input type="text" class="form-control" name="edit_poll_options[]" value="${this.escapeHtml(option)}" placeholder="Poll option ${index + 1}">
                 <button class="btn btn-outline-danger" type="button" onclick="this.parentElement.remove()">
                     <i class="fas fa-times"></i>
                 </button>
             </div>
         `).join('');
+        
+        // Set the allow multiple votes checkbox
+        if (poll.allow_multiple_votes !== undefined) {
+            document.getElementById('editAllowMultipleVotes').checked = poll.allow_multiple_votes == 1;
+        }
     }
 
     async handleEditPost(e) {
@@ -1809,6 +1861,35 @@ class SocialFeed {
         const visibility = document.getElementById('editVisibility').value;
         const includePoll = document.getElementById('editIncludePoll').checked;
         const pinPost = document.getElementById('editPinPost').checked;
+        
+        // Custom validation for poll fields
+        if (includePoll) {
+            const pollQuestion = document.getElementById('editPollQuestion').value.trim();
+            if (!pollQuestion) {
+                this.showFieldError('editPollQuestion', 'Poll question is required.');
+                return;
+            }
+            
+            const pollOptions = document.querySelectorAll('#editPollSection input[name="edit_poll_options[]"]');
+            const validOptions = Array.from(pollOptions).filter(input => input.value.trim() !== '');
+            if (validOptions.length < 2) {
+                // Highlight all poll option fields as invalid
+                pollOptions.forEach(input => {
+                    input.classList.add('is-invalid');
+                    // Remove existing error message
+                    const existingError = input.parentNode.querySelector('.invalid-feedback');
+                    if (existingError) {
+                        existingError.remove();
+                    }
+                    // Add error message
+                    const errorDiv = document.createElement('div');
+                    errorDiv.className = 'invalid-feedback';
+                    errorDiv.textContent = 'At least 2 poll options are required.';
+                    input.parentNode.appendChild(errorDiv);
+                });
+                return;
+            }
+        }
         
         // Validate tags
         const tags = window.editTags.join(',');
@@ -1836,9 +1917,22 @@ class SocialFeed {
         formData.append('tags', tags);
         formData.append('pin_post', pinPost ? '1' : '0');
         formData.append('include_poll', includePoll ? '1' : '0');
+        
+        // Add custom field data for group specific posts
+        if (visibility === 'group_specific') {
+            const customFieldId = document.getElementById('editCustomFieldId').value;
+            const customFieldValue = document.getElementById('editCustomFieldValue').value;
+            formData.append('custom_field_id', customFieldId);
+            formData.append('custom_field_value', customFieldValue);
+        }
 
-        // Add poll options if poll is included
+        // Add poll data if poll is included
         if (includePoll) {
+            const pollQuestion = document.getElementById('editPollQuestion').value.trim();
+            if (pollQuestion) {
+                formData.append('poll_question', pollQuestion);
+            }
+            
             const pollOptions = document.querySelectorAll('#editPollSection input[name="edit_poll_options[]"]');
             pollOptions.forEach(input => {
                 if (input.value.trim() !== '') {
@@ -1917,11 +2011,14 @@ class SocialFeed {
         document.getElementById('editMediaSection').style.display = 'none';
         document.getElementById('editPollSection').style.display = 'none';
         document.getElementById('editLinkSection').style.display = 'none';
+        document.getElementById('editCustomFieldSelection').style.display = 'none';
         document.getElementById('editMediaPreview').innerHTML = '';
         document.getElementById('editTagDisplay').innerHTML = '';
         document.getElementById('editTagList').value = '';
         document.getElementById('editCharCounter').textContent = '0/2000';
         document.getElementById('editTitleCharCounter').textContent = '0/150';
+        this.editMediaFiles = []; // Clear edit media files array
+        this.filesToDelete = []; // Clear files to delete array
         this.clearValidationErrors('editPostForm');
     }
 
@@ -2149,6 +2246,7 @@ class SocialFeed {
         // Real-time validation for form fields
         const titleInput = document.getElementById('postTitle');
         const contentInput = document.getElementById('postContent');
+        const pollQuestionInput = document.getElementById('pollQuestion');
         
         if (titleInput) {
             titleInput.addEventListener('input', () => {
@@ -2177,6 +2275,223 @@ class SocialFeed {
                         errorMessage.remove();
                     }
                 }
+            });
+        }
+        
+        // Real-time validation for poll question
+        if (pollQuestionInput) {
+            pollQuestionInput.addEventListener('input', () => {
+                const value = pollQuestionInput.value.trim();
+                if (value.length > 200) {
+                    this.showFieldError('pollQuestion', 'Poll question cannot exceed 200 characters');
+                } else {
+                    pollQuestionInput.classList.remove('is-invalid');
+                    const errorMessage = pollQuestionInput.parentNode.querySelector('.invalid-feedback');
+                    if (errorMessage) {
+                        errorMessage.remove();
+                    }
+                }
+            });
+            
+            // Add blur validation for poll question
+            pollQuestionInput.addEventListener('blur', () => {
+                const value = pollQuestionInput.value.trim();
+                const includePoll = document.getElementById('includePoll').checked;
+                
+                if (includePoll && !value) {
+                    this.showFieldError('pollQuestion', 'Poll question is required.');
+                } else if (value.length > 200) {
+                    this.showFieldError('pollQuestion', 'Poll question cannot exceed 200 characters');
+                } else {
+                    pollQuestionInput.classList.remove('is-invalid');
+                    const errorMessage = pollQuestionInput.parentNode.querySelector('.invalid-feedback');
+                    if (errorMessage) {
+                        errorMessage.remove();
+                    }
+                }
+            });
+        }
+        
+        // Real-time validation for poll options
+        this.initializePollOptionsValidation();
+        
+        // Real-time validation for edit form poll fields
+        this.initializeEditPollValidation();
+    }
+    
+    initializePollOptionsValidation() {
+        // Add validation for existing poll options
+        const pollOptions = document.querySelectorAll('#pollSection input[name="poll_options[]"]');
+        
+        pollOptions.forEach((input, index) => {
+            input.addEventListener('input', () => {
+                this.validatePollOptions();
+            });
+            
+            // Add blur validation for poll options
+            input.addEventListener('blur', () => {
+                this.validatePollOptions();
+            });
+        });
+        
+        // Add validation for poll options added dynamically
+        const pollSection = document.getElementById('pollSection');
+        if (pollSection) {
+            const observer = new MutationObserver((mutations) => {
+                mutations.forEach((mutation) => {
+                    if (mutation.type === 'childList') {
+                        mutation.addedNodes.forEach((node) => {
+                            if (node.nodeType === Node.ELEMENT_NODE) {
+                                const newInputs = node.querySelectorAll('input[name="poll_options[]"]');
+                                newInputs.forEach(input => {
+                                    input.addEventListener('input', () => {
+                                        this.validatePollOptions();
+                                    });
+                                    
+                                    // Add blur validation for new poll options
+                                    input.addEventListener('blur', () => {
+                                        this.validatePollOptions();
+                                    });
+                                });
+                            }
+                        });
+                    }
+                });
+            });
+            observer.observe(pollSection, { childList: true, subtree: true });
+        }
+    }
+    
+    validatePollOptions() {
+        const pollOptions = document.querySelectorAll('#pollSection input[name="poll_options[]"]');
+        const validOptions = Array.from(pollOptions).filter(input => input.value.trim() !== '');
+        const includePoll = document.getElementById('includePoll').checked;
+        
+        // Clear all poll option errors first
+        pollOptions.forEach(input => {
+            input.classList.remove('is-invalid');
+            const errorMessage = input.parentNode.querySelector('.invalid-feedback');
+            if (errorMessage) {
+                errorMessage.remove();
+            }
+        });
+        
+        // If poll is included and we have less than 2 valid options, show error
+        if (includePoll && validOptions.length < 2) {
+            pollOptions.forEach(input => {
+                input.classList.add('is-invalid');
+                const errorDiv = document.createElement('div');
+                errorDiv.className = 'invalid-feedback';
+                errorDiv.textContent = 'At least 2 poll options are required.';
+                input.parentNode.appendChild(errorDiv);
+            });
+        }
+    }
+    
+    initializeEditPollValidation() {
+        // Real-time validation for edit poll question
+        const editPollQuestionInput = document.getElementById('editPollQuestion');
+        if (editPollQuestionInput) {
+            editPollQuestionInput.addEventListener('input', () => {
+                const value = editPollQuestionInput.value.trim();
+                if (value.length > 200) {
+                    this.showFieldError('editPollQuestion', 'Poll question cannot exceed 200 characters');
+                } else {
+                    editPollQuestionInput.classList.remove('is-invalid');
+                    const errorMessage = editPollQuestionInput.parentNode.querySelector('.invalid-feedback');
+                    if (errorMessage) {
+                        errorMessage.remove();
+                    }
+                }
+            });
+            
+            // Add blur validation for edit poll question
+            editPollQuestionInput.addEventListener('blur', () => {
+                const value = editPollQuestionInput.value.trim();
+                const includePoll = document.getElementById('editIncludePoll').checked;
+                
+                if (includePoll && !value) {
+                    this.showFieldError('editPollQuestion', 'Poll question is required.');
+                } else if (value.length > 200) {
+                    this.showFieldError('editPollQuestion', 'Poll question cannot exceed 200 characters');
+                } else {
+                    editPollQuestionInput.classList.remove('is-invalid');
+                    const errorMessage = editPollQuestionInput.parentNode.querySelector('.invalid-feedback');
+                    if (errorMessage) {
+                        errorMessage.remove();
+                    }
+                }
+            });
+        }
+        
+        // Real-time validation for edit poll options
+        this.initializeEditPollOptionsValidation();
+    }
+    
+    initializeEditPollOptionsValidation() {
+        // Add validation for existing edit poll options
+        const editPollOptions = document.querySelectorAll('#editPollSection input[name="edit_poll_options[]"]');
+        editPollOptions.forEach(input => {
+            input.addEventListener('input', () => {
+                this.validateEditPollOptions();
+            });
+            
+            // Add blur validation for edit poll options
+            input.addEventListener('blur', () => {
+                this.validateEditPollOptions();
+            });
+        });
+        
+        // Add validation for edit poll options added dynamically
+        const editPollSection = document.getElementById('editPollSection');
+        if (editPollSection) {
+            const observer = new MutationObserver((mutations) => {
+                mutations.forEach((mutation) => {
+                    if (mutation.type === 'childList') {
+                        mutation.addedNodes.forEach((node) => {
+                            if (node.nodeType === Node.ELEMENT_NODE) {
+                                const newInputs = node.querySelectorAll('input[name="edit_poll_options[]"]');
+                                newInputs.forEach(input => {
+                                    input.addEventListener('input', () => {
+                                        this.validateEditPollOptions();
+                                    });
+                                    
+                                    // Add blur validation for new edit poll options
+                                    input.addEventListener('blur', () => {
+                                        this.validateEditPollOptions();
+                                    });
+                                });
+                            }
+                        });
+                    }
+                });
+            });
+            observer.observe(editPollSection, { childList: true, subtree: true });
+        }
+    }
+    
+    validateEditPollOptions() {
+        const pollOptions = document.querySelectorAll('#editPollSection input[name="edit_poll_options[]"]');
+        const validOptions = Array.from(pollOptions).filter(input => input.value.trim() !== '');
+        
+        // Clear all poll option errors first
+        pollOptions.forEach(input => {
+            input.classList.remove('is-invalid');
+            const errorMessage = input.parentNode.querySelector('.invalid-feedback');
+            if (errorMessage) {
+                errorMessage.remove();
+            }
+        });
+        
+        // If poll is included and we have less than 2 valid options, show error
+        const includePoll = document.getElementById('editIncludePoll').checked;
+        if (includePoll && validOptions.length < 2) {
+            pollOptions.forEach(input => {
+                input.classList.add('is-invalid');
+                const errorDiv = document.createElement('div');
+                errorDiv.className = 'invalid-feedback';
+                errorDiv.textContent = 'At least 2 poll options are required.';
+                input.parentNode.appendChild(errorDiv);
             });
         }
     }
@@ -2506,7 +2821,6 @@ class SocialFeed {
     getVisibilityBadge(visibility) {
         const badges = {
             'global': '<span class="badge bg-info">Global</span>',
-            'course_specific': '<span class="badge bg-primary">Course</span>',
             'group_specific': '<span class="badge bg-warning">Group</span>'
         };
         return badges[visibility] || '';
@@ -2578,9 +2892,22 @@ class SocialFeed {
             }
         });
     }
+
+    renderPollIndicator(poll) {
+        const totalVotes = poll.options.reduce((sum, option) => sum + option.votes, 0);
+        return `
+            <div class="post-poll-indicator">
+                <div class="d-flex align-items-center text-muted">
+                    <i class="fas fa-poll me-2"></i>
+                    <span class="small">Poll: ${this.escapeHtml(poll.question)}</span>
+                    <span class="badge bg-light text-dark ms-2">${totalVotes} votes</span>
+                </div>
+            </div>
+        `;
+    }
 }
 
-// Initialize Social Feed when document is ready
+// Initialize when DOM is loaded
 document.addEventListener('DOMContentLoaded', () => {
     window.socialFeed = new SocialFeed();
 });

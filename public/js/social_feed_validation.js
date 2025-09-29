@@ -652,7 +652,8 @@ document.addEventListener("DOMContentLoaded", function () {
      * Validate poll options
      */
     function validatePollOptions() {
-        const pollOptions = document.querySelectorAll('input[name="poll_options[]"]');
+        // Check for both create and edit poll options
+        const pollOptions = document.querySelectorAll('input[name="poll_options[]"], input[name="edit_poll_options[]"]');
         let validOptions = 0;
 
         pollOptions.forEach(option => {
@@ -662,7 +663,8 @@ document.addEventListener("DOMContentLoaded", function () {
         });
 
         if (validOptions < 2) {
-            const pollSection = document.getElementById("pollSection");
+            // Determine which poll section to show error for
+            const pollSection = document.getElementById("pollSection") || document.getElementById("editPollSection");
             showPollError(translate('js.validation.poll_minimum_options') || 'Poll must have at least 2 options.');
             return false;
         } else {
@@ -1074,14 +1076,18 @@ document.addEventListener("DOMContentLoaded", function () {
      * Show poll error
      */
     function showPollError(message) {
+        // Check both create and edit poll sections
         const pollSection = document.getElementById("pollSection");
-        if (!pollSection) return;
+        const editPollSection = document.getElementById("editPollSection");
+        const targetSection = pollSection || editPollSection;
+        
+        if (!targetSection) return;
 
-        let errorElement = pollSection.querySelector(".poll-error-message");
+        let errorElement = targetSection.querySelector(".poll-error-message");
         if (!errorElement) {
             errorElement = document.createElement("div");
             errorElement.classList.add("poll-error-message", "alert", "alert-danger", "mt-2");
-            pollSection.appendChild(errorElement);
+            targetSection.appendChild(errorElement);
         }
         errorElement.textContent = message;
         errorElement.style.display = "block";
@@ -1091,13 +1097,18 @@ document.addEventListener("DOMContentLoaded", function () {
      * Hide poll error
      */
     function hidePollError() {
+        // Check both create and edit poll sections
         const pollSection = document.getElementById("pollSection");
-        if (!pollSection) return;
-
-        const errorElement = pollSection.querySelector(".poll-error-message");
-        if (errorElement) {
-            errorElement.style.display = "none";
-        }
+        const editPollSection = document.getElementById("editPollSection");
+        
+        [pollSection, editPollSection].forEach(section => {
+            if (section) {
+                const errorElement = section.querySelector(".poll-error-message");
+                if (errorElement) {
+                    errorElement.style.display = "none";
+                }
+            }
+        });
     }
 
     /**

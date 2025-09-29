@@ -113,7 +113,7 @@ class SocialDashboardModel {
                 LEFT JOIN event_rsvps er ON e.id = er.event_id AND er.is_deleted = 0
                 WHERE e.is_deleted = 0 
                 AND e.client_id = ?
-                AND e.status = 'published'
+                AND e.status = 'active'
                 AND e.start_datetime >= NOW()
                 AND (e.audience_type = 'global' 
                      OR (e.audience_type = 'user_specific' AND e.id IN (
@@ -140,22 +140,18 @@ class SocialDashboardModel {
                        COUNT(DISTINCT r.id) as reaction_count
                 FROM feed_posts p
                 LEFT JOIN user_profiles up ON p.user_id = up.id
-                LEFT JOIN feed_comments c ON p.id = c.post_id AND c.is_deleted = 0
-                LEFT JOIN feed_reactions r ON p.id = r.post_id AND r.is_deleted = 0
-                WHERE p.is_deleted = 0 
+                LEFT JOIN feed_comments c ON p.id = c.post_id AND c.status = 'active'
+                LEFT JOIN feed_reactions r ON p.id = r.post_id
+                WHERE p.deleted_at IS NULL 
                 AND p.client_id = ?
                 AND p.status = 'active'
-                AND (p.visibility = 'public' 
-                     OR (p.visibility = 'course_specific' AND p.id IN (
-                         SELECT post_id FROM feed_post_targets 
-                         WHERE user_id = ? AND is_deleted = 0
-                     )))
+                AND p.visibility = 'global'
                 GROUP BY p.id
                 ORDER BY p.is_pinned DESC, p.created_at DESC
                 LIMIT 5";
 
         $stmt = $this->conn->prepare($sql);
-        $stmt->execute([$clientId, $userId]);
+        $stmt->execute([$clientId]);
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
 
@@ -208,13 +204,10 @@ class SocialDashboardModel {
                          SELECT announcement_id FROM announcement_targets 
                          WHERE user_id = ? AND is_deleted = 0
                      )))
-                AND a.id NOT IN (
-                    SELECT announcement_id FROM announcement_views 
-                    WHERE user_id = ? AND client_id = ?
-                )";
+";
 
         $stmt = $this->conn->prepare($sql);
-        $stmt->execute([$clientId, $userId, $userId, $clientId]);
+        $stmt->execute([$clientId, $userId]);
         $result = $stmt->fetch(PDO::FETCH_ASSOC);
         return $result['count'] ?? 0;
     }
@@ -227,7 +220,7 @@ class SocialDashboardModel {
                 FROM events 
                 WHERE is_deleted = 0 
                 AND client_id = ?
-                AND status = 'published'
+                AND status = 'active'
                 AND start_datetime >= NOW()
                 AND (audience_type = 'global' 
                      OR (audience_type = 'user_specific' AND id IN (
@@ -247,18 +240,14 @@ class SocialDashboardModel {
     private function getNewSocialPostsCount($userId, $clientId) {
         $sql = "SELECT COUNT(*) as count
                 FROM feed_posts 
-                WHERE is_deleted = 0 
+                WHERE deleted_at IS NULL 
                 AND client_id = ?
                 AND status = 'active'
                 AND created_at >= DATE_SUB(NOW(), INTERVAL 24 HOUR)
-                AND (visibility = 'public' 
-                     OR (visibility = 'course_specific' AND id IN (
-                         SELECT post_id FROM feed_post_targets 
-                         WHERE user_id = ? AND is_deleted = 0
-                     )))";
+                AND visibility = 'global'";
 
         $stmt = $this->conn->prepare($sql);
-        $stmt->execute([$clientId, $userId]);
+        $stmt->execute([$clientId]);
         $result = $stmt->fetch(PDO::FETCH_ASSOC);
         return $result['count'] ?? 0;
     }

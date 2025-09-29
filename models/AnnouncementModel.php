@@ -150,8 +150,6 @@ class AnnouncementModel {
                        up.email as creator_email,
                        (SELECT COUNT(*) FROM announcement_acknowledgments aa
                         WHERE aa.announcement_id = a.id AND aa.client_id = a.client_id) as acknowledgment_count,
-                       (SELECT COUNT(*) FROM announcement_views av
-                        WHERE av.announcement_id = a.id AND av.client_id = a.client_id) as view_count,
                        (SELECT COUNT(*) FROM announcement_acknowledgments aa2
                         WHERE aa2.announcement_id = a.id AND aa2.user_id = ? AND aa2.client_id = a.client_id) as user_acknowledged
                 FROM announcements a
@@ -285,9 +283,7 @@ class AnnouncementModel {
                        up.full_name as creator_name,
                        up.email as creator_email,
                        (SELECT COUNT(*) FROM announcement_acknowledgments aa
-                        WHERE aa.announcement_id = a.id AND aa.client_id = a.client_id) as acknowledgment_count,
-                       (SELECT COUNT(*) FROM announcement_views av
-                        WHERE av.announcement_id = a.id AND av.client_id = a.client_id) as view_count
+                        WHERE aa.announcement_id = a.id AND aa.client_id = a.client_id) as acknowledgment_count
                 FROM announcements a
                 LEFT JOIN user_profiles up ON a.created_by = up.id
                 WHERE a.client_id = ? AND a.is_deleted = 0";
@@ -549,22 +545,4 @@ class AnnouncementModel {
         return $stmt->fetch(PDO::FETCH_ASSOC);
     }
 
-    /**
-     * Record user view
-     */
-    public function recordView($announcementId, $userId, $clientId, $timeSpent = null, $ipAddress = null, $userAgent = null) {
-        $sql = "INSERT INTO announcement_views 
-                (announcement_id, user_id, client_id, time_spent_seconds, ip_address, user_agent) 
-                VALUES (?, ?, ?, ?, ?, ?)
-                ON DUPLICATE KEY UPDATE 
-                    last_viewed_at = NOW(),
-                    view_count = view_count + 1,
-                    time_spent_seconds = COALESCE(?, time_spent_seconds)";
-
-        $stmt = $this->conn->prepare($sql);
-        return $stmt->execute([
-            $announcementId, $userId, $clientId, $timeSpent, $ipAddress, $userAgent,
-            $timeSpent
-        ]);
-    }
 }

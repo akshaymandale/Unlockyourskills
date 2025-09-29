@@ -1,14 +1,17 @@
 <?php
 
 require_once 'models/EventModel.php';
+require_once 'models/CustomFieldModel.php';
 require_once 'controllers/BaseController.php';
 require_once 'includes/permission_helper.php';
 
 class EventController extends BaseController {
     private $eventModel;
+    private $customFieldModel;
 
     public function __construct() {
         $this->eventModel = new EventModel();
+        $this->customFieldModel = new CustomFieldModel();
     }
 
     /**
@@ -45,6 +48,15 @@ class EventController extends BaseController {
         // Check permissions for global events
         $systemRole = $_SESSION['user']['system_role'] ?? 'user';
         $canCreateGlobal = in_array($systemRole, ['super_admin', 'admin']);
+
+        // Get client ID from session
+        $clientId = $_SESSION['user']['client_id'];
+
+        // Get custom fields for group-specific events (exact same as opinion polls)
+        $allCustomFields = $this->customFieldModel->getCustomFieldsByClient($clientId);
+        $customFields = array_filter($allCustomFields, function($field) {
+            return $field['field_type'] === 'select';
+        });
 
         require_once 'views/events.php';
     }
@@ -176,8 +188,22 @@ class EventController extends BaseController {
             }
 
             $audienceType = $_POST['audience_type'] ?? '';
-            if (!in_array($audienceType, ['global', 'course_specific', 'group_specific'])) {
+            if (!in_array($audienceType, ['global', 'group_specific'])) {
                 $errors[] = 'Invalid audience type.';
+            }
+
+            // Validate custom fields for group_specific target audience
+            if ($audienceType === 'group_specific') {
+                $customFieldId = $_POST['custom_field_id'] ?? '';
+                $customFieldValue = $_POST['custom_field_value'] ?? '';
+                
+                if (empty($customFieldId)) {
+                    $errors[] = 'Custom field selection is required for group specific events.';
+                }
+                
+                if (empty($customFieldValue)) {
+                    $errors[] = 'Custom field value is required for group specific events.';
+                }
             }
 
             $startDatetime = $_POST['start_datetime'] ?? '';
@@ -231,6 +257,8 @@ class EventController extends BaseController {
                 'start_datetime' => $startDatetime,
                 'end_datetime' => !empty($endDatetime) ? $endDatetime : null,
                 'audience_type' => $audienceType,
+                'custom_field_id' => $audienceType === 'group_specific' ? ($_POST['custom_field_id'] ?? null) : null,
+                'custom_field_value' => $audienceType === 'group_specific' ? ($_POST['custom_field_value'] ?? null) : null,
                 'location' => trim($_POST['location'] ?? ''),
                 'enable_rsvp' => isset($_POST['enable_rsvp']) ? 1 : 0,
                 'send_reminder_before' => (int)$sendReminderBefore,
@@ -245,14 +273,8 @@ class EventController extends BaseController {
             error_log('EventModel::createEvent() returned: ' . print_r($eventId, true));
 
             if ($eventId) {
-                // Handle course/group specific audiences
-                if ($audienceType === 'course_specific' && !empty($_POST['target_courses'])) {
-                    $targetCourses = $_POST['target_courses'];
-                    error_log('Adding course-specific audiences: ' . print_r($targetCourses, true));
-                    foreach ($targetCourses as $courseId) {
-                        $this->eventModel->addEventAudience($eventId, 'course', $courseId, $clientId);
-                    }
-                }
+                // Handle group specific audiences
+                // Course specific audiences are no longer supported
 
                 if ($this->isAjaxRequest()) {
                     header('Content-Type: application/json');
@@ -401,8 +423,22 @@ class EventController extends BaseController {
             }
 
             $audienceType = $_POST['audience_type'] ?? '';
-            if (!in_array($audienceType, ['global', 'course_specific', 'group_specific'])) {
+            if (!in_array($audienceType, ['global', 'group_specific'])) {
                 $errors[] = 'Invalid audience type.';
+            }
+
+            // Validate custom fields for group_specific target audience
+            if ($audienceType === 'group_specific') {
+                $customFieldId = $_POST['custom_field_id'] ?? '';
+                $customFieldValue = $_POST['custom_field_value'] ?? '';
+                
+                if (empty($customFieldId)) {
+                    $errors[] = 'Custom field selection is required for group specific events.';
+                }
+                
+                if (empty($customFieldValue)) {
+                    $errors[] = 'Custom field value is required for group specific events.';
+                }
             }
 
             $startDatetime = $_POST['start_datetime'] ?? '';
@@ -451,6 +487,8 @@ class EventController extends BaseController {
                 'start_datetime' => $startDatetime,
                 'end_datetime' => !empty($endDatetime) ? $endDatetime : null,
                 'audience_type' => $audienceType,
+                'custom_field_id' => $audienceType === 'group_specific' ? ($_POST['custom_field_id'] ?? null) : null,
+                'custom_field_value' => $audienceType === 'group_specific' ? ($_POST['custom_field_value'] ?? null) : null,
                 'location' => trim($_POST['location'] ?? ''),
                 'enable_rsvp' => isset($_POST['enable_rsvp']) ? 1 : 0,
                 'send_reminder_before' => (int)$sendReminderBefore,
@@ -468,13 +506,7 @@ class EventController extends BaseController {
                 // Update audiences
                 $this->eventModel->removeEventAudiences($eventId, $clientId);
 
-                if ($audienceType === 'course_specific' && !empty($_POST['target_courses'])) {
-                    $targetCourses = $_POST['target_courses'];
-                    error_log('Adding course-specific audiences: ' . print_r($targetCourses, true));
-                    foreach ($targetCourses as $courseId) {
-                        $this->eventModel->addEventAudience($eventId, 'course', $courseId, $clientId);
-                    }
-                }
+                // Course specific audiences are no longer supported
 
                 if ($this->isAjaxRequest()) {
                     header('Content-Type: application/json');

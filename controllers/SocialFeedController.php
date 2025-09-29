@@ -1,5 +1,6 @@
 <?php
 require_once 'models/SocialFeedModel.php';
+require_once 'models/CustomFieldModel.php';
 require_once 'controllers/BaseController.php';
 require_once 'config/autoload.php';
 require_once 'core/middleware/AuthMiddleware.php';
@@ -7,6 +8,7 @@ require_once 'core/middleware/AuthMiddleware.php';
 class SocialFeedController extends BaseController {
     private $socialFeedModel;
     private $userModel;
+    private $customFieldModel;
 
     public function __construct() {
         // Start output buffering to prevent any unexpected output
@@ -14,6 +16,7 @@ class SocialFeedController extends BaseController {
         
         $this->socialFeedModel = new SocialFeedModel();
         $this->userModel = new UserModel();
+        $this->customFieldModel = new CustomFieldModel();
         
         // Apply authentication middleware
         $authMiddleware = new AuthMiddleware();
@@ -22,20 +25,33 @@ class SocialFeedController extends BaseController {
 
     // List posts (with filters/search/pagination)
     public function index() {
-        $this->render('social_feed');
+        // Check if user is logged in
+        if (!isset($_SESSION['user']['client_id'])) {
+            $this->toastError('Unauthorized access. Please log in.', 'index.php?controller=LoginController');
+            return;
+        }
+
+        // Get client ID
+        $clientId = $_SESSION['user']['client_id'];
+
+        // Get custom fields for group-specific posts
+        $allCustomFields = $this->customFieldModel->getCustomFieldsByClient($clientId);
+        $customFields = array_filter($allCustomFields, function($field) {
+            return $field['field_type'] === 'select';
+        });
+
+        // Set page title and include view
+        $pageTitle = 'Social Feed';
+        include 'views/social_feed.php';
     }
 
     public function list() {
         // Debug logging
-        error_log("SocialFeedController::list() called");
-        error_log("Session data: " . print_r($_SESSION, true));
-        error_log("GET data: " . print_r($_GET, true));
         
         // TEMPORARY: If no session, use client_id = 1 for testing
         $clientId = $_SESSION['user']['client_id'] ?? 1;
         
         if (!$clientId) {
-            error_log("SocialFeedController::list() - No client_id available");
             $this->jsonResponse([
                 'success' => false,
                 'message' => 'Unauthorized access - No client_id available'
@@ -57,16 +73,13 @@ class SocialFeedController extends BaseController {
                 'client_id' => $clientId
             ];
 
-            error_log("SocialFeedController::list() - Filters: " . print_r($filters, true));
 
             $result = $this->socialFeedModel->getPosts($page, $limit, $filters);
             
-            error_log("SocialFeedController::list() - Model result: " . print_r($result, true));
             
             if ($result['success']) {
                 // If no posts, return empty array and pagination
                 if (empty($result['posts'])) {
-                    error_log("SocialFeedController::list() - No posts found, returning empty array");
                     $this->jsonResponse([
                         'success' => true,
                         'posts' => [],
@@ -78,7 +91,6 @@ class SocialFeedController extends BaseController {
                         ]
                     ]);
                 } else {
-                    error_log("SocialFeedController::list() - Found " . count($result['posts']) . " posts");
                     $this->jsonResponse([
                         'success' => true,
                         'posts' => $result['posts'],
@@ -86,14 +98,12 @@ class SocialFeedController extends BaseController {
                     ]);
                 }
             } else {
-                error_log("SocialFeedController::list() - Model returned error: " . $result['message']);
                 $this->jsonResponse([
                     'success' => false,
                     'message' => $result['message']
                 ]);
             }
         } catch (Exception $e) {
-            error_log("SocialFeedController::list() - Exception: " . $e->getMessage());
             $this->jsonResponse([
                 'success' => false,
                 'message' => 'Failed to load posts: ' . $e->getMessage()
@@ -113,14 +123,15 @@ class SocialFeedController extends BaseController {
                 throw new Exception('Invalid request method');
             }
 
-            // Debug logging
-            error_log('SocialFeedController::create - POST data received: ' . print_r($_POST, true));
-            error_log('SocialFeedController::create - FILES data received: ' . print_r($_FILES, true));
+            // Debug logging removed - issue was directory permissions
+            
 
             // Check if user is logged in
             if (!isset($_SESSION['user']['client_id'])) {
                 throw new Exception('Unauthorized access. Please log in.');
             }
+            
+            // Debug logging removed - issue was directory permissions
 
             // Server-side validation
             $errors = [];
@@ -135,6 +146,26 @@ class SocialFeedController extends BaseController {
             $content = trim($_POST['content'] ?? '');
             $category = trim($_POST['post_type'] ?? '');
             $visibility = $_POST['visibility'] ?? 'global';
+            
+            // Validate visibility value to ensure it's a valid enum value
+            $validVisibilityValues = ['global', 'group_specific'];
+            if (!in_array($visibility, $validVisibilityValues)) {
+                $visibility = 'global'; // Default to global if invalid
+            }
+
+            // Validate custom fields for group_specific visibility
+            if ($visibility === 'group_specific') {
+                $customFieldId = $_POST['custom_field_id'] ?? '';
+                $customFieldValue = $_POST['custom_field_value'] ?? '';
+                
+                if (empty($customFieldId)) {
+                    $errors[] = 'Custom field selection is required for group specific posts.';
+                }
+                
+                if (empty($customFieldValue)) {
+                    $errors[] = 'Custom field value is required for group specific posts.';
+                }
+            }
 
             // Validate and set default post_type
             $validPostTypes = ['text', 'media', 'poll', 'link'];
@@ -171,18 +202,13 @@ class SocialFeedController extends BaseController {
             // Validate media files
             $mediaFiles = [];
             if (isset($_FILES['media']) && !empty($_FILES['media']['name'][0])) {
-                error_log('SocialFeedController::create - Media files detected, validating...');
                 $mediaValidation = $this->validateMediaFiles($_FILES['media']);
                 if (!$mediaValidation['valid']) {
-                    error_log('SocialFeedController::create - Media validation failed: ' . $mediaValidation['message']);
                     $errors[] = $mediaValidation['message'];
                 } else {
-                    error_log('SocialFeedController::create - Media validation passed, handling uploads...');
                     $mediaFiles = $this->handleMediaUploads($_FILES['media']);
-                    error_log('SocialFeedController::create - Media uploads completed: ' . print_r($mediaFiles, true));
                 }
             } else {
-                error_log('SocialFeedController::create - No media files detected in request');
                 // If post_type is media, media files are required
                 if ($category === 'media') {
                     $errors[] = 'Please upload at least one media file.';
@@ -239,7 +265,9 @@ class SocialFeedController extends BaseController {
                 'is_pinned' => isset($_POST['pin_post']) ? 1 : 0,
                 'author_id' => $_SESSION['user']['id'],
                 'client_id' => $_SESSION['user']['client_id'] ?? null,
-                'scheduled_at' => $scheduledAt ? $scheduledAt->format('Y-m-d H:i:s') : null
+                'scheduled_at' => $scheduledAt ? $scheduledAt->format('Y-m-d H:i:s') : null,
+                'custom_field_id' => $visibility === 'group_specific' ? ($_POST['custom_field_id'] ?? null) : null,
+                'custom_field_value' => $visibility === 'group_specific' ? ($_POST['custom_field_value'] ?? null) : null
             ];
 
             // Create the post
@@ -335,6 +363,26 @@ class SocialFeedController extends BaseController {
             $content = trim($_POST['content'] ?? '');
             $category = trim($_POST['post_type'] ?? '');
             $visibility = $_POST['visibility'] ?? 'global';
+            
+            // Validate visibility value to ensure it's a valid enum value
+            $validVisibilityValues = ['global', 'group_specific'];
+            if (!in_array($visibility, $validVisibilityValues)) {
+                $visibility = 'global'; // Default to global if invalid
+            }
+
+            // Validate custom fields for group_specific visibility
+            if ($visibility === 'group_specific') {
+                $customFieldId = $_POST['custom_field_id'] ?? '';
+                $customFieldValue = $_POST['custom_field_value'] ?? '';
+                
+                if (empty($customFieldId)) {
+                    $errors[] = 'Custom field selection is required for group specific posts.';
+                }
+                
+                if (empty($customFieldValue)) {
+                    $errors[] = 'Custom field value is required for group specific posts.';
+                }
+            }
 
             // Validate and set default post_type
             $validPostTypes = ['text', 'media', 'poll', 'link'];
@@ -357,12 +405,8 @@ class SocialFeedController extends BaseController {
                 }
             }
 
-            // Handle media uploads
-            $mediaFiles = [];
-            if (isset($_FILES['media']) && !empty($_FILES['media']['name'][0])) {
-                // Pass raw $_FILES['media'] to updatePost instead of processing here
-                $mediaFiles = $_FILES['media'];
-            }
+            // Note: Media files are already handled above in the validation section
+            // The $mediaFiles variable already contains the processed upload data
 
             // Handle files to delete
             $filesToDelete = [];
@@ -373,7 +417,12 @@ class SocialFeedController extends BaseController {
             // Handle poll data if included
             $pollData = null;
             if (isset($_POST['include_poll']) && $_POST['include_poll'] == '1') {
-                $pollData = $this->validatePollData($_POST);
+                $pollValidation = $this->validatePollData($_POST);
+                if ($pollValidation['valid']) {
+                    $pollData = $pollValidation['data'];
+                } else {
+                    $errors[] = $pollValidation['message'];
+                }
             }
 
             // Validate and prepare link data
@@ -415,12 +464,12 @@ class SocialFeedController extends BaseController {
                 'tags' => $tags,
                 'is_pinned' => isset($_POST['pin_post']) ? 1 : 0,
                 'author_id' => $_SESSION['user']['id'],
-                'client_id' => $_SESSION['user']['client_id'] ?? null
+                'client_id' => $_SESSION['user']['client_id'] ?? null,
+                'custom_field_id' => $visibility === 'group_specific' ? ($_POST['custom_field_id'] ?? null) : null,
+                'custom_field_value' => $visibility === 'group_specific' ? ($_POST['custom_field_value'] ?? null) : null
             ];
 
             // Debug logging
-            error_log('EDIT: $_FILES = ' . print_r($_FILES, true));
-            error_log('EDIT: $mediaFiles = ' . print_r($mediaFiles, true));
 
             // Update the post
             $result = $this->socialFeedModel->updatePost($postData, $mediaFiles, $filesToDelete, $pollData, $linkData);
@@ -647,9 +696,6 @@ class SocialFeedController extends BaseController {
             }
 
             // Debug logging
-            error_log('Report submission - User ID: ' . $_SESSION['user']['id']);
-            error_log('Report submission - Client ID: ' . $_SESSION['user']['client_id']);
-            error_log('Report submission - POST data: ' . print_r($_POST, true));
 
             // Server-side validation
             $errors = [];
@@ -688,7 +734,6 @@ class SocialFeedController extends BaseController {
                 'client_id' => $_SESSION['user']['client_id']
             ];
 
-            error_log('Report data being sent to model: ' . print_r($reportData, true));
 
             $result = $this->socialFeedModel->reportPost($reportData);
             
@@ -704,7 +749,6 @@ class SocialFeedController extends BaseController {
                 ]);
             }
         } catch (Exception $e) {
-            error_log('Report submission error: ' . $e->getMessage());
             $this->jsonResponse([
                 'success' => false,
                 'message' => 'Failed to submit report: ' . $e->getMessage()
@@ -933,8 +977,6 @@ class SocialFeedController extends BaseController {
     }
 
     private function handleMediaUploads($files) {
-        error_log('SocialFeedController::handleMediaUploads - Starting media upload handling');
-        error_log('SocialFeedController::handleMediaUploads - Files array: ' . print_r($files, true));
         
         $uploadedFiles = [];
         $uploadDir = 'uploads/social_feed/';
@@ -942,11 +984,9 @@ class SocialFeedController extends BaseController {
         // Create directory if it doesn't exist
         if (!is_dir($uploadDir)) {
             mkdir($uploadDir, 0777, true);
-            error_log('SocialFeedController::handleMediaUploads - Created upload directory: ' . $uploadDir);
         }
 
         for ($i = 0; $i < count($files['name']); $i++) {
-            error_log("SocialFeedController::handleMediaUploads - Processing file {$i}: " . $files['name'][$i]);
             
             if ($files['error'][$i] === UPLOAD_ERR_OK) {
                 $fileName = $files['name'][$i];
@@ -954,32 +994,24 @@ class SocialFeedController extends BaseController {
                 $fileSize = $files['size'][$i];
                 $fileType = $files['type'][$i];
                 
-                error_log("SocialFeedController::handleMediaUploads - File details: name={$fileName}, tmp_name={$fileTmpName}, size={$fileSize}, type={$fileType}");
                 
                 // Generate unique filename
                 $fileExtension = pathinfo($fileName, PATHINFO_EXTENSION);
                 $uniqueFileName = uniqid() . '_' . time() . '.' . $fileExtension;
                 $filePath = $uploadDir . $uniqueFileName;
                 
-                error_log("SocialFeedController::handleMediaUploads - Attempting to move file to: {$filePath}");
                 
                 if (move_uploaded_file($fileTmpName, $filePath)) {
-                    error_log("SocialFeedController::handleMediaUploads - Successfully moved file to: {$filePath}");
                     $uploadedFiles[] = [
                         'filename' => $fileName,
                         'filepath' => $filePath,
                         'filesize' => $fileSize,
                         'filetype' => $fileType
                     ];
-                } else {
-                    error_log("SocialFeedController::handleMediaUploads - Failed to move file: {$fileTmpName} to {$filePath}");
                 }
-            } else {
-                error_log("SocialFeedController::handleMediaUploads - File upload error: " . $files['error'][$i]);
             }
         }
         
-        error_log('SocialFeedController::handleMediaUploads - Final uploaded files: ' . print_r($uploadedFiles, true));
         return $uploadedFiles;
     }
 
