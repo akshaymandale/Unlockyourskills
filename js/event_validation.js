@@ -132,7 +132,17 @@ function validateTitle(field) {
 }
 
 function validateDescription(field) {
-    const value = field.value.trim();
+    // Handle custom editor content
+    let value = '';
+    if (field.contentEditable === 'true') {
+        // This is a contenteditable div (custom editor)
+        value = field.textContent || field.innerText || '';
+    } else {
+        // This is a regular input/textarea
+        value = field.value || '';
+    }
+    
+    value = value.trim();
     
     if (!value) {
         showFieldError(field, 'Event description is required.');
@@ -173,7 +183,7 @@ function validateEventType(field) {
 
 function validateAudienceType(field, isEdit) {
     const value = field.value;
-    const validTypes = ['global', 'course_specific', 'group_specific'];
+    const validTypes = ['global', 'group_specific'];
     
     if (!value) {
         showFieldError(field, 'Please select a target audience.');
@@ -185,11 +195,18 @@ function validateAudienceType(field, isEdit) {
         return false;
     }
     
-    // Validate course selection if course_specific is selected
-    if (value === 'course_specific') {
-        const courseSelect = document.getElementById(isEdit ? 'editTargetCourses' : 'targetCourses');
-        if (courseSelect && courseSelect.selectedOptions.length === 0) {
-            showFieldError(courseSelect, 'Please select at least one course.');
+    // Validate custom field selection if group_specific is selected
+    if (value === 'group_specific') {
+        const customFieldId = document.getElementById(isEdit ? 'editCustomFieldId' : 'customFieldId');
+        const customFieldValue = document.getElementById(isEdit ? 'editCustomFieldValue' : 'customFieldValue');
+        
+        if (customFieldId && !customFieldId.value) {
+            showFieldError(customFieldId, 'Please select a custom field.');
+            return false;
+        }
+        
+        if (customFieldValue && !customFieldValue.value) {
+            showFieldError(customFieldValue, 'Please select a custom field value.');
             return false;
         }
     }

@@ -27,12 +27,30 @@ class CustomEditor {
     init() {
         this.editor = document.getElementById(this.editorId);
         if (!this.editor) {
-            console.error(`CustomEditor: Element with ID '${this.editorId}' not found`);
             return;
         }
         
         this.hidden = document.getElementById(this.editorId + 'Hidden');
-        this.charCount = document.getElementById(this.editorId.replace('Body', 'CharCount'));
+        // Find character count element - try different patterns based on editor ID
+        let charCountId = '';
+        if (this.editorId === 'eventDescription') {
+            charCountId = 'descriptionCharCount';
+        } else if (this.editorId === 'editEventDescription') {
+            charCountId = 'editDescriptionCharCount';
+        } else if (this.editorId === 'announcementBody') {
+            charCountId = 'bodyCharCount';
+        } else if (this.editorId === 'editAnnouncementBody') {
+            charCountId = 'editBodyCharCount';
+        } else if (this.editorId.includes('Description')) {
+            charCountId = this.editorId.replace('Description', 'CharCount');
+        } else if (this.editorId.includes('Body')) {
+            charCountId = this.editorId.replace('Body', 'CharCount');
+        } else {
+            charCountId = this.editorId + 'CharCount';
+        }
+        
+        this.charCount = document.getElementById(charCountId);
+        
         this.toolbar = this.editor.closest('.custom-editor-container')?.querySelector('.editor-toolbar');
         
         this.setupEditor();
@@ -160,7 +178,9 @@ class CustomEditor {
     updateCharCount() {
         if (this.charCount) {
             const text = this.editor.textContent || this.editor.innerText || '';
-            this.charCount.textContent = text.length;
+            // Remove extra whitespace and only count visible characters
+            const trimmedText = text.replace(/\s+/g, ' ').trim();
+            this.charCount.textContent = trimmedText.length;
         }
     }
     
@@ -208,6 +228,7 @@ window.CustomEditor = CustomEditor;
 document.addEventListener('DOMContentLoaded', function() {
     // Auto-initialize editors with data-custom-editor attribute
     const editors = document.querySelectorAll('[data-custom-editor]');
+    
     editors.forEach(editor => {
         const editorId = editor.id;
         const options = {

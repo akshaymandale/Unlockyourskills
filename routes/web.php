@@ -590,8 +590,19 @@ Router::get('/users/autocomplete', 'UserManagementController@getUserEmailsForAut
     Router::post('/events/{id}/rsvp', 'EventController@rsvp');
 
     // Event Viewing (for learners)
-    Router::get('/my-events', 'EventController@viewEvents');
+    Router::get('/my-events', 'UserEventController@index');
+    Router::get('/api/user-events', 'UserEventController@getUserEvents');
+    Router::post('/api/user-events/rsvp', 'UserEventController@rsvp');
+    Router::get('/api/user-events/upcoming', 'UserEventController@getUpcomingEvents');
     Router::get('/events/{id}/view', 'EventController@viewEvent');
+
+    // Social Feed Viewing (for learners)
+    Router::get('/my-social-feed', 'UserSocialFeedController@index');
+    Router::get('/api/user-social-feed', 'UserSocialFeedController@getUserPosts');
+    Router::get('/api/user-social-feed/details', 'UserSocialFeedController@getPostDetails');
+    Router::post('/api/user-social-feed/reaction', 'UserSocialFeedController@toggleReaction');
+    Router::get('/api/user-social-feed/comments', 'UserSocialFeedController@getComments');
+    Router::post('/api/user-social-feed/comments', 'UserSocialFeedController@addComment');
 
     // ===================================
     // SOCIAL FEED (NEWS WALL)

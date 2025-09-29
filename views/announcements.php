@@ -527,7 +527,6 @@ window.announcementState = {
 
 // Initialize page
 document.addEventListener('DOMContentLoaded', function() {
-    console.log('Announcement Management page loaded');
 
     // Initialize filters and search
     initializeFilters();
@@ -670,11 +669,7 @@ function initializeCharacterCounting() {
         });
     }
 
-    if (bodyInput && bodyCharCount) {
-        bodyInput.addEventListener('input', function() {
-            bodyCharCount.textContent = this.value.length;
-        });
-    }
+    // Body character counting is now handled by the custom editor
 
     // Edit modal character counting
     const editTitleInput = document.getElementById('editAnnouncementTitle');
@@ -693,11 +688,7 @@ function initializeCharacterCounting() {
         });
     }
 
-    if (editBodyInput && editBodyCharCount) {
-        editBodyInput.addEventListener('input', function() {
-            editBodyCharCount.textContent = this.value.length;
-        });
-    }
+    // Edit body character counting is now handled by the custom editor
 }
 
 // Function to toggle custom field selection visibility (Global scope)
@@ -893,12 +884,10 @@ function loadAnnouncements(page = 1) {
             updatePagination(data.pagination);
             updateResultsInfo(data.pagination);
         } else {
-            console.error('Error loading announcements:', data.error || data.message || 'Unknown error');
             showError(data.error || data.message || 'Failed to load announcements. Please try again.');
         }
     })
     .catch(error => {
-        console.error('Network error:', error);
         showError('Network error. Please check your connection and try again.');
     })
     .finally(() => {
@@ -1048,7 +1037,6 @@ function getStatusBadge(status) {
 function getAudienceBadge(audienceType) {
     const badges = {
         'global': '<span class="badge bg-info">Global</span>',
-        'course_specific': '<span class="badge bg-primary">Course</span>',
         'group_specific': '<span class="badge bg-warning">Group</span>'
     };
     return badges[audienceType] || '<span class="badge bg-secondary">Unknown</span>';
@@ -1323,7 +1311,7 @@ function handleCreateSubmit(e) {
         }
     })
     .catch(error => {
-        console.error('Error:', error);
+        // Error handling - console.error removed for clean console('Error:', error);
         showError('Network error. Please try again.');
     })
     .finally(() => {
@@ -1369,7 +1357,7 @@ function handleEditSubmit(e) {
         }
     })
     .catch(error => {
-        console.error('Error:', error);
+        // Error handling - console.error removed for clean console('Error:', error);
         showError('Network error. Please try again.');
     })
     .finally(() => {
@@ -1400,7 +1388,7 @@ function editAnnouncement(announcementId) {
         }
     })
     .catch(error => {
-        console.error('Error:', error);
+        // Error handling - console.error removed for clean console('Error:', error);
         showError('Network error. Please try again.');
     });
 }
@@ -1510,7 +1498,7 @@ function executeAnnouncementDelete(announcementId) {
         }
     })
     .catch(error => {
-        console.error('Error:', error);
+        // Error handling - console.error removed for clean console('Error:', error);
         showError('Network error. Please try again.');
     });
 }
@@ -1563,7 +1551,7 @@ function executeStatusUpdate(announcementId, status) {
         }
     })
     .catch(error => {
-        console.error('Error:', error);
+        // Error handling - console.error removed for clean console('Error:', error);
         showError('Network error. Please try again.');
     });
 }

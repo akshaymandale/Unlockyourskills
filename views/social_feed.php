@@ -109,7 +109,6 @@ include 'includes/sidebar.php';
                                 <select class="form-select" id="visibilityFilter">
                                     <option value="">All Visibility</option>
                                     <option value="global">Global</option>
-                                    <option value="course_specific">Course Specific</option>
                                     <option value="group_specific">Group Specific</option>
                                 </select>
                             </div>
@@ -281,18 +280,33 @@ include 'includes/sidebar.php';
                             <!-- Poll Creation -->
                             <div class="mb-3" id="pollSection" style="display: none;">
                                 <label class="form-label">Create Poll</label>
-                                <div id="pollOptions">
-                                    <div class="input-group mb-2">
-                                        <input type="text" class="form-control" name="poll_options[]" placeholder="Option 1">
-                                    </div>
-                                    <div class="input-group mb-2">
-                                        <input type="text" class="form-control" name="poll_options[]" placeholder="Option 2">
-                                    </div>
+                                
+                                <!-- Poll Question -->
+                                <div class="mb-3">
+                                    <label for="pollQuestion" class="form-label">Poll Question *</label>
+                                    <input type="text" class="form-control" id="pollQuestion" name="poll_question" 
+                                        placeholder="What would you like to ask?" maxlength="200">
+                                    <div class="form-text">Maximum 200 characters</div>
                                 </div>
-                                <button type="button" class="btn btn-sm btn-outline-secondary" id="addPollOption">
-                                    <i class="fas fa-plus me-1"></i>Add Option
-                                </button>
-                                <div class="form-check mt-2">
+                                
+                                <!-- Poll Options -->
+                                <div class="mb-3">
+                                    <label class="form-label">Poll Options *</label>
+                                    <div id="pollOptions">
+                                        <div class="input-group mb-2">
+                                            <input type="text" class="form-control" name="poll_options[]" placeholder="Option 1">
+                                        </div>
+                                        <div class="input-group mb-2">
+                                            <input type="text" class="form-control" name="poll_options[]" placeholder="Option 2">
+                                        </div>
+                                    </div>
+                                    <button type="button" class="btn btn-sm btn-outline-secondary" id="addPollOption">
+                                        <i class="fas fa-plus me-1"></i>Add Option
+                                    </button>
+                                </div>
+                                
+                                <!-- Poll Settings -->
+                                <div class="form-check">
                                     <input class="form-check-input" type="checkbox" id="allowMultipleVotes" name="allow_multiple_votes">
                                     <label class="form-check-label" for="allowMultipleVotes">
                                         Allow multiple votes
@@ -350,10 +364,32 @@ include 'includes/sidebar.php';
                                         <select class="form-select" id="visibility" name="visibility">
                                             <option value="">Select visibility</option>
                                             <option value="global">Global</option>
-                                            <option value="course_specific">Course Specific</option>
                                             <option value="group_specific">Group Specific</option>
                                         </select>
                                         <div class="invalid-feedback"></div>
+                                    </div>
+
+                                    <!-- Custom Field Selection (for Group Specific) -->
+                                    <div class="mb-3" id="customFieldSelection" style="display: none;">
+                                        <div class="mb-3">
+                                            <label for="customFieldId" class="form-label">Select Custom Field <span class="text-danger">*</span></label>
+                                            <select class="form-select" id="customFieldId" name="custom_field_id">
+                                                <option value="">Select custom field...</option>
+                                                <?php foreach ($customFields as $field): ?>
+                                                    <option value="<?= $field['id']; ?>" data-options="<?= htmlspecialchars(json_encode($field['field_options'] ?? [])); ?>">
+                                                        <?= htmlspecialchars($field['field_label']); ?>
+                                                    </option>
+                                                <?php endforeach; ?>
+                                            </select>
+                                            <div class="invalid-feedback"></div>
+                                        </div>
+                                        <div class="mb-3">
+                                            <label for="customFieldValue" class="form-label">Select Custom Field Value <span class="text-danger">*</span></label>
+                                            <select class="form-select" id="customFieldValue" name="custom_field_value">
+                                                <option value="">Select value...</option>
+                                            </select>
+                                            <div class="invalid-feedback"></div>
+                                        </div>
                                     </div>
 
                                     <!-- Tags -->
@@ -468,18 +504,33 @@ include 'includes/sidebar.php';
                             <!-- Poll Creation -->
                             <div class="mb-3" id="editPollSection" style="display: none;">
                                 <label class="form-label">Edit Poll</label>
-                                <div id="editPollOptions">
-                                    <div class="input-group mb-2">
-                                        <input type="text" class="form-control" name="poll_options[]" placeholder="Option 1">
-                                    </div>
-                                    <div class="input-group mb-2">
-                                        <input type="text" class="form-control" name="poll_options[]" placeholder="Option 2">
-                                    </div>
+                                
+                                <!-- Poll Question -->
+                                <div class="mb-3">
+                                    <label for="editPollQuestion" class="form-label">Poll Question *</label>
+                                    <input type="text" class="form-control" id="editPollQuestion" name="poll_question" 
+                                        placeholder="What would you like to ask?" maxlength="200">
+                                    <div class="form-text">Maximum 200 characters</div>
                                 </div>
-                                <button type="button" class="btn btn-sm btn-outline-secondary" id="editAddPollOption">
-                                    <i class="fas fa-plus me-1"></i>Add Option
-                                </button>
-                                <div class="form-check mt-2">
+                                
+                                <!-- Poll Options -->
+                                <div class="mb-3">
+                                    <label class="form-label">Poll Options *</label>
+                                    <div id="editPollOptions">
+                                        <div class="input-group mb-2">
+                                            <input type="text" class="form-control" name="edit_poll_options[]" placeholder="Option 1">
+                                        </div>
+                                        <div class="input-group mb-2">
+                                            <input type="text" class="form-control" name="edit_poll_options[]" placeholder="Option 2">
+                                        </div>
+                                    </div>
+                                    <button type="button" class="btn btn-sm btn-outline-secondary" id="editAddPollOption">
+                                        <i class="fas fa-plus me-1"></i>Add Option
+                                    </button>
+                                </div>
+                                
+                                <!-- Poll Settings -->
+                                <div class="form-check">
                                     <input class="form-check-input" type="checkbox" id="editAllowMultipleVotes" name="allow_multiple_votes">
                                     <label class="form-check-label" for="editAllowMultipleVotes">
                                         Allow multiple votes
@@ -537,10 +588,32 @@ include 'includes/sidebar.php';
                                         <select class="form-select" id="editVisibility" name="visibility">
                                             <option value="">Select visibility</option>
                                             <option value="global">Global</option>
-                                            <option value="course_specific">Course Specific</option>
                                             <option value="group_specific">Group Specific</option>
                                         </select>
                                         <div class="invalid-feedback"></div>
+                                    </div>
+
+                                    <!-- Custom Field Selection (for Group Specific) - Edit Modal -->
+                                    <div class="mb-3" id="editCustomFieldSelection" style="display: none;">
+                                        <div class="mb-3">
+                                            <label for="editCustomFieldId" class="form-label">Select Custom Field <span class="text-danger">*</span></label>
+                                            <select class="form-select" id="editCustomFieldId" name="custom_field_id">
+                                                <option value="">Select custom field...</option>
+                                                <?php foreach ($customFields as $field): ?>
+                                                    <option value="<?= $field['id']; ?>" data-options="<?= htmlspecialchars(json_encode($field['field_options'] ?? [])); ?>">
+                                                        <?= htmlspecialchars($field['field_label']); ?>
+                                                    </option>
+                                                <?php endforeach; ?>
+                                            </select>
+                                            <div class="invalid-feedback"></div>
+                                        </div>
+                                        <div class="mb-3">
+                                            <label for="editCustomFieldValue" class="form-label">Select Custom Field Value <span class="text-danger">*</span></label>
+                                            <select class="form-select" id="editCustomFieldValue" name="custom_field_value">
+                                                <option value="">Select value...</option>
+                                            </select>
+                                            <div class="invalid-feedback"></div>
+                                        </div>
                                     </div>
 
                                     <!-- Tags -->
@@ -746,4 +819,157 @@ include 'includes/sidebar.php';
 <?php require_once 'includes/footer.php'; ?>
 
 <script src="<?= UrlHelper::url('public/js/social_feed_validation.js') ?>"></script>
-<script src="<?= UrlHelper::url('public/js/social_feed.js') ?>"></script> 
+<script src="<?= UrlHelper::url('public/js/social_feed.js') ?>"></script>
+
+<script>
+// Function to toggle custom field selection visibility (Global scope)
+function toggleCustomFieldSelection(audienceSelect, customFieldDiv) {
+    if (audienceSelect.value === 'group_specific') {
+        customFieldDiv.style.display = 'block';
+    } else {
+        customFieldDiv.style.display = 'none';
+        // Clear selections when hidden
+        const fieldIdSelect = customFieldDiv.querySelector('select[name="custom_field_id"]');
+        const fieldValueSelect = customFieldDiv.querySelector('select[name="custom_field_value"]');
+        if (fieldIdSelect) fieldIdSelect.value = '';
+        if (fieldValueSelect) fieldValueSelect.value = '';
+    }
+}
+
+// Function to load custom field values (Global scope)
+function loadCustomFieldValues(fieldIdSelect, fieldValueSelect) {
+    console.log('🔄 loadCustomFieldValues called');
+    console.log('📝 fieldIdSelect:', fieldIdSelect);
+    console.log('📝 fieldValueSelect:', fieldValueSelect);
+    
+    const selectedOption = fieldIdSelect.options[fieldIdSelect.selectedIndex];
+    const optionsData = selectedOption.getAttribute('data-options');
+    
+    console.log('📊 Selected option:', selectedOption);
+    console.log('📊 Options data:', optionsData);
+    
+    // Clear existing options
+    fieldValueSelect.innerHTML = '<option value="">Select value...</option>';
+    
+    if (optionsData) {
+        try {
+            const options = JSON.parse(optionsData);
+            console.log('📊 Parsed options:', options);
+            console.log('📊 Type:', typeof options);
+            
+            // Check if options is a string (contains \r\n) or an array
+            if (typeof options === 'string') {
+                console.log('✅ Processing string with line breaks');
+                // If it's a string with \r\n, split it
+                const splitOptions = options.split(/\r?\n/).filter(opt => opt.trim() !== '');
+                console.log('📊 Split options:', splitOptions);
+                splitOptions.forEach(option => {
+                    const optionElement = document.createElement('option');
+                    optionElement.value = option.trim();
+                    optionElement.textContent = option.trim();
+                    fieldValueSelect.appendChild(optionElement);
+                    console.log(`✅ Added string option: ${option.trim()}`);
+                });
+            } else if (Array.isArray(options)) {
+                console.log('✅ Processing array of options');
+                // If it's already an array, use it directly
+                options.forEach(option => {
+                    const optionElement = document.createElement('option');
+                    optionElement.value = option;
+                    optionElement.textContent = option;
+                    fieldValueSelect.appendChild(optionElement);
+                    console.log(`✅ Added array option: ${option}`);
+                });
+            }
+            console.log('🎯 Total options added:', fieldValueSelect.options.length - 1);
+        } catch (e) {
+            console.log('❌ JSON parsing failed, treating as string:', e);
+            // If JSON parsing fails, treat as newline-separated string
+            const options = optionsData.split(/\r?\n/).filter(opt => opt.trim() !== '');
+            console.log('📊 Fallback split options:', options);
+            options.forEach(option => {
+                const optionElement = document.createElement('option');
+                optionElement.value = option.trim();
+                optionElement.textContent = option.trim();
+                fieldValueSelect.appendChild(optionElement);
+                console.log(`✅ Added fallback option: ${option.trim()}`);
+            });
+        }
+    } else {
+        console.log('❌ No options data found');
+    }
+}
+
+// Initialize custom field functionality when DOM is loaded
+document.addEventListener('DOMContentLoaded', function() {
+    console.log('🔧 Initializing custom field functionality...');
+    
+    // Create form custom field handling
+    const createVisibility = document.getElementById('visibility');
+    const createCustomFieldSelection = document.getElementById('customFieldSelection');
+    const createCustomFieldId = document.getElementById('customFieldId');
+    const createCustomFieldValue = document.getElementById('customFieldValue');
+
+    console.log('📝 Create form elements:', {
+        visibility: createVisibility,
+        customFieldSelection: createCustomFieldSelection,
+        customFieldId: createCustomFieldId,
+        customFieldValue: createCustomFieldValue
+    });
+
+    if (createVisibility && createCustomFieldSelection) {
+        console.log('✅ Attaching visibility change listener for create form');
+        createVisibility.addEventListener('change', function() {
+            console.log('🔄 Visibility changed to:', this.value);
+            toggleCustomFieldSelection(this, createCustomFieldSelection);
+        });
+    } else {
+        console.log('❌ Create form visibility elements not found');
+    }
+
+    if (createCustomFieldId && createCustomFieldValue) {
+        console.log('✅ Attaching custom field change listener for create form');
+        createCustomFieldId.addEventListener('change', function() {
+            console.log('🔄 Custom field changed to:', this.value);
+            loadCustomFieldValues(createCustomFieldId, createCustomFieldValue);
+        });
+    } else {
+        console.log('❌ Create form custom field elements not found');
+    }
+
+    // Edit form custom field handling
+    const editVisibility = document.getElementById('editVisibility');
+    const editCustomFieldSelection = document.getElementById('editCustomFieldSelection');
+    const editCustomFieldId = document.getElementById('editCustomFieldId');
+    const editCustomFieldValue = document.getElementById('editCustomFieldValue');
+
+    console.log('📝 Edit form elements:', {
+        visibility: editVisibility,
+        customFieldSelection: editCustomFieldSelection,
+        customFieldId: editCustomFieldId,
+        customFieldValue: editCustomFieldValue
+    });
+
+    if (editVisibility && editCustomFieldSelection) {
+        console.log('✅ Attaching visibility change listener for edit form');
+        editVisibility.addEventListener('change', function() {
+            console.log('🔄 Edit visibility changed to:', this.value);
+            toggleCustomFieldSelection(this, editCustomFieldSelection);
+        });
+    } else {
+        console.log('❌ Edit form visibility elements not found');
+    }
+
+    if (editCustomFieldId && editCustomFieldValue) {
+        console.log('✅ Attaching custom field change listener for edit form');
+        editCustomFieldId.addEventListener('change', function() {
+            console.log('🔄 Edit custom field changed to:', this.value);
+            loadCustomFieldValues(editCustomFieldId, editCustomFieldValue);
+        });
+    } else {
+        console.log('❌ Edit form custom field elements not found');
+    }
+    
+    console.log('🎯 Custom field initialization complete');
+});
+</script> 

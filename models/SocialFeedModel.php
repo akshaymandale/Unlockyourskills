@@ -197,11 +197,6 @@ class SocialFeedModel {
      */
     public function createPost($postData, $mediaFiles = [], $pollData = null, $linkData = null) {
         try {
-            error_log('SocialFeedModel::createPost - Starting post creation');
-            error_log('SocialFeedModel::createPost - Post data: ' . print_r($postData, true));
-            error_log('SocialFeedModel::createPost - Media files: ' . print_r($mediaFiles, true));
-            error_log('SocialFeedModel::createPost - Poll data: ' . print_r($pollData, true));
-            error_log('SocialFeedModel::createPost - Link data: ' . print_r($linkData, true));
             
             $this->conn->beginTransaction();
 
@@ -209,8 +204,9 @@ class SocialFeedModel {
             $query = "
                 INSERT INTO {$this->table_posts} (
                     user_id, client_id, title, body, tags, post_type, visibility, 
-                    media_files, link_preview, poll_data, is_pinned, status, created_at, updated_at
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'active', NOW(), NOW())
+                    media_files, link_preview, poll_data, is_pinned, status, 
+                    custom_field_id, custom_field_value, created_at, updated_at
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'active', ?, ?, NOW(), NOW())
             ";
 
             $stmt = $this->conn->prepare($query);
@@ -225,16 +221,16 @@ class SocialFeedModel {
                 !empty($mediaFiles) ? json_encode($mediaFiles) : null,
                 $linkData ? json_encode($linkData) : null,
                 $pollData ? json_encode($pollData) : null,
-                $postData['is_pinned']
+                $postData['is_pinned'],
+                $postData['custom_field_id'] ?? null,
+                $postData['custom_field_value'] ?? null
             ]);
 
             $postId = $this->conn->lastInsertId();
 
             // Handle media files
             if (!empty($mediaFiles)) {
-                error_log('SocialFeedModel::createPost - Inserting ' . count($mediaFiles) . ' media files');
                 foreach ($mediaFiles as $media) {
-                    error_log('SocialFeedModel::createPost - Inserting media file: ' . print_r($media, true));
                     $mediaQuery = "
                         INSERT INTO feed_media_files (
                             post_id, client_id, file_name, file_path, file_type, 
@@ -252,15 +248,9 @@ class SocialFeedModel {
                         $media['filetype']
                     ]);
                     
-                    if ($result) {
-                        error_log('SocialFeedModel::createPost - Successfully inserted media file: ' . $media['filename']);
-                    } else {
-                        error_log('SocialFeedModel::createPost - Failed to insert media file: ' . $media['filename']);
-                        error_log('SocialFeedModel::createPost - PDO error: ' . print_r($mediaStmt->errorInfo(), true));
-                    }
+                    // Don't fail the entire transaction for one media file
+                    // The transaction will continue with other media files
                 }
-            } else {
-                error_log('SocialFeedModel::createPost - No media files to insert');
             }
 
             $this->conn->commit();
@@ -338,7 +328,9 @@ class SocialFeedModel {
                     up.full_name,
                     up.email,
                     up.profile_picture,
-                    up.system_role
+                    up.system_role,
+                    (SELECT COUNT(*) FROM {$this->table_comments} WHERE post_id = p.id AND status = 'active') as comment_count,
+                    (SELECT COUNT(*) FROM {$this->table_reactions} WHERE post_id = p.id) as reaction_count
                 FROM {$this->table_posts} p
                 LEFT JOIN user_profiles up ON p.user_id = up.id
                 WHERE {$whereClause}
@@ -511,6 +503,8 @@ class SocialFeedModel {
                     'email' => $comment['email'],
                     'avatar' => $comment['profile_picture']
                 ];
+                // Map body to content for consistency with frontend
+                $comment['content'] = $comment['body'];
             }
 
             return [
@@ -858,30 +852,10 @@ class SocialFeedModel {
         try {
             $this->conn->beginTransaction();
 
-            // Update post
-            $query = "
-                UPDATE {$this->table_posts} 
-                SET title = ?, body = ?, tags = ?, post_type = ?, visibility = ?, 
-                    link_preview = ?, is_pinned = ?, updated_at = NOW()
-                WHERE id = ? AND user_id = ? AND client_id = ?
-            ";
-
-            $stmt = $this->conn->prepare($query);
-            $stmt->execute([
-                $postData['title'] ?? null,
-                $postData['content'],
-                $postData['tags'] ?? null,
-                $postData['post_type'],
-                $postData['visibility'],
-                $linkData ? json_encode($linkData) : null,
-                $postData['is_pinned'],
-                $postData['id'],
-                $postData['author_id'],
-                $postData['client_id']
-            ]);
-
-            if ($stmt->rowCount() === 0) {
-                throw new Exception('Post not found or you do not have permission to edit it');
+            // Prepare poll data for JSON storage
+            $pollDataJson = null;
+            if ($pollData) {
+                $pollDataJson = json_encode($pollData);
             }
 
             // Delete specified media files
@@ -912,13 +886,6 @@ class SocialFeedModel {
             if (!empty($mediaFiles)) {
                 // Handle $_FILES format (array with name, type, tmp_name, error, size keys)
                 for ($i = 0; $i < count($mediaFiles['name']); $i++) {
-                    error_log('MODEL: Processing mediaFile index ' . $i . ': ' . print_r([
-                        'name' => $mediaFiles['name'][$i],
-                        'type' => $mediaFiles['type'][$i],
-                        'tmp_name' => $mediaFiles['tmp_name'][$i],
-                        'size' => $mediaFiles['size'][$i],
-                        'error' => $mediaFiles['error'][$i]
-                    ], true));
                     
                     if ($mediaFiles['error'][$i] === UPLOAD_ERR_OK) {
                         $uploadDir = 'uploads/social_feed/';
@@ -930,10 +897,8 @@ class SocialFeedModel {
                         $filePath = $uploadDir . $filename;
                         $fileType = $this->getFileType($mediaFiles['type'][$i]);
                         
-                        error_log('MODEL: About to move_uploaded_file from ' . $mediaFiles['tmp_name'][$i] . ' to ' . $filePath);
                         
                         if (move_uploaded_file($mediaFiles['tmp_name'][$i], $filePath)) {
-                            error_log('MODEL: move_uploaded_file succeeded');
                             $mediaQuery = "
                                 INSERT INTO feed_media_files (
                                     post_id, client_id, file_name, file_path, file_type, 
@@ -951,10 +916,8 @@ class SocialFeedModel {
                                 $mediaFiles['type'][$i]
                             ]);
                         } else {
-                            error_log('MODEL: move_uploaded_file FAILED');
                         }
                     } else {
-                        error_log('MODEL: File upload error: ' . $mediaFiles['error'][$i]);
                     }
                 }
             }
@@ -962,43 +925,39 @@ class SocialFeedModel {
             // Update the media_files column in feed_posts table to match feed_media_files
             $this->updatePostMediaFilesColumn($postData['id']);
 
-            // Handle poll data
+            // Handle poll data - update the poll_data JSON column
+            $pollDataJson = null;
             if ($pollData) {
-                // Delete existing poll if any
-                $deletePollQuery = "DELETE FROM feed_poll_options WHERE poll_id IN (SELECT id FROM feed_polls WHERE post_id = ?)";
-                $deletePollStmt = $this->conn->prepare($deletePollQuery);
-                $deletePollStmt->execute([$postData['id']]);
+                $pollDataJson = json_encode($pollData);
+            }
+            
+            // Update post with poll data
+            $query = "
+                UPDATE {$this->table_posts} 
+                SET title = ?, body = ?, tags = ?, post_type = ?, visibility = ?, 
+                    link_preview = ?, poll_data = ?, is_pinned = ?, custom_field_id = ?, custom_field_value = ?, updated_at = NOW()
+                WHERE id = ? AND user_id = ? AND client_id = ?
+            ";
 
-                $deletePollQuery = "DELETE FROM feed_polls WHERE post_id = ?";
-                $deletePollStmt = $this->conn->prepare($deletePollQuery);
-                $deletePollStmt->execute([$postData['id']]);
+            $stmt = $this->conn->prepare($query);
+            $stmt->execute([
+                $postData['title'] ?? null,
+                $postData['content'],
+                $postData['tags'] ?? null,
+                $postData['post_type'],
+                $postData['visibility'],
+                $linkData ? json_encode($linkData) : null,
+                $pollDataJson,
+                $postData['is_pinned'],
+                $postData['custom_field_id'] ?? null,
+                $postData['custom_field_value'] ?? null,
+                $postData['id'],
+                $postData['author_id'],
+                $postData['client_id']
+            ]);
 
-                // Insert new poll
-                $pollQuery = "
-                    INSERT INTO feed_polls (
-                        post_id, question, allow_multiple_votes, client_id, created_at
-                    ) VALUES (?, ?, ?, ?, NOW())
-                ";
-                $pollStmt = $this->conn->prepare($pollQuery);
-                $pollStmt->execute([
-                    $postData['id'],
-                    $pollData['question'],
-                    $pollData['allow_multiple_votes'],
-                    $postData['client_id']
-                ]);
-
-                $pollId = $this->conn->lastInsertId();
-
-                // Insert poll options
-                foreach ($pollData['options'] as $option) {
-                    $optionQuery = "
-                        INSERT INTO feed_poll_options (
-                            poll_id, text, votes, created_at
-                        ) VALUES (?, ?, 0, NOW())
-                    ";
-                    $optionStmt = $this->conn->prepare($optionQuery);
-                    $optionStmt->execute([$pollId, $option]);
-                }
+            if ($stmt->rowCount() === 0) {
+                throw new Exception('Post not found or you do not have permission to edit it');
             }
 
             $this->conn->commit();
@@ -1046,9 +1005,7 @@ class SocialFeedModel {
                 $postId
             ]);
             
-            error_log("SocialFeedModel::updatePostMediaFilesColumn - Updated media_files column for post {$postId} with " . count($mediaData) . " files");
         } catch (Exception $e) {
-            error_log("SocialFeedModel::updatePostMediaFilesColumn - Error: " . $e->getMessage());
         }
     }
 
@@ -1072,7 +1029,6 @@ class SocialFeedModel {
      */
     private function getPostMedia($postId) {
         try {
-            error_log("SocialFeedModel::getPostMedia - Getting media files for post ID: {$postId}");
             $query = "SELECT * FROM feed_media_files WHERE post_id = ? ORDER BY created_at ASC";
             $stmt = $this->conn->prepare($query);
             $stmt->execute([$postId]);
@@ -1085,10 +1041,8 @@ class SocialFeedModel {
                 $item['filename'] = $item['file_name'];
             }
             
-            error_log("SocialFeedModel::getPostMedia - Found " . count($media) . " media files: " . print_r($media, true));
             return $media;
         } catch (Exception $e) {
-            error_log("SocialFeedModel::getPostMedia - Error: " . $e->getMessage());
             return [];
         }
     }
@@ -1098,23 +1052,51 @@ class SocialFeedModel {
      */
     private function getPostPoll($postId) {
         try {
-            $query = "SELECT * FROM feed_polls WHERE post_id = ?";
+            $query = "SELECT poll_data FROM {$this->table_posts} WHERE id = ? AND poll_data IS NOT NULL AND poll_data != ''";
             $stmt = $this->conn->prepare($query);
             $stmt->execute([$postId]);
-            $poll = $stmt->fetch(PDO::FETCH_ASSOC);
+            $result = $stmt->fetch(PDO::FETCH_ASSOC);
 
-            if ($poll) {
-                // Get poll options
-                $query = "SELECT * FROM feed_poll_options WHERE poll_id = ? ORDER BY id ASC";
-                $stmt = $this->conn->prepare($query);
-                $stmt->execute([$poll['id']]);
-                $poll['options'] = $stmt->fetchAll(PDO::FETCH_ASSOC);
-
-                // Calculate total votes
-                $poll['total_votes'] = array_sum(array_column($poll['options'], 'votes'));
+            if ($result && $result['poll_data']) {
+                $pollData = json_decode($result['poll_data'], true);
+                if (is_array($pollData)) {
+                    // Handle both nested structure (old format) and direct structure (new format)
+                    if (isset($pollData['valid']) && isset($pollData['data'])) {
+                        // Old nested format: {"valid": true, "data": {...}}
+                        $pollData = $pollData['data'];
+                    }
+                    
+                    // Get vote counts for each option
+                    $voteQuery = "SELECT poll_option_index, COUNT(*) as vote_count FROM feed_poll_votes WHERE post_id = ? GROUP BY poll_option_index";
+                    $voteStmt = $this->conn->prepare($voteQuery);
+                    $voteStmt->execute([$postId]);
+                    $votes = $voteStmt->fetchAll(PDO::FETCH_ASSOC);
+                    
+                    // Create vote counts array
+                    $voteCounts = [];
+                    foreach ($votes as $vote) {
+                        $voteCounts[$vote['poll_option_index']] = (int)$vote['vote_count'];
+                    }
+                    
+                    // Transform options to include vote counts
+                    if (isset($pollData['options']) && is_array($pollData['options'])) {
+                        $pollData['options'] = array_map(function($option, $index) use ($voteCounts) {
+                            return [
+                                'id' => $index,
+                                'text' => $option,
+                                'votes' => $voteCounts[$index] ?? 0
+                            ];
+                        }, $pollData['options'], array_keys($pollData['options']));
+                    } else {
+                        // Handle case where options might be null or not an array
+                        $pollData['options'] = [];
+                    }
+                    
+                    return $pollData;
+                }
             }
 
-            return $poll;
+            return null;
         } catch (Exception $e) {
             return null;
         }

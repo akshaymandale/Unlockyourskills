@@ -18,6 +18,9 @@ include 'includes/navbar.php';
 include 'includes/sidebar.php';
 ?>
 
+<!-- Custom Editor CSS -->
+<link rel="stylesheet" href="public/css/custom-editor.css">
+
 <div class="main-content" data-events-page="true">
     <div class="container add-question-container">
         <!-- Back Arrow and Title -->
@@ -111,7 +114,6 @@ include 'includes/sidebar.php';
                                 <select class="form-select" id="audienceFilter">
                                     <option value="">All Audience</option>
                                     <option value="global">Global</option>
-                                    <option value="course_specific">Course Specific</option>
                                     <option value="group_specific">Group Specific</option>
                                 </select>
                             </div>
@@ -254,11 +256,15 @@ include 'includes/sidebar.php';
                     <div class="row mb-4">
                         <div class="col-12">
                             <label for="eventDescription" class="form-label">Description <span class="text-danger">*</span></label>
-                            <textarea class="form-control" id="eventDescription" name="description" rows="4"
-                                placeholder="Enter event description..." maxlength="2000"></textarea>
-                            <div class="form-text">
-                                <span id="descriptionCharCount">0</span>/2000 characters
-                            </div>
+                            <?php 
+                            // Include the custom editor component
+                            require_once 'views/components/custom-editor.php';
+                            echo renderCustomEditor('eventDescription', 'description', 'descriptionCharCount', [
+                                'placeholder' => 'Enter event description...',
+                                'showCharCount' => true,
+                                'required' => true
+                            ]);
+                            ?>
                             <div class="invalid-feedback"></div>
                         </div>
                     </div>
@@ -305,7 +311,6 @@ include 'includes/sidebar.php';
                                 <?php if ($canCreateGlobal): ?>
                                 <option value="global">Global (All Users)</option>
                                 <?php endif; ?>
-                                <option value="course_specific">Course Specific</option>
                                 <option value="group_specific">Group Specific</option>
                             </select>
                             <div class="invalid-feedback"></div>
@@ -332,6 +337,29 @@ include 'includes/sidebar.php';
                                 <!-- Courses will be loaded via AJAX -->
                             </select>
                             <div class="form-text">Hold Ctrl/Cmd to select multiple courses</div>
+                            <div class="invalid-feedback"></div>
+                        </div>
+                    </div>
+
+                    <!-- Custom Field Selection (for Group Specific) -->
+                    <div class="row mb-4" id="customFieldSelection" style="display: none;">
+                        <div class="col-md-6 mb-3">
+                            <label for="customFieldId" class="form-label">Select Custom Field <span class="text-danger">*</span></label>
+                            <select class="form-select" id="customFieldId" name="custom_field_id">
+                                <option value="">Select custom field...</option>
+                                <?php foreach ($customFields as $field): ?>
+                                    <option value="<?= $field['id']; ?>" data-options="<?= htmlspecialchars($field['field_options'] ?? ''); ?>">
+                                        <?= htmlspecialchars($field['field_label']); ?>
+                                    </option>
+                                <?php endforeach; ?>
+                            </select>
+                            <div class="invalid-feedback"></div>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="customFieldValue" class="form-label">Select Custom Field Value <span class="text-danger">*</span></label>
+                            <select class="form-select" id="customFieldValue" name="custom_field_value">
+                                <option value="">Select custom field first...</option>
+                            </select>
                             <div class="invalid-feedback"></div>
                         </div>
                     </div>
@@ -404,11 +432,14 @@ include 'includes/sidebar.php';
                     <div class="row mb-4">
                         <div class="col-12">
                             <label for="editEventDescription" class="form-label">Description <span class="text-danger">*</span></label>
-                            <textarea class="form-control" id="editEventDescription" name="description" rows="4"
-                                placeholder="Enter event description..." maxlength="2000"></textarea>
-                            <div class="form-text">
-                                <span id="editDescriptionCharCount">0</span>/2000 characters
-                            </div>
+                            <?php 
+                            // Include the custom editor component
+                            echo renderCustomEditor('editEventDescription', 'description', 'editDescriptionCharCount', [
+                                'placeholder' => 'Enter event description...',
+                                'showCharCount' => true,
+                                'required' => true
+                            ]);
+                            ?>
                             <div class="invalid-feedback"></div>
                         </div>
                     </div>
@@ -452,7 +483,6 @@ include 'includes/sidebar.php';
                                 <?php if ($canCreateGlobal): ?>
                                 <option value="global">Global (All Users)</option>
                                 <?php endif; ?>
-                                <option value="course_specific">Course Specific</option>
                                 <option value="group_specific">Group Specific</option>
                             </select>
                             <div class="invalid-feedback"></div>
@@ -489,6 +519,29 @@ include 'includes/sidebar.php';
                                 <!-- Courses will be loaded via AJAX -->
                             </select>
                             <div class="form-text">Hold Ctrl/Cmd to select multiple courses</div>
+                            <div class="invalid-feedback"></div>
+                        </div>
+                    </div>
+
+                    <!-- Edit Custom Field Selection (for Group Specific) -->
+                    <div class="row mb-4" id="editCustomFieldSelection" style="display: none;">
+                        <div class="col-md-6 mb-3">
+                            <label for="editCustomFieldId" class="form-label">Select Custom Field <span class="text-danger">*</span></label>
+                            <select class="form-select" id="editCustomFieldId" name="custom_field_id">
+                                <option value="">Select custom field...</option>
+                                <?php foreach ($customFields as $field): ?>
+                                    <option value="<?= $field['id']; ?>" data-options="<?= htmlspecialchars($field['field_options'] ?? ''); ?>">
+                                        <?= htmlspecialchars($field['field_label']); ?>
+                                    </option>
+                                <?php endforeach; ?>
+                            </select>
+                            <div class="invalid-feedback"></div>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="editCustomFieldValue" class="form-label">Select Custom Field Value <span class="text-danger">*</span></label>
+                            <select class="form-select" id="editCustomFieldValue" name="custom_field_value">
+                                <option value="">Select custom field first...</option>
+                            </select>
                             <div class="invalid-feedback"></div>
                         </div>
                     </div>
@@ -700,8 +753,7 @@ function initializeCharacterCounting() {
     // Create modal character counting
     const titleInput = document.getElementById('eventTitle');
     const titleCharCount = document.getElementById('titleCharCount');
-    const descriptionInput = document.getElementById('eventDescription');
-    const descriptionCharCount = document.getElementById('descriptionCharCount');
+    // Description input is now handled by the custom editor
 
     if (titleInput && titleCharCount) {
         titleInput.addEventListener('input', function() {
@@ -714,22 +766,12 @@ function initializeCharacterCounting() {
         });
     }
 
-    if (descriptionInput && descriptionCharCount) {
-        descriptionInput.addEventListener('input', function() {
-            descriptionCharCount.textContent = this.value.length;
-            if (this.value.length > 2000) {
-                descriptionCharCount.style.color = '#dc3545';
-            } else {
-                descriptionCharCount.style.color = '#6c757d';
-            }
-        });
-    }
+    // Description character counting is now handled by the custom editor
 
     // Edit modal character counting
     const editTitleInput = document.getElementById('editEventTitle');
     const editTitleCharCount = document.getElementById('editTitleCharCount');
-    const editDescriptionInput = document.getElementById('editEventDescription');
-    const editDescriptionCharCount = document.getElementById('editDescriptionCharCount');
+    // Edit description input is now handled by the custom editor
 
     if (editTitleInput && editTitleCharCount) {
         editTitleInput.addEventListener('input', function() {
@@ -742,16 +784,7 @@ function initializeCharacterCounting() {
         });
     }
 
-    if (editDescriptionInput && editDescriptionCharCount) {
-        editDescriptionInput.addEventListener('input', function() {
-            editDescriptionCharCount.textContent = this.value.length;
-            if (this.value.length > 2000) {
-                editDescriptionCharCount.style.color = '#dc3545';
-            } else {
-                editDescriptionCharCount.style.color = '#6c757d';
-            }
-        });
-    }
+    // Edit description character counting is now handled by the custom editor
 }
 
 // Initialize modals
@@ -791,17 +824,60 @@ function toggleCourseSelection(audienceType, isEdit = false) {
     const courseSelect = document.getElementById(isEdit ? 'editTargetCourses' : 'targetCourses');
 
     if (courseRow && courseSelect) {
-        if (audienceType === 'course_specific') {
-            courseRow.classList.remove('d-none');
-            courseSelect.required = true;
-            // Load courses if not already loaded
-            if (courseSelect.options.length === 0) {
-                loadCourses(courseSelect);
-            }
+        // Course selection is no longer needed since course_specific option is removed
+        courseRow.classList.add('d-none');
+        courseSelect.required = false;
+        courseSelect.selectedIndex = 0;
+    }
+}
+
+// Toggle custom field selection based on audience type
+function toggleCustomFieldSelection(audienceType, isEdit = false) {
+    const customFieldRow = document.getElementById(isEdit ? 'editCustomFieldSelection' : 'customFieldSelection');
+    const customFieldId = document.getElementById(isEdit ? 'editCustomFieldId' : 'customFieldId');
+    const customFieldValue = document.getElementById(isEdit ? 'editCustomFieldValue' : 'customFieldValue');
+
+    if (customFieldRow && customFieldId && customFieldValue) {
+        if (audienceType === 'group_specific') {
+            customFieldRow.style.display = 'block';
+            customFieldId.required = true;
+            customFieldValue.required = true;
         } else {
-            courseRow.classList.add('d-none');
-            courseSelect.required = false;
+            customFieldRow.style.display = 'none';
+            customFieldId.required = false;
+            customFieldValue.required = false;
+            customFieldId.selectedIndex = 0;
+            customFieldValue.selectedIndex = 0;
         }
+    }
+}
+
+// Load custom field values based on selected custom field
+function loadCustomFieldValues(fieldIdSelect, fieldValueSelect) {
+    const selectedOption = fieldIdSelect.options[fieldIdSelect.selectedIndex];
+    
+    if (selectedOption && selectedOption.dataset.options) {
+        let options;
+        try {
+            options = JSON.parse(selectedOption.dataset.options);
+        } catch (e) {
+            // If JSON parse fails, treat as a string and split by newlines
+            const rawData = selectedOption.dataset.options;
+            options = rawData.split(/\r?\n/).filter(option => option.trim() !== '');
+        }
+        
+        // Clear existing options
+        fieldValueSelect.innerHTML = '<option value="">Select value...</option>';
+        
+        // Add new options
+        options.forEach(option => {
+            const optionElement = document.createElement('option');
+            optionElement.value = option;
+            optionElement.textContent = option;
+            fieldValueSelect.appendChild(optionElement);
+        });
+    } else {
+        fieldValueSelect.innerHTML = '<option value="">Select custom field first...</option>';
     }
 }
 
@@ -887,12 +963,10 @@ function loadEvents(page = 1) {
             updatePagination(data.pagination);
             updateResultsInfo(data.pagination);
         } else {
-            console.error('Error loading events:', data.error || data.message || 'Unknown error');
             showError(data.error || data.message || 'Failed to load events. Please try again.');
         }
     })
     .catch(error => {
-        console.error('Network error:', error);
         showError('Network error. Please check your connection and try again.');
     })
     .finally(() => {
@@ -1035,7 +1109,6 @@ function getStatusBadge(status) {
 function getAudienceBadge(audienceType) {
     const badges = {
         'global': '<span class="badge bg-info">Global</span>',
-        'course_specific': '<span class="badge bg-primary">Course</span>',
         'group_specific': '<span class="badge bg-warning">Group</span>'
     };
     return badges[audienceType] || '<span class="badge bg-secondary">Unknown</span>';
@@ -1102,7 +1175,6 @@ function showError(message) {
     if (typeof showSimpleToast === 'function') {
         showSimpleToast(message, 'error');
     } else {
-        console.error(message);
         alert('Error: ' + message); // Fallback
     }
 }
@@ -1217,12 +1289,11 @@ function handleCreateSubmit(e) {
                 showError(data.message);
             } else {
                 // For validation errors, let client-side validation handle them
-                console.log('Server validation error:', data.message);
+                // Server validation error handled by client-side validation
             }
         }
     })
     .catch(error => {
-        console.error('Error:', error);
         showError('An error occurred while creating the event.');
     });
 }
@@ -1269,12 +1340,11 @@ function handleEditSubmit(e) {
                 showError(data.message);
             } else {
                 // For validation errors, let client-side validation handle them
-                console.log('Server validation error:', data.message);
+                // Server validation error handled by client-side validation
             }
         }
     })
     .catch(error => {
-        console.error('Error:', error);
         showError('An error occurred while updating the event.');
     });
 }
@@ -1298,7 +1368,6 @@ function editEvent(eventId) {
         }
     })
     .catch(error => {
-        console.error('Error:', error);
         showError('An error occurred while loading event data.');
     });
 }
@@ -1320,10 +1389,31 @@ function populateEditForm(event, audiences) {
 
     // Trigger audience type change to show/hide course selection
     toggleCourseSelection(event.audience_type, true);
+    
+    // Trigger custom field selection toggle
+    toggleCustomFieldSelection(event.audience_type, true);
+    
+    // Set custom field values if they exist
+    if (event.custom_field_id) {
+        document.getElementById('editCustomFieldId').value = event.custom_field_id;
+        // Trigger change event to load custom field values
+        document.getElementById('editCustomFieldId').dispatchEvent(new Event('change'));
+        // Set the custom field value after a short delay to ensure options are loaded
+        setTimeout(() => {
+            if (event.custom_field_value) {
+                document.getElementById('editCustomFieldValue').value = event.custom_field_value;
+            }
+        }, 100);
+    }
 
     // Update character counts
     document.getElementById('editTitleCharCount').textContent = event.title.length;
-    document.getElementById('editDescriptionCharCount').textContent = event.description.length;
+    // Description character count is now handled by the custom editor
+    
+    // Set editor content using custom editor function
+    if (typeof setEditorContent === 'function') {
+        setEditorContent('editEventDescription', event.description || '');
+    }
 }
 
 // Show success message
@@ -1331,7 +1421,6 @@ function showSuccess(message) {
     if (typeof showSimpleToast === 'function') {
         showSimpleToast(message, 'success');
     } else {
-        console.log(message);
         alert(message); // Fallback
     }
 }
@@ -1353,7 +1442,6 @@ function viewEventAttendees(eventId) {
         }
     })
     .catch(error => {
-        console.error('Error:', error);
         showError('An error occurred while loading attendees.');
     });
 }
@@ -1361,7 +1449,6 @@ function viewEventAttendees(eventId) {
 // Display attendees in modal (you would need to create this modal)
 function displayAttendeesModal(rsvps) {
     // Implementation for showing attendees modal
-    console.log('Attendees:', rsvps);
     alert(`Total RSVPs: ${rsvps.length}`); // Temporary fallback
 }
 
@@ -1446,12 +1533,145 @@ function getStatusActionButtons(event) {
 
     return buttons;
 }
+
+// Initialize event listeners for custom field functionality
+document.addEventListener('DOMContentLoaded', function() {
+    // Handle target audience change for create modal
+    const targetAudience = document.getElementById('audienceType');
+    const customFieldSelection = document.getElementById('customFieldSelection');
+    const customFieldId = document.getElementById('customFieldId');
+    const customFieldValue = document.getElementById('customFieldValue');
+
+    // Handle target audience change for edit modal
+    const editTargetAudience = document.getElementById('editAudienceType');
+    const editCustomFieldSelection = document.getElementById('editCustomFieldSelection');
+    const editCustomFieldId = document.getElementById('editCustomFieldId');
+    const editCustomFieldValue = document.getElementById('editCustomFieldValue');
+
+    // Event listeners for create modal
+    if (targetAudience) {
+        targetAudience.addEventListener('change', function() {
+            toggleCustomFieldSelection(this.value, false);
+        });
+    }
+
+    if (customFieldId) {
+        customFieldId.addEventListener('change', function() {
+            loadCustomFieldValues(customFieldId, customFieldValue);
+            // Clear validation error when field is selected
+            if (this.value) {
+                this.classList.remove('is-invalid');
+                this.classList.add('is-valid');
+                const errorElement = this.parentNode.querySelector('.invalid-feedback');
+                if (errorElement) {
+                    errorElement.style.display = 'none';
+                }
+            }
+        });
+    }
+
+    if (customFieldValue) {
+        customFieldValue.addEventListener('change', function() {
+            // Clear validation error when field value is selected
+            if (this.value) {
+                this.classList.remove('is-invalid');
+                this.classList.add('is-valid');
+                const errorElement = this.parentNode.querySelector('.invalid-feedback');
+                if (errorElement) {
+                    errorElement.style.display = 'none';
+                }
+            }
+        });
+    }
+
+    // Event listeners for edit modal
+    if (editTargetAudience) {
+        editTargetAudience.addEventListener('change', function() {
+            toggleCustomFieldSelection(this.value, true);
+        });
+    }
+
+    if (editCustomFieldId) {
+        editCustomFieldId.addEventListener('change', function() {
+            loadCustomFieldValues(editCustomFieldId, editCustomFieldValue);
+            // Clear validation error when field is selected
+            if (this.value) {
+                this.classList.remove('is-invalid');
+                this.classList.add('is-valid');
+                const errorElement = this.parentNode.querySelector('.invalid-feedback');
+                if (errorElement) {
+                    errorElement.style.display = 'none';
+                }
+            }
+        });
+    }
+
+    if (editCustomFieldValue) {
+        editCustomFieldValue.addEventListener('change', function() {
+            // Clear validation error when field value is selected
+            if (this.value) {
+                this.classList.remove('is-invalid');
+                this.classList.add('is-valid');
+                const errorElement = this.parentNode.querySelector('.invalid-feedback');
+                if (errorElement) {
+                    errorElement.style.display = 'none';
+                }
+            }
+        });
+    }
+
+    // Initialize custom field selection on modal show
+    $('#createEventModal').on('shown.bs.modal', function() {
+        if (targetAudience) {
+            toggleCustomFieldSelection(targetAudience.value, false);
+        }
+        // Custom editor is auto-initialized by the custom-editor.js script
+    });
+
+    $('#editEventModal').on('shown.bs.modal', function() {
+        if (editTargetAudience) {
+            toggleCustomFieldSelection(editTargetAudience.value, true);
+        }
+        // Custom editor is auto-initialized by the custom-editor.js script
+    });
+});
 </script>
+
+<!-- Custom Editor JavaScript -->
+<script src="public/js/custom-editor.js"></script>
 
 <!-- Toast Container -->
 <div class="toast-container position-fixed bottom-0 end-0 p-3" id="toastContainer">
     <!-- Toast notifications will be added here -->
 </div>
+
+<!-- Custom field layout styles -->
+<style>
+/* Ensure custom field section displays side by side */
+#customFieldSelection .col-md-6,
+#editCustomFieldSelection .col-md-6 {
+    display: inline-block;
+    width: 48%;
+    margin-right: 2%;
+    vertical-align: top;
+}
+
+#customFieldSelection .col-md-6:last-child,
+#editCustomFieldSelection .col-md-6:last-child {
+    margin-right: 0;
+}
+
+/* Responsive design for smaller screens */
+@media (max-width: 768px) {
+    #customFieldSelection .col-md-6,
+    #editCustomFieldSelection .col-md-6 {
+        display: block;
+        width: 100%;
+        margin-right: 0;
+        margin-bottom: 15px;
+    }
+}
+</style>
 
 <!-- Include event validation and confirmation scripts -->
 <script src="js/event_validation.js"></script>

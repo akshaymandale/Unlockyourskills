@@ -52,7 +52,7 @@ function isCurrentPage($route) {
             'polls',
             'my-announcements',
             'my-events',
-            'feed'
+            'my-social-feed'
         ];
         
         foreach ($socialPages as $socialPage) {

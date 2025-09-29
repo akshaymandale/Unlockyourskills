@@ -68,7 +68,7 @@
 
             <!-- Social Feed Card -->
             <div class="col-md-6 col-lg-3">
-                <div class="card social-feature-card h-100" onclick="window.location.href='<?= UrlHelper::url('feed') ?>'">
+                <div class="card social-feature-card h-100" onclick="window.location.href='<?= UrlHelper::url('my-social-feed') ?>'">
                     <div class="card-body text-center">
                         <div class="social-icon mb-3">
                             <i class="fas fa-rss text-success"></i>
@@ -107,7 +107,7 @@
                                         <?php foreach (array_slice($data['polls'], 0, 3) as $poll): ?>
                                             <div class="activity-item mb-3 p-3 border rounded">
                                                 <h6 class="mb-1"><?= htmlspecialchars($poll['title']) ?></h6>
-                                                <p class="text-muted small mb-2"><?= htmlspecialchars(substr($poll['description'], 0, 100)) ?><?= strlen($poll['description']) > 100 ? '...' : '' ?></p>
+                                                <p class="text-muted small mb-2"><?= htmlspecialchars(substr(strip_tags($poll['description']), 0, 100)) ?><?= strlen(strip_tags($poll['description'])) > 100 ? '...' : '' ?></p>
                                                 <div class="d-flex justify-content-between align-items-center">
                                                     <small class="text-muted">
                                                         <i class="fas fa-vote-yea me-1"></i>
@@ -136,7 +136,7 @@
                                                     </span>
                                                     <div class="flex-grow-1">
                                                         <h6 class="mb-1"><?= htmlspecialchars($announcement['title']) ?></h6>
-                                                        <p class="text-muted small mb-2"><?= htmlspecialchars(substr($announcement['body'], 0, 100)) ?><?= strlen($announcement['body']) > 100 ? '...' : '' ?></p>
+                                                        <p class="text-muted small mb-2"><?= htmlspecialchars(substr(strip_tags($announcement['body']), 0, 100)) ?><?= strlen(strip_tags($announcement['body'])) > 100 ? '...' : '' ?></p>
                                                         <small class="text-muted">
                                                             <i class="fas fa-user me-1"></i>
                                                             <?= htmlspecialchars($announcement['created_by_name']) ?>
@@ -157,7 +157,7 @@
                                         <?php foreach (array_slice($data['events'], 0, 3) as $event): ?>
                                             <div class="activity-item mb-3 p-3 border rounded">
                                                 <h6 class="mb-1"><?= htmlspecialchars($event['title']) ?></h6>
-                                                <p class="text-muted small mb-2"><?= htmlspecialchars(substr($event['description'], 0, 100)) ?><?= strlen($event['description']) > 100 ? '...' : '' ?></p>
+                                                <p class="text-muted small mb-2"><?= htmlspecialchars(substr(strip_tags($event['description']), 0, 100)) ?><?= strlen(strip_tags($event['description'])) > 100 ? '...' : '' ?></p>
                                                 <div class="d-flex justify-content-between align-items-center">
                                                     <small class="text-muted">
                                                         <i class="fas fa-calendar me-1"></i>
@@ -186,7 +186,7 @@
                                                 <div class="d-flex align-items-start">
                                                     <div class="flex-grow-1">
                                                         <h6 class="mb-1"><?= htmlspecialchars($post['title'] ?: 'Social Post') ?></h6>
-                                                        <p class="text-muted small mb-2"><?= htmlspecialchars(substr($post['body'], 0, 100)) ?><?= strlen($post['body']) > 100 ? '...' : '' ?></p>
+                                                        <p class="text-muted small mb-2"><?= htmlspecialchars(substr(strip_tags($post['body']), 0, 100)) ?><?= strlen(strip_tags($post['body'])) > 100 ? '...' : '' ?></p>
                                                         <div class="d-flex justify-content-between align-items-center">
                                                             <small class="text-muted">
                                                                 <i class="fas fa-user me-1"></i>
