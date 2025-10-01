@@ -579,12 +579,6 @@ document.addEventListener('DOMContentLoaded', function() {
     const editCustomFieldId = document.getElementById('editCustomFieldId');
     const editCustomFieldValue = document.getElementById('editCustomFieldValue');
 
-    // Debug: Check if elements are found
-    console.log('Elements found:');
-    console.log('targetAudience:', targetAudience);
-    console.log('customFieldSelection:', customFieldSelection);
-    console.log('customFieldId:', customFieldId);
-    console.log('customFieldValue:', customFieldValue);
 
     // Function to toggle custom field selection visibility
     function toggleCustomFieldSelection(audienceSelect, customFieldDiv) {
@@ -602,25 +596,17 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Function to load custom field values
     function loadCustomFieldValues(fieldIdSelect, fieldValueSelect) {
-        console.log('loadCustomFieldValues called');
-        console.log('fieldIdSelect:', fieldIdSelect);
-        console.log('fieldValueSelect:', fieldValueSelect);
         
         const selectedOption = fieldIdSelect.options[fieldIdSelect.selectedIndex];
-        console.log('selectedOption:', selectedOption);
-        console.log('selectedOption.dataset.options:', selectedOption?.dataset?.options);
         
         if (selectedOption && selectedOption.dataset.options) {
             let options;
             try {
                 options = JSON.parse(selectedOption.dataset.options);
-                console.log('parsed options:', options);
             } catch (e) {
-                console.log('JSON parse failed, treating as string:', e);
                 // If JSON parse fails, treat as a string and split by newlines
                 const rawData = selectedOption.dataset.options;
                 options = rawData.split(/\r?\n/).filter(option => option.trim() !== '');
-                console.log('split options:', options);
             }
             
             fieldValueSelect.innerHTML = '<option value="">Select value...</option>';
@@ -644,7 +630,6 @@ document.addEventListener('DOMContentLoaded', function() {
                 });
             }
         } else {
-            console.log('No options found or invalid data');
             fieldValueSelect.innerHTML = '<option value="">Select value...</option>';
         }
     }
@@ -658,7 +643,6 @@ document.addEventListener('DOMContentLoaded', function() {
 
     if (customFieldId) {
         customFieldId.addEventListener('change', function() {
-            console.log('Custom field changed, calling loadCustomFieldValues');
             loadCustomFieldValues(customFieldId, customFieldValue);
         });
     }

@@ -8,14 +8,12 @@
 (function() {
     'use strict';
 
-    console.log('🎯 Bulletproof Toast System Loading...');
 
     // Store original alert immediately
     window.originalAlert = window.alert;
 
     // Override alert immediately - before any other scripts can use it
     window.alert = function(message) {
-        console.log('🎯 Alert Override Called:', message);
 
         try {
             // If toast system is ready, use it
@@ -26,20 +24,16 @@
                 // Queue the message for when toast system is ready
                 if (!window.toastQueue) window.toastQueue = [];
                 window.toastQueue.push(message);
-                console.log('📋 Queued alert message:', message);
             }
         } catch (error) {
-            console.error('❌ Error in alert override:', error);
             window.originalAlert(message);
         }
     };
 
-    console.log('✅ Alert override installed immediately');
 })();
 
 // Simple toast function that works immediately
 function showSimpleToast(message, type = 'success') {
-    console.log('🎯 Simple toast called:', message, type);
 
     // Ensure container exists
     let container = document.getElementById('toast-container');
@@ -52,7 +46,6 @@ function showSimpleToast(message, type = 'success') {
         // Wait for body if not available
         if (document.body) {
             document.body.appendChild(container);
-            console.log('✅ Toast container created and added to body');
         } else {
             // If body not ready, wait and try again
             setTimeout(() => showSimpleToast(message, type), 100);
@@ -101,7 +94,6 @@ function showSimpleToast(message, type = 'success') {
         }, type === 'error' ? 7000 : 5000);
     }
 
-    console.log('✅ Simple toast displayed');
 }
 
 function getToastConfig(type) {
@@ -211,20 +203,10 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 });
 
-console.log('🎯 Bulletproof Toast Notification System Loaded');
-console.log('🔍 Alert function type:', typeof window.alert);
-console.log('🔍 Original alert type:', typeof window.originalAlert);
-console.log('🔍 showSimpleToast type:', typeof showSimpleToast);
-console.log('🔍 Alert override active:', window.alert !== window.originalAlert);
-console.log('🔍 Toast functions available:', typeof window.showToast);
-console.log('🔍 Toast notification object:', typeof window.toastNotification);
 
 // Test the system immediately
 setTimeout(() => {
-    console.log('🧪 Testing toast system...');
     if (typeof showSimpleToast === 'function') {
-        console.log('✅ Toast system ready for use');
     } else {
-        console.error('❌ Toast system failed to initialize');
     }
 }, 100);

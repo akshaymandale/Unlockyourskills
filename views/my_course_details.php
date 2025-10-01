@@ -2069,6 +2069,94 @@ function isPrerequisiteCompleted($userId, $courseId, $prerequisiteId, $prerequis
             }
         }
         
+        // Helper to get Interactive AI progress status
+        if (!function_exists('getInteractiveAIProgressStatus')) {
+            function getInteractiveAIProgressStatus($courseId, $contentId, $userId) {
+                try {
+                    // Validate inputs
+                    if (empty($courseId) || empty($contentId) || empty($userId)) {
+                        return [
+                            'status' => 'not_started',
+                            'completion_percentage' => 0,
+                            'time_spent' => 0,
+                            'last_updated' => '',
+                            'has_progress' => false
+                        ];
+                    }
+                    
+                    // Get database connection
+                    $db = new PDO(
+                        'mysql:unix_socket=/Applications/XAMPP/xamppfiles/var/mysql/mysql.sock;dbname=unlockyourskills',
+                        'root',
+                        ''
+                    );
+                    $db->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+                    
+                    // Query Interactive AI progress
+                    $stmt = $db->prepare("
+                        SELECT 
+                            status, 
+                            completion_percentage, 
+                            time_spent, 
+                            started_at, 
+                            completed_at, 
+                            updated_at,
+                            is_completed
+                        FROM interactive_progress 
+                        WHERE course_id = ? AND content_id = ? AND user_id = ?
+                        ORDER BY updated_at DESC
+                        LIMIT 1
+                    ");
+                    $stmt->execute([$courseId, $contentId, $userId]);
+                    $progress = $stmt->fetch(PDO::FETCH_ASSOC);
+                    
+                    if ($progress) {
+                        $status = $progress['status'];
+                        $completionPercentage = (float) $progress['completion_percentage'];
+                        $timeSpent = (int) $progress['time_spent'];
+                        $lastUpdated = $progress['updated_at'];
+                        
+                        // Determine final status
+                        if ($progress['is_completed'] || $completionPercentage >= 100) {
+                            $status = 'completed';
+                        } elseif ($completionPercentage > 0) {
+                            $status = 'in_progress';
+                        } elseif (!empty($progress['started_at'])) {
+                            $status = 'started';
+                        } else {
+                            $status = 'not_started';
+                        }
+                        
+                        return [
+                            'status' => $status,
+                            'completion_percentage' => $completionPercentage,
+                            'time_spent' => $timeSpent,
+                            'last_updated' => $lastUpdated,
+                            'has_progress' => true
+                        ];
+                    }
+                    
+                    return [
+                        'status' => 'not_started',
+                        'completion_percentage' => 0,
+                        'time_spent' => 0,
+                        'last_updated' => '',
+                        'has_progress' => false
+                    ];
+                    
+                } catch (Exception $e) {
+                    error_log("Error getting Interactive AI progress status: " . $e->getMessage());
+                    return [
+                        'status' => 'unknown',
+                        'completion_percentage' => 0,
+                        'time_spent' => 0,
+                        'last_updated' => '',
+                        'has_progress' => false
+                    ];
+                }
+            }
+        }
+
         // Helper to get SCORM progress status
         if (!function_exists('getScormProgressStatus')) {
             function getScormProgressStatus($courseId, $contentId, $userId) {
@@ -3055,7 +3143,8 @@ function isPrerequisiteCompleted($userId, $courseId, $prerequisiteId, $prerequis
                                     $hasPassed = $assessmentResults && $assessmentResults['passed'];
                                     
                                     // Check if user has exceeded maximum attempts
-                                    $maxAttempts = $assessmentDetails['num_attempts'] ?? 3;
+                                    // Get effective max attempts considering user overrides
+                                    $maxAttempts = getEffectiveMaxAttempts($courseId, $assessmentId, 'prerequisite', $pre['id'], $userId, $clientId);
                                     $attemptCount = count($assessmentAttempts);
                                     $hasExceededAttempts = $attemptCount >= $maxAttempts;
                                     
@@ -3147,8 +3236,8 @@ function isPrerequisiteCompleted($userId, $courseId, $prerequisiteId, $prerequis
                                             'class' => 'btn-info'
                                         ],
                                         'interactive' => [
-                                            'label' => 'Launch Interactive',
-                                            'icon' => 'fa-wand-magic-sparkles',
+                                            'label' => 'Launch Interactive AI',
+                                            'icon' => 'fa-robot',
                                             'class' => 'btn-primary'
                                         ]
                                     ];
@@ -3783,13 +3872,51 @@ function isPrerequisiteCompleted($userId, $courseId, $prerequisiteId, $prerequis
                                                                         $statusHtml .= "<span class='content-error'><i class='fas fa-exclamation-triangle me-1'></i>No SCORM launch path</span>";
                                                                     }
                                                                     break;
-                                                                case 'non_scorm':
                                                                 case 'interactive':
                                                                     $launchUrl = $content['non_scorm_launch_path'] ?? ($content['interactive_launch_url'] ?? '');
                                                                     if ($launchUrl) {
+                                                                        $interactiveProgress = getInteractiveAIProgressStatus($GLOBALS['course']['id'], $content['id'], $_SESSION['user']['id']);
+                                                                        // Build status
+                                                                        $statusHtml .= "<div class='interactive-progress-status mb-2'>";
+                                                                        if ($interactiveProgress['has_progress']) {
+                                                                            $statusClass = $interactiveProgress['status'] === 'completed' ? 'text-success' : 'text-warning';
+                                                                            $statusIcon = $interactiveProgress['status'] === 'completed' ? 'fa-check-circle' : 'fa-clock';
+                                                                            $statusHtml .= "<div class='{$statusClass}'><i class='fas {$statusIcon} me-1'></i>" . ucfirst($interactiveProgress['status']);
+                                                                            if (!empty($interactiveProgress['completion_percentage'])) {
+                                                                                $statusHtml .= " - {$interactiveProgress['completion_percentage']}% Complete";
+                                                                            }
+                                                                            if (!empty($interactiveProgress['time_spent'])) {
+                                                                                $minutes = floor($interactiveProgress['time_spent'] / 60);
+                                                                                $seconds = $interactiveProgress['time_spent'] % 60;
+                                                                                $statusHtml .= " <small class='text-muted'>({$minutes}m {$seconds}s)</small>";
+                                                                            }
+                                                                            if (!empty($interactiveProgress['last_updated'])) {
+                                                                                $statusHtml .= " <small class='text-muted'>(Last: " . date('M j, Y', strtotime($interactiveProgress['last_updated'])) . ")</small>";
+                                                                            }
+                                                                            $statusHtml .= "</div>";
+                                                                        } else {
+                                                                            $statusHtml .= "<div class='text-muted'><i class='fas fa-circle me-1'></i>Not started</div>";
+                                                                        }
+                                                                        $statusHtml .= "</div>";
+                                                                        // Actions
+                                                                        if ($interactiveProgress['status'] !== 'completed') {
+                                                                            $resolved = resolveContentUrl($launchUrl);
+                                                                            // Use enhanced Interactive AI content viewer
+                                                                            $viewer = UrlHelper::url('my-courses/view-content') . '?type=interactive&title=' . urlencode($content['title']) . '&src=' . urlencode($resolved) . '&course_id=' . $GLOBALS['course']['id'] . '&module_id=' . $module['id'] . '&content_id=' . $content['content_id'];
+                                                                            $actionsHtml .= "<a href='" . htmlspecialchars($viewer) . "' target='_blank' class='postrequisite-action-btn btn-primary launch-content-btn interactive-ai-launch' data-module-id='" . $module['id'] . "' data-content-id='" . $content['id'] . "' data-type='" . $type . "' data-interactive-id='" . $content['content_id'] . "'><i class='fas fa-robot me-1'></i>Launch Interactive AI</a>";
+                                                                        } else {
+                                                                            $actionsHtml .= "<button class='postrequisite-action-btn btn-success' disabled title='Interactive AI content completed'><i class='fas fa-check-circle me-1'></i>Completed</button>";
+                                                                        }
+                                                                    } else {
+                                                                        $statusHtml .= "<span class='content-error'><i class='fas fa-exclamation-triangle me-1'></i>No launch path</span>";
+                                                                    }
+                                                                    break;
+                                                                case 'non_scorm':
+                                                                    $launchUrl = $content['non_scorm_launch_path'] ?? '';
+                                                                    if ($launchUrl) {
                                                                         $resolved = resolveContentUrl($launchUrl);
                                                                         $viewer = UrlHelper::url('my-courses/view-content') . '?type=iframe&title=' . urlencode($content['title']) . '&src=' . urlencode($resolved) . '&course_id=' . $GLOBALS['course']['id'] . '&module_id=' . $module['id'] . '&content_id=' . $content['id'];
-                                                                        $actionsHtml .= "<a href='" . htmlspecialchars($viewer) . "' target='_blank' class='postrequisite-action-btn btn-primary launch-content-btn' data-module-id='" . $module['id'] . "' data-content-id='" . $content['id'] . "' data-type='" . $type . "'><i class='fas fa-wand-magic-sparkles me-1'></i>Launch Interactive</a>";
+                                                                        $actionsHtml .= "<a href='" . htmlspecialchars($viewer) . "' target='_blank' class='postrequisite-action-btn btn-secondary launch-content-btn' data-module-id='" . $module['id'] . "' data-content-id='" . $content['id'] . "' data-type='" . $type . "'><i class='fas fa-external-link-alt me-1'></i>Launch</a>";
                                                                     } else {
                                                                         $statusHtml .= "<span class='content-error'><i class='fas fa-exclamation-triangle me-1'></i>No launch path</span>";
                                                                     }
@@ -4363,8 +4490,8 @@ function isPrerequisiteCompleted($userId, $courseId, $prerequisiteId, $prerequis
                                         'class' => 'btn-info'
                                     ],
                                     'interactive' => [
-                                        'label' => 'Launch Interactive',
-                                        'icon' => 'fa-wand-magic-sparkles',
+                                        'label' => 'Launch Interactive AI',
+                                        'icon' => 'fa-robot',
                                         'class' => 'btn-primary'
                                     ]
                                 ];

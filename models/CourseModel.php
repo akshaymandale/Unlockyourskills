@@ -1714,6 +1714,9 @@ class CourseModel
                 case 'audio':
                 case 'image':
                 case 'interactive':
+                    // For Interactive AI content, use the dedicated method
+                    $progress = $this->getInteractiveAIProgress($content['id'], $userId, $clientId, $courseId);
+                    break;
                 case 'non_scorm':
                 case 'external':
                     $progress = $this->getContentProgress($contentId, $userId, $clientId);
@@ -1763,6 +1766,9 @@ class CourseModel
                 case 'audio':
                 case 'image':
                 case 'interactive':
+                    // For Interactive AI content, use the dedicated method
+                    $progress = $this->getInteractiveAIProgress($content['id'], $userId, $clientId, $courseId);
+                    break;
                 case 'non_scorm':
                 case 'external':
                     $progress = $this->getContentProgress($contentId, $userId, $clientId);
@@ -1837,6 +1843,9 @@ class CourseModel
                 case 'audio':
                 case 'image':
                 case 'interactive':
+                    // For Interactive AI content, use the dedicated method
+                    $progress = $this->getInteractiveAIProgress($content['id'], $userId, $clientId, $courseId);
+                    break;
                 case 'non_scorm':
                 case 'external':
                     $progress = $this->getContentProgress($contentId, $userId, $clientId);
@@ -2052,6 +2061,48 @@ class CourseModel
         } catch (Exception $e) {
             error_log("Error checking course applicability rules: " . $e->getMessage());
             return true; // Assume has applicability rules if error occurs (safer approach)
+        }
+    }
+
+    /**
+     * Get Interactive AI progress from interactive_progress table
+     * @param int $moduleContentId - The course_module_content.id
+     * @param int $userId
+     * @param int $clientId
+     * @param int $courseId
+     * @return int Progress percentage (0-100)
+     */
+    private function getInteractiveAIProgress($moduleContentId, $userId, $clientId, $courseId) {
+        try {
+            $stmt = $this->conn->prepare("
+                SELECT 
+                    completion_percentage,
+                    status,
+                    is_completed
+                FROM interactive_progress 
+                WHERE user_id = ? 
+                AND course_id = ? 
+                AND content_id = ? 
+                AND client_id = ?
+                ORDER BY updated_at DESC
+                LIMIT 1
+            ");
+            $stmt->execute([$userId, $courseId, $moduleContentId, $clientId]);
+            $progress = $stmt->fetch(PDO::FETCH_ASSOC);
+            
+            if ($progress) {
+                // If explicitly completed, return 100%
+                if ($progress['is_completed'] || $progress['status'] === 'completed') {
+                    return 100;
+                }
+                // Otherwise return the completion percentage
+                return (int) $progress['completion_percentage'];
+            }
+            
+            return 0; // No progress found
+        } catch (Exception $e) {
+            error_log("Error getting Interactive AI progress: " . $e->getMessage());
+            return 0;
         }
     }
 } 

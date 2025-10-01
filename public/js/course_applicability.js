@@ -20,42 +20,67 @@ document.addEventListener('DOMContentLoaded', function() {
         radio.addEventListener('change', toggleSections);
     });
 
-    // Fetch custom field values when a field is selected
+    // Load custom field values when a field is selected
     if (customFieldSelect) {
         customFieldSelect.addEventListener('change', function() {
             const fieldId = this.value;
-            customFieldValueSelect.innerHTML = `<option value="">Loading...</option>`;
+            
             if (!fieldId) {
                 customFieldValueSelect.innerHTML = `<option value="">Select a value...</option>`;
-                customFieldValueSelect.style.display = 'none'; // Hide if no field selected
+                customFieldValueSelect.style.display = 'none';
                 console.log('[DEBUG] No custom field selected. Hiding value dropdown.');
                 return;
             }
-            customFieldValueSelect.style.display = 'block'; // Show when field is selected
-            // Find the field options from the DOM (populated server-side)
-            const fieldOption = this.options[this.selectedIndex];
-            // We'll fetch values via AJAX for robustness
-            console.log(`[DEBUG] Fetching options for custom field ID: ${fieldId}`);
-            fetch(`/Unlockyourskills/api/custom-fields/check-label.php?field_id=${fieldId}`)
-                .then(res => res.json())
-                .then(data => {
-                    console.log('[DEBUG] AJAX response for custom field values:', data);
-                    if (data.success && Array.isArray(data.options) && data.options.length > 0) {
-                        customFieldValueSelect.innerHTML = `<option value="">Select a value...</option>` +
-                            data.options.map(opt => `<option value="${opt}">${opt}</option>`).join('');
-                        customFieldValueSelect.style.display = 'block';
-                        console.log('[DEBUG] Options loaded and dropdown shown.');
-                    } else {
-                        customFieldValueSelect.innerHTML = `<option value="">No values found</option>`;
-                        customFieldValueSelect.style.display = 'none';
-                        console.log('[DEBUG] No options found. Hiding value dropdown.');
+            
+            // Get the selected option and its data-options attribute
+            const selectedOption = this.options[this.selectedIndex];
+            const optionsData = selectedOption.getAttribute('data-options');
+            
+            console.log(`[DEBUG] Loading options for field ID: ${fieldId}`);
+            console.log('[DEBUG] Options data:', optionsData);
+            
+            // Clear existing options
+            customFieldValueSelect.innerHTML = '<option value="">Select value...</option>';
+            
+            if (optionsData) {
+                try {
+                    const options = JSON.parse(optionsData);
+                    console.log('[DEBUG] Parsed options:', options);
+                    
+                    // Handle both string (newline-separated) and array formats
+                    if (typeof options === 'string') {
+                        // If it's a string with line breaks, split it
+                        const splitOptions = options.split(/\r?\n/).filter(opt => opt.trim() !== '');
+                        console.log('[DEBUG] Split options:', splitOptions);
+                        splitOptions.forEach(option => {
+                            const optionElement = document.createElement('option');
+                            optionElement.value = option.trim();
+                            optionElement.textContent = option.trim();
+                            customFieldValueSelect.appendChild(optionElement);
+                        });
+                    } else if (Array.isArray(options)) {
+                        // If it's already an array, use it directly
+                        options.forEach(option => {
+                            const optionElement = document.createElement('option');
+                            optionElement.value = option;
+                            optionElement.textContent = option;
+                            customFieldValueSelect.appendChild(optionElement);
+                        });
                     }
-                })
-                .catch((err) => {
+                    
+                    customFieldValueSelect.style.display = 'block';
+                    console.log('[DEBUG] Options loaded and dropdown shown.');
+                    
+                } catch (e) {
+                    console.error('[DEBUG] Error parsing options data:', e);
                     customFieldValueSelect.innerHTML = `<option value="">Error loading values</option>`;
                     customFieldValueSelect.style.display = 'none';
-                    console.error('[DEBUG] Error fetching custom field values:', err);
-                });
+                }
+            } else {
+                customFieldValueSelect.innerHTML = `<option value="">No values available</option>`;
+                customFieldValueSelect.style.display = 'none';
+                console.log('[DEBUG] No options data found.');
+            }
         });
     }
 

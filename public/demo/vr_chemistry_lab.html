@@ -1,0 +1,882 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Virtual Chemistry Laboratory - AR/VR Experience</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+    <style>
+        :root {
+            --primary-color: #6f42c1;
+            --secondary-color: #e83e8c;
+            --success-color: #28a745;
+            --warning-color: #ffc107;
+            --danger-color: #dc3545;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            margin: 0;
+            overflow-x: hidden;
+        }
+        
+        .main-container {
+            max-width: 1600px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        
+        .header {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 15px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+            backdrop-filter: blur(10px);
+        }
+        
+        .content-grid {
+            display: grid;
+            grid-template-columns: 350px 1fr 350px;
+            gap: 20px;
+            height: calc(100vh - 200px);
+        }
+        
+        .left-panel, .vr-container, .right-panel {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 15px;
+            padding: 20px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+            backdrop-filter: blur(10px);
+            overflow-y: auto;
+        }
+        
+        .vr-container {
+            padding: 0;
+            position: relative;
+            min-height: 600px;
+        }
+        
+        #vr-scene {
+            width: 100%;
+            height: 100%;
+            border-radius: 15px;
+            background: linear-gradient(135deg, #2c3e50 0%, #34495e 100%);
+        }
+        
+        .vr-controls {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            z-index: 100;
+        }
+        
+        .vr-controls .btn {
+            margin: 2px;
+            padding: 8px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+        }
+        
+        .experiment-panel {
+            background: #f8f9fa;
+            border-radius: 10px;
+            padding: 15px;
+            margin-bottom: 15px;
+        }
+        
+        .equipment-item {
+            background: #fff;
+            border: 2px solid #e9ecef;
+            border-radius: 10px;
+            padding: 15px;
+            margin-bottom: 10px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-align: center;
+        }
+        
+        .equipment-item:hover {
+            border-color: var(--primary-color);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 15px rgba(111, 66, 193, 0.2);
+        }
+        
+        .equipment-item.selected {
+            border-color: var(--success-color);
+            background: #d4edda;
+        }
+        
+        .molecule-viewer {
+            background: #2d3748;
+            border-radius: 10px;
+            padding: 20px;
+            margin: 20px 0;
+            color: white;
+            text-align: center;
+        }
+        
+        .reaction-display {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border-radius: 10px;
+            padding: 20px;
+            margin: 20px 0;
+        }
+        
+        .safety-alert {
+            background: #f8d7da;
+            border: 1px solid #f5c6cb;
+            border-radius: 10px;
+            padding: 15px;
+            margin: 15px 0;
+        }
+        
+        .ar-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            z-index: 1000;
+            display: none;
+        }
+        
+        .ar-camera {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+        
+        .ar-controls {
+            position: absolute;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 1001;
+        }
+        
+        .btn-vr {
+            background: linear-gradient(135deg, #6f42c1 0%, #e83e8c 100%);
+            border: none;
+            color: white;
+            padding: 12px 24px;
+            border-radius: 25px;
+            font-weight: 600;
+            transition: all 0.3s ease;
+        }
+        
+        .btn-vr:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 15px rgba(111, 66, 193, 0.4);
+            color: white;
+        }
+        
+        .molecule-structure {
+            background: #fff;
+            border-radius: 10px;
+            padding: 20px;
+            margin: 15px 0;
+            text-align: center;
+        }
+        
+        .experiment-log {
+            background: #f8f9fa;
+            border-radius: 10px;
+            padding: 15px;
+            margin: 15px 0;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+        
+        .log-entry {
+            background: #fff;
+            border-left: 4px solid #6f42c1;
+            border-radius: 0 5px 5px 0;
+            padding: 10px;
+            margin-bottom: 10px;
+        }
+        
+        .log-entry.success {
+            border-left-color: #28a745;
+        }
+        
+        .log-entry.warning {
+            border-left-color: #ffc107;
+        }
+        
+        .log-entry.danger {
+            border-left-color: #dc3545;
+        }
+        
+        @media (max-width: 1200px) {
+            .content-grid {
+                grid-template-columns: 1fr;
+                height: auto;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="main-container">
+        <!-- Header -->
+        <div class="header">
+            <div class="row align-items-center">
+                <div class="col-md-8">
+                    <h1><i class="fas fa-vr-cardboard text-primary"></i> Virtual Chemistry Laboratory</h1>
+                    <p class="mb-0 text-muted">Immersive AR/VR chemistry experiments with AI guidance</p>
+                </div>
+                <div class="col-md-4 text-end">
+                    <div class="d-flex gap-2 justify-content-end">
+                        <button class="btn btn-vr" onclick="toggleVR()">
+                            <i class="fas fa-vr-cardboard"></i> VR Mode
+                        </button>
+                        <button class="btn btn-outline-primary" onclick="toggleAR()">
+                            <i class="fas fa-mobile-alt"></i> AR Mode
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="content-grid">
+            <!-- Left Panel: Equipment and Experiments -->
+            <div class="left-panel">
+                <h5><i class="fas fa-flask"></i> Laboratory Equipment</h5>
+                
+                <div class="experiment-panel">
+                    <h6>Available Equipment</h6>
+                    <div class="equipment-item" data-equipment="beaker" onclick="selectEquipment('beaker')">
+                        <i class="fas fa-wine-glass-alt fa-2x text-primary mb-2"></i>
+                        <div>Beaker</div>
+                        <small class="text-muted">For mixing solutions</small>
+                    </div>
+                    
+                    <div class="equipment-item" data-equipment="test-tube" onclick="selectEquipment('test-tube')">
+                        <i class="fas fa-vial fa-2x text-info mb-2"></i>
+                        <div>Test Tube</div>
+                        <small class="text-muted">For small reactions</small>
+                    </div>
+                    
+                    <div class="equipment-item" data-equipment="bunsen-burner" onclick="selectEquipment('bunsen-burner')">
+                        <i class="fas fa-fire fa-2x text-danger mb-2"></i>
+                        <div>Bunsen Burner</div>
+                        <small class="text-muted">For heating</small>
+                    </div>
+                    
+                    <div class="equipment-item" data-equipment="pipette" onclick="selectEquipment('pipette')">
+                        <i class="fas fa-tint fa-2x text-success mb-2"></i>
+                        <div>Pipette</div>
+                        <small class="text-muted">For precise measurements</small>
+                    </div>
+                </div>
+
+                <div class="experiment-panel">
+                    <h6>Chemical Reagents</h6>
+                    <div class="equipment-item" data-chemical="hcl" onclick="selectChemical('hcl')">
+                        <div class="text-danger">HCl</div>
+                        <small class="text-muted">Hydrochloric Acid</small>
+                    </div>
+                    
+                    <div class="equipment-item" data-chemical="naoh" onclick="selectChemical('naoh')">
+                        <div class="text-warning">NaOH</div>
+                        <small class="text-muted">Sodium Hydroxide</small>
+                    </div>
+                    
+                    <div class="equipment-item" data-chemical="cuso4" onclick="selectChemical('cuso4')">
+                        <div class="text-info">CuSO₄</div>
+                        <small class="text-muted">Copper Sulfate</small>
+                    </div>
+                    
+                    <div class="equipment-item" data-chemical="nacl" onclick="selectChemical('nacl')">
+                        <div class="text-success">NaCl</div>
+                        <small class="text-muted">Sodium Chloride</small>
+                    </div>
+                </div>
+
+                <div class="safety-alert">
+                    <h6><i class="fas fa-exclamation-triangle text-warning"></i> Safety Reminders</h6>
+                    <ul class="mb-0 small">
+                        <li>Always wear safety goggles</li>
+                        <li>Never mix chemicals without guidance</li>
+                        <li>Keep flammable materials away from heat</li>
+                        <li>Wash hands after experiments</li>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- Center: VR Scene -->
+            <div class="vr-container">
+                <div class="vr-controls">
+                    <button class="btn btn-sm btn-outline-light" onclick="resetScene()">
+                        <i class="fas fa-redo"></i> Reset
+                    </button>
+                    <button class="btn btn-sm btn-outline-light" onclick="takeMeasurement()">
+                        <i class="fas fa-ruler"></i> Measure
+                    </button>
+                    <button class="btn btn-sm btn-outline-light" onclick="recordObservation()">
+                        <i class="fas fa-microphone"></i> Record
+                    </button>
+                </div>
+                <canvas id="vr-scene"></canvas>
+            </div>
+
+            <!-- Right Panel: Molecular Viewer and Log -->
+            <div class="right-panel">
+                <h5><i class="fas fa-atom"></i> Molecular Viewer</h5>
+                
+                <div class="molecule-viewer">
+                    <canvas id="molecule-canvas" width="300" height="200"></canvas>
+                    <div class="mt-2">
+                        <h6 id="molecule-name">H₂O - Water</h6>
+                        <p class="mb-0 small" id="molecule-info">Two hydrogen atoms bonded to one oxygen atom</p>
+                    </div>
+                </div>
+
+                <div class="reaction-display">
+                    <h6><i class="fas fa-arrow-right"></i> Current Reaction</h6>
+                    <div id="reaction-equation" class="text-center">
+                        <div>HCl + NaOH → NaCl + H₂O</div>
+                        <small>Acid-Base Neutralization</small>
+                    </div>
+                </div>
+
+                <div class="molecule-structure">
+                    <h6>3D Molecular Structure</h6>
+                    <div id="structure-display" class="text-center">
+                        <div class="text-primary">
+                            <i class="fas fa-circle" style="color: red;"></i> O
+                            <i class="fas fa-circle" style="color: white;"></i> H
+                        </div>
+                        <small class="text-muted">Interactive 3D model</small>
+                    </div>
+                </div>
+
+                <div class="experiment-log">
+                    <h6><i class="fas fa-clipboard-list"></i> Experiment Log</h6>
+                    <div id="log-entries">
+                        <div class="log-entry">
+                            <strong>10:00</strong> - Experiment started
+                        </div>
+                        <div class="log-entry warning">
+                            <strong>10:05</strong> - Added HCl to beaker
+                        </div>
+                        <div class="log-entry warning">
+                            <strong>10:10</strong> - Added NaOH dropwise
+                        </div>
+                        <div class="log-entry success">
+                            <strong>10:15</strong> - Neutralization reaction observed
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- AR Overlay -->
+    <div class="ar-overlay" id="ar-overlay">
+        <video class="ar-camera" id="ar-camera" autoplay muted></video>
+        <div class="ar-controls">
+            <button class="btn btn-vr" onclick="closeAR()">
+                <i class="fas fa-times"></i> Close AR
+            </button>
+        </div>
+    </div>
+
+    <script>
+        // Global variables
+        let scene, camera, renderer, controls;
+        let selectedEquipment = null;
+        let selectedChemical = null;
+        let experimentLog = [];
+        let startTime = Date.now();
+        let currentExperiment = 'neutralization';
+
+        // Initialize the VR Chemistry Lab
+        document.addEventListener('DOMContentLoaded', function() {
+            initializeVRScene();
+            initializeMoleculeViewer();
+            startExperiment();
+            updateProgress();
+        });
+
+        function initializeVRScene() {
+            const canvas = document.getElementById('vr-scene');
+            const container = canvas.parentElement;
+            
+            // Create scene
+            scene = new THREE.Scene();
+            scene.background = new THREE.Color(0xf0f0f0);
+            
+            // Create camera
+            camera = new THREE.PerspectiveCamera(75, container.clientWidth / container.clientHeight, 0.1, 1000);
+            camera.position.set(0, 5, 10);
+            
+            // Create renderer
+            renderer = new THREE.WebGLRenderer({ canvas: canvas, antialias: true });
+            renderer.setSize(container.clientWidth, container.clientHeight);
+            renderer.shadowMap.enabled = true;
+            renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+            
+            // Add lighting
+            const ambientLight = new THREE.AmbientLight(0x404040, 0.6);
+            scene.add(ambientLight);
+            
+            const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
+            directionalLight.position.set(10, 10, 5);
+            directionalLight.castShadow = true;
+            scene.add(directionalLight);
+            
+            // Add lab equipment
+            createLabEquipment();
+            
+            // Add controls
+            controls = new THREE.OrbitControls(camera, renderer.domElement);
+            controls.enableDamping = true;
+            controls.dampingFactor = 0.05;
+            
+            // Handle window resize
+            window.addEventListener('resize', onWindowResize);
+            
+            // Start render loop
+            animate();
+        }
+
+        function createLabEquipment() {
+            // Lab table
+            const tableGeometry = new THREE.BoxGeometry(8, 0.2, 4);
+            const tableMaterial = new THREE.MeshLambertMaterial({ color: 0x8B4513 });
+            const table = new THREE.Mesh(tableGeometry, tableMaterial);
+            table.position.set(0, -1, 0);
+            table.receiveShadow = true;
+            scene.add(table);
+            
+            // Beaker
+            const beakerGeometry = new THREE.CylinderGeometry(0.5, 0.6, 1.5, 16);
+            const beakerMaterial = new THREE.MeshLambertMaterial({ 
+                color: 0x87CEEB, 
+                transparent: true, 
+                opacity: 0.7 
+            });
+            const beaker = new THREE.Mesh(beakerGeometry, beakerMaterial);
+            beaker.position.set(-2, 0, 0);
+            beaker.castShadow = true;
+            beaker.name = 'beaker';
+            scene.add(beaker);
+            
+            // Test tube rack
+            const rackGeometry = new THREE.BoxGeometry(1, 0.5, 0.5);
+            const rackMaterial = new THREE.MeshLambertMaterial({ color: 0x654321 });
+            const rack = new THREE.Mesh(rackGeometry, rackMaterial);
+            rack.position.set(2, -0.5, 0);
+            scene.add(rack);
+            
+            // Bunsen burner
+            const burnerGeometry = new THREE.CylinderGeometry(0.2, 0.3, 0.8, 8);
+            const burnerMaterial = new THREE.MeshLambertMaterial({ color: 0xC0C0C0 });
+            const burner = new THREE.Mesh(burnerGeometry, burnerMaterial);
+            burner.position.set(1, 0, 1.5);
+            burner.name = 'bunsen-burner';
+            scene.add(burner);
+            
+            // Add flame effect
+            createFlameEffect(burner);
+        }
+
+        function createFlameEffect(burner) {
+            const flameGeometry = new THREE.ConeGeometry(0.1, 0.3, 8);
+            const flameMaterial = new THREE.MeshBasicMaterial({ 
+                color: 0xff4500, 
+                transparent: true, 
+                opacity: 0.8 
+            });
+            const flame = new THREE.Mesh(flameGeometry, flameMaterial);
+            flame.position.set(0, 0.5, 0);
+            burner.add(flame);
+            
+            // Animate flame
+            function animateFlame() {
+                flame.rotation.z = Math.sin(Date.now() * 0.01) * 0.1;
+                flame.scale.y = 1 + Math.sin(Date.now() * 0.02) * 0.2;
+                requestAnimationFrame(animateFlame);
+            }
+            animateFlame();
+        }
+
+        function initializeMoleculeViewer() {
+            const canvas = document.getElementById('molecule-canvas');
+            const ctx = canvas.getContext('2d');
+            
+            // Draw water molecule
+            drawMolecule(ctx, 'H2O');
+        }
+
+        function drawMolecule(ctx, molecule) {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            
+            const centerX = canvas.width / 2;
+            const centerY = canvas.height / 2;
+            
+            if (molecule === 'H2O') {
+                // Oxygen atom (red)
+                ctx.fillStyle = '#ff4444';
+                ctx.beginPath();
+                ctx.arc(centerX, centerY, 15, 0, 2 * Math.PI);
+                ctx.fill();
+                ctx.fillStyle = 'white';
+                ctx.font = '12px Arial';
+                ctx.textAlign = 'center';
+                ctx.fillText('O', centerX, centerY + 4);
+                
+                // Hydrogen atoms (white)
+                ctx.fillStyle = '#ffffff';
+                ctx.strokeStyle = '#333333';
+                ctx.lineWidth = 2;
+                
+                // H1
+                ctx.beginPath();
+                ctx.arc(centerX - 25, centerY - 15, 10, 0, 2 * Math.PI);
+                ctx.fill();
+                ctx.stroke();
+                ctx.fillStyle = '#333333';
+                ctx.fillText('H', centerX - 25, centerY - 11);
+                
+                // H2
+                ctx.beginPath();
+                ctx.arc(centerX + 25, centerY - 15, 10, 0, 2 * Math.PI);
+                ctx.fill();
+                ctx.stroke();
+                ctx.fillStyle = '#333333';
+                ctx.fillText('H', centerX + 25, centerY - 11);
+                
+                // Bonds
+                ctx.strokeStyle = '#666666';
+                ctx.lineWidth = 3;
+                ctx.beginPath();
+                ctx.moveTo(centerX - 10, centerY - 5);
+                ctx.lineTo(centerX - 15, centerY - 10);
+                ctx.moveTo(centerX + 10, centerY - 5);
+                ctx.lineTo(centerX + 15, centerY - 10);
+                ctx.stroke();
+            }
+        }
+
+        function startExperiment() {
+            addLogEntry('Experiment started - Virtual Chemistry Lab initialized', 'success');
+            
+            // Initialize with Interactive AI system
+            if (window.interactiveAIProgress) {
+                window.interactiveAIProgress.updateStep(1, 5);
+                window.interactiveAIProgress.addAIFeedback("Welcome to the Virtual Chemistry Lab! I'll guide you through safe chemical experiments.", "welcome");
+            }
+            
+            // Simulate experiment progression
+            setTimeout(() => {
+                addLogEntry('Safety check completed - All equipment ready', 'success');
+            }, 2000);
+            
+            setTimeout(() => {
+                addLogEntry('AI Tutor: Ready to begin neutralization experiment', 'warning');
+            }, 4000);
+        }
+
+        function selectEquipment(equipment) {
+            selectedEquipment = equipment;
+            
+            // Update UI
+            document.querySelectorAll('.equipment-item').forEach(item => {
+                item.classList.remove('selected');
+            });
+            document.querySelector(`[data-equipment="${equipment}"]`).classList.add('selected');
+            
+            addLogEntry(`Selected equipment: ${equipment}`, 'warning');
+            
+            // Update 3D scene
+            highlightEquipment(equipment);
+            
+            // Update progress
+            updateProgress();
+        }
+
+        function selectChemical(chemical) {
+            selectedChemical = chemical;
+            
+            // Update UI
+            document.querySelectorAll('.equipment-item').forEach(item => {
+                if (item.dataset.chemical) {
+                    item.classList.remove('selected');
+                }
+            });
+            document.querySelector(`[data-chemical="${chemical}"]`).classList.add('selected');
+            
+            addLogEntry(`Selected chemical: ${chemical}`, 'warning');
+            
+            // Update molecule viewer
+            updateMoleculeViewer(chemical);
+            
+            // Update progress
+            updateProgress();
+        }
+
+        function highlightEquipment(equipmentName) {
+            scene.traverse((child) => {
+                if (child.name === equipmentName) {
+                    // Add highlight effect
+                    child.material.emissive.setHex(0x444444);
+                } else {
+                    child.material.emissive.setHex(0x000000);
+                }
+            });
+        }
+
+        function updateMoleculeViewer(chemical) {
+            const moleculeInfo = {
+                'hcl': { name: 'HCl - Hydrochloric Acid', info: 'Hydrogen chloride molecule' },
+                'naoh': { name: 'NaOH - Sodium Hydroxide', info: 'Sodium hydroxide compound' },
+                'cuso4': { name: 'CuSO₄ - Copper Sulfate', info: 'Copper sulfate pentahydrate' },
+                'nacl': { name: 'NaCl - Sodium Chloride', info: 'Common table salt' }
+            };
+            
+            if (moleculeInfo[chemical]) {
+                document.getElementById('molecule-name').textContent = moleculeInfo[chemical].name;
+                document.getElementById('molecule-info').textContent = moleculeInfo[chemical].info;
+                
+                // Update 3D structure display
+                updateStructureDisplay(chemical);
+            }
+        }
+
+        function updateStructureDisplay(chemical) {
+            const structureDisplay = document.getElementById('structure-display');
+            
+            const structures = {
+                'hcl': '<div class="text-primary"><i class="fas fa-circle" style="color: white;"></i> H - <i class="fas fa-circle" style="color: green;"></i> Cl</div>',
+                'naoh': '<div class="text-primary"><i class="fas fa-circle" style="color: orange;"></i> Na - <i class="fas fa-circle" style="color: red;"></i> O - <i class="fas fa-circle" style="color: white;"></i> H</div>',
+                'cuso4': '<div class="text-primary">Cu - SO₄ (Complex structure)</div>',
+                'nacl': '<div class="text-primary"><i class="fas fa-circle" style="color: orange;"></i> Na - <i class="fas fa-circle" style="color: green;"></i> Cl</div>'
+            };
+            
+            structureDisplay.innerHTML = structures[chemical] || '<div class="text-muted">Select a chemical to view structure</div>';
+        }
+
+        function toggleVR() {
+            // Simulate VR mode
+            addLogEntry('VR mode activated - Immersive experience enabled', 'success');
+            
+            // Enhance 3D scene for VR
+            camera.position.set(0, 1.6, 2); // Eye level
+            controls.enableRotate = false;
+            controls.enablePan = false;
+            
+            // Add VR-specific interactions
+            addVRInteractions();
+            
+            // Update progress
+            updateProgress();
+        }
+
+        function toggleAR() {
+            const overlay = document.getElementById('ar-overlay');
+            const video = document.getElementById('ar-camera');
+            
+            overlay.style.display = 'block';
+            
+            // Access camera
+            navigator.mediaDevices.getUserMedia({ video: true })
+                .then(stream => {
+                    video.srcObject = stream;
+                    addLogEntry('AR mode activated - Camera access granted', 'success');
+                })
+                .catch(err => {
+                    addLogEntry('AR mode failed - Camera access denied', 'danger');
+                    overlay.style.display = 'none';
+                });
+        }
+
+        function closeAR() {
+            const overlay = document.getElementById('ar-overlay');
+            const video = document.getElementById('ar-camera');
+            
+            overlay.style.display = 'none';
+            
+            // Stop camera stream
+            if (video.srcObject) {
+                video.srcObject.getTracks().forEach(track => track.stop());
+            }
+        }
+
+        function addVRInteractions() {
+            // Add click handlers for VR objects
+            renderer.domElement.addEventListener('click', onVRClick);
+        }
+
+        function onVRClick(event) {
+            const mouse = new THREE.Vector2();
+            mouse.x = (event.clientX / renderer.domElement.clientWidth) * 2 - 1;
+            mouse.y = -(event.clientY / renderer.domElement.clientHeight) * 2 + 1;
+            
+            const raycaster = new THREE.Raycaster();
+            raycaster.setFromCamera(mouse, camera);
+            
+            const intersects = raycaster.intersectObjects(scene.children, true);
+            
+            if (intersects.length > 0) {
+                const object = intersects[0].object;
+                addLogEntry(`Interacted with: ${object.name || 'Unknown object'}`, 'warning');
+                
+                // Trigger experiment action
+                if (object.name === 'beaker' && selectedChemical) {
+                    performReaction(selectedChemical);
+                }
+            }
+        }
+
+        function performReaction(chemical) {
+            addLogEntry(`Adding ${chemical} to beaker...`, 'warning');
+            
+            // Simulate reaction
+            setTimeout(() => {
+                const reactions = {
+                    'hcl': 'Acid solution prepared - pH: 1.0',
+                    'naoh': 'Base solution prepared - pH: 13.0',
+                    'cuso4': 'Blue copper sulfate solution formed',
+                    'nacl': 'Neutral salt solution prepared'
+                };
+                
+                addLogEntry(reactions[chemical] || 'Reaction completed', 'success');
+                
+                // Update reaction equation
+                if (chemical === 'hcl' || chemical === 'naoh') {
+                    document.getElementById('reaction-equation').innerHTML = `
+                        <div>${chemical.toUpperCase()} + H₂O → Solution</div>
+                        <small>Dissolution reaction</small>
+                    `;
+                }
+                
+                // Update progress
+                updateProgress();
+                
+                // Complete experiment after all chemicals used
+                if (selectedChemical && selectedEquipment) {
+                    setTimeout(() => {
+                        completeExperiment();
+                    }, 3000);
+                }
+            }, 2000);
+        }
+
+        function completeExperiment() {
+            addLogEntry('Experiment completed successfully!', 'success');
+            addLogEntry('All safety protocols followed', 'success');
+            
+            // Update progress
+            updateProgress();
+            
+            // Mark as completed in Interactive AI system
+            if (window.interactiveAIProgress) {
+                window.interactiveAIProgress.markCompleted();
+                window.interactiveAIProgress.addAIFeedback("Excellent work! You've successfully completed the chemistry experiment safely.", "completion");
+            }
+        }
+
+        function resetScene() {
+            // Reset 3D scene
+            scene.traverse((child) => {
+                if (child.material) {
+                    child.material.emissive.setHex(0x000000);
+                }
+            });
+            
+            // Reset selections
+            selectedEquipment = null;
+            selectedChemical = null;
+            
+            document.querySelectorAll('.equipment-item').forEach(item => {
+                item.classList.remove('selected');
+            });
+            
+            addLogEntry('Scene reset - Ready for new experiment', 'warning');
+        }
+
+        function takeMeasurement() {
+            const measurement = (Math.random() * 10 + 5).toFixed(1);
+            addLogEntry(`Temperature: ${measurement}°C`, 'warning');
+            updateProgress();
+        }
+
+        function recordObservation() {
+            const observations = [
+                'Color change observed',
+                'Bubbles forming',
+                'Temperature increase detected',
+                'Precipitate formation',
+                'Solution clearing'
+            ];
+            
+            const observation = observations[Math.floor(Math.random() * observations.length)];
+            addLogEntry(`Observation: ${observation}`, 'warning');
+            updateProgress();
+        }
+
+        function addLogEntry(message, type = 'warning') {
+            const timestamp = new Date().toLocaleTimeString();
+            const logEntries = document.getElementById('log-entries');
+            
+            const entry = document.createElement('div');
+            entry.className = `log-entry ${type}`;
+            entry.innerHTML = `<strong>${timestamp}</strong> - ${message}`;
+            
+            logEntries.appendChild(entry);
+            logEntries.scrollTop = logEntries.scrollHeight;
+            
+            experimentLog.push({ timestamp, message, type });
+        }
+
+        function onWindowResize() {
+            const canvas = document.getElementById('vr-scene');
+            const container = canvas.parentElement;
+            
+            camera.aspect = container.clientWidth / container.clientHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(container.clientWidth, container.clientHeight);
+        }
+
+        function animate() {
+            requestAnimationFrame(animate);
+            controls.update();
+            renderer.render(scene, camera);
+        }
+
+        function updateProgress() {
+            // Update with Interactive AI system
+            if (window.interactiveAIProgress) {
+                const progressData = {
+                    current_step: Math.min(5, Math.floor(experimentLog.length / 3) + 1),
+                    total_steps: 5,
+                    completion_percentage: Math.min(100, Math.floor((experimentLog.length / 15) * 100)),
+                    is_completed: experimentLog.length >= 15,
+                    time_spent: Math.floor((Date.now() - startTime) / 1000),
+                    status: experimentLog.length >= 15 ? 'completed' : 'in_progress'
+                };
+                
+                window.interactiveAIProgress.forceUpdate();
+                
+                // Add user interaction
+                if (selectedEquipment || selectedChemical) {
+                    window.interactiveAIProgress.addUserResponse(
+                        `Used ${selectedEquipment || selectedChemical}`,
+                        `Experiment log entries: ${experimentLog.length}`,
+                        'equipment_usage'
+                    );
+                }
+            }
+        }
+    </script>
+</body>
+</html>

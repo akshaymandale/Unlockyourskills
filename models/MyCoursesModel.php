@@ -258,7 +258,13 @@ class MyCoursesModel {
             // Note: Post-requisites are not checked for "started" status
             // They should only be used for "completed" status
             
-            // If prerequisites are met but no course content interaction, course is not started
+            // If prerequisites are met, course is considered started (even without course content interaction)
+            // This provides better user experience by showing progress when prerequisites are completed
+            if ($prereqCountResult['count'] > 0 && $prereqMetResult['count'] >= $prereqCountResult['count']) {
+                return true;
+            }
+            
+            // If no prerequisites or prerequisites not met, course is not started
             return false;
             
         } catch (Exception $e) {

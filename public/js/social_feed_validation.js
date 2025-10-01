@@ -4,7 +4,6 @@
  */
 
 document.addEventListener("DOMContentLoaded", function () {
-    console.log("Social Feed Validation Script Loaded!");
 
     const createPostModal = document.getElementById("createPostModal");
     const createPostForm = document.getElementById("createPostForm");
@@ -55,7 +54,6 @@ document.addEventListener("DOMContentLoaded", function () {
     function attachCreatePostValidation() {
         if (!createPostForm) return;
 
-        console.log("✅ Create post form found, setting up validation");
 
         // Remove existing event listeners to prevent duplicates
         createPostForm.removeEventListener("submit", createPostFormSubmitHandler);
@@ -123,7 +121,6 @@ document.addEventListener("DOMContentLoaded", function () {
     function attachEditPostValidation() {
         if (!editPostForm) return;
 
-        console.log("✅ Edit post form found, setting up validation");
 
         editPostForm.removeEventListener("submit", editPostFormSubmitHandler);
         editPostForm.addEventListener("submit", editPostFormSubmitHandler);
@@ -173,7 +170,6 @@ document.addEventListener("DOMContentLoaded", function () {
     function attachReportValidation() {
         if (!reportForm) return;
 
-        console.log("✅ Report form found, setting up validation");
 
         reportForm.removeEventListener("submit", reportFormSubmitHandler);
         reportForm.addEventListener("submit", reportFormSubmitHandler);

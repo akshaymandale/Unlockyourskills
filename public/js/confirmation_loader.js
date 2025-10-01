@@ -26,7 +26,6 @@ class ConfirmationLoader {
     loadCoreConfirmations() {
         // Core confirmation modal is already loaded via confirmation_modal.js
         // Core handlers are loaded via confirmation_handlers.js
-        console.log('✅ Core confirmation system loaded');
     }
 
     loadPageSpecificModules() {

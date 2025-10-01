@@ -5,24 +5,19 @@
 
 class ConfirmationModal {
     constructor() {
-        console.log('🏗️ ConfirmationModal constructor called');
         this.modalId = 'confirmationModal';
         this.onConfirm = null;
         this.onCancel = null;
         this.directConfirmHandler = null;
         this.isConfirming = false;
-        console.log('📝 Creating modal...');
         this.createModal();
-        console.log('🔗 Binding events...');
         this.bindEvents();
-        console.log('✅ ConfirmationModal initialized');
     }
 
     createModal() {
         // Remove existing modal if it exists
         const existingModal = document.getElementById(this.modalId);
         if (existingModal) {
-            console.log('🗑️ Removing existing modal');
             existingModal.remove();
         }
 
@@ -68,33 +63,21 @@ class ConfirmationModal {
         // Verify modal was created
         const createdModal = document.getElementById(this.modalId);
         const createdButton = document.getElementById('confirmButton');
-        console.log('✅ Modal created:', !!createdModal);
-        console.log('✅ Confirm button created:', !!createdButton);
         if (createdButton) {
-            console.log('🔍 Button ID:', createdButton.id);
-            console.log('🔍 Button classes:', createdButton.className);
         }
     }
 
     bindEvents() {
-        console.log('🔧 Binding events for confirmation modal...');
 
         // Handle confirm button click with proper context binding
         document.addEventListener('click', (e) => {
-            console.log('📱 Click event detected on:', e.target);
-            console.log('📱 Target ID:', e.target.id);
-            console.log('📱 Target classes:', e.target.className);
 
             if (e.target.id === 'confirmButton') {
-                console.log('🎯 Confirm button clicked! Calling handleConfirm...');
-                console.log('🔍 this context:', this);
                 // Use arrow function to preserve 'this' context
                 this.handleConfirm();
             } else if (e.target.closest('#confirmButton')) {
-                console.log('🎯 Confirm button area clicked! Calling handleConfirm...');
                 this.handleConfirm();
             } else {
-                console.log('❌ Not the confirm button');
             }
         });
 
@@ -160,11 +143,6 @@ class ConfirmationModal {
         this.onConfirm = onConfirm;
         this.onCancel = onCancel;
 
-        console.log('📦 Stored callbacks in show():');
-        console.log('  - onConfirm:', this.onConfirm);
-        console.log('  - onCancel:', this.onCancel);
-        console.log('  - onConfirm type:', typeof this.onConfirm);
-        console.log('  - onCancel type:', typeof this.onCancel);
 
         // Clean up any existing backdrops before showing (but don't clear callbacks)
         this.cleanupBackdrops();
@@ -180,12 +158,10 @@ class ConfirmationModal {
         // Add direct event listener to the confirm button as backup
         const confirmButton = document.getElementById('confirmButton');
         if (confirmButton) {
-            console.log('🔗 Adding direct click listener to confirm button');
             // Remove any existing listeners
             confirmButton.removeEventListener('click', this.directConfirmHandler);
             // Add new listener
             this.directConfirmHandler = () => {
-                console.log('🎯 Direct button click handler triggered!');
                 this.handleConfirm();
             };
             confirmButton.addEventListener('click', this.directConfirmHandler);
@@ -195,37 +171,28 @@ class ConfirmationModal {
     }
 
     handleConfirm() {
-        console.log('🔘 CONFIRM BUTTON CLICKED');
-        console.log('🔍 Current onConfirm callback:', this.onConfirm);
-        console.log('🔍 Callback type:', typeof this.onConfirm);
 
         // Prevent double execution
         if (this.isConfirming) {
-            console.log('🔄 Already confirming, skipping...');
             return;
         }
         this.isConfirming = true;
 
         // Store callback before hiding modal (to prevent cleanup from clearing it)
         const callback = this.onConfirm;
-        console.log('📦 Stored callback:', callback);
 
         // Hide modal first
         const modalElement = document.getElementById(this.modalId);
         const modal = bootstrap.Modal.getInstance(modalElement);
         if (modal) {
-            console.log('🚪 Hiding modal...');
             modal.hide();
         }
 
         // Execute callback after a short delay to ensure modal is hidden
         if (callback && typeof callback === 'function') {
-            console.log('✅ Executing callback in 100ms...');
             setTimeout(() => {
-                console.log('🚀 EXECUTING CALLBACK NOW!');
                 try {
                     callback();
-                    console.log('✅ Callback executed successfully');
                 } catch (error) {
                     console.error('❌ Error executing callback:', error);
                 } finally {
@@ -234,8 +201,6 @@ class ConfirmationModal {
             }, 100);
         } else {
             console.error('❌ NO VALID CALLBACK FOUND!');
-            console.log('Callback value:', callback);
-            console.log('Callback type:', typeof callback);
             this.isConfirming = false;
         }
     }
@@ -278,15 +243,11 @@ class ConfirmationModal {
 
     // Static method for easy usage
     static confirm(options) {
-        console.log('🏗️ ConfirmationModal.confirm called');
-        console.log('🔍 Current instance:', window.confirmationModalInstance);
 
         if (!window.confirmationModalInstance) {
-            console.log('🆕 Creating new ConfirmationModal instance');
             window.confirmationModalInstance = new ConfirmationModal();
         }
 
-        console.log('📞 Calling show() on instance');
         window.confirmationModalInstance.show(options);
     }
 }
@@ -326,7 +287,6 @@ window.cleanupModalBackdrop = function() {
     document.body.style.overflow = '';
     document.body.style.paddingRight = '';
 
-    console.log('🧹 Modal backdrop cleaned up');
 };
 
 // Helper function to get translation with fallback
@@ -598,9 +558,7 @@ window.confirmDelete = function(itemName, onConfirm) {
 
 // Test function to verify modal is working
 window.testConfirmationModal = function() {
-    console.log('🧪 Testing confirmation modal...');
     window.confirmDelete('test item', function() {
-        console.log('🎉 TEST CALLBACK EXECUTED!');
         alert('Test callback worked!');
     });
 };

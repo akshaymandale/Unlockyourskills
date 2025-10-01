@@ -1,0 +1,962 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI-Powered JavaScript Programming Mastery</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/codemirror.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/theme/monokai.min.css" rel="stylesheet">
+    <style>
+        :root {
+            --primary-color: #28a745;
+            --secondary-color: #17a2b8;
+            --success-color: #28a745;
+            --warning-color: #ffc107;
+            --danger-color: #dc3545;
+            --info-color: #17a2b8;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            margin: 0;
+        }
+        
+        .main-container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        
+        .header {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 15px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+            backdrop-filter: blur(10px);
+        }
+        
+        .content-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            height: calc(100vh - 200px);
+        }
+        
+        .left-panel, .right-panel {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 15px;
+            padding: 20px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+            backdrop-filter: blur(10px);
+            overflow-y: auto;
+        }
+        
+        .ai-tutor {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border-radius: 15px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+        
+        .tutor-message {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 10px;
+            padding: 15px;
+            margin-bottom: 15px;
+            border-left: 4px solid #fff;
+        }
+        
+        .code-editor {
+            border: 2px solid #e9ecef;
+            border-radius: 10px;
+            overflow: hidden;
+            margin-bottom: 15px;
+        }
+        
+        .CodeMirror {
+            height: 300px;
+            font-size: 14px;
+        }
+        
+        .progress-section {
+            background: #f8f9fa;
+            border-radius: 10px;
+            padding: 15px;
+            margin-bottom: 20px;
+        }
+        
+        .progress-bar {
+            height: 8px;
+            border-radius: 4px;
+            background: linear-gradient(90deg, #28a745, #20c997);
+        }
+        
+        .lesson-card {
+            background: #fff;
+            border: 2px solid #e9ecef;
+            border-radius: 10px;
+            padding: 15px;
+            margin-bottom: 10px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        
+        .lesson-card:hover {
+            border-color: var(--primary-color);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 15px rgba(40, 167, 69, 0.2);
+        }
+        
+        .lesson-card.completed {
+            border-color: var(--success-color);
+            background: #d4edda;
+        }
+        
+        .lesson-card.active {
+            border-color: var(--primary-color);
+            background: #e8f5e8;
+        }
+        
+        .btn-custom {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border: none;
+            color: white;
+            padding: 10px 20px;
+            border-radius: 25px;
+            font-weight: 600;
+            transition: all 0.3s ease;
+        }
+        
+        .btn-custom:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+            color: white;
+        }
+        
+        .assessment-modal .modal-content {
+            border-radius: 15px;
+            border: none;
+        }
+        
+        .assessment-question {
+            background: #f8f9fa;
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+        
+        .feedback-good {
+            background: #d4edda;
+            border: 1px solid #c3e6cb;
+            border-radius: 10px;
+            padding: 15px;
+            margin: 10px 0;
+        }
+        
+        .feedback-improvement {
+            background: #fff3cd;
+            border: 1px solid #ffeaa7;
+            border-radius: 10px;
+            padding: 15px;
+            margin: 10px 0;
+        }
+        
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+        
+        .stat-card {
+            background: #fff;
+            border-radius: 10px;
+            padding: 15px;
+            text-align: center;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        }
+        
+        .stat-number {
+            font-size: 24px;
+            font-weight: bold;
+            color: var(--primary-color);
+        }
+        
+        .stat-label {
+            font-size: 12px;
+            color: #6c757d;
+            text-transform: uppercase;
+        }
+        
+        @media (max-width: 768px) {
+            .content-grid {
+                grid-template-columns: 1fr;
+                height: auto;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="main-container">
+        <!-- Header -->
+        <div class="header">
+            <div class="row align-items-center">
+                <div class="col-md-8">
+                    <h1><i class="fas fa-robot text-primary"></i> AI-Powered JavaScript Programming Mastery</h1>
+                    <p class="mb-0 text-muted">Learn JavaScript with your personal AI tutor that adapts to your learning style</p>
+                </div>
+                <div class="col-md-4 text-end">
+                    <div class="stats-grid">
+                        <div class="stat-card">
+                            <div class="stat-number" id="progressPercent">0%</div>
+                            <div class="stat-label">Progress</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-number" id="timeSpent">0m</div>
+                            <div class="stat-label">Time</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-number" id="lessonsCompleted">0</div>
+                            <div class="stat-label">Lessons</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="content-grid">
+            <!-- Left Panel: AI Tutor and Lessons -->
+            <div class="left-panel">
+                <!-- AI Tutor Chat -->
+                <div class="ai-tutor">
+                    <h4><i class="fas fa-robot"></i> Your AI Tutor: JavaScript Expert</h4>
+                    <div id="tutorMessages">
+                        <div class="tutor-message">
+                            <strong>Welcome!</strong> I'm your AI tutor, and I'll guide you through JavaScript programming. 
+                            I'll adapt to your learning pace and provide personalized feedback. Let's start with the basics!
+                        </div>
+                    </div>
+                    <div class="input-group mt-3">
+                        <input type="text" class="form-control" id="userInput" placeholder="Ask me anything about JavaScript...">
+                        <button class="btn btn-light" onclick="sendMessage()">
+                            <i class="fas fa-paper-plane"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Lessons List -->
+                <h5><i class="fas fa-book"></i> Course Lessons</h5>
+                <div id="lessonsList">
+                    <div class="lesson-card active" data-lesson="1">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div>
+                                <h6 class="mb-1">1. JavaScript Basics</h6>
+                                <small class="text-muted">Variables, data types, and operators</small>
+                            </div>
+                            <span class="badge bg-primary">Active</span>
+                        </div>
+                    </div>
+                    <div class="lesson-card" data-lesson="2">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div>
+                                <h6 class="mb-1">2. Functions and Scope</h6>
+                                <small class="text-muted">Function declarations, expressions, and scope</small>
+                            </div>
+                            <span class="badge bg-secondary">Locked</span>
+                        </div>
+                    </div>
+                    <div class="lesson-card" data-lesson="3">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div>
+                                <h6 class="mb-1">3. Objects and Arrays</h6>
+                                <small class="text-muted">Working with complex data structures</small>
+                            </div>
+                            <span class="badge bg-secondary">Locked</span>
+                        </div>
+                    </div>
+                    <div class="lesson-card" data-lesson="4">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div>
+                                <h6 class="mb-1">4. ES6+ Features</h6>
+                                <small class="text-muted">Arrow functions, destructuring, modules</small>
+                            </div>
+                            <span class="badge bg-secondary">Locked</span>
+                        </div>
+                    </div>
+                    <div class="lesson-card" data-lesson="5">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div>
+                                <h6 class="mb-1">5. Asynchronous JavaScript</h6>
+                                <small class="text-muted">Promises, async/await, callbacks</small>
+                            </div>
+                            <span class="badge bg-secondary">Locked</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Right Panel: Code Editor and Output -->
+            <div class="right-panel">
+                <!-- Progress Section -->
+                <div class="progress-section">
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <span><strong>Course Progress</strong></span>
+                        <span id="progressText">0% Complete</span>
+                    </div>
+                    <div class="progress">
+                        <div class="progress-bar" id="progressBar" style="width: 0%"></div>
+                    </div>
+                </div>
+
+                <!-- Code Editor -->
+                <h5><i class="fas fa-code"></i> Interactive Code Editor</h5>
+                <div class="code-editor">
+                    <textarea id="codeEditor">// Welcome to JavaScript Programming!
+// Let's start with the basics
+
+// 1. Variables
+let message = "Hello, JavaScript!";
+const PI = 3.14159;
+var count = 0;
+
+// 2. Data Types
+let name = "John";           // String
+let age = 25;               // Number
+let isStudent = true;       // Boolean
+let hobbies = ["coding", "reading", "gaming"]; // Array
+
+// 3. Functions
+function greet(name) {
+    return `Hello, ${name}!`;
+}
+
+// Try running this code and see the output below
+console.log(greet("World"));
+console.log("My age is:", age);
+console.log("My hobbies:", hobbies);</textarea>
+                </div>
+
+                <div class="d-flex gap-2 mb-3">
+                    <button class="btn btn-custom" onclick="runCode()">
+                        <i class="fas fa-play"></i> Run Code
+                    </button>
+                    <button class="btn btn-outline-primary" onclick="checkCode()">
+                        <i class="fas fa-check"></i> Check Code
+                    </button>
+                    <button class="btn btn-outline-success" onclick="getHint()">
+                        <i class="fas fa-lightbulb"></i> Get Hint
+                    </button>
+                </div>
+
+                <!-- Output -->
+                <h6><i class="fas fa-terminal"></i> Output</h6>
+                <div id="output" class="bg-dark text-light p-3 rounded" style="height: 150px; overflow-y: auto; font-family: 'Courier New', monospace;">
+                    <div class="text-success">Ready to run your JavaScript code!</div>
+                </div>
+
+                <!-- AI Feedback -->
+                <div id="aiFeedback" class="mt-3"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Assessment Modal -->
+    <div class="modal fade assessment-modal" id="assessmentModal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title"><i class="fas fa-question-circle"></i> Quick Assessment</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body" id="assessmentContent">
+                    <!-- Assessment content will be loaded here -->
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Skip</button>
+                    <button type="button" class="btn btn-primary" onclick="submitAssessment()">Submit</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/codemirror.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/mode/javascript/javascript.min.js"></script>
+    <script>
+        // Global variables for progress tracking
+        let currentLesson = 1;
+        let totalLessons = 5;
+        let lessonsCompleted = 0;
+        let startTime = Date.now();
+        let codeEditor;
+        let assessmentQuestions = [
+            {
+                question: "What is the correct way to declare a constant in JavaScript?",
+                options: ["const name = 'John';", "var name = 'John';", "let name = 'John';", "constant name = 'John';"],
+                correct: 0,
+                explanation: "Constants are declared using the 'const' keyword in JavaScript."
+            },
+            {
+                question: "Which of the following is NOT a JavaScript data type?",
+                options: ["String", "Number", "Boolean", "Float"],
+                correct: 3,
+                explanation: "JavaScript doesn't have a separate 'Float' type. Numbers in JavaScript are all floating-point."
+            },
+            {
+                question: "What will this code output: console.log(typeof null);",
+                options: ["null", "undefined", "object", "string"],
+                correct: 2,
+                explanation: "typeof null returns 'object' in JavaScript, which is considered a historical bug."
+            }
+        ];
+
+        // Initialize the application
+        document.addEventListener('DOMContentLoaded', function() {
+            initializeCodeEditor();
+            initializeProgressTracking();
+            startTutorial();
+            updateTimeDisplay();
+            
+            // Set up lesson click handlers
+            document.querySelectorAll('.lesson-card').forEach(card => {
+                card.addEventListener('click', function() {
+                    const lessonNum = parseInt(this.dataset.lesson);
+                    if (lessonNum <= currentLesson) {
+                        switchToLesson(lessonNum);
+                    }
+                });
+            });
+        });
+
+        function initializeCodeEditor() {
+            codeEditor = CodeMirror.fromTextArea(document.getElementById('codeEditor'), {
+                mode: 'javascript',
+                theme: 'monokai',
+                lineNumbers: true,
+                autoCloseBrackets: true,
+                matchBrackets: true,
+                indentUnit: 2,
+                tabSize: 2
+            });
+        }
+
+        function initializeProgressTracking() {
+            // Initialize progress tracking with the Interactive AI system
+            if (window.interactiveAIProgress) {
+                window.interactiveAIProgress.updateStep(currentLesson, totalLessons);
+                window.interactiveAIProgress.addAIFeedback("Welcome to JavaScript Programming! Let's start your coding journey.", "welcome");
+            }
+            
+            // Update progress every 30 seconds
+            setInterval(updateProgress, 30000);
+        }
+
+        function startTutorial() {
+            addTutorMessage("Great! Let's start with JavaScript basics. I'll guide you through each concept step by step.");
+            addTutorMessage("Try running the code in the editor to see how JavaScript works. Then we'll move to the next lesson!");
+            
+            // Update progress
+            updateProgressDisplay();
+        }
+
+        function addTutorMessage(message) {
+            const tutorMessages = document.getElementById('tutorMessages');
+            const messageDiv = document.createElement('div');
+            messageDiv.className = 'tutor-message';
+            messageDiv.innerHTML = `<strong>AI Tutor:</strong> ${message}`;
+            tutorMessages.appendChild(messageDiv);
+            tutorMessages.scrollTop = tutorMessages.scrollHeight;
+        }
+
+        function runCode() {
+            const code = codeEditor.getValue();
+            const output = document.getElementById('output');
+            
+            // Clear previous output
+            output.innerHTML = '';
+            
+            // Capture console.log output
+            const originalLog = console.log;
+            const logs = [];
+            console.log = function(...args) {
+                logs.push(args.map(arg => typeof arg === 'object' ? JSON.stringify(arg) : String(arg)).join(' '));
+                originalLog.apply(console, args);
+            };
+            
+            try {
+                // Execute the code
+                eval(code);
+                
+                // Display output
+                if (logs.length > 0) {
+                    logs.forEach(log => {
+                        const logDiv = document.createElement('div');
+                        logDiv.className = 'text-success';
+                        logDiv.textContent = log;
+                        output.appendChild(logDiv);
+                    });
+                } else {
+                    output.innerHTML = '<div class="text-info">Code executed successfully! (No output)</div>';
+                }
+            } catch (error) {
+                const errorDiv = document.createElement('div');
+                errorDiv.className = 'text-danger';
+                errorDiv.textContent = `Error: ${error.message}`;
+                output.appendChild(errorDiv);
+            }
+            
+            // Restore console.log
+            console.log = originalLog;
+            
+            // Provide AI feedback
+            provideCodeFeedback(code);
+            
+            // Update progress
+            updateProgress();
+        }
+
+        function checkCode() {
+            const code = codeEditor.getValue();
+            let feedback = '';
+            
+            // Basic code analysis
+            if (code.includes('let') || code.includes('const') || code.includes('var')) {
+                feedback += '<div class="feedback-good"><i class="fas fa-check-circle"></i> Great! You\'re using variables.</div>';
+            }
+            
+            if (code.includes('function')) {
+                feedback += '<div class="feedback-good"><i class="fas fa-check-circle"></i> Excellent! You\'re defining functions.</div>';
+            }
+            
+            if (code.includes('console.log')) {
+                feedback += '<div class="feedback-good"><i class="fas fa-check-circle"></i> Perfect! You\'re using console.log for output.</div>';
+            }
+            
+            if (!feedback) {
+                feedback = '<div class="feedback-improvement"><i class="fas fa-lightbulb"></i> Try adding some variables and functions to your code!</div>';
+            }
+            
+            document.getElementById('aiFeedback').innerHTML = feedback;
+            
+            // Update progress
+            updateProgress();
+        }
+
+        function getHint() {
+            const hints = [
+                "Try declaring a variable with 'let' or 'const'",
+                "Create a function that takes a parameter and returns a value",
+                "Use console.log() to display your results",
+                "Experiment with different data types: strings, numbers, booleans, arrays"
+            ];
+            
+            const randomHint = hints[Math.floor(Math.random() * hints.length)];
+            addTutorMessage(`💡 Hint: ${randomHint}`);
+            
+            // Update progress
+            updateProgress();
+        }
+
+        function provideCodeFeedback(code) {
+            let feedback = '';
+            
+            if (code.includes('let') && code.includes('const')) {
+                feedback += '<div class="feedback-good"><i class="fas fa-star"></i> Excellent use of both let and const!</div>';
+            }
+            
+            if (code.includes('function') && code.includes('return')) {
+                feedback += '<div class="feedback-good"><i class="fas fa-star"></i> Great function implementation!</div>';
+            }
+            
+            if (code.includes('template literals') || code.includes('`${')) {
+                feedback += '<div class="feedback-good"><i class="fas fa-star"></i> Nice use of template literals!</div>';
+            }
+            
+            if (feedback) {
+                document.getElementById('aiFeedback').innerHTML = feedback;
+            }
+            
+            // Update progress
+            updateProgress();
+        }
+
+        function sendMessage() {
+            const userInput = document.getElementById('userInput');
+            const message = userInput.value.trim();
+            
+            if (message) {
+                // Add user message
+                const tutorMessages = document.getElementById('tutorMessages');
+                const userMessageDiv = document.createElement('div');
+                userMessageDiv.className = 'tutor-message';
+                userMessageDiv.innerHTML = `<strong>You:</strong> ${message}`;
+                userMessageDiv.style.background = 'rgba(255, 255, 255, 0.2)';
+                tutorMessages.appendChild(userMessageDiv);
+                
+                // Generate AI response
+                const aiResponse = generateAIResponse(message);
+                setTimeout(() => {
+                    addTutorMessage(aiResponse);
+                }, 1000);
+                
+                userInput.value = '';
+                tutorMessages.scrollTop = tutorMessages.scrollHeight;
+                
+                // Update progress
+                updateProgress();
+            }
+        }
+
+        function generateAIResponse(message) {
+            const responses = [
+                "That's a great question! Let me explain that concept in detail.",
+                "Excellent thinking! You're on the right track.",
+                "I can see you're really grasping the concepts. Keep it up!",
+                "That's a common question. Here's how it works:",
+                "You're making great progress! Let me help clarify that.",
+                "Perfect! You've understood the concept correctly.",
+                "Great question! This is an important concept to master.",
+                "I'm impressed with your understanding! Let me elaborate."
+            ];
+            
+            return responses[Math.floor(Math.random() * responses.length)] + " " + 
+                   "JavaScript is a powerful language, and you're learning it step by step. " +
+                   "Try experimenting with the code in the editor to see how things work!";
+        }
+
+        function switchToLesson(lessonNum) {
+            currentLesson = lessonNum;
+            
+            // Update lesson cards
+            document.querySelectorAll('.lesson-card').forEach((card, index) => {
+                card.classList.remove('active', 'completed');
+                if (index + 1 < lessonNum) {
+                    card.classList.add('completed');
+                    card.querySelector('.badge').className = 'badge bg-success';
+                    card.querySelector('.badge').textContent = 'Completed';
+                } else if (index + 1 === lessonNum) {
+                    card.classList.add('active');
+                    card.querySelector('.badge').className = 'badge bg-primary';
+                    card.querySelector('.badge').textContent = 'Active';
+                } else {
+                    card.querySelector('.badge').className = 'badge bg-secondary';
+                    card.querySelector('.badge').textContent = 'Locked';
+                }
+            });
+            
+            // Update code editor content based on lesson
+            updateCodeForLesson(lessonNum);
+            
+            // Update progress
+            updateProgress();
+            
+            // Show assessment for completed lessons
+            if (lessonNum > 1 && lessonNum <= lessonsCompleted + 1) {
+                showAssessment(lessonNum - 1);
+            }
+        }
+
+        function updateCodeForLesson(lessonNum) {
+            const lessonCodes = {
+                1: `// Lesson 1: JavaScript Basics
+// Variables and Data Types
+
+let name = "JavaScript Learner";
+const version = "ES2023";
+var isLearning = true;
+
+// Different data types
+let age = 25;                    // Number
+let city = "San Francisco";      // String
+let isStudent = true;            // Boolean
+let skills = ["HTML", "CSS"];    // Array
+
+// Basic operations
+let sum = 10 + 5;
+let greeting = "Hello, " + name;
+
+console.log("Name:", name);
+console.log("Age:", age);
+console.log("Skills:", skills);`,
+                2: `// Lesson 2: Functions and Scope
+// Function declarations and expressions
+
+function greet(name) {
+    return "Hello, " + name + "!";
+}
+
+// Arrow function (ES6+)
+const add = (a, b) => a + b;
+
+// Function with default parameters
+function createUser(name, age = 18) {
+    return {
+        name: name,
+        age: age,
+        greet: function() {
+            return "Hi, I'm " + this.name;
+        }
+    };
+}
+
+// Scope example
+let globalVar = "I'm global";
+
+function scopeExample() {
+    let localVar = "I'm local";
+    console.log(globalVar); // Can access global
+    console.log(localVar);  // Can access local
+}
+
+console.log(greet("World"));
+console.log(add(5, 3));
+console.log(createUser("Alice", 25).greet());`,
+                3: `// Lesson 3: Objects and Arrays
+// Working with complex data structures
+
+// Object creation
+let person = {
+    name: "John Doe",
+    age: 30,
+    hobbies: ["coding", "reading", "gaming"],
+    address: {
+        street: "123 Main St",
+        city: "New York",
+        country: "USA"
+    },
+    greet: function() {
+        return "Hello, I'm " + this.name;
+    }
+};
+
+// Array methods
+let numbers = [1, 2, 3, 4, 5];
+let doubled = numbers.map(n => n * 2);
+let evens = numbers.filter(n => n % 2 === 0);
+let sum = numbers.reduce((acc, n) => acc + n, 0);
+
+// Destructuring
+let { name, age } = person;
+let [first, second] = numbers;
+
+console.log(person.greet());
+console.log("Doubled:", doubled);
+console.log("Evens:", evens);
+console.log("Sum:", sum);
+console.log("Name:", name, "Age:", age);`,
+                4: `// Lesson 4: ES6+ Features
+// Modern JavaScript features
+
+// Template literals
+let userName = "Developer";
+let userAge = 28;
+let message = \`Hello, \${userName}! You are \${userAge} years old.\`;
+
+// Arrow functions with arrays
+let products = [
+    { name: "Laptop", price: 999 },
+    { name: "Mouse", price: 29 },
+    { name: "Keyboard", price: 79 }
+];
+
+let expensiveItems = products.filter(p => p.price > 50);
+let totalValue = products.reduce((sum, p) => sum + p.price, 0);
+
+// Classes
+class Animal {
+    constructor(name, species) {
+        this.name = name;
+        this.species = species;
+    }
+    
+    speak() {
+        return \`\${this.name} makes a sound\`;
+    }
+}
+
+class Dog extends Animal {
+    speak() {
+        return \`\${this.name} barks!\`;
+    }
+}
+
+let myDog = new Dog("Buddy", "Golden Retriever");
+
+console.log(message);
+console.log("Expensive items:", expensiveItems);
+console.log("Total value:", totalValue);
+console.log(myDog.speak());`,
+                5: `// Lesson 5: Asynchronous JavaScript
+// Promises, async/await, and asynchronous operations
+
+// Promise example
+function fetchUserData(userId) {
+    return new Promise((resolve, reject) => {
+        setTimeout(() => {
+            if (userId > 0) {
+                resolve({
+                    id: userId,
+                    name: "John Doe",
+                    email: "john@example.com"
+                });
+            } else {
+                reject(new Error("Invalid user ID"));
+            }
+        }, 1000);
+    });
+}
+
+// Async/await
+async function getUserInfo(userId) {
+    try {
+        console.log("Fetching user data...");
+        const user = await fetchUserData(userId);
+        console.log("User data:", user);
+        return user;
+    } catch (error) {
+        console.error("Error:", error.message);
+    }
+}
+
+// Promise.all example
+async function fetchMultipleUsers() {
+    try {
+        const users = await Promise.all([
+            fetchUserData(1),
+            fetchUserData(2),
+            fetchUserData(3)
+        ]);
+        console.log("Multiple users:", users);
+    } catch (error) {
+        console.error("Error fetching users:", error.message);
+    }
+}
+
+// Run the examples
+getUserInfo(1);
+fetchMultipleUsers();`
+            };
+            
+            if (lessonCodes[lessonNum]) {
+                codeEditor.setValue(lessonCodes[lessonNum]);
+                addTutorMessage(`Switched to Lesson ${lessonNum}. Try running the code to see the concepts in action!`);
+            }
+        }
+
+        function showAssessment(lessonIndex) {
+            const question = assessmentQuestions[lessonIndex % assessmentQuestions.length];
+            const modal = new bootstrap.Modal(document.getElementById('assessmentModal'));
+            
+            document.getElementById('assessmentContent').innerHTML = `
+                <div class="assessment-question">
+                    <h6>${question.question}</h6>
+                    <div class="mt-3">
+                        ${question.options.map((option, index) => `
+                            <div class="form-check">
+                                <input class="form-check-input" type="radio" name="answer" value="${index}" id="option${index}">
+                                <label class="form-check-label" for="option${index}">${option}</label>
+                            </div>
+                        `).join('')}
+                    </div>
+                </div>
+            `;
+            
+            modal.show();
+        }
+
+        function submitAssessment() {
+            const selectedAnswer = document.querySelector('input[name="answer"]:checked');
+            const questionIndex = lessonsCompleted % assessmentQuestions.length;
+            const question = assessmentQuestions[questionIndex];
+            
+            if (selectedAnswer) {
+                const isCorrect = parseInt(selectedAnswer.value) === question.correct;
+                
+                let feedback = '';
+                if (isCorrect) {
+                    feedback = `<div class="alert alert-success"><i class="fas fa-check-circle"></i> Correct! ${question.explanation}</div>`;
+                    lessonsCompleted++;
+                    completeCurrentLesson();
+                } else {
+                    feedback = `<div class="alert alert-danger"><i class="fas fa-times-circle"></i> Not quite right. ${question.explanation}</div>`;
+                }
+                
+                document.getElementById('assessmentContent').innerHTML += feedback;
+                
+                // Update progress
+                updateProgress();
+            }
+        }
+
+        function completeCurrentLesson() {
+            if (currentLesson < totalLessons) {
+                currentLesson++;
+                switchToLesson(currentLesson);
+                addTutorMessage(`🎉 Great job! You've completed the lesson. Let's move to the next one!`);
+            } else {
+                addTutorMessage(`🎉 Congratulations! You've completed the entire JavaScript course! You're now ready to build amazing web applications.`);
+                if (window.interactiveAIProgress) {
+                    window.interactiveAIProgress.markCompleted();
+                }
+            }
+        }
+
+        function updateProgressDisplay() {
+            const progressPercent = Math.round((lessonsCompleted / totalLessons) * 100);
+            document.getElementById('progressPercent').textContent = progressPercent + '%';
+            document.getElementById('progressText').textContent = progressPercent + '% Complete';
+            document.getElementById('progressBar').style.width = progressPercent + '%';
+            document.getElementById('lessonsCompleted').textContent = lessonsCompleted;
+        }
+
+        function updateTimeDisplay() {
+            const elapsed = Math.floor((Date.now() - startTime) / 1000);
+            const minutes = Math.floor(elapsed / 60);
+            const seconds = elapsed % 60;
+            document.getElementById('timeSpent').textContent = `${minutes}m ${seconds}s`;
+        }
+
+        function updateProgress() {
+            updateProgressDisplay();
+            updateTimeDisplay();
+            
+            // Update with Interactive AI system
+            if (window.interactiveAIProgress) {
+                const progressData = {
+                    current_step: currentLesson,
+                    total_steps: totalLessons,
+                    completion_percentage: Math.round((lessonsCompleted / totalLessons) * 100),
+                    is_completed: lessonsCompleted === totalLessons,
+                    time_spent: Math.floor((Date.now() - startTime) / 1000),
+                    status: lessonsCompleted === totalLessons ? 'completed' : 'in_progress'
+                };
+                
+                window.interactiveAIProgress.forceUpdate();
+                
+                // Add user interaction
+                window.interactiveAIProgress.addUserResponse(
+                    `Completed lesson ${currentLesson}`,
+                    `Progress: ${progressData.completion_percentage}%`,
+                    'lesson_completion'
+                );
+            }
+        }
+
+        // Update time display every second
+        setInterval(updateTimeDisplay, 1000);
+        
+        // Handle Enter key in chat
+        document.getElementById('userInput').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                sendMessage();
+            }
+        });
+    </script>
+</body>
+</html>

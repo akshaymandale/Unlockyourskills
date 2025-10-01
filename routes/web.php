@@ -101,6 +101,15 @@ Router::get('/users/autocomplete', 'UserManagementController@getUserEmailsForAut
     Router::get('/my-courses/view-content', 'MyCoursesController@viewContent');
     Router::get('/my-courses/start', 'MyCoursesController@start');
     
+    // Interactive AI Content API
+    Router::get('/api/interactive-ai/metadata', 'InteractiveAIController@getContentMetadata');
+    Router::get('/api/interactive-ai/validate', 'InteractiveAIController@validateContentRequirements');
+    Router::get('/api/interactive-ai/config', 'InteractiveAIController@getLaunchConfiguration');
+    Router::post('/api/interactive-ai/progress', 'InteractiveAIController@updateInteractiveProgress');
+    Router::get('/api/interactive-ai/time-limit', 'InteractiveAIController@checkTimeLimit');
+    Router::post('/api/interactive-ai/loaded', 'InteractiveAIController@contentLoaded');
+    Router::post('/api/interactive-ai/time-expired', 'InteractiveAIController@timeExpired');
+    
     // SEARCH COURSES
     // ===================================
     Router::get('/search-courses', 'SearchCoursesController@index');
