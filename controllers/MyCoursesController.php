@@ -307,6 +307,24 @@ class MyCoursesController {
         $rawSrc = $_GET['src'] ?? '';
         $title = $_GET['title'] ?? 'Content';
         
+        // Handle Interactive AI content with enhanced functionality
+        if ($type === 'interactive' || ($type === 'iframe' && strpos($rawSrc, 'interactive') !== false)) {
+            $contentId = $_GET['content_id'] ?? null;
+            $courseId = $_GET['course_id'] ?? null;
+            $moduleId = $_GET['module_id'] ?? null;
+            $clientId = $_SESSION['user']['client_id'] ?? null;
+            
+            if (!$contentId || !$courseId || !$clientId) {
+                UrlHelper::redirect('my-courses');
+            }
+            
+            // Use enhanced Interactive AI content viewer
+            require_once 'controllers/InteractiveAIController.php';
+            $interactiveController = new InteractiveAIController();
+            $interactiveController->viewInteractiveContent();
+            return;
+        }
+        
         // Handle video content differently
         if ($type === 'video') {
             $courseId = $_GET['course_id'] ?? null;

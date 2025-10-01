@@ -4,7 +4,6 @@
  */
 
 document.addEventListener('DOMContentLoaded', function() {
-    console.log('Announcement validation system loaded');
     
     // Initialize validation for both create and edit forms
     initializeAnnouncementValidation();
@@ -15,12 +14,10 @@ function initializeAnnouncementValidation() {
     const editForm = document.getElementById('editAnnouncementForm');
     
     if (createForm) {
-        console.log('Initializing create form validation');
         setupFormValidation(createForm, 'create');
     }
     
     if (editForm) {
-        console.log('Initializing edit form validation');
         setupFormValidation(editForm, 'edit');
     }
 }
@@ -30,15 +27,12 @@ function setupFormValidation(form, formType) {
     
     // Add form submit handler
     form.addEventListener('submit', function(e) {
-        console.log(`Form submit handler triggered for: ${formId}`);
         
         if (!validateAnnouncementForm(form)) {
-            console.log('Form validation failed, preventing submission');
             e.preventDefault();
             return false;
         }
         
-        console.log('Form is valid, proceeding with submission...');
         // Form will submit normally via the existing handlers
     });
     
@@ -82,7 +76,6 @@ function setupFormValidation(form, formType) {
 }
 
 function validateAnnouncementForm(form) {
-    console.log('Validating announcement form:', form.id);
     
     let isValid = true;
     const formType = form.id.includes('edit') ? 'edit' : 'create';
@@ -135,7 +128,6 @@ function validateAnnouncementForm(form) {
         isValid = false;
     }
     
-    console.log('Form validation result:', isValid);
     return isValid;
 }
 

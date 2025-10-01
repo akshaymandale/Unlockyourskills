@@ -99,10 +99,8 @@ document.addEventListener('DOMContentLoaded', function() {
     setTimeout(function() {
         const addQuestionBtn = document.getElementById('addQuestionBtn');
         if (addQuestionBtn && !addQuestionBtn.hasAttribute('data-event-attached')) {
-            console.log('Fallback: Setting up add question button event listener');
             addQuestionBtn.setAttribute('data-event-attached', 'true');
             addQuestionBtn.addEventListener('click', function(e) {
-                console.log('Fallback: Add Question button clicked!');
                 e.preventDefault();
                 if (typeof addQuestion === 'function') {
                     addQuestion();
@@ -292,16 +290,13 @@ function initializeCharacterCounting() {
 function initializeModals() {
     // Modal event listeners are handled by the validation system
     // We just need to ensure the create poll form is initialized when the page loads
-    console.log('Initializing modals - event listeners handled by validation system');
 }
 
 // Initialize create poll form
 function initializeCreatePollForm() {
-    console.log('initializeCreatePollForm called');
     
     // The validation script handles modal events and form initialization
     // We just need to ensure the functions are available globally
-    console.log('Create poll form initialization - handled by validation system');
 }
 
 // Make functions globally accessible
@@ -786,12 +781,9 @@ function updatePagination(pagination) {
 
 // Question management functions
 function addQuestion() {
-    console.log('addQuestion function called');
     window.opinionPollsState.questionCounter++;
-    console.log('Question counter:', window.opinionPollsState.questionCounter);
     
     const questionsContainer = document.getElementById('questionsContainer');
-    console.log('Questions container:', questionsContainer);
     
     if (!questionsContainer) {
         console.error('Questions container not found!');

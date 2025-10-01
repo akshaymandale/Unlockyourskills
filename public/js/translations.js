@@ -37,7 +37,6 @@ if (typeof window.t === 'undefined') {
  */
 function loadTranslations() {
     // Translations will be injected by PHP in the HTML head
-    console.log('Translations loaded:', Object.keys(window.translations).length, 'keys');
 }
 
 // Auto-load translations when DOM is ready

@@ -57,7 +57,7 @@ require_once 'includes/sidebar.php';
                         <select id="customFieldSelect" name="custom_field_id" class="form-control">
                             <option value=""><?= Localization::translate('select_custom_field'); ?></option>
                             <?php foreach ($customFields as $field): ?>
-                                <option value="<?= $field['id']; ?>">
+                                <option value="<?= $field['id']; ?>" data-options="<?= htmlspecialchars(json_encode($field['field_options'] ?? [])); ?>">
                                     <?= htmlspecialchars($field['field_label']); ?>
                                 </option>
                             <?php endforeach; ?>

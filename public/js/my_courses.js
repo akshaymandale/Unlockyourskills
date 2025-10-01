@@ -59,7 +59,7 @@ document.addEventListener('DOMContentLoaded', function() {
         if (!courses || courses.length === 0) {
             coursesList.innerHTML = `
                 <div class="empty-state text-center py-5 w-100">
-                    <img src="/Unlockyourskills/public/images/UYSlogo1.png" alt="No courses" style="max-width:120px;opacity:0.7;" class="mb-3"/>
+                    <img src="/Unlockyourskills/public/images/UYSlogo.png" alt="No courses" style="max-width:120px;opacity:0.7;" class="mb-3"/>
                     <h4 class="text-purple mb-2">No courses found</h4>
                     <p class="text-muted">You have no courses assigned yet.<br>Check back soon or contact your admin!</p>
                 </div>

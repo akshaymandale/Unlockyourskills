@@ -40,9 +40,13 @@ class ReportsController {
             // Get custom fields for dynamic filtering
             $customFields = $model->getCustomFieldsForFiltering($clientId);
             
-            // Get initial report data
+            // Get initial report data with pagination
             $filters = ['client_id' => $clientId];
-            $reportData = $model->getUserProgressData($filters);
+            $page = 1;
+            $perPage = 20;
+            $result = $model->getUserProgressData($filters, $page, $perPage);
+            $reportData = $result['data'];
+            $pagination = $result['pagination'];
             $summary = $model->getSummaryStats($filters);
             
             // Prepare chart data
@@ -94,6 +98,7 @@ class ReportsController {
                 'filterOptions' => $filterOptions,
                 'customFields' => $customFields,
                 'reportData' => $reportData,
+                'pagination' => $pagination,
                 'summary' => $summary,
                 'charts' => $charts
             ];
@@ -104,6 +109,7 @@ class ReportsController {
                 'filterOptions' => ['users' => [], 'departments' => [], 'courses' => []],
                 'customFields' => [],
                 'reportData' => [],
+                'pagination' => ['total' => 0, 'per_page' => 20, 'current_page' => 1, 'total_pages' => 0, 'has_next' => false, 'has_prev' => false],
                 'summary' => ['total_progress_records' => 0, 'unique_users' => 0, 'unique_courses' => 0, 'avg_completion' => 0, 'completed_courses' => 0, 'in_progress_courses' => 0, 'not_started_courses' => 0],
                 'charts' => ['completion_status' => ['completed' => 0, 'in_progress' => 0, 'not_started' => 0], 'department_progress' => ['labels' => [], 'data' => []]]
             ];
@@ -153,8 +159,27 @@ class ReportsController {
                         return $value !== null && $value !== '';
                     });
                     
-                    $data = $model->getUserProgressData($filters);
+                    // Get pagination parameters
+                    $page = (int)($_POST['page'] ?? 1);
+                    $perPage = (int)($_POST['per_page'] ?? 20);
+                    
+                    // Debug logging for user filter
+                    if (!empty($filters['user_ids'])) {
+                        error_log("DEBUG: Filtering by user_ids: " . json_encode($filters['user_ids']));
+                    }
+                    
+                    $result = $model->getUserProgressData($filters, $page, $perPage);
+                    $data = $result['data'];
+                    $pagination = $result['pagination'];
                     $summary = $model->getSummaryStats($filters);
+                    
+                    // Debug logging for results
+                    error_log("DEBUG: Found " . count($data) . " records for current page");
+                    error_log("DEBUG: Summary stats: " . json_encode($summary));
+                    
+                    // Get all filtered data for chart calculation (no pagination)
+                    $allDataResult = $model->getUserProgressData($filters, 1, PHP_INT_MAX);
+                    $allData = $allDataResult['data'];
                     
                     // Prepare chart data
                     $charts = [
@@ -169,8 +194,8 @@ class ReportsController {
                         ]
                     ];
                     
-                    // Process completion status
-                    foreach ($data as $row) {
+                    // Process completion status from all filtered data
+                    foreach ($allData as $row) {
                         switch ($row['progress_status']) {
                             case 'completed':
                                 $charts['completion_status']['completed']++;
@@ -184,9 +209,9 @@ class ReportsController {
                         }
                     }
                     
-                    // Process department progress
+                    // Process department progress from all filtered data
                     $deptStats = [];
-                    foreach ($data as $row) {
+                    foreach ($allData as $row) {
                         $dept = $row['department'] ?: 'No Department';
                         if (!isset($deptStats[$dept])) {
                             $deptStats[$dept] = ['total' => 0, 'sum' => 0];
@@ -203,6 +228,7 @@ class ReportsController {
                     echo json_encode([
                         'success' => true,
                         'reportData' => $data,
+                        'pagination' => $pagination,
                         'summary' => $summary,
                         'charts' => $charts
                     ]);

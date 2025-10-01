@@ -4336,6 +4336,19 @@ body select:focus,
     max-width: calc(100% - 80px);
 }
 
+/* ✅ User Progress Report page container styling */
+[data-user-progress-report-page="true"] .container {
+    margin-left: 250px;
+    max-width: calc(100% - 250px);
+    transition: margin-left 0.3s ease-in-out;
+}
+
+[data-user-progress-report-page="true"] .sidebar.collapsed + .container,
+[data-user-progress-report-page="true"] .sidebar.collapsed ~ .main-content .container {
+    margin-left: 80px;
+    max-width: calc(100% - 80px);
+}
+
 /* Social Feed Post Tags */
 .post-tags {
     margin-top: 10px;
@@ -10812,6 +10825,31 @@ body select:focus,
     border-left: 3px solid #2196f3;
 }
 
+/* Filter Option Classes */
+.user-option, .course-option, .custom-field-option, .custom-field-value-option {
+    margin: 0;
+    padding: 0;
+    border-bottom: 1px solid #f0f0f0;
+}
+
+.user-option:last-child, .course-option:last-child, .custom-field-option:last-child, .custom-field-value-option:last-child {
+    border-bottom: none;
+}
+
+.user-option .form-check, .course-option .form-check, .custom-field-option .form-check, .custom-field-value-option .form-check {
+    margin: 0;
+    padding: 8px 12px 8px 2rem;
+    transition: background-color 0.2s ease;
+}
+
+.user-option:hover .form-check, .course-option:hover .form-check, .custom-field-option:hover .form-check, .custom-field-value-option:hover .form-check {
+    background-color: #f8f9fa;
+}
+
+.user-option.hidden, .course-option.hidden, .custom-field-option.hidden, .custom-field-value-option.hidden {
+    display: none !important;
+}
+
 /* Filter Checkbox Styles */
 .filter-checkbox {
     margin-right: 8px;
@@ -10880,6 +10918,26 @@ body select:focus,
     margin-top: 4px;
     background-color: #fff;
     z-index: 1050;
+    min-width: 100%;
+    width: max-content;
+    max-width: 300px;
+}
+
+.filter-dropdown-menu li {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+}
+
+.filter-dropdown-menu .form-check {
+    margin: 0;
+    padding: 8px 12px 8px 2rem;
+}
+
+.filter-dropdown-menu .form-check-label {
+    font-size: 0.875rem;
+    line-height: 1.4;
+    word-break: break-word;
 }
 
 .filter-dropdown-menu .dropdown-divider {
@@ -10932,10 +10990,29 @@ body select:focus,
     letter-spacing: 0.5px;
 }
 
+/* Dropdown Positioning Fixes */
+.dropdown {
+    position: relative;
+}
+
+.dropdown-menu {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+}
+
+.filter-dropdown-menu {
+    position: absolute !important;
+    transform: none !important;
+    will-change: auto;
+}
+
 /* Responsive Adjustments */
 @media (max-width: 768px) {
     .filter-dropdown-menu {
         max-height: 250px;
+        max-width: 250px;
     }
     
     .filter-search-input {

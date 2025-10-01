@@ -902,7 +902,6 @@ function loadCustomFieldValues(fieldIdSelect, fieldValueSelect) {
 
 // Initialize custom field functionality when DOM is loaded
 document.addEventListener('DOMContentLoaded', function() {
-    console.log('🔧 Initializing custom field functionality...');
     
     // Create form custom field handling
     const createVisibility = document.getElementById('visibility');
@@ -910,31 +909,19 @@ document.addEventListener('DOMContentLoaded', function() {
     const createCustomFieldId = document.getElementById('customFieldId');
     const createCustomFieldValue = document.getElementById('customFieldValue');
 
-    console.log('📝 Create form elements:', {
-        visibility: createVisibility,
-        customFieldSelection: createCustomFieldSelection,
-        customFieldId: createCustomFieldId,
-        customFieldValue: createCustomFieldValue
-    });
 
     if (createVisibility && createCustomFieldSelection) {
-        console.log('✅ Attaching visibility change listener for create form');
         createVisibility.addEventListener('change', function() {
-            console.log('🔄 Visibility changed to:', this.value);
             toggleCustomFieldSelection(this, createCustomFieldSelection);
         });
     } else {
-        console.log('❌ Create form visibility elements not found');
     }
 
     if (createCustomFieldId && createCustomFieldValue) {
-        console.log('✅ Attaching custom field change listener for create form');
         createCustomFieldId.addEventListener('change', function() {
-            console.log('🔄 Custom field changed to:', this.value);
             loadCustomFieldValues(createCustomFieldId, createCustomFieldValue);
         });
     } else {
-        console.log('❌ Create form custom field elements not found');
     }
 
     // Edit form custom field handling
@@ -943,33 +930,20 @@ document.addEventListener('DOMContentLoaded', function() {
     const editCustomFieldId = document.getElementById('editCustomFieldId');
     const editCustomFieldValue = document.getElementById('editCustomFieldValue');
 
-    console.log('📝 Edit form elements:', {
-        visibility: editVisibility,
-        customFieldSelection: editCustomFieldSelection,
-        customFieldId: editCustomFieldId,
-        customFieldValue: editCustomFieldValue
-    });
 
     if (editVisibility && editCustomFieldSelection) {
-        console.log('✅ Attaching visibility change listener for edit form');
         editVisibility.addEventListener('change', function() {
-            console.log('🔄 Edit visibility changed to:', this.value);
             toggleCustomFieldSelection(this, editCustomFieldSelection);
         });
     } else {
-        console.log('❌ Edit form visibility elements not found');
     }
 
     if (editCustomFieldId && editCustomFieldValue) {
-        console.log('✅ Attaching custom field change listener for edit form');
         editCustomFieldId.addEventListener('change', function() {
-            console.log('🔄 Edit custom field changed to:', this.value);
             loadCustomFieldValues(editCustomFieldId, editCustomFieldValue);
         });
     } else {
-        console.log('❌ Edit form custom field elements not found');
     }
     
-    console.log('🎯 Custom field initialization complete');
 });
 </script> 

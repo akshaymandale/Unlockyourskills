@@ -17,7 +17,7 @@ class UserProgressReportModel {
             $sql = "SELECT id, field_name, field_label, field_type, field_options 
                     FROM custom_fields 
                     WHERE client_id = ? AND is_deleted = 0 AND is_active = 1 
-                    AND field_type IN ('select', 'radio', 'checkbox')
+                    AND field_type = 'select'
                     ORDER BY field_order ASC, id ASC";
             
             $stmt = $this->conn->prepare($sql);
@@ -32,11 +32,8 @@ class UserProgressReportModel {
                         // Clean up options (remove \r\n and empty values)
                         $field['field_options'] = array_filter(array_map('trim', $options));
                     } else {
-                        // If JSON decode failed, try to parse as string with line breaks
-                        $rawOptions = $field['field_options'];
-                        // Remove quotes and split by \r\n
-                        $rawOptions = str_replace(['"', "'"], '', $rawOptions);
-                        $field['field_options'] = array_filter(array_map('trim', explode("\\r\\n", $rawOptions)));
+                        // If JSON decode resulted in a string, split by line breaks
+                        $field['field_options'] = array_filter(array_map('trim', explode("\r\n", $options)));
                     }
                 } else {
                     $field['field_options'] = [];
@@ -68,10 +65,14 @@ class UserProgressReportModel {
 
     /**
      * Get user progress data with filters - using MyCourses logic
+     * @param array $filters - Filter conditions
+     * @param int $page - Page number (1-based)
+     * @param int $perPage - Records per page
+     * @return array - ['data' => [...], 'pagination' => ['total' => int, 'per_page' => int, 'current_page' => int, 'total_pages' => int]]
      */
-    public function getUserProgressData($filters = []) {
+    public function getUserProgressData($filters = [], $page = 1, $perPage = 20) {
         try {
-            $clientId = $filters['client_id'] ?? $_SESSION['user']['client_id'];
+            $clientId = $filters['client_id'] ?? (isset($_SESSION['user']['client_id']) ? $_SESSION['user']['client_id'] : null);
             $departmentFieldId = $this->getDepartmentFieldId($clientId);
             
             $whereConditions = [];
@@ -110,11 +111,9 @@ class UserProgressReportModel {
                 }
             }
 
-            // Client filter
-            $whereConditions[] = "u.client_id = ?";
-            $params[] = $clientId;
+            // Client filter (already handled in main query)
 
-            $whereClause = !empty($whereConditions) ? "WHERE " . implode(' AND ', $whereConditions) : "";
+            $whereClause = !empty($whereConditions) ? "AND " . implode(' AND ', $whereConditions) : "";
 
             // Department field selection
             $departmentSelect = $departmentFieldId ? 
@@ -131,8 +130,10 @@ class UserProgressReportModel {
                 "LEFT JOIN custom_field_values cfv_custom ON u.id = cfv_custom.user_id AND cfv_custom.custom_field_id = {$filters['custom_field_id']} AND cfv_custom.is_deleted = 0" : 
                 "";
 
-            $sql = "
-                SELECT 
+            // Get all data first (without pagination) to calculate progress and apply status filter
+            // Use a simpler approach - get user-course combinations from applicable courses
+            $allDataSql = "
+                SELECT DISTINCT
                     CONCAT(u.id, '_', c.id) as id,
                     u.id as user_id,
                     c.id as course_id,
@@ -151,16 +152,51 @@ class UserProgressReportModel {
                 CROSS JOIN courses c
                 $departmentJoin
                 $customFieldJoin
+                WHERE u.client_id = ? AND c.client_id = ? AND c.is_deleted = 0
+                AND (
+                    -- Course is applicable to all users
+                    EXISTS (
+                        SELECT 1 FROM course_applicability ca 
+                        WHERE ca.course_id = c.id AND ca.applicability_type = 'all' AND ca.client_id = ?
+                    )
+                    OR
+                    -- Course is applicable to this specific user
+                    EXISTS (
+                        SELECT 1 FROM course_applicability ca 
+                        WHERE ca.course_id = c.id AND ca.applicability_type = 'user' AND ca.user_id = u.id AND ca.client_id = ?
+                    )
+                    OR
+                    -- Course is applicable based on user's custom fields
+                    EXISTS (
+                        SELECT 1 FROM course_applicability ca 
+                        INNER JOIN custom_field_values cfv ON cfv.user_id = u.id 
+                            AND cfv.custom_field_id = ca.custom_field_id 
+                            AND cfv.field_value COLLATE utf8mb4_unicode_ci = ca.custom_field_value COLLATE utf8mb4_unicode_ci
+                            AND cfv.is_deleted = 0
+                        WHERE ca.course_id = c.id AND ca.applicability_type = 'custom_field' AND ca.client_id = ?
+                    )
+                    OR
+                    -- User is enrolled in this course
+                    EXISTS (
+                        SELECT 1 FROM course_enrollments ce 
+                        WHERE ce.course_id = c.id AND ce.user_id = u.id 
+                        AND ce.status = 'approved' AND ce.deleted_at IS NULL AND ce.client_id = ?
+                    )
+                )
                 $whereClause
                 ORDER BY u.id, c.id
             ";
+            
+            // Add client_id parameters for the query
+            $clientParams = [$clientId, $clientId, $clientId, $clientId, $clientId, $clientId];
+            $params = array_merge($clientParams, $params);
 
-            $stmt = $this->conn->prepare($sql);
-            $stmt->execute($params);
-            $result = $stmt->fetchAll(PDO::FETCH_ASSOC);
+            $allDataStmt = $this->conn->prepare($allDataSql);
+            $allDataStmt->execute($params);
+            $allResult = $allDataStmt->fetchAll(PDO::FETCH_ASSOC);
             
             // Process each user-course combination to calculate actual progress
-            foreach ($result as &$record) {
+            foreach ($allResult as &$record) {
                 $isStarted = $this->isCourseStarted($record['course_id'], $record['user_id'], $clientId);
                 
                 if ($isStarted) {
@@ -173,9 +209,6 @@ class UserProgressReportModel {
                     
                     $record['last_accessed_at'] = $lastAccessed;
                     $record['total_time_spent'] = $totalTime;
-                    
-                    // Debug logging (commented out for production)
-                    // error_log("User {$record['user_id']}, Course {$record['course_id']}: Last Accessed = " . ($lastAccessed ?: 'NULL') . ", Total Time = {$totalTime}");
                     
                     if ($progress >= 100) {
                         $record['status'] = 'completed';
@@ -194,7 +227,7 @@ class UserProgressReportModel {
             
             // Apply status filter after calculation
             if (!empty($filters['status']) && is_array($filters['status'])) {
-                $result = array_filter($result, function($record) use ($filters) {
+                $allResult = array_filter($allResult, function($record) use ($filters) {
                     return in_array($record['progress_status'], $filters['status']);
                 });
             }
@@ -205,10 +238,37 @@ class UserProgressReportModel {
                 // For now, we'll skip date filtering as it requires more complex logic
             }
             
-            return array_values($result);
+            // Now apply pagination to the filtered results
+            $totalRecords = count($allResult);
+            $totalPages = ceil($totalRecords / $perPage);
+            $offset = ($page - 1) * $perPage;
+            $result = array_slice($allResult, $offset, $perPage);
+            
+            
+            return [
+                'data' => array_values($result),
+                'pagination' => [
+                    'total' => (int)$totalRecords,
+                    'per_page' => $perPage,
+                    'current_page' => $page,
+                    'total_pages' => $totalPages,
+                    'has_next' => $page < $totalPages,
+                    'has_prev' => $page > 1
+                ]
+            ];
         } catch (Exception $e) {
             error_log("Error getting user progress data: " . $e->getMessage());
-            return [];
+            return [
+                'data' => [],
+                'pagination' => [
+                    'total' => 0,
+                    'per_page' => $perPage,
+                    'current_page' => $page,
+                    'total_pages' => 0,
+                    'has_next' => false,
+                    'has_prev' => false
+                ]
+            ];
         }
     }
 
@@ -300,11 +360,11 @@ class UserProgressReportModel {
                             AND inp.user_id = ? AND inp.course_id = ? AND inp.client_id = ?
                             AND inp.is_completed = 1
                         ))
-                        OR (cp.prerequisite_type = 'non_scorm' AND EXISTS (
-                            SELECT 1 FROM non_scorm_progress nsp 
-                            WHERE nsp.prerequisite_id = cp.id 
-                            AND nsp.user_id = ? AND nsp.course_id = ? AND nsp.client_id = ?
-                            AND nsp.is_completed = 1
+                        OR (cp.prerequisite_type = 'external' AND EXISTS (
+                            SELECT 1 FROM external_progress ep 
+                            WHERE ep.prerequisite_id = cp.id 
+                            AND ep.user_id = ? AND ep.course_id = ? AND ep.client_id = ?
+                            AND ep.is_completed = 1
                         ))
                     )
                 ");
@@ -320,7 +380,7 @@ class UserProgressReportModel {
                     $userId, $courseId, $clientId, // video
                     $userId, $courseId, $clientId, // image
                     $userId, $courseId, $clientId, // interactive
-                    $userId, $courseId, $clientId  // non_scorm
+                    $userId, $courseId, $clientId  // external (duplicate but needed for parameter count)
                 ]);
                 $prereqMetResult = $prereqMetStmt->fetch(PDO::FETCH_ASSOC);
                 
@@ -335,7 +395,7 @@ class UserProgressReportModel {
                 SELECT COUNT(*) as count
                 FROM course_module_content cmc
                 JOIN course_modules cm ON cmc.module_id = cm.id
-                WHERE cm.course_id = ? AND cmc.deleted_at IS NULL AND cm.deleted_at IS NULL
+                WHERE cm.course_id = ? AND cm.deleted_at IS NULL
                 AND (
                     (cmc.content_type = 'assessment' AND EXISTS (
                         SELECT 1 FROM assessment_attempts aa 
@@ -409,7 +469,19 @@ class UserProgressReportModel {
             ]);
             $moduleResult = $moduleStmt->fetch(PDO::FETCH_ASSOC);
             
-            return $moduleResult['count'] > 0;
+            // If user has interacted with module content, course is started
+            if ($moduleResult['count'] > 0) {
+                return true;
+            }
+            
+            // If prerequisites are met, course is considered started (even without course content interaction)
+            // This provides better user experience by showing progress when prerequisites are completed
+            if ($prereqCountResult['count'] > 0 && $prereqMetResult['count'] >= $prereqCountResult['count']) {
+                return true;
+            }
+            
+            // If no prerequisites or prerequisites not met, course is not started
+            return false;
             
         } catch (Exception $e) {
             error_log("Error checking if course started: " . $e->getMessage());
@@ -418,7 +490,7 @@ class UserProgressReportModel {
     }
 
     /**
-     * Calculate course progress percentage based on completion tables
+     * Calculate comprehensive course progress percentage based on all content types
      * @param int $courseId
      * @param int $userId
      * @param int $clientId
@@ -426,19 +498,159 @@ class UserProgressReportModel {
      */
     public function calculateCourseProgress($courseId, $userId, $clientId) {
         try {
-            // Get course completion data from completion tables
+            // Get course completion data from completion tables first (if available)
             $courseCompletion = $this->getCourseCompletionData($userId, $courseId, $clientId);
             
-            if ($courseCompletion) {
+            if ($courseCompletion && $courseCompletion['completion_percentage'] > 0) {
                 return (int) $courseCompletion['completion_percentage'];
             }
             
-            // Fallback: calculate from individual completion tables
-            return $this->calculateCourseProgressFromCompletionTables($userId, $courseId, $clientId);
+            // Calculate comprehensive progress from all content types
+            return $this->calculateComprehensiveCourseProgress($userId, $courseId, $clientId);
             
         } catch (Exception $e) {
             error_log("Error calculating course progress: " . $e->getMessage());
             return 0;
+        }
+    }
+
+    /**
+     * Calculate comprehensive course progress from all content types and progress tables
+     * @param int $userId
+     * @param int $courseId
+     * @param int $clientId
+     * @return int
+     */
+    private function calculateComprehensiveCourseProgress($userId, $courseId, $clientId) {
+        try {
+            $totalWeight = 0;
+            $completedWeight = 0;
+            
+            // Get all course content (prerequisites, modules, post-requisites)
+            $allContent = $this->getAllCourseContent($courseId);
+            
+            foreach ($allContent as $content) {
+                $contentType = $content['content_type'];
+                $contentId = $content['content_id'] ?? $content['id'];
+                $isPrerequisite = $content['is_prerequisite'] ?? false;
+                $isPostRequisite = $content['is_postrequisite'] ?? false;
+                
+                // Calculate weight based on content type and position
+                $weight = $this->getContentWeight($contentType, $isPrerequisite, $isPostRequisite);
+                $totalWeight += $weight;
+                
+                // Calculate progress for this content item
+                $progress = $this->getComprehensiveContentProgress($contentType, $contentId, $userId, $clientId, $courseId);
+                
+                // Apply weight to progress
+                $weightedProgress = ($progress / 100) * $weight;
+                $completedWeight += $weightedProgress;
+            }
+            
+            if ($totalWeight > 0) {
+                $overallProgress = round(($completedWeight / $totalWeight) * 100);
+                return min(100, max(0, $overallProgress));
+            }
+            
+            return 0;
+            
+        } catch (Exception $e) {
+            error_log("Error calculating comprehensive course progress: " . $e->getMessage());
+            return 0;
+        }
+    }
+
+    /**
+     * Get all course content including prerequisites, modules, and post-requisites
+     * @param int $courseId
+     * @return array
+     */
+    private function getAllCourseContent($courseId) {
+        try {
+            $content = [];
+            
+            // Get prerequisites
+            $prereqStmt = $this->conn->prepare("
+                SELECT 
+                    cp.prerequisite_id as content_id,
+                    cp.prerequisite_type as content_type,
+                    'prerequisite' as content_category,
+                    1 as is_prerequisite
+                FROM course_prerequisites cp
+                WHERE cp.course_id = ? AND cp.deleted_at IS NULL
+            ");
+            $prereqStmt->execute([$courseId]);
+            $prerequisites = $prereqStmt->fetchAll(PDO::FETCH_ASSOC);
+            
+            // Get module content
+            $moduleStmt = $this->conn->prepare("
+                SELECT 
+                    cmc.id,
+                    cmc.content_id,
+                    cmc.content_type,
+                    'module' as content_category,
+                    0 as is_prerequisite,
+                    0 as is_postrequisite
+                FROM course_module_content cmc
+                JOIN course_modules cm ON cmc.module_id = cm.id
+                WHERE cm.course_id = ? AND cm.deleted_at IS NULL
+            ");
+            $moduleStmt->execute([$courseId]);
+            $modules = $moduleStmt->fetchAll(PDO::FETCH_ASSOC);
+            
+            // Get post-requisites (if any) - using course_post_requisites table
+            $postreqStmt = $this->conn->prepare("
+                SELECT 
+                    cpr.id as content_id,
+                    cpr.content_type,
+                    'postrequisite' as content_category,
+                    1 as is_postrequisite
+                FROM course_post_requisites cpr
+                WHERE cpr.course_id = ?
+            ");
+            $postreqStmt->execute([$courseId]);
+            $postRequisites = $postreqStmt->fetchAll(PDO::FETCH_ASSOC);
+            
+            return array_merge($prerequisites, $modules, $postRequisites);
+            
+        } catch (Exception $e) {
+            error_log("Error getting all course content: " . $e->getMessage());
+            return [];
+        }
+    }
+
+    /**
+     * Get content weight based on type and position
+     * @param string $contentType
+     * @param bool $isPrerequisite
+     * @param bool $isPostRequisite
+     * @return int
+     */
+    private function getContentWeight($contentType, $isPrerequisite = false, $isPostRequisite = false) {
+        // Base weights by content type
+        $baseWeights = [
+            'assessment' => 10,
+            'assignment' => 10,
+            'scorm' => 8,
+            'document' => 6,
+            'video' => 6,
+            'audio' => 4,
+            'image' => 2,
+            'interactive' => 6,
+            'external' => 4,
+            'survey' => 3,
+            'feedback' => 3
+        ];
+        
+        $baseWeight = $baseWeights[$contentType] ?? 5;
+        
+        // Adjust weight based on position
+        if ($isPrerequisite) {
+            return $baseWeight * 0.8; // Prerequisites have slightly lower weight
+        } elseif ($isPostRequisite) {
+            return $baseWeight * 0.6; // Post-requisites have lower weight
+        } else {
+            return $baseWeight; // Module content has full weight
         }
     }
 
@@ -671,6 +883,44 @@ class UserProgressReportModel {
     }
 
     /**
+     * Get comprehensive content progress for a specific content type
+     * @param string $contentType
+     * @param int $contentId
+     * @param int $userId
+     * @param int $clientId
+     * @param int $courseId
+     * @return int
+     */
+    private function getComprehensiveContentProgress($contentType, $contentId, $userId, $clientId, $courseId) {
+        switch ($contentType) {
+            case 'assessment':
+                return $this->getAssessmentProgress($contentId, $userId, $clientId, $courseId);
+            case 'assignment':
+                return $this->getAssignmentProgress($contentId, $userId, $clientId, $courseId);
+            case 'scorm':
+                return $this->getScormProgress($contentId, $userId, $clientId, $courseId);
+            case 'video':
+                return $this->getVideoProgress($contentId, $userId, $clientId, $courseId);
+            case 'audio':
+                return $this->getAudioProgress($contentId, $userId, $clientId, $courseId);
+            case 'document':
+                return $this->getDocumentProgress($contentId, $userId, $clientId, $courseId);
+            case 'image':
+                return $this->getImageProgress($contentId, $userId, $clientId, $courseId);
+            case 'interactive':
+                return $this->getInteractiveProgress($contentId, $userId, $clientId, $courseId);
+            case 'external':
+                return $this->getExternalProgress($contentId, $userId, $clientId, $courseId);
+            case 'survey':
+                return $this->getSurveyProgress($contentId, $userId, $clientId, $courseId);
+            case 'feedback':
+                return $this->getFeedbackProgress($contentId, $userId, $clientId, $courseId);
+            default:
+                return 0;
+        }
+    }
+
+    /**
      * Get general content progress (video, audio, etc.)
      * @param int $contentId
      * @param int $userId
@@ -840,53 +1090,7 @@ class UserProgressReportModel {
         }
     }
 
-    /**
-     * Get survey progress
-     * @param int $surveyId
-     * @param int $userId
-     * @param int $clientId
-     * @param int $courseId
-     * @return int
-     */
-    private function getSurveyProgress($surveyId, $userId, $clientId, $courseId) {
-        try {
-            $stmt = $this->conn->prepare("
-                SELECT COUNT(*) as count FROM course_survey_responses 
-                WHERE survey_package_id = ? AND user_id = ? AND client_id = ?
-            ");
-            $stmt->execute([$surveyId, $userId, $clientId]);
-            $result = $stmt->fetch(PDO::FETCH_ASSOC);
-            
-            return $result['count'] > 0 ? 100 : 0;
-        } catch (Exception $e) {
-            error_log("Error getting survey progress: " . $e->getMessage());
-            return 0;
-        }
-    }
 
-    /**
-     * Get feedback progress
-     * @param int $feedbackId
-     * @param int $userId
-     * @param int $clientId
-     * @param int $courseId
-     * @return int
-     */
-    private function getFeedbackProgress($feedbackId, $userId, $clientId, $courseId) {
-        try {
-            $stmt = $this->conn->prepare("
-                SELECT COUNT(*) as count FROM course_feedback_responses 
-                WHERE feedback_package_id = ? AND user_id = ? AND client_id = ?
-            ");
-            $stmt->execute([$feedbackId, $userId, $clientId]);
-            $result = $stmt->fetch(PDO::FETCH_ASSOC);
-            
-            return $result['count'] > 0 ? 100 : 0;
-        } catch (Exception $e) {
-            error_log("Error getting feedback progress: " . $e->getMessage());
-            return 0;
-        }
-    }
 
     /**
      * Get assignment progress
@@ -919,11 +1123,13 @@ class UserProgressReportModel {
 
     /**
      * Get summary statistics - using MyCourses logic
+     * Note: This gets ALL data for summary calculation (ignoring pagination)
      */
     public function getSummaryStats($filters = []) {
         try {
-            // Get the same data as getUserProgressData and calculate summary
-            $data = $this->getUserProgressData($filters);
+            // Get all data for summary calculation (no pagination)
+            $result = $this->getUserProgressData($filters, 1, PHP_INT_MAX);
+            $data = $result['data'];
             
             $totalRecords = count($data);
             $uniqueUsers = count(array_unique(array_column($data, 'user_id')));
@@ -1122,6 +1328,284 @@ class UserProgressReportModel {
             return (int)$result['total_time'];
         } catch (Exception $e) {
             error_log("Error getting total time spent: " . $e->getMessage());
+            return 0;
+        }
+    }
+
+    // ========== COMPREHENSIVE PROGRESS METHODS ==========
+
+    /**
+     * Get video progress
+     * @param int $contentId
+     * @param int $userId
+     * @param int $clientId
+     * @param int $courseId
+     * @return int
+     */
+    private function getVideoProgress($contentId, $userId, $clientId, $courseId) {
+        try {
+            $stmt = $this->conn->prepare("
+                SELECT is_completed, viewed_percentage, video_status 
+                FROM video_progress 
+                WHERE content_id = ? AND user_id = ? AND client_id = ? AND course_id = ?
+                ORDER BY updated_at DESC LIMIT 1
+            ");
+            $stmt->execute([$contentId, $userId, $clientId, $courseId]);
+            $result = $stmt->fetch(PDO::FETCH_ASSOC);
+            
+            if ($result) {
+                if ($result['is_completed'] == 1) {
+                    return 100;
+                } elseif ($result['viewed_percentage'] >= 80) {
+                    return min(100, $result['viewed_percentage']);
+                } elseif ($result['viewed_percentage'] > 0) {
+                    return $result['viewed_percentage'];
+                }
+            }
+            
+            return 0;
+        } catch (Exception $e) {
+            error_log("Error getting video progress: " . $e->getMessage());
+            return 0;
+        }
+    }
+
+    /**
+     * Get audio progress
+     * @param int $contentId
+     * @param int $userId
+     * @param int $clientId
+     * @param int $courseId
+     * @return int
+     */
+    private function getAudioProgress($contentId, $userId, $clientId, $courseId) {
+        try {
+            $stmt = $this->conn->prepare("
+                SELECT is_completed, listened_percentage, audio_status 
+                FROM audio_progress 
+                WHERE content_id = ? AND user_id = ? AND client_id = ? AND course_id = ?
+                ORDER BY updated_at DESC LIMIT 1
+            ");
+            $stmt->execute([$contentId, $userId, $clientId, $courseId]);
+            $result = $stmt->fetch(PDO::FETCH_ASSOC);
+            
+            if ($result) {
+                if ($result['is_completed'] == 1) {
+                    return 100;
+                } elseif ($result['listened_percentage'] >= 80) {
+                    return min(100, $result['listened_percentage']);
+                } elseif ($result['listened_percentage'] > 0) {
+                    return $result['listened_percentage'];
+                }
+            }
+            
+            return 0;
+        } catch (Exception $e) {
+            error_log("Error getting audio progress: " . $e->getMessage());
+            return 0;
+        }
+    }
+
+    /**
+     * Get document progress
+     * @param int $contentId
+     * @param int $userId
+     * @param int $clientId
+     * @param int $courseId
+     * @return int
+     */
+    private function getDocumentProgress($contentId, $userId, $clientId, $courseId) {
+        try {
+            $stmt = $this->conn->prepare("
+                SELECT is_completed, viewed_percentage, status, current_page 
+                FROM document_progress 
+                WHERE content_id = ? AND user_id = ? AND client_id = ? AND course_id = ?
+                ORDER BY updated_at DESC LIMIT 1
+            ");
+            $stmt->execute([$contentId, $userId, $clientId, $courseId]);
+            $result = $stmt->fetch(PDO::FETCH_ASSOC);
+            
+            if ($result) {
+                if ($result['is_completed'] == 1 || $result['status'] == 'completed') {
+                    return 100;
+                } elseif ($result['viewed_percentage'] >= 80) {
+                    return min(100, $result['viewed_percentage']);
+                } elseif ($result['current_page'] > 1 || $result['viewed_percentage'] > 0) {
+                    return max(25, $result['viewed_percentage']); // Minimum 25% if started
+                }
+            }
+            
+            return 0;
+        } catch (Exception $e) {
+            error_log("Error getting document progress: " . $e->getMessage());
+            return 0;
+        }
+    }
+
+    /**
+     * Get image progress
+     * @param int $contentId
+     * @param int $userId
+     * @param int $clientId
+     * @param int $courseId
+     * @return int
+     */
+    private function getImageProgress($contentId, $userId, $clientId, $courseId) {
+        try {
+            $stmt = $this->conn->prepare("
+                SELECT is_completed, viewed_at 
+                FROM image_progress 
+                WHERE content_id = ? AND user_id = ? AND client_id = ? AND course_id = ?
+                ORDER BY updated_at DESC LIMIT 1
+            ");
+            $stmt->execute([$contentId, $userId, $clientId, $courseId]);
+            $result = $stmt->fetch(PDO::FETCH_ASSOC);
+            
+            if ($result) {
+                if ($result['is_completed'] == 1) {
+                    return 100;
+                } elseif ($result['viewed_at'] !== null) {
+                    return 100; // Images are considered completed once viewed
+                }
+            }
+            
+            return 0;
+        } catch (Exception $e) {
+            error_log("Error getting image progress: " . $e->getMessage());
+            return 0;
+        }
+    }
+
+    /**
+     * Get interactive progress
+     * @param int $contentId
+     * @param int $userId
+     * @param int $clientId
+     * @param int $courseId
+     * @return int
+     */
+    private function getInteractiveProgress($contentId, $userId, $clientId, $courseId) {
+        try {
+            $stmt = $this->conn->prepare("
+                SELECT is_completed, last_interaction_at 
+                FROM interactive_progress 
+                WHERE content_id = ? AND user_id = ? AND client_id = ? AND course_id = ?
+                ORDER BY updated_at DESC LIMIT 1
+            ");
+            $stmt->execute([$contentId, $userId, $clientId, $courseId]);
+            $result = $stmt->fetch(PDO::FETCH_ASSOC);
+            
+            if ($result) {
+                if ($result['is_completed'] == 1) {
+                    return 100;
+                } elseif ($result['last_interaction_at'] !== null) {
+                    return 50; // Interactive content partially completed if interacted with
+                }
+            }
+            
+            return 0;
+        } catch (Exception $e) {
+            error_log("Error getting interactive progress: " . $e->getMessage());
+            return 0;
+        }
+    }
+
+    /**
+     * Get external progress
+     * @param int $contentId
+     * @param int $userId
+     * @param int $clientId
+     * @param int $courseId
+     * @return int
+     */
+    private function getExternalProgress($contentId, $userId, $clientId, $courseId) {
+        try {
+            $stmt = $this->conn->prepare("
+                SELECT is_completed, last_visited_at 
+                FROM external_progress 
+                WHERE content_id = ? AND user_id = ? AND client_id = ? AND course_id = ?
+                ORDER BY updated_at DESC LIMIT 1
+            ");
+            $stmt->execute([$contentId, $userId, $clientId, $courseId]);
+            $result = $stmt->fetch(PDO::FETCH_ASSOC);
+            
+            if ($result) {
+                if ($result['is_completed'] == 1) {
+                    return 100;
+                } elseif ($result['last_visited_at'] !== null) {
+                    return 100; // External content considered completed once visited
+                }
+            }
+            
+            return 0;
+        } catch (Exception $e) {
+            error_log("Error getting external progress: " . $e->getMessage());
+            return 0;
+        }
+    }
+
+    /**
+     * Get survey progress
+     * @param int $contentId
+     * @param int $userId
+     * @param int $clientId
+     * @param int $courseId
+     * @return int
+     */
+    private function getSurveyProgress($contentId, $userId, $clientId, $courseId) {
+        try {
+            $stmt = $this->conn->prepare("
+                SELECT COUNT(*) as count, MAX(completed_at) as completed_at, MAX(submitted_at) as submitted_at
+                FROM course_survey_responses 
+                WHERE survey_package_id = ? AND user_id = ? AND client_id = ? AND course_id = ?
+            ");
+            $stmt->execute([$contentId, $userId, $clientId, $courseId]);
+            $result = $stmt->fetch(PDO::FETCH_ASSOC);
+            
+            if ($result && $result['count'] > 0) {
+                if ($result['completed_at'] !== null) {
+                    return 100; // Survey completed
+                } elseif ($result['submitted_at'] !== null) {
+                    return 50; // Survey partially completed
+                }
+            }
+            
+            return 0;
+        } catch (Exception $e) {
+            error_log("Error getting survey progress: " . $e->getMessage());
+            return 0;
+        }
+    }
+
+    /**
+     * Get feedback progress
+     * @param int $contentId
+     * @param int $userId
+     * @param int $clientId
+     * @param int $courseId
+     * @return int
+     */
+    private function getFeedbackProgress($contentId, $userId, $clientId, $courseId) {
+        try {
+            $stmt = $this->conn->prepare("
+                SELECT COUNT(*) as count, MAX(completed_at) as completed_at, MAX(submitted_at) as submitted_at
+                FROM course_feedback_responses 
+                WHERE feedback_package_id = ? AND user_id = ? AND client_id = ? AND course_id = ?
+            ");
+            $stmt->execute([$contentId, $userId, $clientId, $courseId]);
+            $result = $stmt->fetch(PDO::FETCH_ASSOC);
+            
+            if ($result && $result['count'] > 0) {
+                if ($result['completed_at'] !== null) {
+                    return 100; // Feedback completed
+                } elseif ($result['submitted_at'] !== null) {
+                    return 50; // Feedback partially completed
+                }
+            }
+            
+            return 0;
+        } catch (Exception $e) {
+            error_log("Error getting feedback progress: " . $e->getMessage());
             return 0;
         }
     }

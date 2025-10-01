@@ -5,7 +5,6 @@
  */
 
 document.addEventListener("DOMContentLoaded", function () {
-    console.log('Opinion Poll validation script loaded');
 
     // Check if jQuery and Bootstrap are available
     if (typeof $ === 'undefined') {
@@ -15,17 +14,14 @@ document.addEventListener("DOMContentLoaded", function () {
 
     // Initialize validation when create poll modal is shown
     $('#createPollModal').on('shown.bs.modal', function () {
-        console.log('Create Poll Modal shown, attaching validation');
         attachPollValidation('createPollForm');
         
         // Set up the add question button event listener
         const addQuestionBtn = document.getElementById('addQuestionBtn');
         if (addQuestionBtn) {
-            console.log('Add Question button found, setting up event listener');
             // Remove any existing event listeners to prevent duplicates
             addQuestionBtn.removeEventListener('click', addQuestion);
             addQuestionBtn.addEventListener('click', function(e) {
-                console.log('Add Question button clicked!');
                 e.preventDefault();
                 if (typeof addQuestion === 'function') {
                     addQuestion();
@@ -43,7 +39,6 @@ document.addEventListener("DOMContentLoaded", function () {
         // Initialize the create poll form and add initial question
         const questionsContainer = document.getElementById('questionsContainer');
         if (questionsContainer && questionsContainer.children.length === 0) {
-            console.log('Questions container is empty, adding initial question');
             // Reset counters and add initial question
             if (typeof questionCounter !== 'undefined') {
                 questionCounter = 0;
@@ -61,35 +56,29 @@ document.addEventListener("DOMContentLoaded", function () {
 
     // Reset form when modal is hidden
     $('#createPollModal').on('hidden.bs.modal', function () {
-        console.log('Create Poll Modal hidden, resetting form');
         resetPollForm('createPollForm');
     });
 
     // Initialize validation when edit poll modal is shown
     $('#editPollModal').on('shown.bs.modal', function () {
-        console.log('Edit Poll Modal shown, attaching validation');
         attachPollValidation('editPollForm');
     });
 
     // Reset form when edit modal is hidden
     $('#editPollModal').on('hidden.bs.modal', function () {
-        console.log('Edit Poll Modal hidden, resetting form');
         resetPollForm('editPollForm');
     });
 
     // Attach validation immediately if forms exist
     if (document.getElementById('createPollForm')) {
-        console.log('Create Poll Form found, attaching validation immediately');
         attachPollValidation('createPollForm');
     }
 
     if (document.getElementById('editPollForm')) {
-        console.log('Edit Poll Form found, attaching validation immediately');
         attachPollValidation('editPollForm');
     }
 
     function attachPollValidation(formId) {
-        console.log('Attempting to attach validation to form:', formId);
         const pollForm = document.getElementById(formId);
 
         if (!pollForm) {
@@ -97,7 +86,6 @@ document.addEventListener("DOMContentLoaded", function () {
             return;
         }
 
-        console.log('Form found, attaching event listeners');
 
         // Prevent duplicate event listeners
         pollForm.removeEventListener("submit", pollFormSubmitHandler);
@@ -105,28 +93,22 @@ document.addEventListener("DOMContentLoaded", function () {
 
         // Attach blur validation on input fields
         const fields = document.querySelectorAll(`#${formId} input, #${formId} select, #${formId} textarea`);
-        console.log('Found fields for validation:', fields.length);
 
         fields.forEach(field => {
             field.removeEventListener("blur", pollFieldBlurHandler);
             field.addEventListener("blur", pollFieldBlurHandler);
         });
 
-        console.log('Validation attached successfully to form:', formId);
     }
 
     function pollFormSubmitHandler(event) {
-        console.log('Form submit handler triggered for:', event.target.id);
         event.preventDefault();
         let isValid = validatePollForm(event.target);
-        console.log('Form validation result:', isValid);
 
         if (isValid) {
-            console.log('Form is valid, proceeding with AJAX submission...');
             // Handle AJAX submission directly here
             submitPollForm(event.target);
         } else {
-            console.log('Form validation failed, preventing submission');
         }
     }
 
@@ -355,7 +337,6 @@ document.addEventListener("DOMContentLoaded", function () {
         }
 
         if (!questionsContainer) {
-            console.log('Questions container not found for form:', formId);
             return false;
         }
 

@@ -1,0 +1,1111 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Adaptive Data Science Learning Journey</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/codemirror.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/theme/material.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        :root {
+            --primary-color: #17a2b8;
+            --secondary-color: #6c757d;
+            --success-color: #28a745;
+            --warning-color: #ffc107;
+            --danger-color: #dc3545;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            margin: 0;
+        }
+        
+        .main-container {
+            max-width: 1600px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        
+        .header {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 15px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+            backdrop-filter: blur(10px);
+        }
+        
+        .content-grid {
+            display: grid;
+            grid-template-columns: 300px 1fr 350px;
+            gap: 20px;
+            height: calc(100vh - 200px);
+        }
+        
+        .left-sidebar, .main-content, .right-sidebar {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 15px;
+            padding: 20px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+            backdrop-filter: blur(10px);
+            overflow-y: auto;
+        }
+        
+        .adaptive-indicator {
+            background: linear-gradient(135deg, #17a2b8 0%, #20c997 100%);
+            color: white;
+            border-radius: 10px;
+            padding: 15px;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+        
+        .learning-path {
+            background: #f8f9fa;
+            border-radius: 10px;
+            padding: 15px;
+            margin-bottom: 15px;
+        }
+        
+        .path-node {
+            background: #fff;
+            border: 2px solid #e9ecef;
+            border-radius: 10px;
+            padding: 15px;
+            margin-bottom: 10px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            position: relative;
+        }
+        
+        .path-node:hover {
+            border-color: var(--primary-color);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 15px rgba(23, 162, 184, 0.2);
+        }
+        
+        .path-node.completed {
+            border-color: var(--success-color);
+            background: #d4edda;
+        }
+        
+        .path-node.current {
+            border-color: var(--primary-color);
+            background: #e8f5e8;
+            animation: pulse 2s infinite;
+        }
+        
+        @keyframes pulse {
+            0% { box-shadow: 0 0 0 0 rgba(23, 162, 184, 0.7); }
+            70% { box-shadow: 0 0 0 10px rgba(23, 162, 184, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(23, 162, 184, 0); }
+        }
+        
+        .path-node.locked {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+        
+        .content-section {
+            display: none;
+            animation: fadeIn 0.5s ease-in;
+        }
+        
+        .content-section.active {
+            display: block;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        .quiz-container {
+            background: #f8f9fa;
+            border-radius: 10px;
+            padding: 20px;
+            margin: 20px 0;
+        }
+        
+        .quiz-question {
+            background: #fff;
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 15px;
+            border-left: 4px solid var(--primary-color);
+        }
+        
+        .code-playground {
+            background: #2d3748;
+            border-radius: 10px;
+            overflow: hidden;
+            margin: 20px 0;
+        }
+        
+        .CodeMirror {
+            height: 300px;
+            font-size: 14px;
+        }
+        
+        .progress-rings {
+            display: flex;
+            justify-content: space-around;
+            margin-bottom: 20px;
+        }
+        
+        .progress-ring {
+            text-align: center;
+        }
+        
+        .progress-ring canvas {
+            max-width: 80px;
+            max-height: 80px;
+        }
+        
+        .skill-level {
+            font-size: 12px;
+            color: #6c757d;
+            margin-top: 5px;
+        }
+        
+        .recommendation-card {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border-radius: 10px;
+            padding: 15px;
+            margin-bottom: 15px;
+        }
+        
+        .ai-insight {
+            background: #e3f2fd;
+            border-left: 4px solid #2196f3;
+            border-radius: 0 10px 10px 0;
+            padding: 15px;
+            margin: 15px 0;
+        }
+        
+        .data-visualization {
+            background: #fff;
+            border-radius: 10px;
+            padding: 20px;
+            margin: 20px 0;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        }
+        
+        .btn-adaptive {
+            background: linear-gradient(135deg, #17a2b8 0%, #20c997 100%);
+            border: none;
+            color: white;
+            padding: 10px 20px;
+            border-radius: 25px;
+            font-weight: 600;
+            transition: all 0.3s ease;
+        }
+        
+        .btn-adaptive:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 15px rgba(23, 162, 184, 0.4);
+            color: white;
+        }
+        
+        @media (max-width: 1200px) {
+            .content-grid {
+                grid-template-columns: 1fr;
+                height: auto;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="main-container">
+        <!-- Header -->
+        <div class="header">
+            <div class="row align-items-center">
+                <div class="col-md-8">
+                    <h1><i class="fas fa-brain text-info"></i> Adaptive Data Science Learning Journey</h1>
+                    <p class="mb-0 text-muted">Personalized learning that adapts to your pace and style</p>
+                </div>
+                <div class="col-md-4 text-end">
+                    <div class="adaptive-indicator">
+                        <h5><i class="fas fa-robot"></i> AI Learning Assistant</h5>
+                        <p class="mb-0" id="learningStyle">Analyzing your learning style...</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="content-grid">
+            <!-- Left Sidebar: Learning Path -->
+            <div class="left-sidebar">
+                <h5><i class="fas fa-route"></i> Your Learning Path</h5>
+                
+                <div class="learning-path">
+                    <div class="path-node current" data-section="intro" onclick="switchSection('intro')">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div>
+                                <h6 class="mb-1">1. Introduction</h6>
+                                <small>Data Science Overview</small>
+                            </div>
+                            <i class="fas fa-play text-primary"></i>
+                        </div>
+                    </div>
+                    
+                    <div class="path-node locked" data-section="python" onclick="switchSection('python')">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div>
+                                <h6 class="mb-1">2. Python Basics</h6>
+                                <small>Programming Fundamentals</small>
+                            </div>
+                            <i class="fas fa-lock text-muted"></i>
+                        </div>
+                    </div>
+                    
+                    <div class="path-node locked" data-section="statistics" onclick="switchSection('statistics')">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div>
+                                <h6 class="mb-1">3. Statistics</h6>
+                                <small>Statistical Analysis</small>
+                            </div>
+                            <i class="fas fa-lock text-muted"></i>
+                        </div>
+                    </div>
+                    
+                    <div class="path-node locked" data-section="ml" onclick="switchSection('ml')">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div>
+                                <h6 class="mb-1">4. Machine Learning</h6>
+                                <small>ML Algorithms</small>
+                            </div>
+                            <i class="fas fa-lock text-muted"></i>
+                        </div>
+                    </div>
+                    
+                    <div class="path-node locked" data-section="visualization" onclick="switchSection('visualization')">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div>
+                                <h6 class="mb-1">5. Visualization</h6>
+                                <small>Data Visualization</small>
+                            </div>
+                            <i class="fas fa-lock text-muted"></i>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Progress Rings -->
+                <div class="progress-rings">
+                    <div class="progress-ring">
+                        <canvas id="pythonProgress" width="80" height="80"></canvas>
+                        <div class="skill-level">Python</div>
+                    </div>
+                    <div class="progress-ring">
+                        <canvas id="statsProgress" width="80" height="80"></canvas>
+                        <div class="skill-level">Statistics</div>
+                    </div>
+                    <div class="progress-ring">
+                        <canvas id="mlProgress" width="80" height="80"></canvas>
+                        <div class="skill-level">ML</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Main Content -->
+            <div class="main-content">
+                <!-- Introduction Section -->
+                <div class="content-section active" id="intro-section">
+                    <h3><i class="fas fa-chart-line"></i> Welcome to Data Science!</h3>
+                    <p>Data science is an interdisciplinary field that uses scientific methods, processes, algorithms, and systems to extract knowledge and insights from many structural and unstructured data.</p>
+                    
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="data-visualization">
+                                <h5>Data Science Process</h5>
+                                <canvas id="dataScienceProcessChart" width="400" height="200"></canvas>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="ai-insight">
+                                <h6><i class="fas fa-lightbulb"></i> AI Insight</h6>
+                                <p>Based on your responses, I'll personalize your learning journey. Let's start with a quick assessment to understand your current knowledge level.</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="quiz-container">
+                        <h5><i class="fas fa-question-circle"></i> Quick Assessment</h5>
+                        <div class="quiz-question">
+                            <h6>What's your experience with programming?</h6>
+                            <div class="form-check">
+                                <input class="form-check-input" type="radio" name="programmingExp" value="beginner" id="progBeginner">
+                                <label class="form-check-label" for="progBeginner">Complete beginner</label>
+                            </div>
+                            <div class="form-check">
+                                <input class="form-check-input" type="radio" name="programmingExp" value="some" id="progSome">
+                                <label class="form-check-label" for="progSome">Some experience with other languages</label>
+                            </div>
+                            <div class="form-check">
+                                <input class="form-check-input" type="radio" name="programmingExp" value="experienced" id="progExperienced">
+                                <label class="form-check-label" for="progExperienced">Experienced programmer</label>
+                            </div>
+                        </div>
+                        
+                        <div class="quiz-question">
+                            <h6>What's your mathematical background?</h6>
+                            <div class="form-check">
+                                <input class="form-check-input" type="radio" name="mathExp" value="basic" id="mathBasic">
+                                <label class="form-check-label" for="mathBasic">Basic high school math</label>
+                            </div>
+                            <div class="form-check">
+                                <input class="form-check-input" type="radio" name="mathExp" value="intermediate" id="mathIntermediate">
+                                <label class="form-check-label" for="mathIntermediate">Some college-level math</label>
+                            </div>
+                            <div class="form-check">
+                                <input class="form-check-input" type="radio" name="mathExp" value="advanced" id="mathAdvanced">
+                                <label class="form-check-label" for="mathAdvanced">Strong mathematical background</label>
+                            </div>
+                        </div>
+                        
+                        <div class="quiz-question">
+                            <h6>What's your preferred learning style?</h6>
+                            <div class="form-check">
+                                <input class="form-check-input" type="radio" name="learningStyle" value="visual" id="styleVisual">
+                                <label class="form-check-label" for="styleVisual">Visual - charts, graphs, diagrams</label>
+                            </div>
+                            <div class="form-check">
+                                <input class="form-check-input" type="radio" name="learningStyle" value="hands-on" id="styleHandsOn">
+                                <label class="form-check-label" for="styleHandsOn">Hands-on - coding and practice</label>
+                            </div>
+                            <div class="form-check">
+                                <input class="form-check-input" type="radio" name="learningStyle" value="theoretical" id="styleTheoretical">
+                                <label class="form-check-label" for="styleTheoretical">Theoretical - concepts and principles</label>
+                            </div>
+                        </div>
+                        
+                        <button class="btn btn-adaptive" onclick="completeAssessment()">
+                            <i class="fas fa-arrow-right"></i> Complete Assessment
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Python Section -->
+                <div class="content-section" id="python-section">
+                    <h3><i class="fab fa-python"></i> Python for Data Science</h3>
+                    <p>Python is the most popular programming language for data science. Let's learn the fundamentals with interactive examples.</p>
+                    
+                    <div class="code-playground">
+                        <div class="bg-dark text-light p-2">
+                            <span><i class="fas fa-code"></i> Python Playground</span>
+                        </div>
+                        <textarea id="pythonCodeEditor"># Welcome to Python for Data Science!
+import pandas as pd
+import numpy as np
+import matplotlib.pyplot as plt
+
+# Creating a simple dataset
+data = {
+    'Name': ['Alice', 'Bob', 'Charlie', 'Diana'],
+    'Age': [25, 30, 35, 28],
+    'Salary': [50000, 60000, 70000, 55000]
+}
+
+df = pd.DataFrame(data)
+print("Dataset:")
+print(df)
+
+# Basic statistics
+print("\nBasic Statistics:")
+print(df.describe())
+
+# Create a simple visualization
+plt.figure(figsize=(8, 6))
+plt.bar(df['Name'], df['Salary'])
+plt.title('Salary by Employee')
+plt.xlabel('Employee')
+plt.ylabel('Salary')
+plt.show()</textarea>
+                    </div>
+                    
+                    <div class="row mt-3">
+                        <div class="col-md-6">
+                            <button class="btn btn-adaptive w-100" onclick="runPythonCode()">
+                                <i class="fas fa-play"></i> Run Code
+                            </button>
+                        </div>
+                        <div class="col-md-6">
+                            <button class="btn btn-outline-info w-100" onclick="getPythonHint()">
+                                <i class="fas fa-lightbulb"></i> Get Hint
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <div id="pythonOutput" class="mt-3 p-3 bg-dark text-light rounded" style="min-height: 100px;">
+                        <div class="text-info">Ready to run your Python code!</div>
+                    </div>
+                </div>
+
+                <!-- Statistics Section -->
+                <div class="content-section" id="statistics-section">
+                    <h3><i class="fas fa-chart-bar"></i> Statistical Analysis</h3>
+                    <p>Statistics is the foundation of data science. Let's explore key statistical concepts with interactive examples.</p>
+                    
+                    <div class="data-visualization">
+                        <h5>Normal Distribution</h5>
+                        <canvas id="normalDistributionChart" width="400" height="200"></canvas>
+                    </div>
+                    
+                    <div class="quiz-container">
+                        <h5>Statistical Concepts Quiz</h5>
+                        <div class="quiz-question">
+                            <h6>What does the standard deviation measure?</h6>
+                            <div class="form-check">
+                                <input class="form-check-input" type="radio" name="stdDev" value="average" id="stdAverage">
+                                <label class="form-check-label" for="stdAverage">The average value</label>
+                            </div>
+                            <div class="form-check">
+                                <input class="form-check-input" type="radio" name="stdDev" value="spread" id="stdSpread">
+                                <label class="form-check-label" for="stdSpread">The spread or variability of data</label>
+                            </div>
+                            <div class="form-check">
+                                <input class="form-check-input" type="radio" name="stdDev" value="median" id="stdMedian">
+                                <label class="form-check-label" for="stdMedian">The middle value</label>
+                            </div>
+                        </div>
+                        <button class="btn btn-adaptive" onclick="checkStatisticsAnswer()">
+                            <i class="fas fa-check"></i> Check Answer
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Machine Learning Section -->
+                <div class="content-section" id="ml-section">
+                    <h3><i class="fas fa-robot"></i> Machine Learning Fundamentals</h3>
+                    <p>Machine learning is the heart of data science. Let's build our first ML model!</p>
+                    
+                    <div class="data-visualization">
+                        <h5>Model Performance</h5>
+                        <canvas id="mlPerformanceChart" width="400" height="200"></canvas>
+                    </div>
+                    
+                    <div class="code-playground">
+                        <div class="bg-dark text-light p-2">
+                            <span><i class="fas fa-brain"></i> Machine Learning Model</span>
+                        </div>
+                        <textarea id="mlCodeEditor"># Simple Linear Regression Example
+from sklearn.linear_model import LinearRegression
+from sklearn.model_selection import train_test_split
+from sklearn.metrics import mean_squared_error, r2_score
+import numpy as np
+
+# Generate sample data
+np.random.seed(42)
+X = np.random.rand(100, 1) * 10
+y = 2 * X.flatten() + 3 + np.random.randn(100) * 2
+
+# Split the data
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2)
+
+# Create and train the model
+model = LinearRegression()
+model.fit(X_train, y_train)
+
+# Make predictions
+y_pred = model.predict(X_test)
+
+# Evaluate the model
+mse = mean_squared_error(y_test, y_pred)
+r2 = r2_score(y_test, y_pred)
+
+print(f"Mean Squared Error: {mse:.2f}")
+print(f"R² Score: {r2:.2f}")
+print(f"Model coefficients: {model.coef_[0]:.2f}")
+print(f"Model intercept: {model.intercept_:.2f}")</textarea>
+                    </div>
+                    
+                    <button class="btn btn-adaptive" onclick="runMLCode()">
+                        <i class="fas fa-play"></i> Train Model
+                    </button>
+                    
+                    <div id="mlOutput" class="mt-3 p-3 bg-dark text-light rounded" style="min-height: 100px;">
+                        <div class="text-info">Ready to train your first ML model!</div>
+                    </div>
+                </div>
+
+                <!-- Visualization Section -->
+                <div class="content-section" id="visualization-section">
+                    <h3><i class="fas fa-chart-pie"></i> Data Visualization</h3>
+                    <p>Effective data visualization is crucial for communicating insights. Let's create beautiful charts!</p>
+                    
+                    <div class="data-visualization">
+                        <h5>Sales Data Visualization</h5>
+                        <canvas id="salesChart" width="400" height="200"></canvas>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="data-visualization">
+                                <h6>Pie Chart</h6>
+                                <canvas id="pieChart" width="200" height="200"></canvas>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="data-visualization">
+                                <h6>Bar Chart</h6>
+                                <canvas id="barChart" width="200" height="200"></canvas>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Right Sidebar: AI Recommendations -->
+            <div class="right-sidebar">
+                <h5><i class="fas fa-magic"></i> AI Recommendations</h5>
+                
+                <div class="recommendation-card">
+                    <h6><i class="fas fa-star"></i> Next Steps</h6>
+                    <p id="nextSteps">Complete the assessment to get personalized recommendations.</p>
+                </div>
+                
+                <div class="recommendation-card">
+                    <h6><i class="fas fa-clock"></i> Learning Time</h6>
+                    <p>Estimated time to complete: <span id="estimatedTime">2-3 hours</span></p>
+                </div>
+                
+                <div class="recommendation-card">
+                    <h6><i class="fas fa-trophy"></i> Achievements</h6>
+                    <div id="achievements">
+                        <div class="text-muted">Complete sections to unlock achievements!</div>
+                    </div>
+                </div>
+                
+                <div class="ai-insight">
+                    <h6><i class="fas fa-brain"></i> AI Insights</h6>
+                    <p id="aiInsights">I'm analyzing your learning patterns to provide better recommendations.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/codemirror.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/mode/python/python.min.js"></script>
+    <script>
+        // Global variables
+        let currentSection = 'intro';
+        let completedSections = [];
+        let learningProfile = {};
+        let pythonCodeEditor;
+        let mlCodeEditor;
+        let startTime = Date.now();
+
+        // Initialize the application
+        document.addEventListener('DOMContentLoaded', function() {
+            initializeCodeEditors();
+            initializeCharts();
+            initializeProgressRings();
+            startAdaptiveLearning();
+            updateProgress();
+        });
+
+        function initializeCodeEditors() {
+            pythonCodeEditor = CodeMirror.fromTextArea(document.getElementById('pythonCodeEditor'), {
+                mode: 'python',
+                theme: 'material',
+                lineNumbers: true,
+                indentUnit: 4,
+                tabSize: 4
+            });
+
+            mlCodeEditor = CodeMirror.fromTextArea(document.getElementById('mlCodeEditor'), {
+                mode: 'python',
+                theme: 'material',
+                lineNumbers: true,
+                indentUnit: 4,
+                tabSize: 4
+            });
+        }
+
+        function initializeCharts() {
+            // Data Science Process Chart
+            const processCtx = document.getElementById('dataScienceProcessChart').getContext('2d');
+            new Chart(processCtx, {
+                type: 'doughnut',
+                data: {
+                    labels: ['Data Collection', 'Data Cleaning', 'Exploration', 'Modeling', 'Deployment'],
+                    datasets: [{
+                        data: [20, 15, 25, 30, 10],
+                        backgroundColor: ['#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0', '#9966FF']
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    plugins: {
+                        legend: {
+                            position: 'bottom'
+                        }
+                    }
+                }
+            });
+
+            // Normal Distribution Chart
+            const normalCtx = document.getElementById('normalDistributionChart').getContext('2d');
+            const normalData = [];
+            for (let i = -4; i <= 4; i += 0.1) {
+                normalData.push({
+                    x: i,
+                    y: Math.exp(-i * i / 2) / Math.sqrt(2 * Math.PI)
+                });
+            }
+            
+            new Chart(normalCtx, {
+                type: 'line',
+                data: {
+                    datasets: [{
+                        label: 'Normal Distribution',
+                        data: normalData,
+                        borderColor: '#36A2EB',
+                        backgroundColor: 'rgba(54, 162, 235, 0.1)',
+                        fill: true
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    scales: {
+                        x: {
+                            type: 'linear',
+                            position: 'bottom'
+                        }
+                    }
+                }
+            });
+
+            // ML Performance Chart
+            const mlCtx = document.getElementById('mlPerformanceChart').getContext('2d');
+            new Chart(mlCtx, {
+                type: 'line',
+                data: {
+                    labels: ['Epoch 1', 'Epoch 2', 'Epoch 3', 'Epoch 4', 'Epoch 5'],
+                    datasets: [{
+                        label: 'Training Loss',
+                        data: [0.8, 0.6, 0.4, 0.3, 0.2],
+                        borderColor: '#FF6384',
+                        backgroundColor: 'rgba(255, 99, 132, 0.1)'
+                    }, {
+                        label: 'Validation Loss',
+                        data: [0.9, 0.7, 0.5, 0.4, 0.35],
+                        borderColor: '#36A2EB',
+                        backgroundColor: 'rgba(54, 162, 235, 0.1)'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    scales: {
+                        y: {
+                            beginAtZero: true
+                        }
+                    }
+                }
+            });
+
+            // Sales Chart
+            const salesCtx = document.getElementById('salesChart').getContext('2d');
+            new Chart(salesCtx, {
+                type: 'bar',
+                data: {
+                    labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'],
+                    datasets: [{
+                        label: 'Sales',
+                        data: [12000, 19000, 15000, 25000, 22000, 30000],
+                        backgroundColor: 'rgba(54, 162, 235, 0.8)'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    scales: {
+                        y: {
+                            beginAtZero: true
+                        }
+                    }
+                }
+            });
+
+            // Pie Chart
+            const pieCtx = document.getElementById('pieChart').getContext('2d');
+            new Chart(pieCtx, {
+                type: 'pie',
+                data: {
+                    labels: ['Desktop', 'Mobile', 'Tablet'],
+                    datasets: [{
+                        data: [60, 30, 10],
+                        backgroundColor: ['#FF6384', '#36A2EB', '#FFCE56']
+                    }]
+                },
+                options: {
+                    responsive: true
+                }
+            });
+
+            // Bar Chart
+            const barCtx = document.getElementById('barChart').getContext('2d');
+            new Chart(barCtx, {
+                type: 'bar',
+                data: {
+                    labels: ['A', 'B', 'C', 'D'],
+                    datasets: [{
+                        data: [10, 20, 15, 25],
+                        backgroundColor: ['#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0']
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    scales: {
+                        y: {
+                            beginAtZero: true
+                        }
+                    }
+                }
+            });
+        }
+
+        function initializeProgressRings() {
+            drawProgressRing('pythonProgress', 0, '#17a2b8');
+            drawProgressRing('statsProgress', 0, '#28a745');
+            drawProgressRing('mlProgress', 0, '#ffc107');
+        }
+
+        function drawProgressRing(canvasId, percentage, color) {
+            const canvas = document.getElementById(canvasId);
+            const ctx = canvas.getContext('2d');
+            const centerX = canvas.width / 2;
+            const centerY = canvas.height / 2;
+            const radius = 30;
+            
+            // Clear canvas
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            
+            // Draw background circle
+            ctx.beginPath();
+            ctx.arc(centerX, centerY, radius, 0, 2 * Math.PI);
+            ctx.strokeStyle = '#e9ecef';
+            ctx.lineWidth = 8;
+            ctx.stroke();
+            
+            // Draw progress arc
+            ctx.beginPath();
+            ctx.arc(centerX, centerY, radius, -Math.PI / 2, -Math.PI / 2 + (percentage / 100) * 2 * Math.PI);
+            ctx.strokeStyle = color;
+            ctx.lineWidth = 8;
+            ctx.stroke();
+            
+            // Draw percentage text
+            ctx.fillStyle = color;
+            ctx.font = '14px Arial';
+            ctx.textAlign = 'center';
+            ctx.fillText(percentage + '%', centerX, centerY + 5);
+        }
+
+        function startAdaptiveLearning() {
+            // Initialize with Interactive AI system
+            if (window.interactiveAIProgress) {
+                window.interactiveAIProgress.updateStep(1, 5);
+                window.interactiveAIProgress.addAIFeedback("Welcome to Adaptive Data Science Learning! I'll personalize your journey based on your responses.", "welcome");
+            }
+            
+            // Update learning style indicator
+            document.getElementById('learningStyle').textContent = "Analyzing your learning style...";
+            
+            // Update AI insights
+            document.getElementById('aiInsights').textContent = "I'm ready to adapt the content to your learning preferences. Let's start with the assessment!";
+        }
+
+        function completeAssessment() {
+            const programmingExp = document.querySelector('input[name="programmingExp"]:checked');
+            const mathExp = document.querySelector('input[name="mathExp"]:checked');
+            const learningStyle = document.querySelector('input[name="learningStyle"]:checked');
+            
+            if (!programmingExp || !mathExp || !learningStyle) {
+                alert('Please answer all questions before proceeding.');
+                return;
+            }
+            
+            // Create learning profile
+            learningProfile = {
+                programming: programmingExp.value,
+                math: mathExp.value,
+                style: learningStyle.value,
+                timestamp: Date.now()
+            };
+            
+            // Update learning style indicator
+            const styleText = {
+                'visual': 'Visual Learner - Charts & Graphs',
+                'hands-on': 'Hands-on Learner - Coding & Practice',
+                'theoretical': 'Theoretical Learner - Concepts & Principles'
+            };
+            document.getElementById('learningStyle').textContent = styleText[learningStyle.value];
+            
+            // Unlock next section
+            unlockSection('python');
+            
+            // Update recommendations
+            updateRecommendations();
+            
+            // Update AI insights
+            document.getElementById('aiInsights').textContent = `Perfect! I've analyzed your profile. You're a ${learningStyle.value} learner with ${programmingExp.value} programming experience and ${mathExp.value} math background. I'll adapt the content accordingly.`;
+            
+            // Update progress
+            updateProgress();
+            
+            // Add user response to Interactive AI system
+            if (window.interactiveAIProgress) {
+                window.interactiveAIProgress.addUserResponse(
+                    "Learning Assessment",
+                    `Style: ${learningStyle.value}, Programming: ${programmingExp.value}, Math: ${mathExp.value}`,
+                    'assessment'
+                );
+            }
+        }
+
+        function updateRecommendations() {
+            const recommendations = {
+                'beginner': 'Start with Python basics and focus on understanding data types and basic operations.',
+                'some': 'You can move through Python basics quickly and focus on data science libraries.',
+                'experienced': 'Jump to advanced topics and focus on data science-specific Python libraries.'
+            };
+            
+            document.getElementById('nextSteps').textContent = recommendations[learningProfile.programming] || 'Complete the assessment to get personalized recommendations.';
+        }
+
+        function switchSection(sectionName) {
+            // Check if section is unlocked
+            if (sectionName !== 'intro' && !completedSections.includes(getPreviousSection(sectionName))) {
+                return;
+            }
+            
+            // Hide all sections
+            document.querySelectorAll('.content-section').forEach(section => {
+                section.classList.remove('active');
+            });
+            
+            // Show selected section
+            document.getElementById(sectionName + '-section').classList.add('active');
+            
+            // Update path nodes
+            document.querySelectorAll('.path-node').forEach(node => {
+                node.classList.remove('current');
+                if (node.dataset.section === sectionName) {
+                    node.classList.add('current');
+                }
+            });
+            
+            currentSection = sectionName;
+            
+            // Update progress
+            updateProgress();
+        }
+
+        function getPreviousSection(sectionName) {
+            const sections = ['intro', 'python', 'statistics', 'ml', 'visualization'];
+            const index = sections.indexOf(sectionName);
+            return index > 0 ? sections[index - 1] : null;
+        }
+
+        function unlockSection(sectionName) {
+            const node = document.querySelector(`[data-section="${sectionName}"]`);
+            if (node) {
+                node.classList.remove('locked');
+                node.querySelector('i').className = 'fas fa-unlock text-success';
+                node.onclick = () => switchSection(sectionName);
+            }
+        }
+
+        function completeSection(sectionName) {
+            if (!completedSections.includes(sectionName)) {
+                completedSections.push(sectionName);
+                
+                // Update path node
+                const node = document.querySelector(`[data-section="${sectionName}"]`);
+                if (node) {
+                    node.classList.add('completed');
+                    node.classList.remove('current');
+                    node.querySelector('i').className = 'fas fa-check text-success';
+                }
+                
+                // Unlock next section
+                const nextSection = getNextSection(sectionName);
+                if (nextSection) {
+                    unlockSection(nextSection);
+                }
+                
+                // Update progress rings
+                updateProgressRings();
+                
+                // Update achievements
+                updateAchievements();
+                
+                // Update progress
+                updateProgress();
+                
+                // Add completion to Interactive AI system
+                if (window.interactiveAIProgress) {
+                    window.interactiveAIProgress.addUserResponse(
+                        `Completed ${sectionName} section`,
+                        `Sections completed: ${completedSections.length}/5`,
+                        'section_completion'
+                    );
+                }
+            }
+        }
+
+        function getNextSection(sectionName) {
+            const sections = ['intro', 'python', 'statistics', 'ml', 'visualization'];
+            const index = sections.indexOf(sectionName);
+            return index < sections.length - 1 ? sections[index + 1] : null;
+        }
+
+        function updateProgressRings() {
+            const pythonProgress = completedSections.includes('python') ? 100 : 0;
+            const statsProgress = completedSections.includes('statistics') ? 100 : 0;
+            const mlProgress = completedSections.includes('ml') ? 100 : 0;
+            
+            drawProgressRing('pythonProgress', pythonProgress, '#17a2b8');
+            drawProgressRing('statsProgress', statsProgress, '#28a745');
+            drawProgressRing('mlProgress', mlProgress, '#ffc107');
+        }
+
+        function updateAchievements() {
+            const achievements = document.getElementById('achievements');
+            achievements.innerHTML = '';
+            
+            const achievementList = [
+                { id: 'intro', text: '🎯 Assessment Complete', icon: 'fas fa-clipboard-check' },
+                { id: 'python', text: '🐍 Python Basics Mastered', icon: 'fab fa-python' },
+                { id: 'statistics', text: '📊 Statistics Expert', icon: 'fas fa-chart-bar' },
+                { id: 'ml', text: '🤖 ML Fundamentals', icon: 'fas fa-robot' },
+                { id: 'visualization', text: '📈 Visualization Pro', icon: 'fas fa-chart-pie' }
+            ];
+            
+            achievementList.forEach(achievement => {
+                if (completedSections.includes(achievement.id)) {
+                    const achievementDiv = document.createElement('div');
+                    achievementDiv.className = 'text-success mb-2';
+                    achievementDiv.innerHTML = `<i class="${achievement.icon}"></i> ${achievement.text}`;
+                    achievements.appendChild(achievementDiv);
+                }
+            });
+            
+            if (achievements.children.length === 0) {
+                achievements.innerHTML = '<div class="text-muted">Complete sections to unlock achievements!</div>';
+            }
+        }
+
+        function runPythonCode() {
+            const code = pythonCodeEditor.getValue();
+            const output = document.getElementById('pythonOutput');
+            
+            // Simulate Python execution
+            output.innerHTML = `
+                <div class="text-success">Dataset:</div>
+                <div class="text-light">    Name   Age  Salary</div>
+                <div class="text-light">0  Alice   25   50000</div>
+                <div class="text-light">1    Bob   30   60000</div>
+                <div class="text-light">2 Charlie  35   70000</div>
+                <div class="text-light">3  Diana   28   55000</div>
+                <div class="text-success mt-2">Basic Statistics:</div>
+                <div class="text-light">         Age     Salary</div>
+                <div class="text-light">count   4.00      4.00</div>
+                <div class="text-light">mean   29.50  58750.00</div>
+                <div class="text-light">std     4.20   8703.89</div>
+                <div class="text-success mt-2">Chart displayed successfully!</div>
+            `;
+            
+            // Complete Python section
+            setTimeout(() => {
+                completeSection('python');
+                switchSection('statistics');
+            }, 2000);
+        }
+
+        function getPythonHint() {
+            const hints = [
+                "Try modifying the data values to see how statistics change",
+                "Experiment with different chart types like scatter plots",
+                "Add more columns to your dataset",
+                "Try filtering the data based on certain criteria"
+            ];
+            
+            const hint = hints[Math.floor(Math.random() * hints.length)];
+            document.getElementById('pythonOutput').innerHTML = `<div class="text-warning">💡 Hint: ${hint}</div>`;
+        }
+
+        function checkStatisticsAnswer() {
+            const selectedAnswer = document.querySelector('input[name="stdDev"]:checked');
+            if (selectedAnswer) {
+                const isCorrect = selectedAnswer.value === 'spread';
+                const feedback = isCorrect ? 
+                    '<div class="alert alert-success">Correct! Standard deviation measures the spread or variability of data.</div>' :
+                    '<div class="alert alert-danger">Not quite right. Standard deviation measures the spread or variability of data, not the average or median.</div>';
+                
+                document.querySelector('.quiz-container').innerHTML += feedback;
+                
+                if (isCorrect) {
+                    setTimeout(() => {
+                        completeSection('statistics');
+                        switchSection('ml');
+                    }, 1500);
+                }
+            }
+        }
+
+        function runMLCode() {
+            const output = document.getElementById('mlOutput');
+            output.innerHTML = `
+                <div class="text-success">Model Training Complete!</div>
+                <div class="text-light">Mean Squared Error: 3.45</div>
+                <div class="text-light">R² Score: 0.89</div>
+                <div class="text-light">Model coefficients: 2.05</div>
+                <div class="text-light">Model intercept: 2.98</div>
+                <div class="text-success mt-2">Great job! Your model has an 89% accuracy!</div>
+            `;
+            
+            // Complete ML section
+            setTimeout(() => {
+                completeSection('ml');
+                switchSection('visualization');
+            }, 2000);
+        }
+
+        function updateProgress() {
+            // Update with Interactive AI system
+            if (window.interactiveAIProgress) {
+                const progressData = {
+                    current_step: completedSections.length + 1,
+                    total_steps: 5,
+                    completion_percentage: Math.round((completedSections.length / 5) * 100),
+                    is_completed: completedSections.length === 5,
+                    time_spent: Math.floor((Date.now() - startTime) / 1000),
+                    status: completedSections.length === 5 ? 'completed' : 'in_progress'
+                };
+                
+                window.interactiveAIProgress.forceUpdate();
+                
+                // Mark as completed if all sections done
+                if (completedSections.length === 5) {
+                    window.interactiveAIProgress.markCompleted();
+                }
+            }
+        }
+
+        // Auto-complete visualization section when loaded
+        document.getElementById('visualization-section').addEventListener('DOMContentLoaded', function() {
+            setTimeout(() => {
+                completeSection('visualization');
+            }, 3000);
+        });
+    </script>
+</body>
+</html>

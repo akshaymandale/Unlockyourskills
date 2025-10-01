@@ -1,0 +1,355 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Adaptive Spanish Language Learning</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        body { background: linear-gradient(135deg, #fd7e14 0%, #e83e8c 100%); min-height: 100vh; }
+        .main-container { max-width: 1200px; margin: 0 auto; padding: 20px; }
+        .content-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; height: calc(100vh - 200px); }
+        .panel { background: rgba(255, 255, 255, 0.95); border-radius: 15px; padding: 20px; box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1); overflow-y: auto; }
+        .tutor-chat { background: linear-gradient(135deg, #fd7e14 0%, #e83e8c 100%); color: white; border-radius: 15px; padding: 20px; margin-bottom: 20px; }
+        .lesson-card { background: #f8f9fa; border-radius: 10px; padding: 15px; margin-bottom: 10px; cursor: pointer; transition: all 0.3s ease; }
+        .lesson-card:hover { transform: translateY(-2px); box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1); }
+        .lesson-card.active { border-left: 4px solid #fd7e14; background: #fff3cd; }
+        .lesson-card.completed { border-left: 4px solid #28a745; background: #d4edda; }
+        .btn-custom { background: linear-gradient(135deg, #fd7e14 0%, #e83e8c 100%); border: none; color: white; padding: 10px 20px; border-radius: 25px; }
+        .pronunciation-area { background: #f8f9fa; border-radius: 10px; padding: 20px; margin: 20px 0; text-align: center; }
+        .word-card { background: white; border-radius: 10px; padding: 20px; margin: 10px 0; box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1); }
+    </style>
+</head>
+<body>
+    <div class="main-container">
+        <div class="header bg-white rounded p-3 mb-3">
+            <h1><i class="fas fa-language text-warning"></i> Adaptive Spanish Language Learning</h1>
+            <p class="mb-0 text-muted">Personalized Spanish learning with AI pronunciation assistance</p>
+        </div>
+
+        <div class="content-grid">
+            <div class="panel">
+                <div class="tutor-chat">
+                    <h4><i class="fas fa-user-graduate"></i> Tu Tutor de Español</h4>
+                    <div id="tutorMessages">
+                        <div class="bg-white bg-opacity-10 p-3 rounded mb-2">
+                            <strong>¡Hola!</strong> I'm your Spanish tutor. Let's start your language learning journey!
+                        </div>
+                    </div>
+                    <div class="input-group mt-3">
+                        <input type="text" class="form-control" id="userInput" placeholder="Ask in Spanish or English...">
+                        <button class="btn btn-light" onclick="sendMessage()"><i class="fas fa-paper-plane"></i></button>
+                    </div>
+                </div>
+
+                <h5><i class="fas fa-book"></i> Lessons</h5>
+                <div class="lesson-card active" onclick="switchLesson(1)">
+                    <h6>1. Basic Greetings</h6>
+                    <small>Hola, Buenos días, ¿Cómo estás?</small>
+                </div>
+                <div class="lesson-card" onclick="switchLesson(2)">
+                    <h6>2. Numbers</h6>
+                    <small>Uno, dos, tres, cuatro...</small>
+                </div>
+                <div class="lesson-card" onclick="switchLesson(3)">
+                    <h6>3. Family</h6>
+                    <small>Familia, padre, madre, hermano</small>
+                </div>
+                <div class="lesson-card" onclick="switchLesson(4)">
+                    <h6>4. Food & Drinks</h6>
+                    <small>Comida, agua, café, pan</small>
+                </div>
+                <div class="lesson-card" onclick="switchLesson(5)">
+                    <h6>5. Conversation</h6>
+                    <small>Basic conversation skills</small>
+                </div>
+            </div>
+
+            <div class="panel">
+                <div class="progress-section bg-light rounded p-3 mb-3">
+                    <div class="d-flex justify-content-between">
+                        <span><strong>Progress</strong></span>
+                        <span id="progressText">0% Complete</span>
+                    </div>
+                    <div class="progress">
+                        <div class="progress-bar bg-warning" id="progressBar" style="width: 0%"></div>
+                    </div>
+                </div>
+
+                <div id="lessonContent">
+                    <h5><i class="fas fa-star"></i> Basic Greetings</h5>
+                    
+                    <div class="word-card">
+                        <h3 class="text-center text-primary">Hola</h3>
+                        <p class="text-center text-muted">Hello</p>
+                        <button class="btn btn-custom w-100" onclick="pronounceWord('hola')">
+                            <i class="fas fa-volume-up"></i> Pronounce
+                        </button>
+                    </div>
+
+                    <div class="word-card">
+                        <h3 class="text-center text-primary">Buenos días</h3>
+                        <p class="text-center text-muted">Good morning</p>
+                        <button class="btn btn-custom w-100" onclick="pronounceWord('buenos días')">
+                            <i class="fas fa-volume-up"></i> Pronounce
+                        </button>
+                    </div>
+
+                    <div class="word-card">
+                        <h3 class="text-center text-primary">¿Cómo estás?</h3>
+                        <p class="text-center text-muted">How are you?</p>
+                        <button class="btn btn-custom w-100" onclick="pronounceWord('cómo estás')">
+                            <i class="fas fa-volume-up"></i> Pronounce
+                        </button>
+                    </div>
+
+                    <div class="pronunciation-area">
+                        <h6><i class="fas fa-microphone"></i> Practice Pronunciation</h6>
+                        <button class="btn btn-custom" onclick="startRecording()">
+                            <i class="fas fa-microphone"></i> Record Your Voice
+                        </button>
+                        <div id="pronunciationFeedback" class="mt-2"></div>
+                    </div>
+
+                    <div class="mt-3">
+                        <button class="btn btn-custom w-100" onclick="completeLesson()">
+                            <i class="fas fa-check"></i> Complete Lesson
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let currentLesson = 1;
+        let completedLessons = 0;
+        let startTime = Date.now();
+
+        document.addEventListener('DOMContentLoaded', function() {
+            initializeProgressTracking();
+            updateProgress();
+        });
+
+        function initializeProgressTracking() {
+            if (window.interactiveAIProgress) {
+                window.interactiveAIProgress.updateStep(1, 5);
+                window.interactiveAIProgress.addAIFeedback("¡Hola! Welcome to Spanish learning! I'll help you master pronunciation and conversation.", "welcome");
+            }
+        }
+
+        function switchLesson(lessonNum) {
+            if (lessonNum <= currentLesson) {
+                currentLesson = lessonNum;
+                
+                // Update lesson cards
+                document.querySelectorAll('.lesson-card').forEach((card, index) => {
+                    card.classList.remove('active', 'completed');
+                    if (index + 1 < lessonNum) {
+                        card.classList.add('completed');
+                    } else if (index + 1 === lessonNum) {
+                        card.classList.add('active');
+                    }
+                });
+                
+                loadLessonContent(lessonNum);
+                updateProgress();
+            }
+        }
+
+        function loadLessonContent(lessonNum) {
+            const lessonContents = {
+                1: {
+                    title: "Basic Greetings",
+                    words: [
+                        { spanish: "Hola", english: "Hello" },
+                        { spanish: "Buenos días", english: "Good morning" },
+                        { spanish: "¿Cómo estás?", english: "How are you?" },
+                        { spanish: "Gracias", english: "Thank you" }
+                    ]
+                },
+                2: {
+                    title: "Numbers",
+                    words: [
+                        { spanish: "Uno", english: "One" },
+                        { spanish: "Dos", english: "Two" },
+                        { spanish: "Tres", english: "Three" },
+                        { spanish: "Cuatro", english: "Four" }
+                    ]
+                },
+                3: {
+                    title: "Family",
+                    words: [
+                        { spanish: "Familia", english: "Family" },
+                        { spanish: "Padre", english: "Father" },
+                        { spanish: "Madre", english: "Mother" },
+                        { spanish: "Hermano", english: "Brother" }
+                    ]
+                },
+                4: {
+                    title: "Food & Drinks",
+                    words: [
+                        { spanish: "Comida", english: "Food" },
+                        { spanish: "Agua", english: "Water" },
+                        { spanish: "Café", english: "Coffee" },
+                        { spanish: "Pan", english: "Bread" }
+                    ]
+                },
+                5: {
+                    title: "Conversation",
+                    words: [
+                        { spanish: "¿Dónde está?", english: "Where is?" },
+                        { spanish: "Por favor", english: "Please" },
+                        { spanish: "Lo siento", english: "I'm sorry" },
+                        { spanish: "De nada", english: "You're welcome" }
+                    ]
+                }
+            };
+
+            const lesson = lessonContents[lessonNum];
+            const content = document.getElementById('lessonContent');
+            
+            content.innerHTML = `
+                <h5><i class="fas fa-star"></i> ${lesson.title}</h5>
+                ${lesson.words.map(word => `
+                    <div class="word-card">
+                        <h3 class="text-center text-primary">${word.spanish}</h3>
+                        <p class="text-center text-muted">${word.english}</p>
+                        <button class="btn btn-custom w-100" onclick="pronounceWord('${word.spanish}')">
+                            <i class="fas fa-volume-up"></i> Pronounce
+                        </button>
+                    </div>
+                `).join('')}
+                <div class="pronunciation-area">
+                    <h6><i class="fas fa-microphone"></i> Practice Pronunciation</h6>
+                    <button class="btn btn-custom" onclick="startRecording()">
+                        <i class="fas fa-microphone"></i> Record Your Voice
+                    </button>
+                    <div id="pronunciationFeedback" class="mt-2"></div>
+                </div>
+                <div class="mt-3">
+                    <button class="btn btn-custom w-100" onclick="completeLesson()">
+                        <i class="fas fa-check"></i> Complete Lesson
+                    </button>
+                </div>
+            `;
+        }
+
+        function pronounceWord(word) {
+            // Simulate pronunciation
+            addTutorMessage(`Pronouncing: ${word}`);
+            
+            // Use Web Speech API if available
+            if ('speechSynthesis' in window) {
+                const utterance = new SpeechSynthesisUtterance(word);
+                utterance.lang = 'es-ES';
+                speechSynthesis.speak(utterance);
+            }
+            
+            updateProgress();
+        }
+
+        function startRecording() {
+            const feedback = document.getElementById('pronunciationFeedback');
+            feedback.innerHTML = '<div class="text-info">Recording... Speak now!</div>';
+            
+            // Simulate recording
+            setTimeout(() => {
+                const scores = ['Excellent!', 'Good!', 'Keep practicing!'];
+                const score = scores[Math.floor(Math.random() * scores.length)];
+                feedback.innerHTML = `<div class="text-success">${score} Your pronunciation is improving!</div>`;
+                updateProgress();
+            }, 2000);
+        }
+
+        function completeLesson() {
+            if (completedLessons < 5) {
+                completedLessons++;
+                currentLesson = Math.min(5, currentLesson + 1);
+                
+                // Update lesson cards
+                document.querySelectorAll('.lesson-card').forEach((card, index) => {
+                    if (index + 1 <= completedLessons) {
+                        card.classList.add('completed');
+                        card.classList.remove('active');
+                    } else if (index + 1 === currentLesson) {
+                        card.classList.add('active');
+                    }
+                });
+                
+                // Load next lesson
+                if (currentLesson <= 5) {
+                    loadLessonContent(currentLesson);
+                }
+                
+                addTutorMessage(`¡Excelente! You completed lesson ${completedLessons}. Let's continue!`);
+                updateProgress();
+                
+                // Add to Interactive AI system
+                if (window.interactiveAIProgress) {
+                    window.interactiveAIProgress.addUserResponse(
+                        `Completed lesson ${completedLessons}`,
+                        `Spanish lesson: ${currentLesson}`,
+                        'lesson_completion'
+                    );
+                }
+            }
+        }
+
+        function sendMessage() {
+            const input = document.getElementById('userInput');
+            const message = input.value.trim();
+            
+            if (message) {
+                addTutorMessage(`You: ${message}`);
+                setTimeout(() => {
+                    const responses = [
+                        "¡Muy bien! That's correct Spanish!",
+                        "Good pronunciation! Keep practicing!",
+                        "Let me help you with that...",
+                        "¡Excelente! You're learning quickly!"
+                    ];
+                    const response = responses[Math.floor(Math.random() * responses.length)];
+                    addTutorMessage(`Tutor: ${response}`);
+                }, 1000);
+                input.value = '';
+                updateProgress();
+            }
+        }
+
+        function addTutorMessage(message) {
+            const tutorMessages = document.getElementById('tutorMessages');
+            const messageDiv = document.createElement('div');
+            messageDiv.className = 'bg-white bg-opacity-10 p-3 rounded mb-2';
+            messageDiv.innerHTML = message;
+            tutorMessages.appendChild(messageDiv);
+            tutorMessages.scrollTop = tutorMessages.scrollHeight;
+        }
+
+        function updateProgress() {
+            const progress = Math.min(100, (completedLessons / 5) * 100);
+            document.getElementById('progressText').textContent = progress + '% Complete';
+            document.getElementById('progressBar').style.width = progress + '%';
+            
+            if (window.interactiveAIProgress) {
+                const progressData = {
+                    current_step: currentLesson,
+                    total_steps: 5,
+                    completion_percentage: progress,
+                    is_completed: completedLessons >= 5,
+                    time_spent: Math.floor((Date.now() - startTime) / 1000),
+                    status: completedLessons >= 5 ? 'completed' : 'in_progress'
+                };
+                
+                window.interactiveAIProgress.forceUpdate();
+                
+                if (completedLessons >= 5) {
+                    window.interactiveAIProgress.markCompleted();
+                    addTutorMessage("¡Felicitaciones! You've completed all Spanish lessons! You're now ready for conversations!");
+                }
+            }
+        }
+    </script>
+</body>
+</html>

@@ -19,8 +19,17 @@ document.addEventListener('DOMContentLoaded', function() {
         console.log('Original data preserved for client-side filtering:', window.reportData.originalData.length, 'records');
     }
     
+    // Initialize pagination variables
+    window.reportData.currentPage = window.reportData.currentPage || 1;
+    window.reportData.perPage = window.reportData.perPage || 20;
+    
     // Initialize charts with data passed from server
     initializeCharts();
+    
+    // Initialize pagination controls if pagination data is available
+    if (window.reportData && window.reportData.pagination) {
+        updatePaginationControls(window.reportData.pagination);
+    }
     
     // Set initial button state
     updateApplyButtonState();
@@ -126,13 +135,16 @@ function loadReportData() {
         return;
     }
     
+    // Reset pagination when applying new filters
+    resetPagination();
+    
     const filters = getCurrentFilters();
     console.log('Applied filters:', filters);
     console.log('Original data count:', window.reportData.reportData.length);
     
-    // If custom field filtering is applied, use server-side filtering
-    if (filters.custom_field_id && filters.custom_field_value) {
-        console.log('Using server-side filtering for custom field');
+    // If any complex filtering is applied, use server-side filtering
+    if (filters.custom_field_id || filters.user_ids || filters.course_ids) {
+        console.log('Using server-side filtering for complex filters');
         loadReportDataFromServer(filters);
         return;
     }
@@ -292,13 +304,27 @@ function getCurrentFilters() {
     // Get form values
     const startDate = document.getElementById('startDate')?.value;
     const endDate = document.getElementById('endDate')?.value;
-    const customFieldId = document.getElementById('customFieldSelect')?.value;
     const customFieldValue = document.getElementById('customFieldValueSelect')?.value;
+    
+    // Get custom field ID from dropdown selection
+    let customFieldId = null;
+    const customFieldText = document.getElementById('customFieldText');
+    if (customFieldText && customFieldText.textContent !== 'Select Custom Field') {
+        // Find the custom field option that matches the selected text
+        const customFieldOptions = document.querySelectorAll('.custom-field-option label');
+        customFieldOptions.forEach(option => {
+            const optionText = option.textContent.trim();
+            if (optionText === customFieldText.textContent) {
+                customFieldId = option.getAttribute('data-field-id');
+            }
+        });
+    }
     
     // Get multi-select checkbox values
     const selectedUserIds = Array.from(document.querySelectorAll('.user-filter-checkbox:checked')).map(cb => cb.value);
     const selectedCourseIds = Array.from(document.querySelectorAll('.course-filter-checkbox:checked')).map(cb => cb.value);
     const selectedCustomFieldValues = Array.from(document.querySelectorAll('.custom-field-value-checkbox:checked')).map(cb => cb.value);
+    // Get status filter values from checkboxes
     const selectedStatuses = Array.from(document.querySelectorAll('input[name="status[]"]:checked')).map(cb => cb.value);
     
     // Check if "All" options are selected
@@ -491,11 +517,11 @@ function renderDataTable(data) {
         tr.innerHTML = `
             <td>${row.user_name || 'N/A'}</td>
             <td>${row.user_email || 'N/A'}</td>
-            <td>${row.department || 'No Department'}</td>
             <td>${row.course_name || 'N/A'}</td>
             <td>${row.completion_percentage || 0}%</td>
             <td><span class="badge bg-${getStatusColor(row.progress_status)}">${formatStatusText(row.progress_status)}</span></td>
             <td>${row.last_accessed_at ? new Date(row.last_accessed_at).toLocaleDateString() : 'N/A'}</td>
+            <td>${formatTimeSpent(row.total_time_spent || 0)}</td>
         `;
         tbody.appendChild(tr);
     });
@@ -516,6 +542,19 @@ function formatStatusText(status) {
         case 'in_progress': return 'In Progress';
         case 'not_started': return 'Not Started';
         default: return 'N/A';
+    }
+}
+
+function formatTimeSpent(seconds) {
+    if (!seconds || seconds === 0) return '0m';
+    
+    const hours = Math.floor(seconds / 3600);
+    const minutes = Math.floor((seconds % 3600) / 60);
+    
+    if (hours > 0) {
+        return `${hours}h ${minutes}m`;
+    } else {
+        return `${minutes}m`;
     }
 }
 
@@ -569,13 +608,8 @@ function setupEventListeners() {
         });
     }
     
-    // Custom field selection change
-    const customFieldSelect = document.getElementById('customFieldSelect');
-    if (customFieldSelect) {
-        customFieldSelect.addEventListener('change', function(e) {
-            handleCustomFieldChange(e.target.value);
-        });
-    }
+        // Custom field selection change (now using dropdown options)
+        setupCustomFieldDropdown();
     
     // Multi-select checkbox functionality
     setupMultiSelectFilters();
@@ -605,22 +639,17 @@ function setupEventListeners() {
     // Export buttons
     const exportPdfBtn = document.getElementById('exportPdf');
     if (exportPdfBtn) {
-        exportPdfBtn.addEventListener('click', function() {
+        exportPdfBtn.addEventListener('click', function(e) {
+            e.preventDefault();
             exportReport('pdf');
         });
     }
     
     const exportExcelBtn = document.getElementById('exportExcel');
     if (exportExcelBtn) {
-        exportExcelBtn.addEventListener('click', function() {
+        exportExcelBtn.addEventListener('click', function(e) {
+            e.preventDefault();
             exportReport('excel');
-        });
-    }
-    
-    const exportCsvBtn = document.getElementById('exportCsv');
-    if (exportCsvBtn) {
-        exportCsvBtn.addEventListener('click', function() {
-            exportReport('csv');
         });
     }
 }
@@ -647,9 +676,19 @@ function clearFilters() {
     if (startDate) startDate.value = '';
     if (endDate) endDate.value = '';
     
+    // Clear status filter checkboxes
+    const statusCheckboxes = document.querySelectorAll('input[name="status[]"]');
+    statusCheckboxes.forEach(checkbox => checkbox.checked = false);
+    
     // Reset dropdowns and checkboxes
-    const customFieldSelect = document.getElementById('customFieldSelect');
     const customFieldValueSelect = document.getElementById('customFieldValueSelect');
+    
+    // Clear custom field selection
+    const customFieldText = document.getElementById('customFieldText');
+    if (customFieldText) {
+        customFieldText.textContent = 'Select Custom Field';
+    }
+    handleCustomFieldChange('');
     
     // Clear user filter checkboxes
     const userFilterAll = document.getElementById('userFilterAll');
@@ -699,6 +738,34 @@ function clearFilters() {
     updateApplyButtonState();
     
     console.log('All filters cleared');
+}
+
+function setupCustomFieldDropdown() {
+    // Setup dropdown item click listeners
+    const customFieldOptions = document.querySelectorAll('.custom-field-option label');
+    customFieldOptions.forEach(option => {
+        option.addEventListener('click', function(e) {
+            e.preventDefault();
+            
+            const fieldId = this.getAttribute('data-field-id');
+            const fieldLabel = this.textContent.trim();
+            
+            // Update the dropdown button text
+            const customFieldText = document.getElementById('customFieldText');
+            if (customFieldText) {
+                customFieldText.textContent = fieldLabel;
+            }
+            
+            // Handle the custom field change
+            handleCustomFieldChange(fieldId);
+            
+            // Close the dropdown
+            const dropdown = bootstrap.Dropdown.getInstance(document.getElementById('customFieldDropdown'));
+            if (dropdown) {
+                dropdown.hide();
+            }
+        });
+    });
 }
 
 function handleCustomFieldChange(fieldId) {
@@ -758,23 +825,26 @@ function handleCustomFieldChange(fieldId) {
                 
                 // Add to checkbox list
                 if (customFieldValueOptions) {
-                    const li = document.createElement('li');
-                    li.className = 'custom-field-value-option';
-                    li.setAttribute('data-search', option.toLowerCase());
-                    li.innerHTML = `
-                        <div class="form-check px-3 py-1">
+                    const div = document.createElement('div');
+                    div.className = 'custom-field-value-option';
+                    div.setAttribute('data-search', option.toLowerCase());
+                    div.innerHTML = `
+                        <div class="form-check py-1">
                             <input class="form-check-input custom-field-value-checkbox" type="checkbox" id="custom_value_${option.replace(/\s+/g, '_')}" name="custom_field_values[]" value="${option}">
                             <label class="form-check-label" for="custom_value_${option.replace(/\s+/g, '_')}">
                                 ${option}
                             </label>
                         </div>
                     `;
-                    customFieldValueOptions.appendChild(li);
+                    customFieldValueOptions.appendChild(div);
                 }
             });
             
             // Setup event listeners for the new checkboxes
             setupCustomFieldValueCheckboxes();
+            
+            // Update the dropdown button text to show current selection
+            updateCustomFieldValueText();
         } else {
             if (customFieldValueSelect) customFieldValueSelect.disabled = true;
             if (customFieldValueDropdown) {
@@ -823,6 +893,12 @@ function loadReportDataFromServer(filters) {
         }
     });
     
+    // Add pagination parameters
+    const currentPage = window.reportData.currentPage || 1;
+    const perPage = window.reportData.perPage || 20;
+    formData.append('page', currentPage);
+    formData.append('per_page', perPage);
+    
     // Debug: Log form data contents
     console.log('FormData contents:');
     for (let [key, value] of formData.entries()) {
@@ -852,16 +928,24 @@ function loadReportDataFromServer(filters) {
                 window.reportData.reportData = data.reportData;
                 window.reportData.summary = data.summary;
                 window.reportData.charts = data.charts;
+                window.reportData.pagination = data.pagination;
                 
                 // Preserve original data for client-side filtering
                 if (!window.reportData.originalData) {
                     window.reportData.originalData = [...data.reportData];
                 }
                 
+                // Debug logging
+                console.log('DEBUG: Received data from server:', data);
+                console.log('DEBUG: Summary stats:', data.summary);
+                console.log('DEBUG: Charts data:', data.charts);
+                console.log('DEBUG: Report data count:', data.reportData ? data.reportData.length : 0);
+                
                 // Render the filtered data
                 updateSummaryCards(data.summary);
                 renderCharts(data.charts);
                 renderDataTable(data.reportData);
+                updatePaginationControls(data.pagination);
                 
                 console.log('Server-side filtering completed successfully');
             } else {
@@ -915,6 +999,9 @@ function setupSearchFilters() {
     
     // Course search
     setupSearchFilter('courseSearchInput', 'course-option', 'courseFilterOptions');
+    
+    // Custom field search
+    setupSearchFilter('customFieldSearchInput', 'custom-field-option', 'customFieldOptions');
     
     // Custom field value search
     setupSearchFilter('customFieldValueSearchInput', 'custom-field-value-option', 'customFieldValueOptions');
@@ -1080,16 +1167,16 @@ function setupCustomFieldValueCheckboxes() {
 
 // Handle "All Values" checkbox change
 function handleCustomFieldValueAllChange() {
-    const customFieldValueText = document.getElementById('customFieldValueText');
-    
     if (this.checked) {
         // Uncheck all individual value checkboxes
         const valueCheckboxes = document.querySelectorAll('.custom-field-value-checkbox');
         valueCheckboxes.forEach(checkbox => {
             checkbox.checked = false;
         });
-        customFieldValueText.textContent = 'All Values';
     }
+    
+    // Update the dropdown button text to show current selection
+    updateCustomFieldValueText();
     updateApplyButtonState();
 }
 
@@ -1104,6 +1191,8 @@ function handleCustomFieldValueChange() {
             customFieldValueAll.checked = false;
         }
     }
+    
+    // Update the dropdown button text to show current selection
     updateCustomFieldValueText();
     updateApplyButtonState();
 }
@@ -1151,28 +1240,10 @@ function updateCourseFilterText() {
 // Update custom field value text based on selected checkboxes
 function updateCustomFieldValueText() {
     const valueCheckboxes = document.querySelectorAll('.custom-field-value-checkbox:checked');
-    let customFieldValueText = document.getElementById('customFieldValueText');
+    const customFieldValueText = document.getElementById('customFieldValueText');
     
-    console.log('updateCustomFieldValueText - valueCheckboxes:', valueCheckboxes.length);
-    console.log('updateCustomFieldValueText - customFieldValueText element:', customFieldValueText);
-    console.log('updateCustomFieldValueText - document ready state:', document.readyState);
-    console.log('updateCustomFieldValueText - all elements with id customFieldValueText:', document.querySelectorAll('#customFieldValueText'));
-    
-    // If element not found, try to find it with a slight delay
     if (!customFieldValueText) {
-        console.warn('customFieldValueText element not found, retrying...');
-        console.error('Available elements in document:', document.querySelectorAll('[id*="customFieldValue"]'));
-        
-        // Try again after a short delay
-        setTimeout(() => {
-            customFieldValueText = document.getElementById('customFieldValueText');
-            if (customFieldValueText) {
-                console.log('customFieldValueText found on retry:', customFieldValueText);
-                updateCustomFieldValueTextContent(customFieldValueText, valueCheckboxes);
-            } else {
-                console.error('customFieldValueText still not found after retry');
-            }
-        }, 100);
+        console.error('customFieldValueText element not found');
         return;
     }
     
@@ -1304,10 +1375,72 @@ function setupDateAndStatusListeners() {
 function exportReport(format) {
     console.log('Exporting report as:', format);
     
-    const filters = getCurrentFilters();
-    const queryString = new URLSearchParams(filters).toString();
+    // Show loading indicator
+    const btn = format === 'pdf' ? document.getElementById('exportPdf') : document.getElementById('exportExcel');
+    if (btn) {
+        const originalHtml = btn.innerHTML;
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i> Generating...';
+        
+        // Restore button after 3 seconds
+        setTimeout(() => {
+            btn.disabled = false;
+            btn.innerHTML = originalHtml;
+        }, 3000);
+    }
     
-    window.open(`/Unlockyourskills/api/reports/export-user-progress.php?format=${format}&${queryString}`, '_blank');
+    const filters = getCurrentFilters();
+    
+    // Build form data for POST request
+    const form = document.createElement('form');
+    form.method = 'POST';
+    form.action = '/Unlockyourskills/api/reports/export-user-progress.php';
+    form.target = '_blank';
+    
+    // Add format
+    const formatInput = document.createElement('input');
+    formatInput.type = 'hidden';
+    formatInput.name = 'format';
+    formatInput.value = format;
+    form.appendChild(formatInput);
+    
+    // Add filters
+    Object.keys(filters).forEach(key => {
+        if (Array.isArray(filters[key])) {
+            filters[key].forEach(value => {
+                const input = document.createElement('input');
+                input.type = 'hidden';
+                input.name = key + '[]';
+                input.value = value;
+                form.appendChild(input);
+            });
+        } else {
+            const input = document.createElement('input');
+            input.type = 'hidden';
+            input.name = key;
+            input.value = filters[key];
+            form.appendChild(input);
+        }
+    });
+    
+    // Add current report data (for charts)
+    if (window.reportData) {
+        const summaryInput = document.createElement('input');
+        summaryInput.type = 'hidden';
+        summaryInput.name = 'summary';
+        summaryInput.value = JSON.stringify(window.reportData.summary);
+        form.appendChild(summaryInput);
+        
+        const chartsInput = document.createElement('input');
+        chartsInput.type = 'hidden';
+        chartsInput.name = 'charts';
+        chartsInput.value = JSON.stringify(window.reportData.charts);
+        form.appendChild(chartsInput);
+    }
+    
+    document.body.appendChild(form);
+    form.submit();
+    document.body.removeChild(form);
 }
 
 function showLoading() {
@@ -1343,4 +1476,114 @@ function showError(message) {
     if (reportContent) {
         reportContent.innerHTML = errorHtml;
     }
+}
+
+// Pagination Functions
+function updatePaginationControls(pagination) {
+    const paginationControls = document.getElementById('paginationControls');
+    const paginationInfo = document.getElementById('paginationInfo');
+    
+    if (!paginationControls || !paginationInfo) {
+        return;
+    }
+    
+    // Update pagination info
+    const start = (pagination.current_page - 1) * pagination.per_page + 1;
+    const end = Math.min(pagination.current_page * pagination.per_page, pagination.total);
+    paginationInfo.textContent = `Showing ${start} to ${end} of ${pagination.total} entries`;
+    
+    // Clear existing pagination controls
+    paginationControls.innerHTML = '';
+    
+    // Don't show pagination if there's only one page or no data
+    if (pagination.total_pages <= 1) {
+        return;
+    }
+    
+    // Previous button
+    const prevLi = document.createElement('li');
+    prevLi.className = `page-item ${!pagination.has_prev ? 'disabled' : ''}`;
+    prevLi.innerHTML = `
+        <a class="page-link" href="#" data-page="${pagination.current_page - 1}" ${!pagination.has_prev ? 'tabindex="-1" aria-disabled="true"' : ''}>
+            <span aria-hidden="true">&laquo;</span>
+        </a>
+    `;
+    paginationControls.appendChild(prevLi);
+    
+    // Page numbers
+    const startPage = Math.max(1, pagination.current_page - 2);
+    const endPage = Math.min(pagination.total_pages, pagination.current_page + 2);
+    
+    // First page if not in range
+    if (startPage > 1) {
+        const firstLi = document.createElement('li');
+        firstLi.className = 'page-item';
+        firstLi.innerHTML = `<a class="page-link" href="#" data-page="1">1</a>`;
+        paginationControls.appendChild(firstLi);
+        
+        if (startPage > 2) {
+            const ellipsisLi = document.createElement('li');
+            ellipsisLi.className = 'page-item disabled';
+            ellipsisLi.innerHTML = `<span class="page-link">...</span>`;
+            paginationControls.appendChild(ellipsisLi);
+        }
+    }
+    
+    // Page numbers in range
+    for (let i = startPage; i <= endPage; i++) {
+        const pageLi = document.createElement('li');
+        pageLi.className = `page-item ${i === pagination.current_page ? 'active' : ''}`;
+        pageLi.innerHTML = `<a class="page-link" href="#" data-page="${i}">${i}</a>`;
+        paginationControls.appendChild(pageLi);
+    }
+    
+    // Last page if not in range
+    if (endPage < pagination.total_pages) {
+        if (endPage < pagination.total_pages - 1) {
+            const ellipsisLi = document.createElement('li');
+            ellipsisLi.className = 'page-item disabled';
+            ellipsisLi.innerHTML = `<span class="page-link">...</span>`;
+            paginationControls.appendChild(ellipsisLi);
+        }
+        
+        const lastLi = document.createElement('li');
+        lastLi.className = 'page-item';
+        lastLi.innerHTML = `<a class="page-link" href="#" data-page="${pagination.total_pages}">${pagination.total_pages}</a>`;
+        paginationControls.appendChild(lastLi);
+    }
+    
+    // Next button
+    const nextLi = document.createElement('li');
+    nextLi.className = `page-item ${!pagination.has_next ? 'disabled' : ''}`;
+    nextLi.innerHTML = `
+        <a class="page-link" href="#" data-page="${pagination.current_page + 1}" ${!pagination.has_next ? 'tabindex="-1" aria-disabled="true"' : ''}>
+            <span aria-hidden="true">&raquo;</span>
+        </a>
+    `;
+    paginationControls.appendChild(nextLi);
+    
+    // Add click event listeners to pagination links
+    paginationControls.addEventListener('click', function(e) {
+        e.preventDefault();
+        
+        const target = e.target.closest('a[data-page]');
+        if (target && !target.closest('.disabled')) {
+            const page = parseInt(target.getAttribute('data-page'));
+            if (page && page !== window.reportData.currentPage) {
+                goToPage(page);
+            }
+        }
+    });
+}
+
+function goToPage(page) {
+    window.reportData.currentPage = page;
+    
+    // Get current filters and reload data
+    const filters = getCurrentFilters();
+    loadReportDataFromServer(filters);
+}
+
+function resetPagination() {
+    window.reportData.currentPage = 1;
 }
