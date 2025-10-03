@@ -143,8 +143,8 @@ function loadReportData() {
     console.log('Original data count:', window.reportData.reportData.length);
     
     // If any complex filtering is applied, use server-side filtering
-    if (filters.custom_field_id || filters.user_ids || filters.course_ids) {
-        console.log('Using server-side filtering for complex filters');
+    if (filters.custom_field_id || filters.user_ids || filters.course_ids || filters.start_date || filters.end_date) {
+        console.log('Using server-side filtering for complex filters or date filtering');
         loadReportDataFromServer(filters);
         return;
     }

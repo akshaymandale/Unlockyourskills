@@ -1563,5 +1563,15 @@
     "js.validation.field_options_two_required": "कम से कम दो विकल्प आवश्यक हैं",
     "js.validation.field_required": "{field} आवश्यक है",
     "js.validation.field_label_min_length": "फ़ील्ड लेबल कम से कम 2 अक्षर लंबा होना चाहिए",
-    "js.validation.fix_errors_before_submit": "कृपया फॉर्म सबमिट करने से पहले सभी वैधता त्रुटियों को ठीक करें।"
+    "js.validation.fix_errors_before_submit": "कृपया फॉर्म सबमिट करने से पहले सभी वैधता त्रुटियों को ठीक करें।",
+    "enrollment_status_distribution": "नामांकन स्थिति वितरण",
+    "course_completion_rates": "पाठ्यक्रम पूर्णता दरें",
+    "course_completion_data": "पाठ्यक्रम पूर्णता डेटा",
+    "total_enrollments": "कुल नामांकन",
+    "overall_completion_rate": "समग्र पूर्णता दर",
+    "completion_rate": "पूर्णता दर",
+    "last_activity": "अंतिम गतिविधि",
+    "total_courses": "कुल पाठ्यक्रम",
+    "applicable_users": "लागू उपयोगकर्ता",
+    "enrolled": "नामांकित"
 }

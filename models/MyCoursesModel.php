@@ -258,13 +258,15 @@ class MyCoursesModel {
             // Note: Post-requisites are not checked for "started" status
             // They should only be used for "completed" status
             
-            // If prerequisites are met, course is considered started (even without course content interaction)
-            // This provides better user experience by showing progress when prerequisites are completed
+            // HYBRID MODE: Course is considered "started" when prerequisites are ALL completed
+            // This shows the course as "In Progress" (ready to start) when it becomes available
+            // but only if ALL prerequisites are actually met
             if ($prereqCountResult['count'] > 0 && $prereqMetResult['count'] >= $prereqCountResult['count']) {
-                return true;
+                return true; // Prerequisites are met - course is unlocked and ready
             }
             
-            // If no prerequisites or prerequisites not met, course is not started
+            // If no prerequisites exist, course is not started until content is accessed
+            // If prerequisites exist but not met, course is not started
             return false;
             
         } catch (Exception $e) {
