@@ -1771,5 +1771,15 @@
     "expand_all": "Expand All",
     "collapse_all": "Collapse All",
     "refresh": "Refresh",
-    "loading_hierarchy": "Loading organizational hierarchy..."
+    "loading_hierarchy": "Loading organizational hierarchy...",
+    "enrollment_status_distribution": "Enrollment Status Distribution",
+    "course_completion_rates": "Course Completion Rates",
+    "course_completion_data": "Course Completion Data",
+    "total_enrollments": "Total Enrollments",
+    "overall_completion_rate": "Overall Completion Rate",
+    "completion_rate": "Completion Rate",
+    "last_activity": "Last Activity",
+    "total_courses": "Total Courses",
+    "applicable_users": "Applicable Users",
+    "enrolled": "Enrolled"
 }

@@ -234,8 +234,19 @@ class UserProgressReportModel {
             
             // Apply date range filter after calculation
             if (!empty($filters['start_date']) && !empty($filters['end_date'])) {
-                // This would need to be implemented based on actual activity dates
-                // For now, we'll skip date filtering as it requires more complex logic
+                $allResult = array_filter($allResult, function($record) use ($filters) {
+                    // Only filter records that have last_accessed_at (i.e., courses that have been started)
+                    if (!$record['last_accessed_at']) {
+                        return false; // Exclude not-started courses when date filtering is applied
+                    }
+                    
+                    $lastAccessed = new DateTime($record['last_accessed_at']);
+                    $startDate = new DateTime($filters['start_date']);
+                    $endDate = new DateTime($filters['end_date'] . ' 23:59:59'); // Include the full end date
+                    
+                    // Include records where last activity was within the date range
+                    return $lastAccessed >= $startDate && $lastAccessed <= $endDate;
+                });
             }
             
             // Now apply pagination to the filtered results
@@ -498,13 +509,6 @@ class UserProgressReportModel {
      */
     public function calculateCourseProgress($courseId, $userId, $clientId) {
         try {
-            // Get course completion data from completion tables first (if available)
-            $courseCompletion = $this->getCourseCompletionData($userId, $courseId, $clientId);
-            
-            if ($courseCompletion && $courseCompletion['completion_percentage'] > 0) {
-                return (int) $courseCompletion['completion_percentage'];
-            }
-            
             // Calculate comprehensive progress from all content types
             return $this->calculateComprehensiveCourseProgress($userId, $courseId, $clientId);
             
@@ -654,28 +658,6 @@ class UserProgressReportModel {
         }
     }
 
-    /**
-     * Get course completion data from course_completion table
-     * @param int $userId
-     * @param int $courseId
-     * @param int $clientId
-     * @return array|null
-     */
-    private function getCourseCompletionData($userId, $courseId, $clientId) {
-        try {
-            $stmt = $this->conn->prepare("
-                SELECT completion_percentage, is_completed, 
-                       prerequisites_completed, modules_completed, post_requisites_completed
-                FROM course_completion 
-                WHERE user_id = ? AND course_id = ? AND client_id = ?
-            ");
-            $stmt->execute([$userId, $courseId, $clientId]);
-            return $stmt->fetch(PDO::FETCH_ASSOC);
-        } catch (Exception $e) {
-            error_log("Error getting course completion data: " . $e->getMessage());
-            return null;
-        }
-    }
 
     /**
      * Calculate course progress from individual completion tables
